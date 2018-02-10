@@ -32,6 +32,7 @@ string ip_addr__global;
 string localization_method;
 string stats_file_addr;
 string ns;
+double v_max;
 	
 enum State { setup, waiting, flying, completed, failed, invalid };
 
@@ -78,6 +79,11 @@ void package_delivery_initialize_params() {
                 (ns + "/stats_file_addr").c_str());
      return; 
     }
+    if(!ros::param::get("/motion_planner/v_max", v_max)){
+        ROS_FATAL("Could not start exploration. Parameter missing! Looking for %s", 
+                (ns + "/v_max").c_str());
+     return; 
+    }
 }
 
 geometry_msgs::Point get_start(Drone& drone) {
@@ -117,6 +123,28 @@ trajectory_t request_trajectory(ros::ServiceClient& client, geometry_msgs::Point
     }
 
     return create_trajectory(srv.response.multiDOFtrajectory);
+}
+
+trajectory_t mod_trajectory(const trajectory_t& trajectory) {
+    ROS_ERROR("v_max is %f", v_max);
+
+    trajectory_t result;
+
+    for (multiDOFpoint p : trajectory) {
+        double v = std::sqrt(p.vx*p.vx + p.vy*p.vy + p.vz*p.vz);
+        double scale = v_max / v;
+
+        p.vx *= scale;
+        p.vy *= scale;
+        p.vz *= scale;
+        p.duration /= scale;
+
+        if (p.vx != p.vx || p.vy != p.vy || p.vz != p.vz || p.duration == 0)
+            continue;
+        result.push_back(p);
+    }
+
+    return result;
 }
 
 bool trajectory_done(const trajectory_t& trajectory) {
@@ -168,7 +196,7 @@ int main(int argc, char **argv)
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
 	//----------------------------------------------------------------- 
-    const float goal_s_error_margin = 3.0; //ok distance to be away from the goal.
+    const float goal_s_error_margin = 100.0; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
                                            //flight controler to land exactly
@@ -179,6 +207,19 @@ int main(int argc, char **argv)
     //----------------------------------------------------------------- 
 	// *** F:DN Body
 	//----------------------------------------------------------------- 
+    
+    // Wait for SLAM to come online
+    tf::TransformListener tfListen;
+    while(1) {
+        try {
+            tf::StampedTransform transform;
+            tfListen.lookupTransform("/world", "/"+localization_method, ros::Time(0), transform);
+            break;
+        } catch(tf::TransformException& ex) {
+        }
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
     update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
     log_time(stats_file_addr);
     update_stats_file(stats_file_addr,"###\n");
@@ -194,7 +235,7 @@ int main(int argc, char **argv)
             goal = get_goal();
             start = get_start(drone);
 
-            spin_around(drone);
+            // spin_around(drone);
             next_state = waiting;
         }
         else if (state == waiting)
@@ -203,6 +244,7 @@ int main(int argc, char **argv)
 
             start = get_start(drone);
             normal_traj = request_trajectory(get_trajectory_client, start, goal);
+            normal_traj = mod_trajectory(normal_traj);
 
             // Pause a little bit so that future_col can be updated
             col_coming = col_imminent = false;
@@ -266,33 +308,33 @@ int main(int argc, char **argv)
 
             // Choose correct queue to use
             if (!panic_traj.empty()) {
-                ROS_ERROR("Chose panic trajectory");
+                // ROS_ERROR("Chose panic trajectory");
                 forward_traj = &panic_traj;
                 rev_traj = nullptr;
             } else if (!slam_loss_traj.empty()) {
-                ROS_WARN("Chose SLAM loss trajectory");
+                // ROS_WARN("Chose SLAM loss trajectory");
                 forward_traj = &slam_loss_traj;
                 rev_traj = &normal_traj;
                 yaw_strategy = ignore_yaw;
             } else if (!future_col_traj.empty()) {
-                ROS_WARN("Chose future collision trajectory");
+                // ROS_WARN("Chose future collision trajectory");
                 forward_traj = &future_col_traj;
                 rev_traj = &rev_normal_traj;
             } else {
-                ROS_INFO("Chose normal path");
+                // ROS_INFO("Chose normal path");
                 forward_traj = &normal_traj;
                 rev_traj = &rev_normal_traj;
             }
 
-            multiDOFpoint p = forward_traj->front();
-            std::cout << forward_traj->size() << " ";
-            std::cout << p.vx << " " << p.vy << " " << p.vz << " " << p.duration << std::endl;
+            // multiDOFpoint p = forward_traj->front();
+            // std::cout << p.vx << " " << p.vy << " " << p.vz << " " << p.duration << " " << std::sqrt(p.vx*p.vx+p.vy*p.vy+p.vz*p.vz) << " " <<  p.yaw << std::endl;
 
             follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, check_position);
 
             // Choose next state (failure, completion, or more flying)
-            
-            if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj))
+            if (slam_lost)
+                next_state = failed;
+            else if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj))
                 next_state = failed;
             else if (trajectory_done(*forward_traj))
                 next_state = completed;

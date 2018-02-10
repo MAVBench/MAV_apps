@@ -27,7 +27,10 @@ static bool action_upon_slam_loss_reset(Drone& drone, const std::string& topic);
 
 static trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second);
 static multiDOFpoint reverse_point(multiDOFpoint mdp);
+
 static float yawFromQuat(geometry_msgs::Quaternion q);
+static void quatToRotation(const geometry_msgs::Quaternion& q, float& roll, float& pitch, float& yaw);
+static void quatToRotation(const tf::Quaternion& q, float& roll, float& pitch, float& yaw);
 
 template <class T>
 static T magnitude(T a, T b, T c) {
@@ -133,7 +136,7 @@ trajectory_t create_slam_loss_trajectory(Drone& drone, trajectory_t& normal_traj
     */
 
     // Add backtrack to trajectory
-    double distance_left = 5.0;
+    double distance_left = 10.0;
     const double safe_v = 1.0;
 
     for (multiDOFpoint p : rev_normal_traj) {
@@ -401,11 +404,13 @@ static float yawFromQuat(geometry_msgs::Quaternion q)
 
 void output_flight_summary(Drone& drone, const std::string& fname)
 {
+    // Get flight stats
     auto flight_stats = drone.getFlightStats();
 
+    // Output flight stats
     stringstream stats_ss;
-
-    stats_ss << "{  StateOfCharge: " << flight_stats.state_of_charge << "," << endl;
+    stats_ss << "{" << endl;
+    stats_ss << "  StateOfCharge: " << flight_stats.state_of_charge << "," << endl;
     stats_ss << "  Voltage: " << flight_stats.voltage << "," << endl;
     stats_ss << "  EnergyConsumed: " << flight_stats.energy_consumed << "," << endl;
     stats_ss << "  DistanceTravelled: " << flight_stats.distance_traveled << "," << endl;
@@ -491,5 +496,30 @@ trajectory_msgs::MultiDOFJointTrajectory create_trajectory_msg(const trajectory_
     result.points.push_back(mdp);
 
     return result;
+}
+
+static void quatToRotation(const geometry_msgs::Quaternion& q, float& roll, float& pitch, float& yaw)
+{
+	// Formulas for roll, pitch, yaw
+	roll = atan2(2*(q.w*q.x + q.y*q.z), 1 - 2*(q.x*q.x + q.y*q.y) );
+	pitch = asin(2*(q.w*q.y - q.z*q.x));
+	yaw = atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z));
+
+    roll = (roll*180)/3.14159265359;
+    pitch = (pitch*180)/3.14159265359;
+    yaw = (yaw*180)/3.14159265359;
+
+    yaw = (yaw <= 180 ? yaw : yaw - 360);
+}
+
+static void quatToRotation(const tf::Quaternion& q, float& roll, float& pitch, float& yaw)
+{
+    geometry_msgs::Quaternion q2;
+    q2.x = q.x();
+    q2.y = q.y();
+    q2.z = q.z();
+    q2.w = q.w();
+
+    quatToRotation(q2, roll, pitch, yaw);
 }
 

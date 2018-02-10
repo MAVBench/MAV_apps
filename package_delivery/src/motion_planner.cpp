@@ -43,13 +43,6 @@
 #include <mav_trajectory_generation_ros/ros_visualization.h>
 
 // OMPL specific headers
-#include <ompl/base/SpaceInformation.h>
-#include <ompl/base/spaces/RealVectorStateSpace.h>
-#include <ompl/geometric/planners/rrt/RRT.h>
-#include <ompl/geometric/planners/rrt/RRTConnect.h>
-#include <ompl/geometric/planners/prm/PRM.h>
-#include <ompl/geometric/SimpleSetup.h>
-#include <ompl/config.h>
 
 // Type-defs
 using piecewise_trajectory = std::vector<graph::node>;
@@ -126,34 +119,8 @@ void clear_octomap_bbx(const graph::node& pos);
 void generate_octomap(const octomap_msgs::Octomap& msg);
 
 
-// *** F:DN Initializes the PRM.
-graph create_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree *octree, graph::node_id &start_id, graph::node_id &goal_id);
-
-
-piecewise_trajectory lawn_mower(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
-
-// *** F:DN Increases the density of the PRM.
-void extend_PRM(graph &roadmap, octomap::OcTree * octree);
-
-
-// ***F:DN Use the PRM sampling method to find a piecewise path
-piecewise_trajectory PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
-
-
-// ***F:DN Use the RRT sampling method to find a piecewise path
-piecewise_trajectory RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
-
-
-// ***F:DN Use the RRT sampling method from OMPL to find a piecewise path
-piecewise_trajectory OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
-
-
-// ***F:DN Use bi-directonal RRT from OMPL to find a piecewise path
-piecewise_trajectory OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
-
-
-// ***F:DN Use the PRM sampling method from OMPL to find a piecewise path
-piecewise_trajectory OMPL_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
+// ***F:DN FOR MICRO-BENCHMARK
+piecewise_trajectory semicircle(geometry_msgs::Point start, geometry_msgs::Point goal);
 
 
 // *** F:DN Optimize and smoothen a piecewise path without causing any new collisions.
@@ -195,8 +162,9 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
     // octomap_msgs::binaryMapToMsg(*octree, omp);
     octree->writeBinary("/home/ubuntu/octomap.bt");
 
-    piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length ,req.n_pts_per_dir, octree);
+    // piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length ,req.n_pts_per_dir, octree);
     //piecewise_path = motion_planning_core(req.start, req.goal, octree);
+    piecewise_path = semicircle(req.start, req.goal);
 
     if (piecewise_path.size() == 0) {
         ROS_ERROR("Empty path returned");
@@ -248,23 +216,6 @@ void motion_planning_initialize_params() {
     //std::cout<<"max_dist_to_"<<max_dist_to_connect_at__global<<std::endl;
     
     ros::param::get("/motion_planner/motion_planning_core", motion_planning_core_str);
-    if (motion_planning_core_str == "PRM")
-        motion_planning_core = PRM;
-    else if (motion_planning_core_str == "RRT")
-        motion_planning_core = RRT;
-    else if (motion_planning_core_str == "lawn_mower")
-        motion_planning_core = lawn_mower;
-    else if (motion_planning_core_str == "OMPL-RRT")
-        motion_planning_core = OMPL_RRT;
-    else if (motion_planning_core_str == "OMPL-RRTConnect")
-        motion_planning_core = OMPL_RRTConnect;
-    else if (motion_planning_core_str == "OMPL-PRM")
-        motion_planning_core = OMPL_PRM;
-    else{
-        std::cout<<"This motion planning type is not defined"<<std::endl;
-        exit(0);
-    }
-
 }
 
 
@@ -527,164 +478,6 @@ void generate_octomap(const octomap_msgs::Octomap& msg)
 }
 
 
-graph create_lawnMower_path(geometry_msgs::Point start, int width, int length, int n_pts_per_dir, octomap::OcTree *octree, graph::node_id &start_id, graph::node_id &goal_id)
-
-{
-	
-    // *** F:DN variables 
-    graph roadmap;
-	bool success = true;
-    double x_step = double(length)/double(n_pts_per_dir);
-    double y_step = double(width)/double(n_pts_per_dir);
-    graph::node_id cur_node_id, prev_node_id;
-    double x = start.x;
-    double y = start.y;
-
-
-	//ROS_INFO("starting piecewise_path");
-	ROS_INFO("starting x,y is %f %f", x, y);
-	//start_id = -1, goal_id = -2;
-	
-    //*** F:DN generate all the nodes
-        for (int i = 0 ; i < n_pts_per_dir; i++) {
-            for (int j = 0 ; j < n_pts_per_dir; j++) {
-
-                ROS_INFO("%f %f", x, y);
-                if (i==0 && j==0) {
-                    graph::node_id cur_node_id = roadmap.add_node(
-                            x, y, start.z);
-                }
-                else{
-                    graph::node_id cur_node_id = roadmap.add_node(x, y, start.z);
-                    roadmap.connect(cur_node_id, prev_node_id, 
-                            dist(roadmap.get_node(cur_node_id), 
-                                roadmap.get_node(prev_node_id)));
-                }
-                ROS_INFO("id is %d", int(cur_node_id)); 
-                y +=y_step;
-                prev_node_id = cur_node_id; 
-            }
-	   
-            /*
-            if ((i+1)  < n_pts_per_dir) { 
-                    
-                    ROS_INFO("%f %f", x, y);
-		    x += (x_step/3); 
-	            cur_node_id = roadmap.add_node(x, y, start.z);
-		    roadmap.connect(cur_node_id, prev_node_id, 
-				    dist(roadmap.get_node(cur_node_id), 
-					    roadmap.get_node(prev_node_id)));
-		    prev_node_id = cur_node_id; 
-                    ROS_INFO("%f %f", x, y);
-		    x += (x_step/3); 
-		    cur_node_id = roadmap.add_node(x, y, start.z);
-		    roadmap.connect(cur_node_id, prev_node_id, 
-				    dist(roadmap.get_node(cur_node_id), 
-					    roadmap.get_node(prev_node_id)));
-		    prev_node_id = cur_node_id; 
-		    x += (x_step/3);
-	    } 
-             */          
-	    x += x_step;
-	    y_step *= -1;
-    }
-   
-    // ***F:DN returning back the the origin
-    cur_node_id = roadmap.add_node(start.x, start.y, start.z);
-    roadmap.connect(cur_node_id, prev_node_id, 
-            dist(roadmap.get_node(cur_node_id), 
-                roadmap.get_node(prev_node_id)));
-        
-    cout <<"road map"<<endl;
-    cout<<roadmap;
-	if (occupied(octree, start.x, start.y, start.z)) {
-		ROS_ERROR("Start is already occupied!");
-		success = false;
-	}
-    return roadmap;
-}
-
-graph create_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree *octree, graph::node_id &start_id, graph::node_id &goal_id)
-{
-	graph roadmap;
-	bool success = true;
-
-	ROS_INFO("starting piecewise_path");
-	ROS_INFO("initialized roadmap");
-	start_id = -1, goal_id = -2;
-	graph::node s = {start.x, start.y, start.z, start_id};
-	graph::node g = {goal.x, goal.y, goal.z, goal_id};
-
-	ROS_INFO("Start %f %f %f", start.x, start.y, start.z);
-	ROS_INFO("Goal  %f %f %f", goal.x, goal.y, goal.z);
-
-	// Check whether the path is even possible.
-	// The path is impossible if the start or end coordinates are in an occupied part of the octomap.
-	
-	if (occupied(octree, start.x, start.y, start.z)) {
-		ROS_WARN("Start is already occupied!");
-		// success = false;
-	}
-
-	if (occupied(octree, goal.x, goal.y, goal.z)) {
-		ROS_ERROR("Goal is already occupied!");
-		success	= false;
-	}
-
-
-	// If the path is believed to be possible, then add the start and end nodes.
-	// Note: the path may still be impossible. Our earlier check is quite rudimentary.
-	if (success) {
-		roadmap.add_node(s);
-		roadmap.add_node(g);
-
-		// If possible, connect the start and end nodes directly.
-		// Then, the shortest path will be a straight line between the start and goal.
-		if (!collision(octree, s, g)) {
-			ROS_INFO("No collision so connecting start and goal directly.");
-			roadmap.connect(start_id, goal_id);
-		}
-	}
-	return roadmap;
-}
-
-
-void extend_PRM(graph &roadmap, octomap::OcTree * octree)
-{    
-	//-----------------------------------------------------------------
-	// *** F:DN variables
-	//-----------------------------------------------------------------
-    
-    static std::random_device random_seed;
-    static std::mt19937 rd_mt(random_seed()); //a pseudo-random number generator
-    static std::uniform_real_distribution<> x_dist(x__low_bound__global, x__high_bound__global); 
-	static std::uniform_real_distribution<> y_dist(y__low_bound__global, y__high_bound__global); 
-	static std::uniform_real_distribution<> z_dist(z__low_bound__global, z__high_bound__global); 
-
-    //-----------------------------------------------------------------
-    // *** F:DB Body
-    //----------------------------------------------------------------- 
-	// Add random nodes
-    std::vector<graph::node_id> nodes_added;
-	while (nodes_added.size() < nodes_to_add_to_roadmap__global) {
-		double x = x_dist(rd_mt), y = y_dist(rd_mt), z = z_dist(rd_mt);
-
-		// Make sure we're not adding a node to an occupied part of the octomap
-		if (!occupied(octree, x, y, z)) {			
-			graph::node_id id = roadmap.add_node(x, y, z);
-			nodes_added.push_back(id);
-		}
-	}
-
-	// Connect the recently-added points to their neighbors in the roadmap
-	for (const auto& n : nodes_added) {
-		auto nearest_nodes = nodes_in_radius(roadmap, n, max_dist_to_connect_at__global, octree);
-		for (const auto& n2 : nearest_nodes) {
-            roadmap.connect(n, n2, dist(roadmap.get_node(n), roadmap.get_node(n2)));
-		}
-	}	
-}
-
 
 void create_response(package_delivery::get_trajectory::Response &res, smooth_trajectory& smooth_path)
 {
@@ -797,6 +590,7 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
 		opt.getSegments(&segments);
 
 		// Loop through the vector of segments looking for collisions
+        /*
 		for (int i = 0; !col && i < segments.size(); ++i) {
 			const double time_step = 0.1;
 			double segment_len = segments[i].getTime();
@@ -839,6 +633,7 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
             }
 			}
 		}
+        */
 	} while (col);
 
 	// Return the collision-free smooth trajectory
@@ -891,6 +686,7 @@ void publish_graph(graph& g)
 
 void postprocess(piecewise_trajectory& path)
 {
+    return;
     // We use a greedy approach to shorten the path here.
     // We connect non-adjacent nodes in the path that do not have collisions.
     
@@ -908,410 +704,27 @@ void postprocess(piecewise_trajectory& path)
     }
 }
 
-piecewise_trajectory lawn_mower(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
+
+piecewise_trajectory semicircle(geometry_msgs::Point start, geometry_msgs::Point goal)
 {
-	//----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
-    piecewise_trajectory result;
-	graph::node_id start_id, goal_id;
-	auto generate_shortest_path = keep_roadmap_intact_plan; // TODO: parameter
-	// auto generate_shortest_path = astar_plan;
-	//int max_roadmap_size__global;
-
-    //ros::param::get("motion_planner/max_roadmap_size__global", max_roadmap_size__global);
-    
-    //----------------------------------------------------------------- 
-    // *** F:DN Body 
-    //----------------------------------------------------------------- 
-    graph roadmap = create_lawnMower_path(start, width, length, n_pts_per_dir, octree, start_id, goal_id);
-
-    if (roadmap.size() == 0) {
-    	ROS_ERROR("PRM could not be initialized.");
-    	return result;
-    }
-
-    publish_graph(roadmap); // A debugging function used to publish the roadmap generated, so it can be viewed in rviz
-
-    	
-    // Search for a path to the goal in the PRM
-    result = generate_shortest_path(roadmap);
-/*
-    // Grow PRM and re-run path-planner until we find a path
-    while(result.empty()) {
-        grow_PRM(roadmap, octree);
-
-        ROS_INFO("Roadmap size: %d", roadmap.size());
-
-        publish_graph(roadmap);
-
-      	if (roadmap.size() > max_roadmap_size__global) {
-            ROS_ERROR("Path not found!");
-            return result;
-      	}
-
-		result = generate_shortest_path(roadmap, start_id, goal_id);
-    }
-    */
-    return result;
-}
-
-piecewise_trajectory PRM(geometry_msgs::Point start, geometry_msgs::Point goal,int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
-{
-	//----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
-    piecewise_trajectory result;
-	graph::node_id start_id, goal_id;
-	auto generate_shortest_path = dijkstra_plan; // TODO: parameter
-	// auto generate_shortest_path = astar_plan;
-	//int max_roadmap_size__global;
-
-    //ros::param::get("motion_planner/max_roadmap_size__global", max_roadmap_size__global);
-    
-    //----------------------------------------------------------------- 
-    // *** F:DN Body 
-    //----------------------------------------------------------------- 
-    graph roadmap = create_PRM(start, goal, octree, start_id, goal_id);
-
-    if (roadmap.size() == 0) {
-    	ROS_ERROR("PRM could not be initialized.");
-    	return result;
-    }
-
-    publish_graph(roadmap); // A debugging function used to publish the roadmap generated, so it can be viewed in rviz
-
-	// Search for a path to the goal in the PRM
-    result = generate_shortest_path(roadmap, start_id, goal_id);
-
-    // Grow PRM and re-run path-planner until we find a path
-    while(result.empty()) {
-      	if (roadmap.size() > max_roadmap_size__global) {
-            ROS_ERROR("Path not found!");
-            return result;
-      	}
-
-        extend_PRM(roadmap, octree);
-
-        ROS_INFO("Roadmap size: %u", roadmap.size());
-
-        publish_graph(roadmap);
-
-		result = generate_shortest_path(roadmap, start_id, goal_id);
-    }
-
-    return result;
-}
-
-graph create_RRT(geometry_msgs::Point start, graph::node_id &start_id)
-{
-	graph rrt;
-
-
-	start_id = -1;
-	graph::node s = {start.x, start.y, start.z, start_id};
-    s.parent = graph::invalid_id();
-
-    rrt.add_node(s);
-
-
-	return rrt;
-}
-
-graph::node_id closest_node_to_coordinate(graph& g, double x, double y, double z)
-{
-    auto node_ids = g.node_ids();
-
-    graph::node goal = {x, y, z};
-
-    return *min_element(node_ids.begin(), node_ids.end(), [&g, &goal] (graph::node_id n1, graph::node_id n2) { return dist(g.get_node(n1), goal) < dist(g.get_node(n2), goal); });
-}
-
-
-
-
-graph::node_id extend_RRT(graph& rrt, geometry_msgs::Point goal, bool& reached_goal)
-{
-    graph::node_id result;
-    reached_goal = false;
-
-    static std::random_device random_seed;
-    static std::mt19937 rd_mt(random_seed()); //a pseudo-random number generator
-    static std::uniform_real_distribution<> x_dist(x__low_bound__global, x__high_bound__global); 
-	static std::uniform_real_distribution<> y_dist(y__low_bound__global, y__high_bound__global); 
-	static std::uniform_real_distribution<> z_dist(z__low_bound__global, z__high_bound__global); 
-    static std::uniform_int_distribution<> bias_dist(0, 100);
-
-    // Get random coordinate, q_random
-    double x, y, z;
-    bool towards_goal;
-
-    if (bias_dist(rd_mt) <= rrt_bias__global) {
-        x = goal.x, y = goal.y, z = goal.z;
-        towards_goal = true;
-    } else {
-        x = x_dist(rd_mt), y = y_dist(rd_mt), z = z_dist(rd_mt);
-        towards_goal = false;
-    }
-    
-    // Find closest node, q_close
-    graph::node_id q_close_id = closest_node_to_coordinate(rrt, x, y, z);
-
-    // Get q_step
-    graph::node& q_close = rrt.get_node(q_close_id);
-    double dx = x - q_close.x;
-    double dy = y - q_close.y;
-    double dz = z - q_close.z;
-
-    double d_len = std::sqrt(dx*dx + dy*dy + dz*dz);
-    if (d_len > rrt_step_size__global) { 
-        dx = dx * rrt_step_size__global / d_len;
-        dy = dy * rrt_step_size__global / d_len;
-        dz = dz * rrt_step_size__global / d_len;
-    }
-
-    graph::node q_step = {q_close.x + dx, q_close.y + dy, q_close.z + dz};
-
-    // If no collision, append q_step to q_close
-    if (!collision(octree, q_close, q_step)) {
-        graph::node_id q_step_id = rrt.add_node(q_step.x, q_step.y, q_step.z);
-
-        // The cost of an edge is not important for RRT, so we leave it 0
-        rrt.connect(q_close_id, q_step_id, 0);
-        rrt.get_node(q_step_id).parent = q_close_id;
-
-        // Check whether we have reached the goal
-        if (towards_goal && d_len <= rrt_step_size__global)
-            reached_goal = true;
-
-        result = q_step_id;
-    } else {
-        result = graph::invalid_id();
-    }
-
-    // Return result (either q_step or an invalid id)
-    return result;
-}
-
-piecewise_trajectory build_reverse_path(graph g, graph::node_id goal)
-{
-    piecewise_trajectory result;
-
-    for (graph::node_id n = goal; n != graph::invalid_id(); n = g.get_node(n).parent) {
-        result.push_back(g.get_node(n));
-    }
-
-	std::reverse(result.begin(), result.end());
-
-    return result;
-}
-
-piecewise_trajectory RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
-{
-    piecewise_trajectory result;
-    graph::node_id start_id, goal_id;
-
-    // Initialize the RRT with the starting location
-    graph rrt = create_RRT(start, start_id);
-
-    // Keep extending the RRT until we reach the goal
-    int iterations = 0;
-    int fails = 0;
-    for (bool finished = false; !finished;
-            goal_id = extend_RRT(rrt, goal, finished)) {
-
-        publish_graph(rrt);
-
-        if (iterations >= 1000000000) {
-            publish_graph(rrt);
-            ROS_INFO("We're done ese");
-            return result;
-        }
-        iterations++;
-
-        if (goal_id == graph::invalid_id())
-            fails++;
-    }
-
-    publish_graph(rrt);
-
-    ROS_INFO("Fail rate: %f%%", double(fails*100) / iterations);
-
-    ROS_INFO("RRT (of size %u) reached goal! Building path now", rrt.size());
-
-    // Follow the parents on the tree backwards to the root
-    result = build_reverse_path(rrt, goal_id);
-
-    return result;
-}
-
-class OMPLMotionValidator : public ompl::base::MotionValidator
-{
-public:
-    OMPLMotionValidator(const ompl::base::SpaceInformationPtr &si)
-        : ompl::base::MotionValidator(si)
-    {
-    }
-
-    bool checkMotion(const ompl::base::State *s1,
-            const ompl::base::State *s2) const override
-    {
-        namespace ob = ompl::base;
-
-        const auto *pos1 = s1->as<ob::RealVectorStateSpace::StateType>();
-        const auto *pos2 = s2->as<ob::RealVectorStateSpace::StateType>();
-
-        double x1 = pos1->values[0], x2 = pos2->values[0];
-        double y1 = pos1->values[1], y2 = pos2->values[1];
-        double z1 = pos1->values[2], z2 = pos2->values[2];
-
-        return !collision(octree, {x1,y1,z1}, {x2,y2,z2});
-    }
-
-    bool checkMotion(const ompl::base::State *s1,
-            const ompl::base::State *s2,
-            std::pair<ompl::base::State*, double>& lastValid) const override
-    {
-        namespace ob = ompl::base;
-
-        const auto *pos1 = s1->as<ob::RealVectorStateSpace::StateType>();
-        const auto *pos2 = s2->as<ob::RealVectorStateSpace::StateType>();
-
-        double x1 = pos1->values[0], x2 = pos2->values[0];
-        double y1 = pos1->values[1], y2 = pos2->values[1];
-        double z1 = pos1->values[2], z2 = pos2->values[2];
-
-        graph::node end;
-        bool valid = !collision(octree, {x1,y1,z1}, {x2,y2,z2}, &end);
-
-        if (!valid) {
-            auto *end_pos = lastValid.first->as<ob::RealVectorStateSpace::StateType>();
-            end_pos->values[0] = end.x;
-            end_pos->values[1] = end.y;
-            end_pos->values[2] = end.z;
-
-            double dx = x2-x1, dy = y2-y1, dz = z2-z1;
-            double end_dx = end.x-x1, end_dy = end.y-y1, end_dz = end.z-z1;
-
-            if (dx != 0)
-                lastValid.second = end_dx / dx;
-            else if (dy != 0)
-                lastValid.second = end_dy / dy;
-            else if (dz != 0)
-                lastValid.second = end_dz / dz;
-            else
-                lastValid.second = 0;
-        }
-
-        return valid;
-    }
-
-};
-
-bool OMPLStateValidityChecker(const ompl::base::State * state)
-{
-    namespace ob = ompl::base;
-
-    const auto *pos = state->as<ob::RealVectorStateSpace::StateType>();
-
-    double x = pos->values[0];
-    double y = pos->values[1];
-    double z = pos->values[2];
-
-    return !out_of_bounds({x,y,z}) && !occupied(octree, x, y, z);
-}
-
-
-template<class PlannerType>
-piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
-{
-#ifndef INFLATE
-    namespace ob = ompl::base;
-    namespace og = ompl::geometric;
-
-    piecewise_trajectory result;
-
-    auto space(std::make_shared<ob::RealVectorStateSpace>(3));
-
-    // Set bounds
-    ob::RealVectorBounds bounds(3);
-    bounds.setLow(0, std::min(x__low_bound__global, start.x));
-    bounds.setHigh(0, std::max(x__high_bound__global, start.x));
-    bounds.setLow(1, std::min(y__low_bound__global, start.y));
-    bounds.setHigh(1, std::max(y__high_bound__global, start.y));
-    bounds.setLow(2, std::min(z__low_bound__global, start.z));
-    bounds.setHigh(2, std::max(z__high_bound__global, start.z));
-
-    space->setBounds(bounds);
-
-    og::SimpleSetup ss(space);
-
-    // Setup collision checker
-    ob::SpaceInformationPtr si = ss.getSpaceInformation();
-    si->setStateValidityChecker(OMPLStateValidityChecker);
-    si->setMotionValidator(std::make_shared<OMPLMotionValidator>(si));
-    si->setup();
-
-    // Set planner
-    ob::PlannerPtr planner(new PlannerType(si));
-    ss.setPlanner(planner);
-
-    ob::ScopedState<> start_state(space);
-    start_state[0] = start.x;
-    start_state[1] = start.y;
-    start_state[2] = start.z;
-
-    ob::ScopedState<> goal_state(space);
-    goal_state[0] = goal.x;
-    goal_state[1] = goal.y;
-    goal_state[2] = goal.z;
-
-    ss.setStartAndGoalStates(start_state, goal_state);
-
-    ss.setup();
-
-    // Solve for path
-    ob::PlannerStatus solved = ss.solve(10.0);
-
-    if (solved)
-    {
-        ROS_INFO("Solution found!");
-        ss.simplifySolution();
-
-        for (auto state : ss.getSolutionPath().getStates()) {
-            const auto *pos = state->as<ob::RealVectorStateSpace::StateType>();
-
-            double x = pos->values[0];
-            double y = pos->values[1];
-            double z = pos->values[2];
-
-            result.push_back({x, y, z});
-        }
-    }
-    else
-        ROS_ERROR("Path not found!");
-
-    return result;
-#else
-    ROS_ERROR("OMPL-based planners cannot be compiled together with inflation!");
-#endif
-}
-
-
-piecewise_trajectory OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
-{
-    return OMPL_plan<ompl::geometric::RRT>(start, goal, width, length, n_pts_per_dir, octree);
-}
-
-
-piecewise_trajectory OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
-{
-    return OMPL_plan<ompl::geometric::RRTConnect>(start, goal, width, length, n_pts_per_dir, octree);
-}
-
-
-piecewise_trajectory OMPL_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
-{
-    return OMPL_plan<ompl::geometric::PRM>(start, goal, width, length, n_pts_per_dir, octree);
+    double dx = goal.x - start.x;
+    double dy = goal.y - start.y;
+    double dz = goal.z - start.z;
+    double d = std::sqrt(dx*dx + dy*dy + dz*dz);
+    // double yaw = std::atan2(dy, dx);
+    double yaw = std::atan2(dx, dy);
+
+    ROS_INFO("dx,dy,dz is (%f %f %f)", dx, dy, dz);
+    ROS_INFO_STREAM("Yaw is " << yaw << " and d is " << d);
+    ROS_INFO_STREAM("Alternative yaw is " << std::atan2(dx, dy));
+
+    graph::node start_node{start.x, start.y, start.z};
+    graph::node goal_node{goal.x, goal.y, goal.z};
+    graph::node mid{(start.x+goal.x)/2.0, (start.y+goal.y)/2.0, (start.z+goal.z)/2.0};
+
+    mid.x -= (d/2)*std::cos(yaw);
+    mid.y += (d/2)*std::sin(yaw);
+
+    return {start_node, mid, goal_node};
 }
 

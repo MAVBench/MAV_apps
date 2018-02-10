@@ -13,15 +13,16 @@
     <param name="/ip_addr" value="$(arg host_ip)" />
 
     <!-- Drone's physical characteristics /-->
-    <arg name="v_max" default="2"/> 
-    <arg name="a_max" default="6"/> 
+    <arg name="v_max" default="1"/> 
+    <arg name="a_max" default="7"/> 
 
     <!-- orb slam location--> 
     <arg name="orb_slam2_dir" default="$(find ORB_SLAM2)/../../.."/> 
+    <arg name="orb_slam2_sleep_time" default="0"/> 
     
     <!-- Set the localization method /-->
-    <!-- arg name="localization_method" default="orb_slam2_rgbd" /-->
-    <arg name="localization_method" default="ground_truth" />
+    <arg name="localization_method" default="orb_slam2_rgbd" />
+    <!--arg name="localization_method" default="ground_truth" /-->
     <!--arg name="localization_method" default="gps" /-->
     
     <!-- stat file-->
@@ -29,7 +30,7 @@
 
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
     <!-- also planning to prevent stdio stuff(if they really matter)-->
-    <arg name="DEBUG" default="true" />
+    <arg name="DEBUG" default="false" />
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
 
     <!-- set this to "" if you don't want perf -->
@@ -39,6 +40,8 @@
     <!-- starting nodes -->
 
     <node pkg="stats_manager" type="stats_manager" name="stats_manager" output="screen"/>
+
+    <node pkg="stats_manager" type="slam_hz.sh" name="slam_hz" args="$(arg orb_slam2_sleep_time) $(arg v_max)"/>
 
     <!-- Octomap -->
 	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
@@ -105,12 +108,16 @@
 
     </node>
 	
+    <?ignore 
     <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
-		<param name="panic_distance" value="0.5"/>
+		<param name="panic_distance" value="1"/>
     </node>
+    ?>
 
+    <?ignore 
     <node pkg="package_delivery" type="future_collision" name="future_collision" output="screen">
     </node>
+    ?>
     
     <?ignore 
     <!-- Convert to point cloud -->
@@ -142,7 +149,7 @@
         <param name="z_dist_to_sample_from__low_bound" value="2"/>
         <param name="z_dist_to_sample_from__high_bound" value="6"/>
 
-        <param name="sampling_interval" value="0.5"/>
+        <param name="sampling_interval" value="0.25"/>
 
         <!-- options for motion_planning core --> 
         <!-- param name="motion_planning_core" value="PRM"/-->
@@ -164,7 +171,9 @@
     </node>
 
 	<group if="$(eval localization_method == 'orb_slam2_rgbd')">
-        <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth" output="screen"/>
+        <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth" output="screen">
+            <param name="sleep_time" value="$(arg orb_slam2_sleep_time)" />
+        </node>
 	</group>
     
     <!-- rviz -->
