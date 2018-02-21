@@ -14,7 +14,7 @@ void sigIntHandler(int sig);
 
 // Stats functions
 void update_stats_file(const std::string& stats_file__addr, const std::string& content);
-void output_flight_summary(Drone& drone, const std::string& fname);
+void output_flight_summary(msr::airlib::FlightStats init, msr::airlib::FlightStats end, std::string mission_status, const std::string& fname);
 
 
 // Functions and classes to manipulate and follow trajectories

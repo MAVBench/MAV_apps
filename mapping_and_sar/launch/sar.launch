@@ -35,6 +35,7 @@
     <node pkg="stats_manager" type="stats_manager" name="stats_manager" output="screen"/>
 
     <include file="$(find mapping_and_sar)/launch/mav_inspector.launch">
+    <arg name="DEBUG" value="$(arg DEBUG)"/> 
     <arg name="app_name" value="SAR" />
     <arg name="mav_name" value="$(arg mav_name)" />
     <arg name="host_ip" value="$(arg host_ip)"/>
@@ -42,7 +43,7 @@
     <arg name="waypoint_x" value="0.0" />
     <arg name="waypoint_y" value="0.0" />
     <arg name="waypoint_z" value="1.0" />
-    <arg name="param_file" value="$(find mapping_and_sar)/resource/exploration.yaml" />
+    <arg name="param_file" value="$(find mapping_and_sar)/resource/mapping.yaml" />
     <arg name="enable_logging" value="$(arg enable_logging)" />
     <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
     <arg name="log_file" value="$(arg log_file)" />
@@ -60,7 +61,7 @@
   <arg name="host_ip" value="$(arg host_ip)"/>
   </include>
 
-  <arg name="param_file" value="$(find mapping_and_sar)/resource/exploration.yaml" />
+  <arg name="param_file" value="$(find mapping_and_sar)/resource/mapping.yaml" />
   <!-- following the tejactory --> 
   <!-- group ns="$(arg mav_name)" -->
   <node pkg="mapping_and_sar" type="follow_trajectory" name="follow_trajectory" output="screen">

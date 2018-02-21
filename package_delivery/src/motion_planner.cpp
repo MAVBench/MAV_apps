@@ -120,7 +120,7 @@ void generate_octomap(const octomap_msgs::Octomap& msg);
 
 
 // ***F:DN FOR MICRO-BENCHMARK
-piecewise_trajectory semicircle(geometry_msgs::Point start, geometry_msgs::Point goal);
+piecewise_trajectory circle(geometry_msgs::Point start, geometry_msgs::Point goal);
 
 
 // *** F:DN Optimize and smoothen a piecewise path without causing any new collisions.
@@ -164,7 +164,7 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
 
     // piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length ,req.n_pts_per_dir, octree);
     //piecewise_path = motion_planning_core(req.start, req.goal, octree);
-    piecewise_path = semicircle(req.start, req.goal);
+    piecewise_path = circle(req.start, req.goal);
 
     if (piecewise_path.size() == 0) {
         ROS_ERROR("Empty path returned");
@@ -588,52 +588,6 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
 		// (Each segment goes from one of the original nodes to the next one in the path)
 		mav_trajectory_generation::Segment::Vector segments;
 		opt.getSegments(&segments);
-
-		// Loop through the vector of segments looking for collisions
-        /*
-		for (int i = 0; !col && i < segments.size(); ++i) {
-			const double time_step = 0.1;
-			double segment_len = segments[i].getTime();
-
-			auto segment_start = *(piecewise_path.begin() + i);
-			auto segment_end = *(piecewise_path.begin() + i + 1);
-
-			// Step through each individual segment, at increments of "time_step" seconds, looking for a collision
-			for (double t = 0; t < segment_len - time_step; t += time_step) {
-				auto pos1 = segments[i].evaluate(t);
-				auto pos2 = segments[i].evaluate(t + time_step);
-
-				graph::node n1 = {pos1.x(), pos1.y(), pos1.z()};
-				graph::node n2 = {pos2.x(), pos2.y(), pos2.z()};
-
-				// Check for a collision between two near points on the segment
-				
-                
-            if (motion_planning_core_str != "lawn_mower") {
-                if (out_of_bounds(n1) || out_of_bounds(n2) || collision(octree, n1, n2)) {
-					// Add a new vertex in the middle of the segment we are currently on
-					mav_trajectory_generation::Vertex middle(dimension);
-
-					double middle_x = (segment_start.x + segment_end.x) / 2;
-					double middle_y = (segment_start.y + segment_end.y) / 2;
-					double middle_z = (segment_start.z + segment_end.z) / 2;
-
-					middle.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(middle_x, middle_y, middle_z));
-
-					vertices.insert(vertices.begin()+i+1, middle);
-
-                    // Add a new node to the piecewise path where the vertex is
-                    graph::node middle_node = {middle_x, middle_y, middle_z};
-					piecewise_path.insert(piecewise_path.begin()+i+1, middle_node);
-
-					col = true;
-
-					break;
-				}
-            }
-			}
-		}
-        */
 	} while (col);
 
 	// Return the collision-free smooth trajectory
@@ -705,26 +659,39 @@ void postprocess(piecewise_trajectory& path)
 }
 
 
-piecewise_trajectory semicircle(geometry_msgs::Point start, geometry_msgs::Point goal)
+piecewise_trajectory circle(geometry_msgs::Point start, geometry_msgs::Point goal)
 {
+    piecewise_trajectory result;
+
     double dx = goal.x - start.x;
     double dy = goal.y - start.y;
     double dz = goal.z - start.z;
     double d = std::sqrt(dx*dx + dy*dy + dz*dz);
-    // double yaw = std::atan2(dy, dx);
+    double r = d/2;
     double yaw = std::atan2(dx, dy);
-
-    ROS_INFO("dx,dy,dz is (%f %f %f)", dx, dy, dz);
-    ROS_INFO_STREAM("Yaw is " << yaw << " and d is " << d);
-    ROS_INFO_STREAM("Alternative yaw is " << std::atan2(dx, dy));
+    const double pi = std::atan(1)*4;
 
     graph::node start_node{start.x, start.y, start.z};
     graph::node goal_node{goal.x, goal.y, goal.z};
     graph::node mid{(start.x+goal.x)/2.0, (start.y+goal.y)/2.0, (start.z+goal.z)/2.0};
 
-    mid.x -= (d/2)*std::cos(yaw);
-    mid.y += (d/2)*std::sin(yaw);
+    std::cout << mid.x << ", " << mid.y << ", " << mid.z << std::endl;
 
-    return {start_node, mid, goal_node};
+    result.push_back(start_node);
+    for (double a = 0; a <= 180;) {
+        graph::node n;
+        n.x = mid.x - r*std::sin(a/180 * pi);
+        n.y = mid.y - r*std::cos(a/180 * pi);
+        n.z = start.z + a/180 * (goal.z-start.z);
+        result.push_back(n);
+
+        if (a < 5 || a > 175)
+            a += 0.05;
+        else
+            a += 5;
+    }
+    result.push_back(goal_node);
+
+    return result;
 }
 

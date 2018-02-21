@@ -7,11 +7,17 @@
 #include <limits>
 #include <cmath>
 
+#include <std_srvs/Trigger.h>
+
 #include <Eigen/Dense>
 
 #include "common.h"
 
 using namespace std;
+
+vector<Eigen::Matrix4d> P;
+vector<Eigen::Matrix4d> Q;
+string stats_fname;
 
 // Functions to calculate SLAM error
 // Explanation of formula: "A Benchmark for the Evaluation of RGB-D SLAM Systems"
@@ -21,28 +27,37 @@ Eigen::Matrix4d Ei(const std::vector<Eigen::Matrix4d>& P, const std::vector<Eige
 double rmse_E_delta(const std::vector<Eigen::Matrix4d>& P, const std::vector<Eigen::Matrix4d>& Q, int delta);
 double absoluteTrajectoryError(const std::vector<Eigen::Matrix4d>& P, const std::vector<Eigen::Matrix4d>& Q);
 
+bool output(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res)
+{
+    ROS_INFO("Calculating!");
+    stringstream slam_error_ss;
+    slam_error_ss << "{" << endl;
+    // slam_error_ss << "  \"SLAM_relative_pose_error\": " << relativePoseError(P, Q) << "," << endl;
+    slam_error_ss << "  \"SLAM_absolute_trajectory_error\": " << absoluteTrajectoryError(P, Q) << "," << endl;
+    update_stats_file(stats_fname, slam_error_ss.str());
+    ROS_INFO("Done calculating error!");
+
+    res.success = true;
+    return true;
+}
+
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "stats_manager");
     ros::NodeHandle n;
-
+    
     // Variables for SLAM accuracy measurements
     tf::TransformListener tfListen;
-    std::vector<Eigen::Matrix4d> P;
-    std::vector<Eigen::Matrix4d> Q;
 
     // Parameters
-    uint16_t port = 41451;
-    string ip_addr;
-    string stats_fname;
     string localization_method;
 
-    ros::param::get("/ip_addr", ip_addr);
     ros::param::get("/stats_file_addr", stats_fname);
     ros::param::get("/airsim_imgPublisher/localization_method", localization_method);
 
-    Drone drone(ip_addr.c_str(), port);
+    ros::ServiceServer service = n.advertiseService("/output_stats", output);
 
 	ros::Rate loop_rate(10);
     while (ros::ok()) {
@@ -67,16 +82,9 @@ int main(int argc, char **argv)
             // ROS_ERROR("Stats manager failed to read transform");
         }
 
+        ros::spinOnce();
         loop_rate.sleep();
     }
-
-    update_stats_file(stats_fname, "\nFlightSummaryEnd: ");
-    output_flight_summary(drone, stats_fname);
-
-    stringstream slam_error_ss;
-    slam_error_ss << "SLAM_relative_pose_error: " << relativePoseError(P, Q) << endl;
-    slam_error_ss << "SLAM_absolute_trajectory_error: " << absoluteTrajectoryError(P, Q) << endl;
-    update_stats_file(stats_fname, slam_error_ss.str());
 
     return 0;
 }

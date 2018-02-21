@@ -19,6 +19,7 @@
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
 #include <std_msgs/Bool.h>
+#include <std_srvs/Trigger.h>
 #include "common.h"
 #include "timer.h"
 
@@ -33,6 +34,7 @@ string localization_method;
 string stats_file_addr;
 string ns;
 double v_max;
+double angular_vel;
 	
 enum State { setup, waiting, flying, completed, failed, invalid };
 
@@ -84,6 +86,11 @@ void package_delivery_initialize_params() {
                 (ns + "/v_max").c_str());
      return; 
     }
+    if(!ros::param::get("/angular_vel", angular_vel)){
+        ROS_FATAL("Could not start exploration. Parameter missing! Looking for %s", 
+                (ns + "/angular_vel").c_str());
+     return;
+    }
 }
 
 geometry_msgs::Point get_start(Drone& drone) {
@@ -130,6 +137,8 @@ trajectory_t mod_trajectory(const trajectory_t& trajectory) {
 
     trajectory_t result;
 
+    float yaw = -90;
+
     for (multiDOFpoint p : trajectory) {
         double v = std::sqrt(p.vx*p.vx + p.vy*p.vy + p.vz*p.vz);
         double scale = v_max / v;
@@ -138,11 +147,29 @@ trajectory_t mod_trajectory(const trajectory_t& trajectory) {
         p.vy *= scale;
         p.vz *= scale;
         p.duration /= scale;
+        p.yaw = yaw;
 
         if (p.vx != p.vx || p.vy != p.vy || p.vz != p.vz || p.duration == 0)
             continue;
+        yaw += p.duration * angular_vel;
+        yaw = yaw <= 180 ? yaw : yaw-360;
         result.push_back(p);
     }
+
+    // Reverse path to build full circle
+    trajectory_t back_path;
+    for (multiDOFpoint p : result) {
+        p.vx = -p.vx;
+        p.vy = -p.vy;
+        p.vz = -p.vz;
+        p.yaw = yaw;
+
+        yaw += p.duration * angular_vel;
+        yaw = yaw <= 180 ? yaw : yaw-360;
+
+        back_path.push_back(p);
+    }
+    result.insert(result.end(), back_path.begin(), back_path.end());
 
     return result;
 }
@@ -176,12 +203,16 @@ int main(int argc, char **argv)
     bool created_slam_loss_traj = false;
 
     uint16_t port = 41451;
-    Drone drone(ip_addr__global.c_str(), port, localization_method);
+    // Drone drone(ip_addr__global.c_str(), port, localization_method);
+    Drone drone(ip_addr__global.c_str(), port, "ground_truth");
     bool delivering_mission_complete = false; //if true, we have delivered the 
                                               //pkg and successfully returned to origin
     // *** F:DN subscribers,publishers,servers,clients
 	ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("get_trajectory_srv");
+	ros::ServiceClient stats_output_client = 
+        nh.serviceClient<std_srvs::Trigger>("output_stats");
+
     ros::Subscriber panic_sub = 
 		nh.subscribe<std_msgs::Bool>("panic_topic", 1, panic_callback);
     ros::Subscriber panic_dir_sub = 
@@ -196,14 +227,14 @@ int main(int argc, char **argv)
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
 	//----------------------------------------------------------------- 
-    const float goal_s_error_margin = 100.0; //ok distance to be away from the goal.
+    const float goal_s_error_margin = 1e9; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
                                            //flight controler to land exactly
                                            //on the goal
 
-    
-    
+    msr::airlib::FlightStats init_stats, end_stats;
+    std::string mission_status = "timeout";
     //----------------------------------------------------------------- 
 	// *** F:DN Body
 	//----------------------------------------------------------------- 
@@ -220,9 +251,9 @@ int main(int argc, char **argv)
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     
-    update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
-    log_time(stats_file_addr);
-    update_stats_file(stats_file_addr,"###\n");
+    //update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
+    //log_time(stats_file_addr);
+    //update_stats_file(stats_file_addr,"###\n");
 
     for (State state = setup; ros::ok(); ) {
         ros::spinOnce();
@@ -235,7 +266,10 @@ int main(int argc, char **argv)
             goal = get_goal();
             start = get_start(drone);
 
+            init_stats = drone.getFlightStats();
             // spin_around(drone);
+            drone.set_yaw(-90);
+            
             next_state = waiting;
         }
         else if (state == waiting)
@@ -260,7 +294,7 @@ int main(int argc, char **argv)
             trajectory_t * forward_traj = nullptr;
             trajectory_t * rev_traj = nullptr;
             bool check_position = false;
-            yaw_strategy_t yaw_strategy = face_forward;
+            yaw_strategy_t yaw_strategy = follow_yaw; // face_forward; // ignore_yaw;
 
             // Handle panic queue
             if (should_panic) {
@@ -347,7 +381,19 @@ int main(int argc, char **argv)
 
             if (dist(drone.position(), goal) < goal_s_error_margin) {
                 ROS_INFO("Delivered the package and returned!");
-                update_stats_file(stats_file_addr,"mission_status completed");
+                mission_status = "completed"; 
+
+                end_stats = drone.getFlightStats();
+                std_srvs::Trigger srv;
+                if (!stats_output_client.call(srv)) {
+                    ROS_ERROR("Failed to output some info.");
+                }
+                output_flight_summary(init_stats, end_stats, mission_status, stats_file_addr);
+
+
+                break;
+                //update_stats_file(stats_file_addr,"mission_status completed");
+
                 next_state = setup;
             } else { //If we've drifted too far off from the destination
                 ROS_WARN("We're a little off...");
@@ -363,7 +409,18 @@ int main(int argc, char **argv)
         }
         else if (state == failed) {
             ROS_ERROR("Failed to reach destination");
-            update_stats_file(stats_file_addr,"mission_status failed");
+            mission_status = "failed"; 
+
+            end_stats = drone.getFlightStats();
+            std_srvs::Trigger srv;
+            if (!stats_output_client.call(srv)) {
+                ROS_ERROR("Failed to output some info.");
+            }
+            output_flight_summary(init_stats, end_stats, mission_status, stats_file_addr);
+
+            break;
+
+            //update_stats_file(stats_file_addr,"mission_status failed");
             next_state = setup;
         }
         else
