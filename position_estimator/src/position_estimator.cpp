@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include <phoenix_msg/error.h>
+#include <tf/transform_listener.h>
 
 enum estimator_t {GPS, SLAM_All, SLAM_MI, IMU} // SLAM_All: stereo+IMU. SLAM_MI: monocular+IMU
 
@@ -15,28 +17,25 @@ int main(int argc, char **argv)
     //-----------------------------------------------------------------
 	// *** F:DN variables	
 	//-----------------------------------------------------------------
-    //uint16_t port = 41451;
-    //Drone drone(ip_addr__global.c_str(), port, localization_method);
-                                              //pkg and successfully returned to origin
-    // *** F:DN subscribers,publishers,servers,clients
-    ros::ServiceClient SLAM_All_start_stop_client = 
-        nh.serviceClient<std_msgs::Bool>("/SLAM_All/start_stop");
-   ros::ServiceClient SLAM_All_inputs_client = 
-        nh.serviceClient<phoenix_tb_msgs::error>("/SLAM_All/good_sensors");
+   
+    // ros::ServiceClient SLAM_All_start_stop_client = 
+    //     nh.serviceClient<std_msgs::Bool>("/SLAM_All/start_stop");
+    // ros::ServiceClient SLAM_All_inputs_client = 
+    //     nh.serviceClient<phoenix_tb_msgs::error>("/SLAM_All/good_sensors");
 
-    ros::ServiceClient SLAM_MI_start_stop_client = 
-        nh.serviceClient<std_msgs::Bool>("/SLAM_MI/start_stop");
-   ros::ServiceClient SLAM_MI_inputs_client = 
-        nh.serviceClient<phoenix_tb_msgs::error>("/SLAM_MI/good_sensors");
-
+    // ros::ServiceClient SLAM_MI_start_stop_client = 
+    //     nh.serviceClient<std_msgs::Bool>("/SLAM_MI/start_stop");
+    // ros::ServiceClient SLAM_MI_inputs_client = 
+    //     nh.serviceClient<phoenix_tb_msgs::error>("/SLAM_MI/good_sensors");
+    
     ros::Subscriber error_sub =  
-		nh.subscribe<phoenix_tb_msgs::error>("error", 1, error_callback);
+		nh.subscribe<phoenix_msg::error>("error", 1, error_callback);
 
 	ros::spin();
 }
 
 
-void error_callback(const phoenix_tb_msgs::error::ConstPtr& msg) {
+void error_callback(const phoenix_msg::error::ConstPtr& msg) {
 	/*
 	msg.imu0
 	msg.imu1
@@ -49,7 +48,7 @@ void error_callback(const phoenix_tb_msgs::error::ConstPtr& msg) {
 
 	estimator_t estimator;
 
-	static phoenix_tb_msgs::error last_msg;
+	static phoenix_msg::error last_msg;
 
 	if(msg.gps) {
 		estimator = GPS;
@@ -66,16 +65,34 @@ void error_callback(const phoenix_tb_msgs::error::ConstPtr& msg) {
 		}
 	}
 
-	if (estimator == GPS) {
-		// broadcast GPS as true transform
-	} else if (estimator == SLAM_All) {
-		// broacast SLAM_All as true transform
-	} else if (estimator == SLAM_MI) {
-		// broadcast SLAM_MI as true transform
-	} else if (estimator == IMU) {
-		// broadcast IMU as true transform
-	}
+    static tf::TransformListener tfListen;
+    static tf::TransformBroadcaster tfBroadcast;
+    try {
+        tf::StampedTransform transform;
 
+        if (estimator == GPS) {
+            // broadcast GPS as true transform
+            tfListen.lookupTransform("world", "gps", ros::Time(0), transform);
+        } else if (estimator == SLAM_All) {
+            // broacast SLAM_All as true transform
+            tfListen.lookupTransform("world", "vins-mono", ros::Time(0), transform);
+        } else if (estimator == SLAM_MI) {
+            // broadcast SLAM_MI as true transform
+            tfListen.lookupTransform("world", "vins-mono", ros::Time(0), transform);
+        }
+        /*
+        else if (estimator == IMU) {
+            // broadcast IMU as true transform
+        }
+        */
+
+        transform.child_frame_id_ = "drone";
+        tfBroadcast.sendTransform(transform);
+    } catch (tf::TransformException& ex) {
+        ROS_ERROR("%s", ex.what());
+    }
+
+    /*
 	if (msg != last_msg) {
 		if (estimator == GPS) {
 			SLAM_All_start_stop_client.call("stop");
@@ -95,6 +112,7 @@ void error_callback(const phoenix_tb_msgs::error::ConstPtr& msg) {
 			SLAM_MI_start_stop_client.call("stop");
 		}
 	}
+    */
 
 	last_msg = msg;
 }
