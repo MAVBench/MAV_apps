@@ -49,7 +49,7 @@ public:
     geometry_msgs::Pose pose();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
 
-    //coord gps();
+    coord gps();
 
     // *** F:DN Query data
     float get_pitch();
