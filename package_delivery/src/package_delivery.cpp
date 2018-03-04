@@ -158,7 +158,8 @@ int main(int argc, char **argv)
     double max_speed_increment_time = 0;
 	
     uint16_t port = 41451;
-    Drone drone(ip_addr__global.c_str(), port, localization_method);
+    // Drone drone(ip_addr__global.c_str(), port, localization_method);
+    Drone drone(ip_addr__global.c_str(), port, "drone");
     bool delivering_mission_complete = false; //if true, we have delivered the 
                                               //pkg and successfully returned to origin
     // *** F:DN subscribers,publishers,servers,clients
