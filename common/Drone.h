@@ -20,7 +20,7 @@
 
 const float FACE_FORWARD = std::numeric_limits<float>::infinity();
 const float FACE_BACKWARD = -std::numeric_limits<float>::infinity();
-const float YAW_UNCHANGED = std::numeric_limits<float>::quiet_NaN();
+const float YAW_UNCHANGED = -1e9;
 
 class Drone {
 public:
@@ -48,19 +48,25 @@ public:
     coord position(); 
     geometry_msgs::Pose pose();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
-
     coord gps();
 
     // *** F:DN Query data
     float get_pitch();
     float get_yaw();
     float get_roll();
-    //geometry_msgs::Pose get_geometry_pose();
-    //geometry_msgs::PoseWithCovariance get_geometry_pose_with_coveraiance();
-    msr::airlib::FlightStats getFlightStats();
+    //coord gps();
 
+    // *** F:DN Stats functions
+    msr::airlib::FlightStats getFlightStats();
+    
+    msr::airlib::IMUStats getIMUStats();
+    
     // *** F:DN Collison functions
     msr::airlib::CollisionInfo getCollisionInfo();
+
+    // *** F:DN Drone parameters functions
+    float maxYawRate();
+    float maxYawRateDuringFlight();
 
 private:
     msr::airlib::MultirotorRpcLibClient * client;
@@ -71,7 +77,10 @@ private:
     uint64_t collision_count;
 
     float max_yaw_rate = 15.0;
+    //float max_yaw_rate_during_flight = 90.0;
     float max_yaw_rate_during_flight = 10.0;
+    // Initial position as determined by the flight-controller 
+    coord initial_fc_pos;
 };
 
 #endif

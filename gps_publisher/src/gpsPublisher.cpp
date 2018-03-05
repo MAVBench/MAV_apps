@@ -45,9 +45,9 @@ int main(int argc, char **argv)
       transform.setRotation(q);
 
       br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-                  "world", "gps");
+                  "world", "gps"));
 
-      std_cout << "Position: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+      cout << "Position: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
       loop_rate.sleep();
   }
 
