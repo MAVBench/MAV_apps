@@ -28,6 +28,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(5);
 
   tf::TransformBroadcaster br;
+  tf::TransformListener listen;
 
   uint16_t port = 41451;
   string ip_addr__global = "10.157.90.49";
@@ -43,12 +44,15 @@ int main(int argc, char **argv)
       if (imu.time_stamp != imu_last_time_stamp) {
           imu_last_time_stamp = imu.time_stamp;
 
-          tf::Transform transform;
+          tf::StampedTransform transform;
+
+          listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
+
           transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
 
-          tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
-                  imu.orientation.z(), imu.orientation.w());
-          transform.setRotation(q);
+          // tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
+          //         imu.orientation.z(), imu.orientation.w());
+          // transform.setRotation(q);
 
           br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
                       "world", "gps"));
