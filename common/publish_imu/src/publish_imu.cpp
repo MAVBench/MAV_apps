@@ -32,10 +32,12 @@ using namespace std;
 std::string ip_addr__global;
 using namespace msr::airlib;
 
+
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
-    
+
     // ROS node initialization
     ros::init(argc, argv, "publish_imu", ros::init_options::NoSigintHandler);
     ros::NodeHandle nh;
@@ -52,45 +54,54 @@ int main(int argc, char **argv)
     sensor_msgs::Imu IMU_msg;
     ros::Publisher IMU_pub = nh.advertise <sensor_msgs::Imu>("imu_topic", 1);
     IMUStats IMU_stats;
-    //geometry_msgs::Vector3 linear_acceleration; 
-    //geometry_msgs::Vector3 angular_velocity; 
-    //geometry_msgs::Quaternion orientation;     
+    //geometry_msgs::Vector3 linear_acceleration;
+    //geometry_msgs::Vector3 angular_velocity;
+    //geometry_msgs::Quaternion orientation;
     //float roll, yaw, pitch;
     //msr::airlib::VectorMath::toEulerianAngle(IMU_stats.orientation, pitch, roll, yaw);
     //ROS_INFO_STREAM(yaw*180/M_PI);
 
+
+    uint64_t last_time_stamp = 0;   // unlikely will have a 0 timestamp
     while (ros::ok())
 	{
         //publish(drone);
-        IMU_stats = drone.getIMUStats();  
-        
-        IMU_msg.orientation.x  = IMU_stats.orientation.x();
-        IMU_msg.orientation.y  = IMU_stats.orientation.y();
-        IMU_msg.orientation.z  = IMU_stats.orientation.z();
-        IMU_msg.orientation.w  = IMU_stats.orientation.w();
-        IMU_msg.orientation_covariance[0] = .00001;
-        IMU_msg.orientation_covariance[4] = .00001;
-        IMU_msg.orientation_covariance[8] = .00001;
+        IMU_stats = drone.getIMUStats();
 
-        IMU_msg.angular_velocity.x = IMU_stats.angular_velocity[0];
-        IMU_msg.angular_velocity.y = IMU_stats.angular_velocity[1];
-        IMU_msg.angular_velocity.z = IMU_stats.angular_velocity[2];
-        IMU_msg.angular_velocity_covariance[0] = .00001;
-        IMU_msg.angular_velocity_covariance[4] = .00001;
-        IMU_msg.angular_velocity_covariance[8] = .00001;
+        // don't publish if timestamp stays the same
+        if (IMU_stats.time_stamp != last_time_stamp)
+        {
+            last_time_stamp = IMU_stats.time_stamp;
 
-        IMU_msg.linear_acceleration.x = IMU_stats.linear_acceleration[0];
-        IMU_msg.linear_acceleration.y = IMU_stats.linear_acceleration[1];
-        IMU_msg.linear_acceleration.z = IMU_stats.linear_acceleration[2];
-        IMU_msg.linear_acceleration_covariance[0] = .00001;
-        IMU_msg.linear_acceleration_covariance[4] = .00001;
-        IMU_msg.linear_acceleration_covariance[8] = .00001;
-        IMU_msg.header.stamp = ros::Time(uint32_t(IMU_stats.time_stamp / 1000000000 ),
-                IMU_stats.time_stamp%(IMU_stats.time_stamp/1000000000));
-        IMU_pub.publish(IMU_msg);
+            IMU_msg.orientation.x  = IMU_stats.orientation.x();
+            IMU_msg.orientation.y  = IMU_stats.orientation.y();
+            IMU_msg.orientation.z  = IMU_stats.orientation.z();
+            IMU_msg.orientation.w  = IMU_stats.orientation.w();
+            IMU_msg.orientation_covariance[0] = .00001;
+            IMU_msg.orientation_covariance[4] = .00001;
+            IMU_msg.orientation_covariance[8] = .00001;
+
+            IMU_msg.angular_velocity.x = IMU_stats.angular_velocity[0];
+            IMU_msg.angular_velocity.y = IMU_stats.angular_velocity[1];
+            IMU_msg.angular_velocity.z = IMU_stats.angular_velocity[2];
+            IMU_msg.angular_velocity_covariance[0] = .00001;
+            IMU_msg.angular_velocity_covariance[4] = .00001;
+            IMU_msg.angular_velocity_covariance[8] = .00001;
+
+            IMU_msg.linear_acceleration.x = IMU_stats.linear_acceleration[0];
+            IMU_msg.linear_acceleration.y = IMU_stats.linear_acceleration[1];
+            IMU_msg.linear_acceleration.z = IMU_stats.linear_acceleration[2];
+            IMU_msg.linear_acceleration_covariance[0] = .00001;
+            IMU_msg.linear_acceleration_covariance[4] = .00001;
+            IMU_msg.linear_acceleration_covariance[8] = .00001;
+            IMU_msg.header.stamp = ros::Time(uint32_t(IMU_stats.time_stamp / 1000000000 ),
+                    IMU_stats.time_stamp%(IMU_stats.time_stamp/1000000000));
+
+            IMU_pub.publish(IMU_msg);
+        }
         pub_rate.sleep();
     }
-    
+
 
 }
 
