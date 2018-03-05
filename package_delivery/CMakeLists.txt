@@ -30,6 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   nlopt
   minkindr_conversions
   octomap_world
+  nodelet
 )
 
 ## System dependencies are found with CMake's conventions
@@ -187,9 +188,11 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-add_executable(motion_planner src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
-add_dependencies(motion_planner package_delivery_generate_messages_cpp)
-target_link_libraries(motion_planner ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread  cuda cudart cublas curand )
+add_library(motion_planner_deps src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+
+add_library(motion_planner_nodelet src/motion_planner_nodelet.cpp)
+add_dependencies(motion_planner_nodelet package_delivery_generate_messages_cpp)
+target_link_libraries(motion_planner_nodelet motion_planner_deps ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread  cuda cudart cublas curand )
 
 add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
     ${common_utility_src}/common.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp)
