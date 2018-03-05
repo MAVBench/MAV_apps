@@ -46,19 +46,22 @@ int main(int argc, char **argv)
 
           tf::StampedTransform transform;
 
-          listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
+          try {
+              listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
 
-          transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
+              transform.setOrigin(tf::Vector3(pos.x, pos.y - 4, pos.z));
 
-          // tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
-          //         imu.orientation.z(), imu.orientation.w());
-          // transform.setRotation(q);
+              // tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
+              //         imu.orientation.z(), imu.orientation.w());
+              // transform.setRotation(q);
 
-          br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-                      "world", "gps"));
+              br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+                          "world", "gps"));
 
-          cout << "Position: " << pos.x << " " << pos.y << " " << pos.z
-               << " @" << timestamp << std::endl;
+              cout << "Position: " << pos.x << " " << pos.y - 4 << " " << pos.z
+                   << " @" << timestamp << std::endl;
+          } catch (...) {
+          }
       }
       loop_rate.sleep();
   }

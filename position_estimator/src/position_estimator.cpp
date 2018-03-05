@@ -74,10 +74,10 @@ void error_callback(const phoenix_msg::error::ConstPtr& msg) {
             tfListen.lookupTransform("world", "gps", ros::Time(0), transform);
         } else if (estimator == SLAM_All) {
             // broacast SLAM_All as true transform
-            tfListen.lookupTransform("world", "vins-mono", ros::Time(0), transform);
+            tfListen.lookupTransform("world", "orb_slam2_rgbd", ros::Time(0), transform);
         } else if (estimator == SLAM_MI) {
             // broadcast SLAM_MI as true transform
-            tfListen.lookupTransform("world", "vins-mono", ros::Time(0), transform);
+            tfListen.lookupTransform("world", "orb_slam2_rgbd", ros::Time(0), transform);
         }
         /*
         else if (estimator == IMU) {

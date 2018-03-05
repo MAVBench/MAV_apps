@@ -13,19 +13,17 @@
     <param name="/ip_addr" value="$(arg host_ip)" />
 
     <!-- Drone's physical characteristics /-->
-    <arg name="v_max" default="4.5"/> 
+    <arg name="v_max" default="2"/> 
     <arg name="a_max" default="8"/> 
 
     <!-- orb slam location--> 
     <arg name="orb_slam2_dir" default="$(find ORB_SLAM2)/../../.."/> 
-    
-    
         
     <!-- Set the localization method /-->
-    <!-- arg name="localization_method" default="orb_slam2_rgbd" /-->
+    <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
     <!--arg name="localization_method" default="vins_mono" /-->
-    <arg name="localization_method" default="gps" />
-    
+    <!-- arg name="localization_method" default="gps" /-->
+    <arg name="localization_method" default="ground_truth" />
     
     <!-- stat file-->
     <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />

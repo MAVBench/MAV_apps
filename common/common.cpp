@@ -291,9 +291,9 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
 
         if (check_position) {
             auto pos = drone.position();
-            v_x += 0.05*(p.x-pos.x);
-            v_y += 0.05*(p.y-pos.y);
-            v_z += 0.2*(p.z-pos.z);
+            v_x += 0.5*(p.x-pos.x);
+            v_y += 0.5*(p.y-pos.y);
+            v_z += 1.0*(p.z-pos.z);
         }
 
         // Calculate the yaw we should be flying with
