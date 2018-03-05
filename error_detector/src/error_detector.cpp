@@ -37,9 +37,8 @@ int main(int argc, char **argv)
     
 
     while(node.ok()){
-        //look up
         io_run();
-        ros::spin(1);
+        ros::spinOnce();
     }
 }
 
