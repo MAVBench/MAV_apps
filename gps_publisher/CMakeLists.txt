@@ -101,7 +101,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
-find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 catkin_package(
@@ -162,9 +161,9 @@ link_directories (
 #   ${catkin_LIBRARIES}
 # )
 
-add_executable(gps_publisher src/gps_publisher.cpp)
-add_dependencies()
-target_link_libraries()
+add_executable(gps_publisher src/gpsPublisher.cpp ${common_utility_src}/Drone.cpp)
+# add_dependencies()
+target_link_libraries(gps_publisher ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 
 #############
 ## Install ##

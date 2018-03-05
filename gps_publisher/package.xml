@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>package_delivery</name>
+  <name>gps_publisher</name>
   <version>0.0.0</version>
   <description>MAV-Bench ROS packages</description>
 

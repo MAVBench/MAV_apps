@@ -1,10 +1,10 @@
 #include <ros/ros.h>
 #include <phoenix_msg/error.h>
 #include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
+enum estimator_t {GPS, SLAM_All, SLAM_MI, IMU}; // SLAM_All: stereo+IMU. SLAM_MI: monocular+IMU
 
-enum estimator_t {GPS, SLAM_All, SLAM_MI, IMU} // SLAM_All: stereo+IMU. SLAM_MI: monocular+IMU
-
-void error_callback(const phoenix_tb_msgs::error::ConstPtr& msg);
+void error_callback(const phoenix_msg::error::ConstPtr& msg);
 
 // *** F:DN main function
 int main(int argc, char **argv)
@@ -12,7 +12,6 @@ int main(int argc, char **argv)
     // ROS node initialization
     ros::init(argc, argv, "position_estimator");
     ros::NodeHandle nh;
-    ns = ros::this_node::getName();
     
     //-----------------------------------------------------------------
 	// *** F:DN variables	
@@ -50,14 +49,14 @@ void error_callback(const phoenix_msg::error::ConstPtr& msg) {
 
 	static phoenix_msg::error last_msg;
 
-	if(msg.gps) {
+	if(msg->gps) {
 		estimator = GPS;
 	}
-	else if (msg.camera1 && msg.camera0 && msg.imu0) {
+	else if (msg->camera_left && msg->camera_right && msg->imu_0) {
 		estimator = SLAM_All;
 	}
-	else if ((!msg.camera1 || !msg.camera0) && msg.imu0){
-		if(!msg.camera1 && msg.camera0 || msg.camera1 && !msg.camera0) { // only one camera is working
+	else if ((!msg->camera_left || !msg->camera_right) && msg->imu_0){
+		if(!msg->camera_left && msg->camera_right || msg->camera_left && !msg->camera_right) { // only one camera is working
 			estimator = SLAM_MI;
 		}
 		else{ // only IMU no camera
@@ -114,5 +113,5 @@ void error_callback(const phoenix_msg::error::ConstPtr& msg) {
 	}
     */
 
-	last_msg = msg;
+	last_msg = *msg;
 }

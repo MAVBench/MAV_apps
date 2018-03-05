@@ -12,8 +12,10 @@
 Drone::Drone() : client(0)
 {
 	connect();
-    //initial_gps = {0, 0, 0};
-    //initial_gps = gps();
+
+	auto pos = client->getPosition();
+    initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
+
     this->localization_method = "ground_truth";
 }
 
@@ -21,15 +23,18 @@ Drone::Drone(const std::string& ip_addr, uint16_t port) : client(0), collision_c
     localization_method("ground_truth")
 {
 	connect(ip_addr, port);
-    //initial_gps = {0, 0, 0};
-    //initial_gps = gps();
+
+	auto pos = client->getPosition();
+    initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
 }
 
 Drone::Drone(const std::string& ip_addr, uint16_t port, std::string localization_method) : client(0), collision_count(0)
 {
 	connect(ip_addr, port);
-    //initial_gps = {0, 0, 0};
-    //initial_gps = gps();
+
+	auto pos = client->getPosition();
+    initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
+
     this->localization_method = localization_method;
 }
 
@@ -181,25 +186,9 @@ bool Drone::set_yaw_based_on_quaternion(geometry_msgs::Quaternion q)
 }
 
 static float xy_yaw(double x, double y) {
-    float angle_to_dest;
-
     if (x == 0 && y == 0)
-        angle_to_dest = 0;
-    else if (x == 0) {
-        angle_to_dest = y > 0 ? 0 : -180;
-    } else if (y == 0) {
-        angle_to_dest = x > 0 ? 90 : -90;
-    } else if (x > 0 && y > 0) {
-        angle_to_dest = std::atan(x/y) * 180.0/3.14;
-    } else if (x > 0 && y < 0) {
-        angle_to_dest = 180.0 - (std::atan(-x/y) * 180.0/3.14);
-    } else if (x < 0 && y > 0) {
-        angle_to_dest = -(std::atan(-x/y) * 180.0/3.14);
-    } else if (x < 0 && y < 0) {
-        angle_to_dest = -180 + (std::atan(x/y) * 180.0/3.14);
-    }
-
-    return angle_to_dest;
+        return YAW_UNCHANGED;
+    return 90 - atan2(y, x)*180.0/3.14;
 }
 
 bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double duration)
@@ -262,8 +251,8 @@ coord Drone::gps()
     // https://stackoverflow.com/questions/3024404/transform-longitude-latitude-into-meters
     coord result;
 
-	getCollisionInfo();
-	auto currentGPS = client->getGPSLocation();
+	// getCollisionInfo();
+	auto currentGPS = client->getGpsLocation();
 	auto homeGPS = client->getHomeGeoPoint();
 
     std::cout << "currentGPS: " << currentGPS << std::endl;
@@ -276,7 +265,7 @@ coord Drone::gps()
 
     result.x = deltaLong * latCircumference / 360;
     result.y = deltaLat * 40008000 / 360;
-    result.z = currentGPS.z - homeGPS.z;
+    result.z = currentGPS.altitude - homeGPS.altitude;
 
     return result;
 }
@@ -284,6 +273,7 @@ coord Drone::gps()
 geometry_msgs::Pose Drone::pose()
 {
     geometry_msgs::Pose result;
+
     /*
     if (this->localization_method == "gps") {
         auto p = client->getPosition();
@@ -296,8 +286,9 @@ geometry_msgs::Pose Drone::pose()
         result.orientation.z = q.z();
         result.orientation.w = q.w();
     }else{
-     */
+    */
     //std::cout<<"localization method is"<<this->localization_method<<std::endl;
+    
     tf::StampedTransform transform;
         try{
             tfListen.lookupTransform("/world", "/"+(this->localization_method),
@@ -305,6 +296,17 @@ geometry_msgs::Pose Drone::pose()
         }
         catch (tf::TransformException ex){
             ROS_ERROR("%s",ex.what());
+
+            auto p = client->getPosition();
+            auto q = client->getOrientation();
+            result.position.x = client->getPosition().y() - initial_fc_pos.x;
+            result.position.y = client->getPosition().x() - initial_fc_pos.y;
+            result.position.z = -1*client->getPosition().z() - initial_fc_pos.z;
+            result.orientation.x = q.x();
+            result.orientation.y = q.y();
+            result.orientation.z = q.z();
+            result.orientation.w = q.w();
+
             return result;
         }
 
@@ -456,5 +458,27 @@ msr::airlib::FlightStats Drone::getFlightStats()
         std::cerr << "getFlightStats() failed!" << std::endl;
         return msr::airlib::FlightStats();
     }
+}
+
+
+msr::airlib::IMUStats Drone::getIMUStats()
+{
+    try {
+        return client->getIMUStats();
+    } catch (const std::exception& e) {
+        std::cerr << "getIMUStats() failed!" << e.what()<<std::endl;
+        return msr::airlib::IMUStats();
+    }
+}
+
+
+float Drone::maxYawRate()
+{
+    return max_yaw_rate;
+}
+
+float Drone::maxYawRateDuringFlight()
+{
+    return max_yaw_rate_during_flight;
 }
 

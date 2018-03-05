@@ -51,8 +51,8 @@ nbvInspection::nbvPlanner<stateVec>::nbvPlanner(const ros::NodeHandle& nh,
   plannerService_ = nh_.advertiseService("nbvplanner",
                                          &nbvInspection::nbvPlanner<stateVec>::plannerCallback,
                                          this);
-  posClient_ = nh_.subscribe("pose", 10, &nbvInspection::nbvPlanner<stateVec>::posCallback, this);
-  odomClient_ = nh_.subscribe("odometry", 10, &nbvInspection::nbvPlanner<stateVec>::odomCallback, this);
+  posClient_ = nh_.subscribe("pose", 1, &nbvInspection::nbvPlanner<stateVec>::posCallback, this);
+  odomClient_ = nh_.subscribe("odometry", 1, &nbvInspection::nbvPlanner<stateVec>::odomCallback, this);
 
   pointcloud_sub_ = nh_.subscribe("pointcloud_throttled", 1,
                                   &nbvInspection::nbvPlanner<stateVec>::insertPointcloudWithTf,
@@ -154,6 +154,7 @@ template<typename stateVec>
 void nbvInspection::nbvPlanner<stateVec>::posCallback(
     const geometry_msgs::PoseWithCovarianceStamped& pose)
 {
+    //ROS_INFO_STREAM("n pcb"); 
     tree_->setStateFromPoseMsg(pose);
   // Planner is now ready to plan.
   ready_ = true;
@@ -169,10 +170,21 @@ void nbvInspection::nbvPlanner<stateVec>::odomCallback(
 }
 
 template<typename stateVec>
+float nbvInspection::nbvPlanner<stateVec>::update_coverage(int update_coverage_freq){
+    if (coverage_ctr_ % update_coverage_freq == 0) { 
+        coverage_ =  tree_->coverage();
+        ROS_INFO_STREAM("coverage so far" << coverage_ << "%"); 
+    }
+    coverage_ctr_++;
+    return coverage_;
+}
+
+    template<typename stateVec>
 bool nbvInspection::nbvPlanner<stateVec>::plannerCallback(nbvplanner::nbvp_srv::Request& req,
                                                           nbvplanner::nbvp_srv::Response& res)
 {
-  ros::Time computationTime = ros::Time::now();
+   //ROS_INFO_STREAM("in planner");
+    ros::Time computationTime = ros::Time::now();
   // Check that planner is ready to compute path.
   if (!ros::ok()) {
     ROS_INFO_THROTTLE(1, "Exploration finished. Not planning any further moves.");
@@ -195,7 +207,13 @@ bool nbvInspection::nbvPlanner<stateVec>::plannerCallback(nbvplanner::nbvp_srv::
 
   bool DEBUG = false;
   std::string ns = ros::this_node::getName();
-  ros::param::get(ns + "/DEBUG", DEBUG);
+  if(!ros::param::get(ns + "/DEBUG", DEBUG)) {
+      ROS_ERROR_STREAM("DEBUG parameter not provided in" << ns << " node");
+  }
+  int update_coverage_freq; 
+  if(!ros::param::get(ns + "/update_coverage_freq", update_coverage_freq)) {
+      ROS_ERROR_STREAM("update_coverage_freq parameter not provided in" << ns << " node");
+  }
   // Clear old tree and reinitialize.
   if(DEBUG){ 
       origin_destList = visualization_msgs::Marker();
@@ -256,6 +274,8 @@ bool nbvInspection::nbvPlanner<stateVec>::plannerCallback(nbvplanner::nbvp_srv::
   }
   evadePub_.publish(segment);
   ROS_INFO_STREAM("Path computation lasted"<<(ros::Time::now() - computationTime).toSec()<<"s");
+  res.coverage = update_coverage(update_coverage_freq); 
+  res.path_computation_time =  (ros::Time::now() - computationTime).toSec();
   return true;
 }
 
