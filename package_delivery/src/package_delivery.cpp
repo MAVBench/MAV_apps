@@ -32,6 +32,13 @@ bool should_panic = false;
 bool col_imminent = false;
 bool col_coming = false;
 bool slam_lost = false;
+
+long long g_panic_rlzd_t_accumulate = 0;
+int g_panic_ctr = 0;
+
+long long g_planning_time_including_ros_overhead_acc  = 0;
+int  g_planning_ctr = 0; 
+
 geometry_msgs::Vector3 panic_direction;
 string ip_addr__global;
 string localization_method;
@@ -42,10 +49,39 @@ std::string g_supervisor_mailbox; //file to write to when completed
 enum State { setup, waiting, flying, completed, failed, invalid };
 
 void log_data_before_shutting_down(){
+
+    std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     
     profiling_data_srv_inst.request.key = "mission_status";
     profiling_data_srv_inst.request.value = (g_mission_status == "completed" ? 1.0: 0.0);
+    if (ros::service::waitForService("/record_profiling_data", 10)){ 
+        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+            ROS_ERROR_STREAM("could not probe data using stats manager");
+            ros::shutdown();
+        }
+    }
+    
+    profiling_data_srv_inst.request.key = "panic_ctr";
+    profiling_data_srv_inst.request.value = g_panic_ctr;
+    if (ros::service::waitForService("/record_profiling_data", 10)){ 
+        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+            ROS_ERROR_STREAM("could not probe data using stats manager");
+            ros::shutdown();
+        }
+    }
+    
+    profiling_data_srv_inst.request.key = "panic_response_time_in_follow_the_leader";
+    profiling_data_srv_inst.request.value = (g_panic_rlzd_t_accumulate/ (double)g_panic_ctr)*1e-9;
+    if (ros::service::waitForService("/record_profiling_data", 10)){ 
+        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+            ROS_ERROR_STREAM("could not probe data using stats manager");
+            ros::shutdown();
+        }
+    }
+
+    profiling_data_srv_inst.request.key = "planning_including_ros_overhead";
+    profiling_data_srv_inst.request.value = ((double)g_planning_time_including_ros_overhead_acc/g_planning_ctr)/1e9;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
             ROS_ERROR_STREAM("could not probe data using stats manager");
@@ -183,6 +219,8 @@ int main(int argc, char **argv)
     Drone drone(ip_addr__global.c_str(), port, localization_method);
     bool delivering_mission_complete = false; //if true, we have delivered the 
                                               //pkg and successfully returned to origin
+    
+    ros::Time start_hook_t, end_hook_t;                                          
     // *** F:DN subscribers,publishers,servers,clients
 	ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("get_trajectory_srv");
@@ -207,7 +245,8 @@ int main(int argc, char **argv)
                                            //given the issues associated with
                                            //flight controler to land exactly
                                            //on the goal
-
+    ros::Time panic_realization_start_t;
+    ros::Time panic_realization_end_t;
     msr::airlib::FlightStats init_stats, end_stats;
     std::string mission_status;
     //----------------------------------------------------------------- 
@@ -247,10 +286,14 @@ int main(int argc, char **argv)
             ROS_INFO("Waiting to receive trajectory...");
 
             start = get_start(drone);
+            
+            start_hook_t = ros::Time::now(); 
             normal_traj = request_trajectory(get_trajectory_client, start, goal);
-
+            end_hook_t = ros::Time::now(); 
             // Pause a little bit so that future_col can be updated
             col_coming = col_imminent = false;
+            g_planning_time_including_ros_overhead_acc += ((end_hook_t - start_hook_t).toSec()*1e9);
+            g_planning_ctr++; 
             std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
             if (!normal_traj.empty())
@@ -268,8 +311,8 @@ int main(int argc, char **argv)
             // Handle panic queue
             if (should_panic) {
                 ROS_ERROR("Panicking!");
+                panic_realization_start_t = ros::Time::now();
                 panic_traj = create_panic_trajectory(drone, panic_direction);
-                
                 normal_traj.clear(); // Replan a path once we're done
             } else {
                 panic_traj.clear();
@@ -327,6 +370,13 @@ int main(int argc, char **argv)
                 rev_traj = &rev_normal_traj;
             }
 
+            if (should_panic){ //CLCT_DATA
+                panic_realization_end_t = ros::Time::now();
+                g_panic_rlzd_t_accumulate += 
+                    (panic_realization_end_t - panic_realization_start_t).toSec()*1e9;
+                g_panic_ctr++;
+            }
+            
             follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, check_position);
 
             // Choose next state (failure, completion, or more flying)

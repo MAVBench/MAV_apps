@@ -45,7 +45,6 @@ void signal_supervisor(std::string file_to_write_to, std::string msg){
 
 
 void update_stats_file(const std::string& stats_file__addr, const std::string& content){
-    printf("insed update stats file"); 
     std::ofstream myfile;
     myfile.open(stats_file__addr, std::ofstream::out | std::ofstream::app);
     myfile << content << std::endl;
@@ -93,7 +92,7 @@ trajectory_t create_future_col_trajectory(const trajectory_t& normal_traj, doubl
     multiDOFpoint first_p = normal_traj.front();
 
     double initial_velocity = magnitude(first_p.vx, first_p.vy, first_p.vz);
-    initial_velocity = std::max(initial_velocity, 1.0);
+    initial_velocity = std::max(initial_velocity, .001);
     double distance_left = stopping_distance;
 
     for (multiDOFpoint p : normal_traj) {

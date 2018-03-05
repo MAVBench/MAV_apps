@@ -14,29 +14,31 @@
 #include "string"
 #include <fstream>
 #include <iostream>
-#include "misc.h"
-#include "configs.h"
-#include "log__class.h"
+//#include "configs.h"
+//#include "log__class.h"
 #include <fstream>
 #include <cmath>
+#include "error.h"
 using namespace std;
 
-// *** F:DN calculate the error associated with follow the leader
-// they are all normalized
-
-error calculate_error(bounding_box bb, double roll, int img_cols, double height_ratio){
-    double bb__cntr =  target_y(img_cols/2, bb.x + bb.w/2, roll);
-    double img__col__cntr =  img_cols / 2;
+/*
+double target_y(double center, double target)
+{
+	return (target-center) + center;
+    //cos(roll * M_PI / 180) + center;
+}
+*/
+error calculate_error(bounding_box bb, int img_cols, double height_ratio){
     error my_error = {-1, -1, -1, -1};
-
-    // my_error.x = abs(height_ratio*img_cols - bb.h)/(height_ratio*img_cols)  ;
+    /*    
+    double bb_cntr =  target_y(img_cols/2, bb.x + bb.w/2);
+    double img_col_cntr =  img_cols / 2;
     my_error.x = abs(((height_ratio*img_cols)/bb.h)  - 1) ; //into the screen
-    
-    //double vx = 0; 
-    my_error.y = abs(img__col__cntr -  bb__cntr)/(img__col__cntr); 
+    my_error.y = abs(img_col_cntr -  bb_cntr)/(img_col_cntr); 
     my_error.full = (my_error.y + my_error.x)/2;
 
     my_error.z = abs(0);
+    */ 
     return my_error;
 
 }
