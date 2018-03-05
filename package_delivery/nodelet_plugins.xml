@@ -1,0 +1,8 @@
+<library path="lib/libmotion_planner_nodelet">
+  <class name="mp_pkg/MotionPlannerNodelet" type="mp_pkg::MotionPlannerNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for running the motion planning
+    </description>
+  </class>
+</library>
+
