@@ -34,7 +34,8 @@ int main(int argc, char **argv)
   Drone drone(ip_addr__global.c_str(), port);
 
   while (ros::ok()) {
-      auto pos = drone.gps();
+      uint64_t timestamp;
+      auto pos = drone.gps(timestamp);
       auto imu = drone.getIMUStats();
 
       tf::Transform transform;
