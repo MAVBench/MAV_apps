@@ -45,14 +45,14 @@ int main(int argc, char **argv)
 
 void camera_timer0_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
-    current_msg.camera = 1;
-    cameraTimer.async_wait(gps_timer_callback);
+    current_msg.camera0 = 1;
+    cameraTimer.async_wait(camera_timer0_callback);
 }
 
 void camera_timer1_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
-    current_msg.camera = 1;
-    cameraTimer1.async_wait(gps_timer_callback);
+    current_msg.camera1 = 1;
+    cameraTimer1.async_wait(camera_timer1_callback);
 }
 
 void imu_callback(){
@@ -63,7 +63,7 @@ void imu_callback(){
 void imu_timer_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
     current_msg.imu = 1;
-    imuTimer.async_wait(im_timer_callback);
+    imuTimer.async_wait(imu_timer_callback);
 }
 
 void gps_timer_callback(const boost::system::error_code& e){
@@ -75,6 +75,6 @@ void gps_timer_callback(const boost::system::error_code& e){
         phoenix_msg::error error_msg;
         current_msg.gps = 1;
     }
-    gps.async_wait(camera_timer_callback);
+    gps.async_wait(gps_timer_callback);
 }
 
