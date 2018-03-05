@@ -48,13 +48,12 @@ public:
     coord position(); 
     geometry_msgs::Pose pose();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
-    coord gps();
+    coord gps(uint64_t& timestamp);
 
     // *** F:DN Query data
     float get_pitch();
     float get_yaw();
     float get_roll();
-    //coord gps();
 
     // *** F:DN Stats functions
     msr::airlib::FlightStats getFlightStats();

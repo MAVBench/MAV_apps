@@ -246,18 +246,15 @@ bool Drone::land()
     return true;
 }
 
-coord Drone::gps()
+coord Drone::gps(uint64_t& timestamp)
 {
     // https://stackoverflow.com/questions/3024404/transform-longitude-latitude-into-meters
     coord result;
 
 	// getCollisionInfo();
-	auto currentGPS = client->getGpsLocation();
+	auto currentGPS = client->getGPSStats();
 	auto homeGPS = client->getHomeGeoPoint();
 
-    std::cout << "currentGPS: " << currentGPS << std::endl;
-    std::cout << "homeGPS: " << homeGPS << std::endl;
- 
     double deltaLat = currentGPS.latitude - homeGPS.latitude;
     double deltaLong = currentGPS.longitude - homeGPS.longitude;
 
@@ -266,6 +263,8 @@ coord Drone::gps()
     result.x = deltaLong * latCircumference / 360;
     result.y = deltaLat * 40008000 / 360;
     result.z = currentGPS.altitude - homeGPS.altitude;
+
+    timestamp = currentGPS.time_stamp;
 
     return result;
 }
