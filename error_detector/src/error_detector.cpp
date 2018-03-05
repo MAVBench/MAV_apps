@@ -9,10 +9,12 @@
 
 static tf::TransformListener listener;
 static ros::Publisher errorPub;
+static phoenix_msg::error current_msg;
 
-void camera_timer_callback(void);
-void imu_timer_callback(void);
-void gps_timer_callback(void);
+void camera_timer_callback(const boost::system::error_code& e);
+void imu_timer_callback(const boost::system::error_code& e);
+void imu_callback(void);
+void gps_timer_callback(const boost::system::error_code& e);
 
 int main(int argc, char **argv)
 {
@@ -24,48 +26,55 @@ int main(int argc, char **argv)
     boost::asio::io_context io;
     boost::asio::deadline_timer gpsTimer(io, boost::posix_time::seconds(5));
     boost::asio::deadline_timer imuTimer(io, boost::posix_time::seconds(5));
-    boost::asio::deadline_timer cameraTimer(io, boost::posix_time::seconds(5));    
+    boost::asio::deadline_timer cameraTimer0(io, boost::posix_time::seconds(5));    
+    boost::asio::deadline_timer cameraTimer1(io, boost::posix_time::seconds(5));     
     
-    
-    
-    errorPub = nh.advertise<phonix_msg::error("error", 1000);
+    ros::Subscriber imuSub = nh.subscribe<sensor_msgs::Imu>("imu_topic", 1, imu_callback);
+
+    errorPub = nh.advertise<phoenix_msg::error>("error", 1000);
     //start timers
-    gpsTimer.async_wait(gps_timer_callback());
-    imuTimer.async_wait(im_timer_callback());
-    cameraTimer.async_wait(camera_timer_callback());
-
+    gpsTimer.async_wait(gps_timer_callback);
     
-
-    while(node.ok()){
+    ros::Rate r(10);
+    while(ros::ok()){
         io_run();
+        errorPub.publish(current_msg);
         ros::spinOnce();
     }
 }
 
-void camera_timer_callback(){
-    phoenix_msg::error error_msg;
-    error_msg.camera = 1;
-    errorPub.publish(msg);
-    gpsTimer.async_wait(gps_timer_callback());
+void camera_timer0_callback(const boost::system::error_code& e){
+    if(e) return; //timer canceled
+    current_msg.camera0 = 1;
+    cameraTimer.async_wait(camera_timer0_callback);
 }
 
-void imu_timer_callback(){
-    phoenix_msg::error error_msg;
-    error_msg.imu = 1;
-    errorPub.publish(msg);
-    imuTimer.async_wait(im_timer_callback());
+void camera_timer1_callback(const boost::system::error_code& e){
+    if(e) return; //timer canceled
+    current_msg.camera1 = 1;
+    cameraTimer1.async_wait(camera_timer1_callback);
 }
 
-void gps_timer_callback(){
-    
+void imu_callback(){
+    imuTimer.cancel();
+    imuTimer.async_wait(imu_timer_callback);
+}
+
+void imu_timer_callback(const boost::system::error_code& e){
+    if(e) return; //timer canceled
+    current_msg.imu = 1;
+    imuTimer.async_wait(imu_timer_callback);
+}
+
+void gps_timer_callback(const boost::system::error_code& e){
+    if(e) return; //timer was canceled 
     tf::StampedTransform transform;
     try{
         tfListen.lookupTransform("/world", "/gps", ros::Time(0), transform);
     }catch(tf::TransformException ex){
         phoenix_msg::error error_msg;
-        error_msg.gps = 1;
-        errorPub.publish(msg);
+        current_msg.gps = 1;
     }
-    cameraTimer.async_wait(camera_timer_callback());
+    gps.async_wait(gps_timer_callback);
 }
 
