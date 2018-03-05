@@ -33,15 +33,15 @@ int main(int argc, char **argv)
   string ip_addr__global = "10.157.90.49";
   Drone drone(ip_addr__global.c_str(), port);
 
-  uint64_t imu_last_time_stamp = 0;
+  uint64_t gps_last_timestamp = 0;
   while (ros::ok()) {
       uint64_t timestamp;
       auto pos = drone.gps(timestamp);
       auto imu = drone.getIMUStats();
 
       // publish if last time stamp is sane
-      if (imu.time_stamp != imu_last_time_stamp) {
-          imu_last_time_stamp = imu.time_stamp;
+      if (timestamp > gps_last_timestamp) {
+          gps_last_timestamp = timestamp;
 
           tf::Transform transform;
           transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
@@ -53,7 +53,8 @@ int main(int argc, char **argv)
           br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
                       "world", "gps"));
 
-          cout << "Position: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+          cout << "Position: " << pos.x << " " << pos.y << " " << pos.z
+               << " @" << timestamp << std::endl;
       }
       loop_rate.sleep();
   }

@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string>
 #include <limits>
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include <geometry_msgs/Pose.h>
 #include "coord.h"
