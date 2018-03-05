@@ -13,8 +13,8 @@
     <param name="/ip_addr" value="$(arg host_ip)" />
 
     <!-- Drone's physical characteristics /-->
-    <arg name="v_max" default="2"/> 
-    <arg name="a_max" default="6"/> 
+    <arg name="v_max" default="4.5"/> 
+    <arg name="a_max" default="8"/> 
 
     <!-- orb slam location--> 
     <arg name="orb_slam2_dir" default="$(find ORB_SLAM2)/../../.."/> 
@@ -23,8 +23,8 @@
         
     <!-- Set the localization method /-->
     <!-- arg name="localization_method" default="orb_slam2_rgbd" /-->
-    <arg name="localization_method" default="ground_truth" />
-    <!--arg name="localization_method" default="gps" /-->
+    <!--arg name="localization_method" default="vins_mono" /-->
+    <arg name="localization_method" default="gps" />
     
     
     <!-- stat file-->
@@ -34,7 +34,7 @@
 
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
     <!-- also planning to prevent stdio stuff(if they really matter)-->
-    <arg name="DEBUG" default="false" />
+    <arg name="DEBUG" default="true" />
     <arg name="CLCT_DATA" value="true" />
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
 
@@ -58,17 +58,21 @@
          
     <!--comment-->
     <!-- Octomap -->
-	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+	<!-- node pkg="octomap_server" type="octomap_server_node" name="octomap_server" -->
+
+    <node pkg="nodelet" type="nodelet" name="standalone_nodelet" args="manager"/>
+
+    <node pkg="nodelet" type="nodelet" name="octomap_server_nodelet" args="load octomap_server/OctomapServerNodelet depth_transforms_manager">
         <param name="resolution" value="0.5" />
 		
 		<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
 		<param name="frame_id" type="string" value="world" />
 		
 		<!-- maximum range to integrate (speedup!) -->
-		<param name="sensor_model/max_range" value="20" />
+		<param name="sensor_model/max_range" value="15" />
 
 		<!-- data source to integrate (PointCloud2) -->
-		<remap from="cloud_in" to="/points" />
+		<!-- remap from="octomap_server_nodelet/cloud_in" to="/points" /-->
 
 		<!-- Filter ground for binary occupancy map -->
 		<param name="base_frame_id" value="world" />
@@ -123,7 +127,9 @@
 
 
 	<!-- Nodelet manager for this pipeline -->
-	<node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager"/>
+	<node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager">
+		<remap from="/points" to="/cloud_in" />
+    </node>
 
 	<!-- Convert to point cloud -->
 	<node pkg="nodelet" type="nodelet" name="cloudify"
@@ -169,9 +175,9 @@
         <param name="x_dist_to_sample_from__low_bound" value="-35"/>
 		<param name="x_dist_to_sample_from__high_bound" value="35"/>
         <param name="y_dist_to_sample_from__low_bound" value="-5"/>
-        <param name="y_dist_to_sample_from__high_bound" value="70"/>
+        <param name="y_dist_to_sample_from__high_bound" value="100"/>
         <param name="z_dist_to_sample_from__low_bound" value="2"/>
-        <param name="z_dist_to_sample_from__high_bound" value="6"/>
+        <param name="z_dist_to_sample_from__high_bound" value="8"/>
 
         <param name="sampling_interval" value="0.5"/>
 
@@ -203,5 +209,6 @@
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
     </group>
 
+  <node pkg="publish_imu" type="publish_imu" name="publish_imu"/> 
 </launch>
 

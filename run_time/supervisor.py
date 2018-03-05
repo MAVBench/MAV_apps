@@ -94,9 +94,9 @@ def main():
     mav_bench_dir = sys.argv[1]
     app =  sys.argv[2]
     max_run_time= sys.argv[3]
-    
     stat_file = mav_bench_dir+"/data/"+app+"/supervisor_mailbox.txt"
     """ 
+    
     stat_f_hndlr = open(stat_file, "w")
     stat_f_hndlr.close()
     initial_time = time() 

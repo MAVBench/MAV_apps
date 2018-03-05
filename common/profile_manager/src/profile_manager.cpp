@@ -368,7 +368,7 @@ void output_flight_summary(void){
     float total_energy_consumed = 0;
     
     //Flight Stats dependent metrics
-    stats_ss << endl<<"{"<<endl;
+    stats_ss << "{"<<endl;
     stats_ss << "\t\"distance_travelled\": " << g_end_stats.distance_traveled - g_init_stats.distance_traveled<< "," << endl;
     stats_ss << "\t\"flight_time\": " << g_end_stats.flight_time - g_init_stats.flight_time<< "," << endl;
     stats_ss << "\t\"collision_count\": " << g_end_stats.collision_count  - g_init_stats.collision_count << "," << endl;
@@ -396,6 +396,9 @@ void output_flight_summary(void){
                 stats_ss << "\t\t\"" <<it->first<<'"'<<":{" << endl;
                 stats_ss << "\t\t\t\""<<"mean"<<'"'<<":"<< it->second.mean_pub_rate <<","<< endl;
                 stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << ","<< endl;
+                stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << ","<< endl;
+                stats_ss << "\t\t\t\""<<"msg_avg_age"<<'"'<<":"<< it->second.stamp_age_mean<< ","<< endl;
+                stats_ss << "\t\t\t\""<<"msg_max_age"<<'"'<<":"<< it->second.stamp_age_max<< ","<< endl;
                 stats_ss << "\t\t\t\""<<"droppage_rate"<<'"'<<":"<< it->second.mean_droppage_rate << endl <<"\t\t}" << endl;
                 stats_ss <<"\t}" << ","<<endl;
             }
@@ -404,6 +407,8 @@ void output_flight_summary(void){
                 stats_ss << "\t\t\t\""<<"mean"<<'"'<<":"<< it->second.mean_pub_rate<<","<< endl;
                 stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << "," << endl;
                 stats_ss << "\t\t\t\""<<"droppage_rate"<<'"'<<":"<<it->second.mean_droppage_rate << endl <<"\t\t}," << endl;
+                stats_ss << "\t\t\t\""<<"msg_avg_age"<<'"'<<":"<< it->second.stamp_age_mean<< ","<< endl;
+                stats_ss << "\t\t\t\""<<"msg_max_age"<<'"'<<":"<< it->second.stamp_age_max<<","<< endl;
             }
         }
     }
@@ -466,10 +471,14 @@ void topic_statistics_cb(const rosgraph_msgs::TopicStatistics::ConstPtr& msg) {
         (window_stop_nsec - window_start_nsec)/1000000000;
     long long msg_droppage_rate = msg->dropped_msgs/window_duration;
     
+    long long stamp_age_mean = (msg->stamp_age_mean.toSec())*1000000000;
+    double stamp_age_max = (msg->stamp_age_max.toSec())*1000000000;
+
     int pub_rate  = (int) ((double)1.0/(double)msg->period_mean.toSec());
     int pub_rate_sqr = pub_rate*pub_rate; 
     
-    g_topics_stats[msg->topic].acc(pub_rate, msg_droppage_rate);
+    g_topics_stats[msg->topic].acc(pub_rate, msg_droppage_rate, 
+                                   stamp_age_mean, stamp_age_max);
     
     /* 
     if(msg->topic == "/airsim_qc/nbvPlanner/octomap_free"){
@@ -505,6 +514,11 @@ int main(int argc, char **argv)
         #ifndef USE_INTEL
         read_cpu_power_sample(&xs_cpu);
         #endif // NOT USE_INTEL
+        
+        if (g_drone->getFlightStats().collision_count > 1) {
+           ; 
+            //ROS_INFO_STREAM("collision count too high");
+        }
         loop_rate.sleep();
         ros::spinOnce();
     }
