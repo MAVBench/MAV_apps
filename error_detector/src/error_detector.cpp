@@ -24,7 +24,6 @@ int main(int argc, char **argv)
     
     //timer init
     boost::asio::io_context io;
-    boost::asio::deadline_timer gpsTimer(io, boost::posix_time::seconds(5));
     boost::asio::deadline_timer imuTimer(io, boost::posix_time::seconds(5));
     boost::asio::deadline_timer cameraTimer0(io, boost::posix_time::seconds(5));    
     boost::asio::deadline_timer cameraTimer1(io, boost::posix_time::seconds(5));     
@@ -38,6 +37,13 @@ int main(int argc, char **argv)
     ros::Rate r(10);
     while(ros::ok()){
         io_run();
+        ros::Time now = ros::Time:now();
+        tf::StampedTransform transform;
+        if(!tfListen.waitForTransform("/world", "/gps", ros::Time(0), transform)){ 
+            phoenix_msg::error error_msg;
+            current_msg.gps = 1;i
+        }
+        
         errorPub.publish(current_msg);
         ros::spinOnce();
     }
@@ -66,15 +72,4 @@ void imu_timer_callback(const boost::system::error_code& e){
     imuTimer.async_wait(imu_timer_callback);
 }
 
-void gps_timer_callback(const boost::system::error_code& e){
-    if(e) return; //timer was canceled 
-    tf::StampedTransform transform;
-    try{
-        tfListen.lookupTransform("/world", "/gps", ros::Time(0), transform);
-    }catch(tf::TransformException ex){
-        phoenix_msg::error error_msg;
-        current_msg.gps = 1;
-    }
-    gps.async_wait(gps_timer_callback);
-}
 
