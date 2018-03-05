@@ -33,21 +33,27 @@ int main(int argc, char **argv)
   string ip_addr__global = "10.157.90.49";
   Drone drone(ip_addr__global.c_str(), port);
 
+  uint64_t imu_last_time_stamp = 0;
   while (ros::ok()) {
       auto pos = drone.gps();
       auto imu = drone.getIMUStats();
 
-      tf::Transform transform;
-      transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
+      // publish if last time stamp is sane
+      if (imu.time_stamp != imu_last_time_stamp) {
+          imu_last_time_stamp = imu.time_stamp;
 
-      tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
-              imu.orientation.z(), imu.orientation.w());
-      transform.setRotation(q);
+          tf::Transform transform;
+          transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
 
-      br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-                  "world", "gps"));
+          tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
+                  imu.orientation.z(), imu.orientation.w());
+          transform.setRotation(q);
 
-      cout << "Position: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+          br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+                      "world", "gps"));
+
+          cout << "Position: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+      }
       loop_rate.sleep();
   }
 
