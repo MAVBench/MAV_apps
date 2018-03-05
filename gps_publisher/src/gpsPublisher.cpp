@@ -29,6 +29,10 @@ int main(int argc, char **argv)
 
   tf::TransformBroadcaster br;
 
+  uint16_t port = 41451;
+  string ip_addr__global = "10.157.90.49";
+  Drone drone(ip_addr__global.c_str(), port);
+
   while (ros::ok()) {
       auto pos = drone.gps();
       auto imu = drone.getIMUStats();
