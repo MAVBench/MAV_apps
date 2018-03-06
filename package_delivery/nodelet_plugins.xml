@@ -5,4 +5,10 @@
     </description>
   </class>
 </library>
-
+<library path="lib/libfuture_collision_nodelet">
+  <class name="fc_pkg/FutureCollisionNodelet" type="fc_pkg::FutureCollisionNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for running the future collision
+    </description>
+  </class>
+</library>

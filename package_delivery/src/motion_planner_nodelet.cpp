@@ -63,29 +63,29 @@ using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 
 
 // Parameters
-graph::node_id start_id,  goal_id;
-std::string motion_planning_core_str;
-bool DEBUG__global;
-double drone_height__global;
-double drone_radius__global;
-double rrt_step_size__global;
-int rrt_bias__global;
-double x__low_bound__global, x__high_bound__global;
-double y__low_bound__global, y__high_bound__global;
-double z__low_bound__global, z__high_bound__global;
-int nodes_to_add_to_roadmap__global;
-double max_dist_to_connect_at__global;
-double sampling_interval__global;
-double v_max__global, a_max__global;
-int max_roadmap_size__global;
-std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *)> motion_planning_core;
-long long g_path_computation_without_OM_PULL_time_acc = 0;
+static graph::node_id start_id,  goal_id;
+static std::string motion_planning_core_str;
+static bool DEBUG__global;
+static double drone_height__global;
+static double drone_radius__global;
+static double rrt_step_size__global;
+static int rrt_bias__global;
+static double x__low_bound__global, x__high_bound__global;
+static double y__low_bound__global, y__high_bound__global;
+static double z__low_bound__global, z__high_bound__global;
+static int nodes_to_add_to_roadmap__global;
+static double max_dist_to_connect_at__global;
+static double sampling_interval__global;
+static double v_max__global, a_max__global;
+static int max_roadmap_size__global;
+static std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *)> motion_planning_core;
+static long long g_path_computation_without_OM_PULL_time_acc = 0;
 static int g_number_of_planning = 0 ;
 
 //*** F:DN global variables
-octomap::OcTree * octree = nullptr;
-trajectory_msgs::MultiDOFJointTrajectory traj_topic;
-ros::ServiceClient octo_client;
+static octomap::OcTree * octree = nullptr;
+static trajectory_msgs::MultiDOFJointTrajectory traj_topic;
+static ros::ServiceClient octo_client;
 
 // The following block of global variables only exist for debugging purposes
 visualization_msgs::MarkerArray smooth_traj_markers;
@@ -181,6 +181,7 @@ void postprocess(piecewise_trajectory& path);
 //*** F:DN getting the smoothened trajectory
 bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res)
 {
+    auto loop_start_t = ros::Time::now();
     x__low_bound__global = std::min(x__low_bound__global, req.start.x);
     x__high_bound__global = std::max(x__high_bound__global, req.start.x);
     y__low_bound__global = std::min(y__low_bound__global, req.start.y);
@@ -200,6 +201,7 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
     //----------------------------------------------------------------- 
 
     request_octomap();
+    auto loop_end_t_2 = ros::Time::now();
     if (octree == nullptr) {
     	ROS_ERROR("Octomap is not available.");
     	return false;
@@ -210,7 +212,6 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
     // octree->writeBinary("/home/nvidia/octomap.bt");
 
 
-    auto loop_start_t = ros::Time::now();
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length ,req.n_pts_per_dir, octree);
     //piecewise_path = motion_planning_core(req.start, req.goal, octree);
 
@@ -238,7 +239,8 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
     auto loop_end_t = ros::Time::now(); 
     g_path_computation_without_OM_PULL_time_acc += (((loop_end_t - loop_start_t).toSec())*1e9);
     g_number_of_planning++; 
-    //ROS_INFO_STREAM("planning takes"<<(loop_end_t - loop_start_t).toSec());
+    ROS_INFO_STREAM("planning takes" << (loop_end_t - loop_start_t).toSec());
+    ROS_INFO_STREAM("om + copying" << (loop_end_t_2 - loop_start_t).toSec());
     return true;
 }
 
@@ -334,7 +336,7 @@ class MotionPlannerNodelet: public nodelet::Nodelet {
 public:
     virtual void onInit() {
         ROS_INFO("Initializing motion planning nodelet ...");
-        ros::NodeHandle& nh = this->getPrivateNodeHandle();
+        ros::NodeHandle& nh = this->getNodeHandle();
         motion_planning_initialize_params();
         signal(SIGINT, sigIntHandler);
 
@@ -357,14 +359,14 @@ public:
         graph_conn_list.color.r = 1;
         graph_conn_list.color.a = 1;
         
-        timer = nh.createTimer<MotionPlannerNodelet>(ros::Duration(0.1),
+        timer = nh.createTimer<MotionPlannerNodelet>(ros::Duration(0.2),
                                                      &MotionPlannerNodelet::callback, 
                                                      this);
         ROS_INFO("Initializing timer callback ...");
     }
     
     void callback(const ros::TimerEvent& event) {
-        ROS_INFO("MotionPlannerNodelet callback() is invoked...");
+        // ROS_INFO("MotionPlannerNodelet callback() is invoked...");
         if (DEBUG__global) { //if debug, publish markers to be seen by rviz
             smooth_traj_vis_pub.publish(smooth_traj_markers);
             piecewise_traj_vis_pub.publish(piecewise_traj_markers);
@@ -548,7 +550,7 @@ bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::nod
 			for (double a = 0; a <= pi*2; a += angle_step) {
 				octomap::point3d start(n1.x + r*std::cos(a), n1.y + r*std::sin(a), n1.z + h);
 
-				if (octree->castRay(start, direction, end, true, distance)) {
+                if (octree->castRay(start, direction, end, true, distance)) {
 
                     if (end_ptr != nullptr) {
                         end_ptr->x = end.x();
@@ -587,11 +589,17 @@ std::vector<graph::node_id> nodes_in_radius(/*const*/ graph& g, graph::node_id n
 void request_octomap()
 {
     octomap_msgs::GetOctomap srv;
-    
-    if (octo_client.call(srv))
+    auto loop_start_t = ros::Time::now();
+    ros::Time loop_end_t_2;
+    if (octo_client.call(srv)){
+        loop_end_t_2 = ros::Time::now();
         generate_octomap(srv.response.map);
+    }
     else
         ROS_ERROR("Octomap service request failed");
+
+    ROS_INFO_STREAM("pulling om takes" << (loop_end_t_2 - loop_start_t).toSec());
+
 }
 
 

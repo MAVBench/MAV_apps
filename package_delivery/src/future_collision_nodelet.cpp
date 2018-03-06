@@ -19,6 +19,10 @@
 #include "Drone.h"
 #include "timer.h"
 
+// Nodelet headers
+#include <nodelet/nodelet.h>
+#include <pluginlib/class_list_macros.h>
+
 // Typedefs
 typedef trajectory_msgs::MultiDOFJointTrajectory traj_msg_t;
 typedef std::chrono::system_clock sys_clock;
@@ -26,12 +30,12 @@ typedef std::chrono::time_point<sys_clock> sys_clock_time_point;
 static const sys_clock_time_point never = sys_clock_time_point::min();
 
 // Global variables
-octomap::OcTree * octree = nullptr;
-traj_msg_t traj;
-std::string ip_addr__global;
-std::string localization_method;
-double drone_height__global;
-double drone_radius__global;
+static octomap::OcTree * octree = nullptr;
+static traj_msg_t traj;
+static std::string ip_addr__global;
+static std::string localization_method;
+static double drone_height__global;
+static double drone_radius__global;
 
 template <class T>
 bool collision(octomap::OcTree * octree, const T& n1, const T& n2)
@@ -177,8 +181,8 @@ bool check_for_collisions(Drone& drone, sys_clock_time_point& time_to_warn)
 
 void future_collision_initialize_params()
 {
-    ros::param::get("/motion_planner/drone_radius", drone_radius__global);
-    ros::param::get("/motion_planner/drone_height", drone_height__global);
+    ros::param::get("/motion_planner_nodelet/drone_radius", drone_radius__global);
+    ros::param::get("/motion_planner_nodelet/drone_height", drone_height__global);
 
     if(!ros::param::get("/package_delivery/ip_addr",ip_addr__global)){
         ROS_FATAL("Could not start exploration. IP address parameter missing!");
@@ -191,7 +195,71 @@ void future_collision_initialize_params()
     }
 }
 
+namespace fc_pkg {
 
+class FutureCollisionNodelet: public nodelet::Nodelet {
+public:
+    virtual void onInit() {
+        ROS_INFO("Initializing future collision nodelet ...");
+        ros::NodeHandle& nh = this->getNodeHandle();
+
+        future_collision_initialize_params();
+        collision_coming = false;
+        
+        octomap_sub = nh.subscribe("octomap_binary", 1, pull_octomap);
+        traj_sub = nh.subscribe<traj_msg_t>("multidoftraj", 1, pull_traj);
+        col_coming_pub = nh.advertise<std_msgs::Bool>("col_coming", 1);
+        col_imminent_pub = nh.advertise<std_msgs::Bool>("col_imminent", 1);
+        
+        uint16_t port = 41451;
+        drone_p = new Drone(ip_addr__global.c_str(), port, localization_method);
+        timer = nh.createTimer<FutureCollisionNodelet>(ros::Duration(0.01),
+                                                      &FutureCollisionNodelet::callback, 
+                                                      this);
+    }
+    
+    void callback(const ros::TimerEvent& event) {
+        // auto loop_start_t = ros::Time::now();
+        // ROS_INFO("FutureCollisionNodelet callback() before invoked...");
+        collision_coming = check_for_collisions(*drone_p, time_to_warn);
+        // Publish whether or not a future collision has been detected
+        col_coming_msg.data = collision_coming;
+        col_coming_pub.publish(col_coming_msg);
+
+        // Publish whether or not a collision is close enough that we should
+        // respond to it
+        if (collision_coming) {
+            auto now = sys_clock::now();
+            if (now >= time_to_warn) {
+                col_imminent_msg.data = true;
+                col_imminent_pub.publish(col_imminent_msg);
+            }
+        } else {
+            col_imminent_msg.data = false;
+            col_imminent_pub.publish(col_imminent_msg);
+        }
+        // ROS_INFO("FutureCollisionNodelet callback() after invoked...");
+        // ROS_INFO_STREAM("future_col takes" << (loop_end_t - loop_start_t).toSec());
+    }
+    
+    bool collision_coming;
+    sys_clock_time_point time_to_warn;
+
+    std_msgs::Bool col_coming_msg;
+    std_msgs::Bool col_imminent_msg;
+    ros::Subscriber octomap_sub;
+    ros::Subscriber traj_sub;
+    ros::Publisher col_coming_pub;
+    ros::Publisher col_imminent_pub;
+    Drone *drone_p;
+    ros::Timer timer;
+};
+
+}  // fc_pkg
+
+PLUGINLIB_EXPORT_CLASS(fc_pkg::FutureCollisionNodelet, nodelet::Nodelet)
+
+#if 0
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "future_collision");
@@ -247,4 +315,4 @@ int main(int argc, char** argv)
         loop_rate.sleep();
     }
 }
-
+#endif

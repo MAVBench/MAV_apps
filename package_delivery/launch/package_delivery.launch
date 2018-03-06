@@ -13,7 +13,7 @@
     <param name="/ip_addr" value="$(arg host_ip)" />
 
     <!-- Drone's physical characteristics /-->
-    <arg name="v_max" default="4.5"/> 
+    <arg name="v_max" default="6"/> 
     <arg name="a_max" default="8"/> 
 
     <!-- orb slam location--> 
@@ -127,7 +127,7 @@
 
 
 	<!-- Nodelet manager for this pipeline -->
-	<node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager">
+	<node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
 		<remap from="/points" to="/cloud_in" />
     </node>
 
@@ -146,7 +146,7 @@
 		<param name="panic_distance" value="0.5"/>
     </node>
 
-    <node pkg="package_delivery" type="future_collision" name="future_collision" output="screen">
+    <node pkg="nodelet" type="nodelet" name="future_collision_nodelet" args="load fc_pkg/FutureCollisionNodelet depth_transforms_manager" output="screen">
     </node>
     
     <?ignore 
@@ -188,14 +188,6 @@
         <param name="motion_planning_core" value="OMPL-RRTConnect"/>
         <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
         
-        <remap from="/motion_planner_nodelet/graph" to="graph"/>
-        <remap from="/motion_planner_nodelet/graph_conn" to="graph_conn"/>
-        <remap from="/motion_planner_nodelet/multidoftraj" to="multidoftraj"/>
-        <remap from="/motion_planner_nodelet/omap" to="omap"/>
-        <remap from="/motion_planner_nodelet/trajectory" to="trajectory"/>
-        <remap from="/motion_planner_nodelet/waypoints" to="waypoints"/>
-        <remap from="/motion_planner_nodelet/get_trajectory_srv" to="get_trajectory_srv"/>
-        <remap from="/motion_planner_nodelet/octomap_binary" to="octomap_binary"/>
 	</node>
 
 	<!-- Demo program that controls drone -->

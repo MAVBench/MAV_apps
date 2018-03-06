@@ -206,8 +206,8 @@ target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc
 add_executable(panic_pcl ${common_utility_src}/panic_pcl.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 target_link_libraries(panic_pcl ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
-add_executable(future_collision src/future_collision ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
-target_link_libraries(future_collision ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+add_library(future_collision_nodelet src/future_collision_nodelet.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(future_collision_nodelet ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
 
 add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
