@@ -37,6 +37,9 @@ static std::string localization_method;
 static double drone_height__global;
 static double drone_radius__global;
 
+static ros::Time init_ts;
+static double count_pull = 0;
+
 template <class T>
 bool collision(octomap::OcTree * octree, const T& n1, const T& n2)
 {
@@ -111,6 +114,16 @@ void pull_octomap(const octomap_msgs::Octomap& msg)
 
     if (octree == nullptr) {
         ROS_ERROR("Octree could not be pulled.");
+    }
+
+    auto loop_start_t = ros::Time::now();
+    if ((loop_start_t - init_ts).toSec() > 3) {
+        init_ts = loop_start_t;
+        loop_start_t = ros::Time::now();
+        count_pull = 1;
+    } else {
+        count_pull += 1;
+        ROS_INFO_STREAM("pull_octomap Hz: " << count_pull / (loop_start_t - init_ts).toSec());
     }
 
     LOG_ELAPSED(future_collision_pull);
@@ -202,6 +215,7 @@ public:
     virtual void onInit() {
         ROS_INFO("Initializing future collision nodelet ...");
         ros::NodeHandle& nh = this->getNodeHandle();
+        init_ts = ros::Time::now();
 
         future_collision_initialize_params();
         collision_coming = false;
