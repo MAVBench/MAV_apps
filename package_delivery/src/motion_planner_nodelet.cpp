@@ -200,7 +200,7 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
     // *** F:DN Body 
     //----------------------------------------------------------------- 
 
-    request_octomap();
+    // request_octomap();
     auto loop_end_t_2 = ros::Time::now();
     if (octree == nullptr) {
     	ROS_ERROR("Octomap is not available.");
@@ -345,10 +345,10 @@ public:
         smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
         piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
         traj_pub = nh.advertise<trajectory_msgs::MultiDOFJointTrajectory>("multidoftraj", 1);
+        octomap_sub = nh.subscribe("octomap_binary", 1, generate_octomap);
         octo_pub = nh.advertise<octomap_msgs::Octomap>("omap", 1);
         pcl_pub = nh.advertise<PointCloud> ("graph", 1);
         graph_conn_pub = nh.advertise<visualization_msgs::Marker>("graph_conns", 100);
-        // ros::Subscriber octomap_sub = nh.subscribe("octomap_full", 1, generate_octomap);
         octo_client = nh.serviceClient<octomap_msgs::GetOctomap>("octomap_binary");
 	
         pcl_ptr->header.frame_id = graph_conn_list.header.frame_id = "world";
@@ -383,6 +383,7 @@ public:
     ros::Publisher traj_pub;
     ros::Publisher octo_pub;
     ros::Publisher pcl_pub;
+    ros::Subscriber octomap_sub;
     ros::Timer timer;
 };
 
