@@ -123,7 +123,7 @@ void pull_octomap(const octomap_msgs::Octomap& msg)
         count_pull = 1;
     } else {
         count_pull += 1;
-        ROS_INFO_STREAM("pull_octomap Hz: " << count_pull / (loop_start_t - init_ts).toSec());
+        //ROS_INFO_STREAM("pull_octomap Hz: " << count_pull / (loop_start_t - init_ts).toSec());
     }
 
     LOG_ELAPSED(future_collision_pull);
