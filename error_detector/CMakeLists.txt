@@ -15,7 +15,10 @@ find_package(catkin REQUIRED COMPONENTS
   phoenix_msg
   image_transport
   tf
+  cv_bridge
 )
+
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -146,7 +149,7 @@ include_directories(
 
 add_executable(error_detector src/error_detector.cpp)
 add_dependencies(error_detector phoenix_msg_generate_messages_cpp)
-target_link_libraries(error_detector ${catkin_LIBRARIES})
+target_link_libraries(error_detector ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
