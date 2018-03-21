@@ -7,6 +7,9 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Imu.h>
 
+#include <opencv2/opencv.hpp>
+#include "cam-feat.hpp"
+
 //monitors IMU, camera, gps for errors, alerts subscribers
 
 static ros::Publisher error_pub;
@@ -36,14 +39,14 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     std::cout << "Error Detector Node" << std::endl;
-    
+
     tf::TransformListener tfListen;
-        
+
     ros::Subscriber imu_0_sub = nh.subscribe("imu_topic", 1, imu_0_sub_callback);
     image_transport::Subscriber camera_r_sub = it.subscribe("/Airsim/right/image_raw", 1, camera_r_sub_callback);
 
     error_pub = nh.advertise<phoenix_msg::error>("error", 1000);
-    
+
     //start timers
 
     io.run();
@@ -52,6 +55,9 @@ int main(int argc, char **argv)
     current_msg.gps          = 1;
     current_msg.imu_0        = 1;
     current_msg.camera_right = 1;
+
+    // feature detection based camera fault detector
+    cam_feat cf(20); // tentative 20 frames before consider camera to be faulty
 
     while(ros::ok()){
         ros::Time now = ros::Time::now();
@@ -66,7 +72,16 @@ int main(int argc, char **argv)
                 std::cout << "GPS data timed out" << std::endl;
             current_msg.gps = 0;
         }
-        
+
+        // Logic for feature detector
+        cv::Mat frame;  // TODO: subscribe and get frames from camera
+        cv::Mat downscaled;
+        cv::resize(frame, resized, cv::Size(80, 45));   // downscale for perf
+        if (!cf.test_frame(downscaled)) {
+            current_msg.camera_right = 0;
+        }
+        //
+
         error_pub.publish(current_msg);
         ros::spinOnce();
         r.sleep();
