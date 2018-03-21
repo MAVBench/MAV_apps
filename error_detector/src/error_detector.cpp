@@ -14,6 +14,10 @@
 
 static ros::Publisher error_pub;
 static phoenix_msg::error current_msg;
+static tf::StampedTransform last_tr;
+static Vector3 last_imu_accel;
+
+int calc_max_dist(void);
 
 void camera_l_timer_callback(const boost::system::error_code& e);
 void camera_r_timer_callback(const boost::system::error_code& e);
@@ -23,7 +27,7 @@ void gps_timer_callback(const boost::system::error_code& e);
 void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr&);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr&);
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr&);
-
+void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
 
 //timer init
 boost::asio::io_service io;
@@ -64,11 +68,23 @@ int main(int argc, char **argv)
         tf::StampedTransform transform;
 
         if (tfListen.waitForTransform("/world", "/gps", ros::Time::now(), ros::Duration(1.0))) {
-            if (current_msg.gps == 0)
+            if (current_msg.gps == 0){
+                tfListen.LookUpTransform("/world", "/gps", ros:Time::now(), transform);
                 std::cout << "GPS data found" << std::endl;
-            current_msg.gps = 1;
+                //compare old coordinates to new  coordinates
+                //need velocity from  IMU
+                int maxDist = calc_max_dist();
+                int traveledDist = transform.getOrigin().distance();
+                if(traveledDist>maxDist){
+                     std::cout<<"GPS position not consistent with IMU acceleration"<<std::endl;
+                }else{
+                    //valid gps data
+                    current_msg.gps =1;
+                }
+            }
         } else {
             if (current_msg.gps == 1)
+                
                 std::cout << "GPS data timed out" << std::endl;
             current_msg.gps = 0;
         }
@@ -86,6 +102,17 @@ int main(int argc, char **argv)
         ros::spinOnce();
         r.sleep();
     }
+}
+
+int calc_max_dist(){
+   //TODO: check units of numbers
+   if(last_imu_accel == NULL)
+      //can't use imu accel to calc max dist
+      return INT_MAX;
+   int max_accel = last_imu_accel.distance();
+   int time = 5; //picked 5 seconds, cause that is the max time btwn
+                 //valid Imu msgs
+   return max_accel * time * time; 
 }
 
 void camera_l_timer_callback(const boost::system::error_code& e){
@@ -136,5 +163,6 @@ void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
     if (current_msg.imu_0 == 0)
         std::cout << "IMU data found" << std::endl;
     current_msg.imu_0 = 1;
+    last_imu_accel = msg.linear_acceleration;
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
