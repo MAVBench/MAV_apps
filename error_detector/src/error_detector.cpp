@@ -7,6 +7,7 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Imu.h>
 
+#include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include "cam-feat.hpp"
 
@@ -57,7 +58,6 @@ int main(int argc, char **argv)
     current_msg.camera_right = 1;
 
     // feature detection based camera fault detector
-    cam_feat cf(20); // tentative 20 frames before consider camera to be faulty
 
     while(ros::ok()){
         ros::Time now = ros::Time::now();
@@ -72,15 +72,6 @@ int main(int argc, char **argv)
                 std::cout << "GPS data timed out" << std::endl;
             current_msg.gps = 0;
         }
-
-        // Logic for feature detector
-        cv::Mat frame;  // TODO: subscribe and get frames from camera
-        cv::Mat downscaled;
-        cv::resize(frame, resized, cv::Size(80, 45));   // downscale for perf
-        if (!cf.test_frame(downscaled)) {
-            current_msg.camera_right = 0;
-        }
-        //
 
         error_pub.publish(current_msg);
         ros::spinOnce();
@@ -115,20 +106,38 @@ void imu_0_timer_callback(const boost::system::error_code& e){
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
 
+
+uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
+{
+    cv_bridge::CvImagePtr cv_ptr;
+    cv_ptr = cv_bridge::toCvCopy(msg);
+    cv::Mat resized;
+    cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
+    if (!cf.test_frame(resized))
+        return 0;
+    return 1;
+}
+
+cam_feat cf_l(20); // tentative 20 frames before consider camera to be faulty
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_l_timer.cancel();
     if (current_msg.camera_left == 0)
         std::cout << "Left camera data found" << std::endl;
     current_msg.camera_left = 1;
     camera_l_timer.async_wait(camera_l_timer_callback);
+    
+    current_msg.camera_left = test_frame(cf_l, msg);
 }
 
+cam_feat cf_r(20); // tentative 20 frames before consider camera to be faulty
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_r_timer.cancel();
     if (current_msg.camera_right == 0)
         std::cout << "Right camera data found" << std::endl;
     current_msg.camera_right = 1;
     camera_r_timer.async_wait(camera_r_timer_callback);
+
+    current_msg.camera_right = test_frame(cf_r, msg);
 }
 
 void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
