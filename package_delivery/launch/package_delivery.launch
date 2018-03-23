@@ -47,7 +47,7 @@
 
   <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
   <!-- also planning to prevent stdio stuff(if they really matter)-->
-  <arg name="DEBUG" default="true" />
+  <arg name="DEBUG" default="false" />
   <arg name="CLCT_DATA" value="false" />
   <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
   <param name="DEBUG"  value="$(arg DEBUG)" />
@@ -73,7 +73,7 @@
 
   <!--comment-->
     <!-- Octomap -->
-    <node pkg="nodelet" type="nodelet" name="octomap_server_nodelet" args="load octomap_server/OctomapServerNodelet depth_transforms_manager">
+    <node pkg="nodelet" type="nodelet" name="octomap_server_nodelet" args="load octomap_server/OctomapServerNodelet depth_transforms_manager" output="screen">
 	<!-- node pkg="octomap_server" type="octomap_server_node" name="octomap_server" output="screen"-->
         <param name="resolution" value="$(arg planning_resolution)" />
 		
@@ -142,7 +142,7 @@
 
 
 	<!-- Nodelet manager for this pipeline -->
-    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager">
+    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
         <remap from="/points" to="/cloud_in" />
     </node>
 
