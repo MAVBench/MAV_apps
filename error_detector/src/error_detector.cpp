@@ -6,6 +6,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Vector3.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
@@ -16,7 +17,7 @@
 static ros::Publisher error_pub;
 static phoenix_msg::error current_msg;
 static tf::StampedTransform last_tr;
-static Vector3 last_imu_accel;
+static geometry_msgs::Vector3 last_imu_accel;
 
 int calc_max_dist(void);
 
@@ -28,7 +29,7 @@ void gps_timer_callback(const boost::system::error_code& e);
 void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr&);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr&);
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr&);
-void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
+// void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
 
 //timer init
 boost::asio::io_service io;
@@ -69,12 +70,12 @@ int main(int argc, char **argv)
 
         if (tfListen.waitForTransform("/world", "/gps", ros::Time::now(), ros::Duration(1.0))) {
             if (current_msg.gps == 0){
-                tfListen.LookUpTransform("/world", "/gps", ros:Time::now(), transform);
+                tfListen.lookupTransform("/world", "/gps", ros::Time::now(), transform);
                 std::cout << "GPS data found" << std::endl;
                 //compare old coordinates to new  coordinates
                 //need velocity from  IMU
                 int maxDist = calc_max_dist();
-                int traveledDist = transform.getOrigin().distance();
+                int traveledDist = transform.getOrigin().length();
                 if(traveledDist>maxDist){
                      std::cout<<"GPS position not consistent with IMU acceleration"<<std::endl;
                 }else{
@@ -96,18 +97,19 @@ int main(int argc, char **argv)
 }
 
 #define max_velocity 15
-ros::time last_msg_time; //might need to initialize this
-
+ros::Time last_msg_time; //might need to initialize this
+ros::Time current_msg_time; //might need to initialize this
+static bool imu_accel_init = false;
 
 int calc_max_dist(){
    //last imu accel is in m/s^2 of x,y,z
-    dtime = last_msg_time - msg->header.stamp; //time between imu messages
-    last_msg_time = msg->header.stamp;
+    double dtime = (last_msg_time - current_msg_time).toSec(); //time between imu messages
+    
 
-   if(last_imu_accel == NULL || dtime = 0;){
+   if(imu_accel_init == 0 || dtime ==  0){
       return max_velocity * 5;
     }
-   return max_velocity * time;
+   return max_velocity * dtime;
 }
 
 void camera_l_timer_callback(const boost::system::error_code& e){
@@ -175,7 +177,11 @@ void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
     imu_0_timer.cancel();
     if (current_msg.imu_0 == 0)
         std::cout << "IMU data found" << std::endl;
+    last_msg_time = current_msg_time;
+    current_msg_time = msg->header.stamp;
     current_msg.imu_0 = 1;
-    last_imu_accel = msg.linear_acceleration;
+    last_imu_accel = msg->linear_acceleration;
+    imu_accel_init = true;
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
+
