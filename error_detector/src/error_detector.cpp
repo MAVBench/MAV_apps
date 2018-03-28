@@ -95,15 +95,20 @@ int main(int argc, char **argv)
     }
 }
 
+#define max_velocity 6
+
+
 int calc_max_dist(){
-   //TODO: check units of numbers
-   if(last_imu_accel == NULL)
-      //can't use imu accel to calc max dist
-      return INT_MAX;
+   //last imu accel is in m/s^2 of x,y,z
+
+    ros::time  msg->header.stamp; //ros time datatype
+
+   int time = 5; //TODO: calculate some dt between IMU messages
+   if(last_imu_accel == NULL){
+      return max_velocity * time;
+    }
    int max_accel = last_imu_accel.distance();
-   int time = 5; //picked 5 seconds, cause that is the max time btwn
-                 //valid Imu msgs
-   return max_accel * time * time; 
+   return max_accel * time * time;
 }
 
 void camera_l_timer_callback(const boost::system::error_code& e){
