@@ -303,7 +303,8 @@ int main(int argc, char **argv)
     bool created_slam_loss_traj = false;
 
     uint16_t port = 41451;
-    Drone drone(ip_addr__global.c_str(), port, localization_method,
+    // Drone drone(ip_addr__global.c_str(), port, localization_method,
+    Drone drone(ip_addr__global.c_str(), port, "ground_truth",
                 g_max_yaw_rate, g_max_yaw_rate_during_flight);
     bool delivering_mission_complete = false; //if true, we have delivered the 
                                               //pkg and successfully returned to origin
@@ -381,9 +382,11 @@ int main(int argc, char **argv)
         {
             control_drone(drone);
 
-            goal = get_goal();
-            start = get_start(drone);
-            
+            if (localization_method == "orb_slam2_rgbd")
+                waitForLocalization("orb_slam2_rgbd");
+
+            control_drone(drone);
+
             profiling_data_srv_inst.request.key = "start_profiling";
             if (ros::service::waitForService("/record_profiling_data", 10)){ 
                 if(!record_profiling_data_client.call(profiling_data_srv_inst)){
@@ -391,9 +394,15 @@ int main(int argc, char **argv)
                     ros::shutdown();
                 }
             }
+
+            control_drone(drone);
+
+            goal = get_goal();
+            start = get_start(drone);
             
-            spin_around(drone);
-            next_state = waiting;
+            // spin_around(drone);
+            // next_state = waiting;
+            next_state = trajectory_completed;
         }
         else if (state == waiting)
         {
@@ -498,10 +507,10 @@ int main(int argc, char **argv)
         }
         else if (state == trajectory_completed)
         {
-            fail_ctr = normal_traj.empty() ? fail_ctr+1 : 0; 
+            // fail_ctr = normal_traj.empty() ? fail_ctr+1 : 0; 
             
             if (normal_traj.empty()){
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
             if (fail_ctr >fail_threshold) {
                 next_state = failed;

@@ -1,12 +1,18 @@
 <launch>
+  <param name="/magic_velocity" value="$(arg magic_velocity)" type="double" />
+  <param name="/magic_fps" value="$(arg magic_fps)" type="double" />
+  <param name="/magic_freq" value="$(arg magic_freq)" type="double" />
+
+  <param name="/slam_fps" value="$(arg slam_fps)" />
+
   <!-- args and params --> 
   <!-- Behzad's workstation ip --> 
-  <arg name="host_ip" default="10.157.90.51" />
+  <!-- arg name="host_ip" default="10.157.90.51" /-->
   <!--arg name="host_ip" default="169.254.153.158" /-->
   <!-- Hasans's workstation ip --> 
   <!--arg name="host_ip" default="10.157.90.49" /-->
   <!-- Hasans's direct connection ip --> 
-  <!-- arg name="host_ip" default="169.254.250.191" /-->
+  <arg name="host_ip" default="169.254.250.191" />
   <!--Wenzhi's workstation ip-->
   <!--arg name="host_ip" default="10.157.90.62" /-->
   <param name="/ip_addr" value="$(arg host_ip)" />
@@ -28,8 +34,8 @@
   <!-- orb slam location--> 
   <arg name="orb_slam2_dir" default="$(find ORB_SLAM2)/../../.."/> 
 
-  <arg name="max_yaw_rate" default="90"/>
-  <arg name="max_yaw_rate_during_flight" default="90"/>
+  <arg name="max_yaw_rate" default="15"/>
+  <arg name="max_yaw_rate_during_flight" default="15"/>
   <param name="v_max" value="$(arg v_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
@@ -41,9 +47,11 @@
 
   <!-- Set the localization method /-->
   <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
-  <!--arg name="localization_method" default="vins_mono" /-->
+  <arg name="localization_method" default="vins_mono" />
   <!--arg name="localization_method" default="gps" /-->
-  <arg name="localization_method" default="ground_truth" />
+  <!--arg name="localization_method" default="ground_truth" /-->
+
+  <param name="localization_method" value="$(arg localization_method)" />
 
   <!-- stat file-->
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
@@ -82,6 +90,7 @@
 
   <!--comment-->
     <!-- Octomap -->
+    <comment>
     <node pkg="nodelet" type="nodelet" name="octomap_server_nodelet" args="load octomap_server/OctomapServerNodelet depth_transforms_manager" output="screen">
 	<!-- node pkg="octomap_server" type="octomap_server_node" name="octomap_server" output="screen"-->
         <param name="resolution" value="$(arg planning_resolution)" />
@@ -110,6 +119,7 @@
 		<param name="ground_filter/distance" value="0.04" />
 		<param name="ground_filter/angle" value="0.4" /> -->
 	</node>
+    </comment>
 
     <comment>
 	<node pkg="octomap_world" type="octomap_manager" name="octomap_manager">
@@ -153,11 +163,14 @@
 
 
 	<!-- Nodelet manager for this pipeline -->
+    <comment>
     <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
         <remap from="/points" to="/cloud_in" />
     </node>
+    </comment>
 
 	<!-- Convert to point cloud -->
+    <comment>
 	<node pkg="nodelet" type="nodelet" name="cloudify"
 	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond" output="screen">
 
@@ -167,13 +180,18 @@
 		<remap from="image_rect" to="/Airsim/depth_front"/>
 
     </node>
+    </comment>
     
+    <comment>
     <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
 		<param name="panic_distance" value=".1"/>
     </node>
+    </comment>
     
+    <comment>
     <node pkg="package_delivery" type="future_collision" name="future_collision" output="screen">
     </node>
+    </comment>
     
     <?ignore 
     <!-- Convert to point cloud -->
@@ -183,13 +201,14 @@
     </node>
     ?>
 
+    <comment>
     <node pkg="package_delivery" type="follow_trajectory" name="follow_trajectory" output="screen">
     <!-- param name="yaw_t" value=".75"/ -->
     <param name="ip_addr" value="$(arg host_ip)"/>
     <param name="localization_method" type="string" value="$(arg localization_method)"/>
     </node>
+    </comment>
 1
-
 
 	<!-- Path-Planner -->
 	<node pkg="package_delivery" type="motion_planner" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)">
@@ -238,7 +257,7 @@
     </node>
 
 	<group if="$(eval localization_method == 'orb_slam2_rgbd')">
-        <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth" output="screen"/>
+        <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth_front" output="screen"/>
 	</group>
 
   <group if="$(eval localization_method == 'vins_mono')">

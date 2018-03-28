@@ -245,7 +245,6 @@ void scan_around(Drone &drone, int angle) {
 
 void spin_around(Drone &drone) {
     drone.fly_velocity(0, 0, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     ROS_INFO("Spinning around...");
     ros::Time last_time;
     float init_yaw = drone.get_yaw();
@@ -261,8 +260,8 @@ void spin_around(Drone &drone) {
 
     // to correct 
     double dz = start_z - drone.pose().position.z;
-    double vz = dz > 0 ? 1 : -1;
-    double dt = dz > 0 ? dz : -dz;
+    double vz = dz > 0 ? 0.5 : -0.5;
+    double dt = dz/vz;
     
     drone.fly_velocity(0, 0, vz, YAW_UNCHANGED, dt);
     std::this_thread::sleep_for(std::chrono::milliseconds(int(dt*1000.0)));

@@ -1,0 +1,60 @@
+#!/bin/bash
+
+velocities=( 2 4 6 1 3 5 )
+fps=( 14 10 6 2 12 8 4 )
+freqs=( 12 8 4 10 6 2 )
+# velocities=( 6 )
+# fps=( 10 )
+# freqs=( 5 )
+
+echo >restart
+
+for run in {1..5}
+do
+    for v in "${velocities[@]}"
+    do
+        for s in "${fps[@]}"
+        do
+            for f in "${freqs[@]}"
+            do
+                # Create init file
+                d15=$(bc -l <<< 15*2/$v)
+                d30=$(bc -l <<< 30*2/$v)
+                d35=$(bc -l <<< 35*2/$v)
+
+                cp micro.init micro.pre
+                sed -i -- "s/_v_/$v/g" micro.pre
+                sed -i -- "s/_d15_/$d15/g" micro.pre
+                sed -i -- "s/_d30_/$d30/g" micro.pre
+                sed -i -- "s/_d35_/$d35/g" micro.pre
+
+                # Set VINS-Mono settings
+                sed -i "47s/.*/freq: $f/" ~/catkin_ws/src/VINS-Mono/config/airsim/airsim.yaml
+
+                # Output data
+                echo run: $run
+                echo velocity: $v
+                echo fps: $s
+                grep freq ~/catkin_ws/src/VINS-Mono/config/airsim/airsim.yaml | grep -v \#
+
+                # Restart AirSim
+                sshpass -p "3NS5o8a" scp restart root@169.254.250.191:"C:\\Users\\root\\Documents\\AirSim\\restart"
+                sleep 5
+
+                # Start supervisor
+                python run_time/supervisor.py &
+                sleep 5
+
+                # Launch package_delivery
+                roslaunch package_delivery package_delivery.launch slam_fps:=$s magic_velocity:=$v magic_fps:=$s magic_freq:=$f <micro.pre
+                sleep 5
+            done
+        done
+    done
+done
+
+sshpass -p "3NS5o8a" scp restart root@169.254.250.191:"C:\\Users\\root\\Documents\\AirSim\\exit"
+
+rm micro.pre
+rm restart
+
