@@ -68,9 +68,9 @@ int main(int argc, char **argv)
         ros::Time now = ros::Time::now();
         tf::StampedTransform transform;
 
-        if (tfListen.waitForTransform("/world", "/gps", ros::Time::now(), ros::Duration(1.0))) {
+        if (tfListen.waitForTransform("/world", "/gps", now, ros::Duration(1.0))) {
             if (current_msg.gps == 0){
-                tfListen.lookupTransform("/world", "/gps", ros::Time::now(), transform);
+                tfListen.lookupTransform("/world", "/gps", now, transform);
                 std::cout << "GPS data found" << std::endl;
                 //compare old coordinates to new  coordinates
                 //need velocity from  IMU

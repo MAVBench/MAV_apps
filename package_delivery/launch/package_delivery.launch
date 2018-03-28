@@ -22,8 +22,11 @@
     <!-- Set the localization method /-->
     <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
     <!--arg name="localization_method" default="vins_mono" /-->
-    <!-- arg name="localization_method" default="gps" /-->
-    <arg name="localization_method" default="ground_truth" />
+    <arg name="localization_method" default="gps" />
+    <!-- arg name="localization_method" default="ground_truth" /-->
+
+    <param name="localization_method" value="$(arg localization_method)" />
+    <param name="data_collection_iteration_freq_ptCld" value="100" />
     
     <!-- stat file-->
     <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
@@ -33,8 +36,10 @@
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
     <!-- also planning to prevent stdio stuff(if they really matter)-->
     <arg name="DEBUG" default="true" />
-    <arg name="CLCT_DATA" value="true" />
+    <arg name="CLCT_DATA" value="false" />
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
+    <param name="DEBUG" type="bool" value="$(arg DEBUG)" />
+    <param name="CLCT_DATA" value="$(arg CLCT_DATA)" />
 
 
     <group if="$(arg CLCT_DATA)">
@@ -120,6 +125,9 @@
 
         <!-- Localization of the depth images -->
         <param name="localization_method" value="$(arg localization_method)" />
+
+        <param name="loop_rate" value="20" />
+        <param name="all_front" value="true" />
 	</node>
 
 
