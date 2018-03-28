@@ -485,6 +485,17 @@ msr::airlib::IMUStats Drone::getIMUStats()
 }
 
 
+msr::airlib::IMUStats Drone::getIMUStats2()
+{
+    try {
+        return client->getIMUStats2();
+    } catch (const std::exception& e) {
+        std::cerr << "getIMUStats() failed!" << e.what()<<std::endl;
+        return msr::airlib::IMUStats();
+    }
+}
+
+
 float Drone::maxYawRate()
 {
     return max_yaw_rate;
