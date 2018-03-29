@@ -14,17 +14,63 @@
  */
 class cam_feat
 {
+private:
+    struct his_entry
+    {
+        //std::vector<cv::KeyPoint> * kp = nullptr;
+        cv::Mat * desc = nullptr;
+        int count = -1;
+
+        void clean(void)
+        {
+            delete this->desc;
+        }
+    };
+
+    // count of current frame
+    int calc_spuriosity(int count)
+    {
+        int spuriosity = 0;
+        for (auto it = this->his.begin(); it != this->his.end(); ++it) {
+            int old_count = it->count;
+            float ratio = (float) count / (float) old_count;
+            if (ratio < 0.25f) {
+                ++spuriosity;
+            } else {
+                --spuriosity;
+            }
+        }
+        return spuriosity;
+    };
+
 public:
+    enum status
+    {
+        OKAY,
+        BLANK,
+        HIJACK
+    };
+
     /**
      * Constructor
      * @param[in]   frame_thresh    How many frames without information
-                                    before deemed an error?
+     *                              before deemed an error?
+     * @param[in]   hijack_detect   Enable detection of hijacked feed?
+     * @param[in]   hijack_thresh   How many spurious frames in a row to consider a fault?
+     * @param[in]   his_size        History size additional detection
      */
-    cam_feat(int frame_threh)
+    cam_feat(int frame_threh, bool hijack_detect, int hijack_thresh = 3, int his_size = 4)
     {
         this->fault_rating = 0;
         this->frame_thresh = frame_thresh;
         this->orb = cv::ORB::create(500, 1.2f, 4, 5, 0, 2, cv::ORB::HARRIS_SCORE, 5);
+
+        this->hijack_detect = hijack_detect;
+        this->hijack_rating = 0;
+        if (hijack_detect)
+            this->matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
+        this->hijack_thresh = hijack_thresh;
+        this->his_size = his_size;
     };
 
     /**
@@ -34,15 +80,18 @@ public:
      * @param[in]   frame   A color frame. Best if downscaled for performance.
      * @return  true if no errors have been detected with regards to features
      */
-    bool test_frame(const cv::Mat & frame)
+    status test_frame(const cv::Mat & frame)
     {
         // ORB uses greyscale
         cv::Mat grey;
         cv::cvtColor(frame, grey, cv::COLOR_BGR2GRAY);
-        std::vector<cv::KeyPoint> kp;
-        this->orb->detect(grey, kp);
 
-        if (kp.size() < 3) {
+        std::vector<cv::KeyPoint> * kp = new std::vector<cv::KeyPoint>();
+        cv::Mat * desc = new cv::Mat();
+
+        this->orb->detectAndCompute(grey, cv::noArray(), *kp, *desc);
+
+        if (kp->size() < 3) {
             if (fault_rating <= INT_MAX - 1) {
                 fault_rating += 1;
             }
@@ -50,31 +99,100 @@ public:
             fault_rating = 0;
         }
 
-        return this->has_features();
-    };
+        // hijack detection
+        if (this->hijack_detect) {
+            std::vector<std::vector<cv::DMatch>> matches;
 
-    /**
-     * Tells if there are features in the tested frames.
-     * @return true if okay, false if faulty
-     */
-    bool has_features(void)
-    {
-        return !(this->is_faulty());
+            // when we have previous frames, do a detection
+            int count = 0;
+            if (this->his.size() >= this->his_size) {
+                if (kp->size() > 0) {
+                    // count number of matched keypoints
+                    for (auto it = this->his.begin(); it != this->his.end(); ++it) {
+                        this->matcher->knnMatch(*(it->desc), *desc, matches, 2);
+                        for (int i = 0; i < matches.size(); ++i) {
+                            if (matches[i][0].distance < 0.20f * matches[i][1].distance)
+                                ++count;
+                        }
+                    }
+                    //std::cout << count << std::endl;
+                }
+
+                // thresholding
+                if (this->his.front().count == -1 ||
+                    calc_spuriosity(count) < (-this->hijack_rating)) {
+                    his_entry entry;
+                    entry.desc = desc;
+                    entry.count = count;
+                    this->his.push_back(entry);
+                    hijack_rating = 0;
+                } else {
+                    //std::cout << "spurious" << std::endl;
+                    if (hijack_rating <= INT_MAX - 1)
+                        hijack_rating += 1;
+                }
+            } else {
+                his_entry entry;
+                entry.desc = desc;
+                entry.count = -1;
+                this->his.push_back(entry);
+            }
+
+            if (this->his.size() > this->his_size) {
+                his_entry entry = this->his.front();
+                entry.clean();
+                this->his.pop_front();
+            }
+        }
+
+        return this->get_status();
     };
 
     /**
      * Tells if there are faults in the tested frames
      * @return true if faulty
      */
-    bool is_faulty(void)
+    status get_status(void)
     {
-        return (fault_rating > this->frame_thresh);
+        if (this->fault_rating > this->frame_thresh) {
+            return BLANK;
+        }
+
+        if (hijack_detect) {
+            if (this->hijack_rating > this->hijack_thresh)
+                return HIJACK;
+        }
+
+        return OKAY;
     };
+
+    /**
+     * Resets hijack state
+     * Flushes history
+     */
+     void reset_hijack(void)
+     {
+        while (!(this->his.empty())) {
+            his_entry entry = this->his.front();
+            entry.clean();
+            this->his.pop_front();
+        }
+        hijack_rating = 0;
+     }
+
 
 private:
     int fault_rating;
     int frame_thresh;
     cv::Ptr<cv::ORB> orb;
+
+    int his_size;
+    int hijack_rating;
+    int hijack_thresh;
+    bool hijack_detect;
+
+    cv::Ptr<cv::DescriptorMatcher> matcher;
+    std::list<his_entry> his;
 };
 
 #endif//__CAM_FEAT_HPP__

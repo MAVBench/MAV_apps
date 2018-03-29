@@ -85,7 +85,7 @@ int main(int argc, char **argv)
             }
         } else {
             if (current_msg.gps == 1)
-                
+
                 std::cout << "GPS data timed out" << std::endl;
             current_msg.gps = 0;
         }
@@ -146,23 +146,26 @@ uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
     cv_ptr = cv_bridge::toCvCopy(msg);
     cv::Mat resized;
     cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
-    if (!cf.test_frame(resized))
+    cam_feat::status status = cf.test_frame(resized);
+    if (status == cam_feat::OKAY)
         return 0;
     return 1;
 }
 
-cam_feat cf_l(20); // tentative 20 frames before consider camera to be faulty
+// tentative 20 frames before consider camera to be faulty
+// enable feed hijack detection, with thresh of 3 frames and 3 frame history
+cam_feat cf_l(20, true, 3, 3);
+cam_feat cf_r(20, true, 3, 3);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_l_timer.cancel();
     if (current_msg.camera_left == 0)
         std::cout << "Left camera data found" << std::endl;
     current_msg.camera_left = 1;
     camera_l_timer.async_wait(camera_l_timer_callback);
-    
+
     current_msg.camera_left = test_frame(cf_l, msg);
 }
 
-cam_feat cf_r(20); // tentative 20 frames before consider camera to be faulty
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_r_timer.cancel();
     if (current_msg.camera_right == 0)
