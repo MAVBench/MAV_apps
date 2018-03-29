@@ -72,12 +72,12 @@ int main(int argc, char **argv)
             if (current_msg.gps == 0){
                 tfListen.lookupTransform("/world", "/gps", now, transform);
                 std::cout << "GPS data found" << std::endl;
-                int totalTraveledDist = transform.getOrigin().length();
-                static int lastTraveledDist = 0;
+                double totalTraveledDist = transform.getOrigin().length();
+                static double lastTraveledDist = 0;
 
                 //compare old coordinates to new  coordinates
-                int dDist = totalTraveledDist - lastTraveledDist;
-                int maxDist = calc_max_dist();
+                double dDist = totalTraveledDist - lastTraveledDist;
+                double maxDist = calc_max_dist();
                 if(traveledDist > maxDist){
                      std::cout<<"GPS moved " << DDist << ", expected max distance: " << maxDist <<std::endl;
                 }else{
@@ -104,14 +104,14 @@ ros::Time last_msg_time; //might need to initialize this
 ros::Time current_msg_time; //might need to initialize this
 static bool imu_accel_init = false;
 
-int calc_max_dist(){
+double calc_max_dist(){
    //last imu accel is in m/s^2 of x,y,z
-    double dtime = (last_msg_time - current_msg_time).toSec(); //time between imu messages
+    double dtime = (current_msg_time - last_msg_time).toSec(); //time between imu messages
     
-
    if(imu_accel_init == 0 || dtime ==  0){
       return max_velocity * 5;
     }
+
    return max_velocity * dtime;
 }
 
