@@ -31,7 +31,8 @@ int main(int argc, char **argv)
   tf::TransformListener listen;
 
   uint16_t port = 41451;
-  string ip_addr__global = "10.157.90.49";
+  string ip_addr__global; //= "10.157.90.49";
+  ros::param::get("/ip_addr", ip_addr__global);
   Drone drone(ip_addr__global.c_str(), port);
 
   int i = 0;
@@ -51,8 +52,8 @@ int main(int argc, char **argv)
               listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
 
               if (i++ % 50 == 0) {
-                  ROS_ERROR("GPS FIAL ON PURPPOSE");
-                  pos.x = 100; pos.y = 1000; pos.z = 17;
+                  // ROS_ERROR("GPS FIAL ON PURPPOSE");
+                  // pos.x = 100; pos.y = 1000; pos.z = 17;
               }
 
               transform.setOrigin(tf::Vector3(pos.x, pos.y - 4, pos.z));

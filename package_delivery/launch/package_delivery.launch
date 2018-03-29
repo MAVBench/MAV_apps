@@ -4,9 +4,9 @@
     <!--arg name="host_ip" default="10.157.90.51" /-->
     <!--arg name="host_ip" default="169.254.153.158" /-->
     <!-- Hasans's workstation ip --> 
-    <arg name="host_ip" default="10.157.90.49" />
+    <!-- arg name="host_ip" default="10.157.90.49" /-->
     <!-- Hasans's direct connection ip --> 
-    <!-- arg name="host_ip" default="169.254.250.191" /-->
+    <arg name="host_ip" default="169.254.250.191" />
     <!--Wenzhi's workstation ip-->
     <!--arg name="host_ip" default="10.157.90.62" /-->
 
@@ -22,8 +22,8 @@
     <!-- Set the localization method /-->
     <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
     <!--arg name="localization_method" default="vins_mono" /-->
-    <arg name="localization_method" default="gps" />
-    <!-- arg name="localization_method" default="ground_truth" /-->
+    <!-- arg name="localization_method" default="gps" /-->
+    <arg name="localization_method" default="ground_truth" />
 
     <param name="localization_method" value="$(arg localization_method)" />
     <param name="data_collection_iteration_freq_ptCld" value="100" />
@@ -144,7 +144,7 @@
 		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
 		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
 		<!-- Input: Rectified depth image -->
-		<remap from="image_rect" to="/Airsim/depth"/>
+		<remap from="image_rect" to="/Airsim/depth_front"/>
 
     </node>
 	
