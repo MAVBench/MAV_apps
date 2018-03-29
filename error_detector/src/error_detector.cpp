@@ -77,7 +77,7 @@ int main(int argc, char **argv)
                 int maxDist = calc_max_dist();
                 int traveledDist = transform.getOrigin().length();
                 if(traveledDist > maxDist){
-                     std::cout<<"GPS moved " + traveledDist.toString() + ", expected max distance: " + maxDist.toString(); <<std::endl;
+                     std::cout<< "GPS moved " << traveledDist << ", expected max distance: " << maxDist << std::endl;
                 }else{
                     //valid gps data
                     current_msg.gps =1;
