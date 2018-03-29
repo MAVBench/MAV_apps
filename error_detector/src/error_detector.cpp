@@ -72,17 +72,20 @@ int main(int argc, char **argv)
             if (current_msg.gps == 0){
                 tfListen.lookupTransform("/world", "/gps", now, transform);
                 std::cout << "GPS data found" << std::endl;
+                int totalTraveledDist = transform.getOrigin().length();
+                static int lastTraveledDist = 0;
+
                 //compare old coordinates to new  coordinates
-                //need velocity from  IMU
+                int dDist = totalTraveledDist - lastTraveledDist;
                 int maxDist = calc_max_dist();
-                int traveledDist = transform.getOrigin().length();
                 if(traveledDist > maxDist){
-                     std::cout<<"GPS moved " + traveledDist.toString() + ", expected max distance: " + maxDist.toString(); <<std::endl;
+                     std::cout<<"GPS moved " << DDist << ", expected max distance: " << maxDist <<std::endl;
                 }else{
                     //valid gps data
                     current_msg.gps =1;
                 }
             }
+            lastTraveledDist = currentTraveledDist; //update old value
         } else {
             if (current_msg.gps == 1)
 
