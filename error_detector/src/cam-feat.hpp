@@ -15,18 +15,23 @@
 class cam_feat
 {
 private:
-    struct data_point
+    struct his_entry
     {
         //std::vector<cv::KeyPoint> * kp = nullptr;
         cv::Mat * desc = nullptr;
         int count = -1;
+
+        void clean(void)
+        {
+            delete this->desc;
+        }
     };
 
     // count of current frame
     int calc_spuriosity(int count)
     {
         int spuriosity = 0;
-        for (auto it = this->data.begin(); it != this->data.end(); ++it) {
+        for (auto it = this->his.begin(); it != this->his.end(); ++it) {
             int old_count = it->count;
             float ratio = (float) count / (float) old_count;
             if (ratio < 0.25f) {
@@ -100,10 +105,10 @@ public:
 
             // when we have previous frames, do a detection
             int count = 0;
-            if (this->data.size() >= this->his_size) {
+            if (this->his.size() >= this->his_size) {
                 if (kp->size() > 0) {
                     // count number of matched keypoints
-                    for (auto it = this->data.begin(); it != this->data.end(); ++it) {
+                    for (auto it = this->his.begin(); it != this->his.end(); ++it) {
                         this->matcher->knnMatch(*(it->desc), *desc, matches, 2);
                         for (int i = 0; i < matches.size(); ++i) {
                             if (matches[i][0].distance < 0.20f * matches[i][1].distance)
@@ -114,12 +119,12 @@ public:
                 }
 
                 // thresholding
-                if (this->data.front().count == -1 ||
+                if (this->his.front().count == -1 ||
                     calc_spuriosity(count) < (-this->hijack_rating)) {
-                    data_point datum;
-                    datum.desc = desc;
-                    datum.count = count;
-                    this->data.push_back(datum);
+                    his_entry entry;
+                    entry.desc = desc;
+                    entry.count = count;
+                    this->his.push_back(entry);
                     hijack_rating = 0;
                 } else {
                     //std::cout << "spurious" << std::endl;
@@ -127,16 +132,16 @@ public:
                         hijack_rating += 1;
                 }
             } else {
-                data_point datum;
-                datum.desc = desc;
-                datum.count = -1;
-                this->data.push_back(datum);
+                his_entry entry;
+                entry.desc = desc;
+                entry.count = -1;
+                this->his.push_back(entry);
             }
 
-            if (this->data.size() > this->his_size) {
-                data_point datum = this->data.front();
-                delete datum.desc;
-                this->data.pop_front();
+            if (this->his.size() > this->his_size) {
+                his_entry entry = this->his.front();
+                entry.clean();
+                this->his.pop_front();
             }
         }
 
@@ -161,6 +166,21 @@ public:
         return OKAY;
     };
 
+    /**
+     * Resets hijack state
+     * Flushes history
+     */
+     void reset_hijack(void)
+     {
+        while (!(this->his.empty())) {
+            his_entry entry = this->his.front();
+            entry.clean();
+            this->his.pop_front();
+        }
+        hijack_rating = 0;
+     }
+
+
 private:
     int fault_rating;
     int frame_thresh;
@@ -172,7 +192,7 @@ private:
     bool hijack_detect;
 
     cv::Ptr<cv::DescriptorMatcher> matcher;
-    std::list<data_point> data;
+    std::list<his_entry> his;
 };
 
 #endif//__CAM_FEAT_HPP__
