@@ -107,7 +107,7 @@ static bool imu_accel_init = false;
 double calc_max_dist(){
    //last imu accel is in m/s^2 of x,y,z
     double dtime = (current_msg_time - last_msg_time).toSec(); //time between imu messages
-    
+
    if(imu_accel_init == 0 || dtime ==  0){
       return max_velocity * 5;
     }
@@ -148,7 +148,8 @@ uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
     cv_bridge::CvImagePtr cv_ptr;
     cv_ptr = cv_bridge::toCvCopy(msg);
     cv::Mat resized;
-    cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
+    //cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
+    cv::resize(cv_ptr->image, resized, cv::Size(120, 67));
     cam_feat::status status = cf.test_frame(resized);
     if (status == cam_feat::OKAY)
         return 0;
@@ -157,8 +158,8 @@ uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
 
 // tentative 20 frames before consider camera to be faulty
 // enable feed hijack detection, with thresh of 3 frames and 3 frame history
-cam_feat cf_l(20, true, 3, 3);
-cam_feat cf_r(20, true, 3, 3);
+cam_feat cf_l(10, true, 3, 4);
+cam_feat cf_r(10, true, 3, 4);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_l_timer.cancel();
     if (current_msg.camera_left == 0)

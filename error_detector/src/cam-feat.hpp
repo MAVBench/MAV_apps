@@ -33,8 +33,10 @@ private:
         int spuriosity = 0;
         for (auto it = this->his.begin(); it != this->his.end(); ++it) {
             int old_count = it->count;
+            if (old_count > 300)
+                old_count = 300;
             float ratio = (float) count / (float) old_count;
-            if (ratio < 0.25f) {
+            if (ratio < 0.30f) {
                 ++spuriosity;
             } else {
                 --spuriosity;
@@ -73,6 +75,11 @@ public:
         this->his_size = his_size;
     };
 
+    ~cam_feat(void)
+    {
+        this->reset_hijack();
+    };
+
     /**
      * Provides a frame to this feature detector. Increments internal
      * counters for thresholds if necessary
@@ -86,8 +93,10 @@ public:
         cv::Mat grey;
         cv::cvtColor(frame, grey, cv::COLOR_BGR2GRAY);
 
+        bool pushed = false;
         std::vector<cv::KeyPoint> * kp = new std::vector<cv::KeyPoint>();
         cv::Mat * desc = new cv::Mat();
+        cv::imshow("grey", grey);
 
         this->orb->detectAndCompute(grey, cv::noArray(), *kp, *desc);
 
@@ -100,8 +109,20 @@ public:
         }
 
         // hijack detection
-        if (this->hijack_detect) {
+        if (this->hijack_detect && kp->size() >= 3) {
             std::vector<std::vector<cv::DMatch>> matches;
+
+            float mean = cv::mean(grey)[0];
+            //float ratio_thresh = (mean[0] < 40.0) ? 0.30f : 0.20f;
+            float ratio_thresh = 0.30f;
+
+            ratio_thresh = -(0.3)/(130.0) * mean + 0.44615;
+            //ratio_thresh = -(0.3)/(130.0) * mean + 0.54615;
+
+            if (ratio_thresh > 0.40f)
+                ratio_thresh = 0.40f;
+            if (ratio_thresh < 0.10f)
+                ratio_thresh = 0.10f;
 
             // when we have previous frames, do a detection
             int count = 0;
@@ -111,11 +132,12 @@ public:
                     for (auto it = this->his.begin(); it != this->his.end(); ++it) {
                         this->matcher->knnMatch(*(it->desc), *desc, matches, 2);
                         for (int i = 0; i < matches.size(); ++i) {
-                            if (matches[i][0].distance < 0.20f * matches[i][1].distance)
+                            //if (matches[i][0].distance < 0.30f * matches[i][1].distance)
+                            if (matches[i][0].distance < ratio_thresh * matches[i][1].distance)
                                 ++count;
                         }
                     }
-                    //std::cout << count << std::endl;
+                    //std::cout << count << ", kps: " << kp->size() << ", mean: " << mean << std::endl;
                 }
 
                 // thresholding
@@ -126,6 +148,7 @@ public:
                     entry.count = count;
                     this->his.push_back(entry);
                     hijack_rating = 0;
+                    pushed = true;
                 } else {
                     //std::cout << "spurious" << std::endl;
                     if (hijack_rating <= INT_MAX - 1)
@@ -136,6 +159,7 @@ public:
                 entry.desc = desc;
                 entry.count = -1;
                 this->his.push_back(entry);
+                pushed = true;
             }
 
             if (this->his.size() > this->his_size) {
@@ -144,6 +168,11 @@ public:
                 this->his.pop_front();
             }
         }
+
+        if (!pushed) {
+            delete desc;
+        }
+        delete kp;
 
         return this->get_status();
     };
