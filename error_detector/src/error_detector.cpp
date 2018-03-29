@@ -76,8 +76,8 @@ int main(int argc, char **argv)
                 //need velocity from  IMU
                 int maxDist = calc_max_dist();
                 int traveledDist = transform.getOrigin().length();
-                if(traveledDist>maxDist){
-                     std::cout<<"GPS position not consistent with IMU acceleration"<<std::endl;
+                if(traveledDist > maxDist){
+                     std::cout<<"GPS moved " + traveledDist.toString() + ", expected max distance: " + maxDist.toString(); <<std::endl;
                 }else{
                     //valid gps data
                     current_msg.gps =1;
