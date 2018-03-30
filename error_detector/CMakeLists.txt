@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   phoenix_msg
   image_transport
+  geometry_msgs
   tf
   cv_bridge
 )

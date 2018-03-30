@@ -62,6 +62,7 @@ public:
     msr::airlib::FlightStats getFlightStats();
     
     msr::airlib::IMUStats getIMUStats();
+    msr::airlib::IMUStats getIMUStats2();
     
     // *** F:DN Collison functions
     msr::airlib::CollisionInfo getCollisionInfo();
