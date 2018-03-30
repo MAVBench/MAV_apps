@@ -6,6 +6,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Vector3.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
@@ -16,9 +17,9 @@
 static ros::Publisher error_pub;
 static phoenix_msg::error current_msg;
 static tf::StampedTransform last_tr;
-static Vector3 last_imu_accel;
+static geometry_msgs::Vector3 last_imu_accel;
 
-int calc_max_dist(void);
+double calc_max_dist(void);
 
 void camera_l_timer_callback(const boost::system::error_code& e);
 void camera_r_timer_callback(const boost::system::error_code& e);
@@ -28,7 +29,7 @@ void gps_timer_callback(const boost::system::error_code& e);
 void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr&);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr&);
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr&);
-void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
+// void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
 
 //timer init
 boost::asio::io_service io;
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
 
     ros::Subscriber imu_0_sub = nh.subscribe("imu_topic", 1, imu_0_sub_callback);
     image_transport::Subscriber camera_r_sub = it.subscribe("/Airsim/right/image_raw", 1, camera_r_sub_callback);
+    image_transport::Subscriber camera_l_sub = it.subscribe("/Airsim/left/image_raw", 1, camera_l_sub_callback);
 
     error_pub = nh.advertise<phoenix_msg::error>("error", 1000);
 
@@ -67,16 +69,18 @@ int main(int argc, char **argv)
         ros::Time now = ros::Time::now();
         tf::StampedTransform transform;
 
-        if (tfListen.waitForTransform("/world", "/gps", ros::Time::now(), ros::Duration(1.0))) {
+        if (tfListen.waitForTransform("/world", "/gps", now, ros::Duration(1.0))) {
             if (current_msg.gps == 0){
-                tfListen.LookUpTransform("/world", "/gps", ros:Time::now(), transform);
+                tfListen.lookupTransform("/world", "/gps", now, transform);
                 std::cout << "GPS data found" << std::endl;
+                double totalTraveledDist = transform.getOrigin().length();
+                static double lastTraveledDist = 0;
+
                 //compare old coordinates to new  coordinates
-                //need velocity from  IMU
-                int maxDist = calc_max_dist();
-                int traveledDist = transform.getOrigin().distance();
-                if(traveledDist>maxDist){
-                     std::cout<<"GPS position not consistent with IMU acceleration"<<std::endl;
+                double dDist = totalTraveledDist - lastTraveledDist;
+                double maxDist = calc_max_dist();
+                if(dDist > maxDist){
+                     std::cout<<"GPS moved " << dDist << ", expected max distance: " << maxDist <<std::endl;
                 }else{
                     //valid gps data
                     current_msg.gps =1;
@@ -84,7 +88,7 @@ int main(int argc, char **argv)
             }
         } else {
             if (current_msg.gps == 1)
-                
+
                 std::cout << "GPS data timed out" << std::endl;
             current_msg.gps = 0;
         }
@@ -95,15 +99,20 @@ int main(int argc, char **argv)
     }
 }
 
-int calc_max_dist(){
-   //TODO: check units of numbers
-   if(last_imu_accel == NULL)
-      //can't use imu accel to calc max dist
-      return INT_MAX;
-   int max_accel = last_imu_accel.distance();
-   int time = 5; //picked 5 seconds, cause that is the max time btwn
-                 //valid Imu msgs
-   return max_accel * time * time; 
+#define max_velocity 15
+ros::Time last_msg_time; //might need to initialize this
+ros::Time current_msg_time; //might need to initialize this
+static bool imu_accel_init = false;
+
+double calc_max_dist(){
+   //last imu accel is in m/s^2 of x,y,z
+    double dtime = (current_msg_time - last_msg_time).toSec(); //time between imu messages
+
+   if(imu_accel_init == 0 || dtime ==  0){
+      return max_velocity * 5;
+    }
+
+   return max_velocity * dtime;
 }
 
 void camera_l_timer_callback(const boost::system::error_code& e){
@@ -139,24 +148,28 @@ uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
     cv_bridge::CvImagePtr cv_ptr;
     cv_ptr = cv_bridge::toCvCopy(msg);
     cv::Mat resized;
-    cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
-    if (!cf.test_frame(resized))
-        return 0;
-    return 1;
+    //cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
+    cv::resize(cv_ptr->image, resized, cv::Size(120, 67));
+    cam_feat::status status = cf.test_frame(resized);
+    if (status == cam_feat::OKAY)
+        return 1;
+    return 0;
 }
 
-cam_feat cf_l(20); // tentative 20 frames before consider camera to be faulty
+// tentative 20 frames before consider camera to be faulty
+// enable feed hijack detection, with thresh of 3 frames and 3 frame history
+cam_feat cf_l(10, true, 3, 4);
+cam_feat cf_r(10, true, 3, 4);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_l_timer.cancel();
     if (current_msg.camera_left == 0)
         std::cout << "Left camera data found" << std::endl;
     current_msg.camera_left = 1;
     camera_l_timer.async_wait(camera_l_timer_callback);
-    
+
     current_msg.camera_left = test_frame(cf_l, msg);
 }
 
-cam_feat cf_r(20); // tentative 20 frames before consider camera to be faulty
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_r_timer.cancel();
     if (current_msg.camera_right == 0)
@@ -171,7 +184,11 @@ void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
     imu_0_timer.cancel();
     if (current_msg.imu_0 == 0)
         std::cout << "IMU data found" << std::endl;
+    last_msg_time = current_msg_time;
+    current_msg_time = msg->header.stamp;
     current_msg.imu_0 = 1;
-    last_imu_accel = msg.linear_acceleration;
+    last_imu_accel = msg->linear_acceleration;
+    imu_accel_init = true;
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
+

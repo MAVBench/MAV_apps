@@ -25,6 +25,7 @@
     <arg name="DEBUG" value="true" /> 
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
 
+    <!-- node pkg="gps_publisher" type="gps_publisher" name="gps_publisher" / -->
     
     <!--img publisher node--> 
     <node pkg="control_drone" type="control_thread" name="control_thread" output="screen"/>
