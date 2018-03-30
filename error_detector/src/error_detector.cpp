@@ -19,7 +19,7 @@ static phoenix_msg::error current_msg;
 static tf::StampedTransform last_tr;
 static geometry_msgs::Vector3 last_imu_accel;
 
-int calc_max_dist(void);
+double calc_max_dist(void);
 
 void camera_l_timer_callback(const boost::system::error_code& e);
 void camera_r_timer_callback(const boost::system::error_code& e);
@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 
     ros::Subscriber imu_0_sub = nh.subscribe("imu_topic", 1, imu_0_sub_callback);
     image_transport::Subscriber camera_r_sub = it.subscribe("/Airsim/right/image_raw", 1, camera_r_sub_callback);
+    image_transport::Subscriber camera_l_sub = it.subscribe("/Airsim/left/image_raw", 1, camera_l_sub_callback);
 
     error_pub = nh.advertise<phoenix_msg::error>("error", 1000);
 
@@ -72,12 +73,14 @@ int main(int argc, char **argv)
             if (current_msg.gps == 0){
                 tfListen.lookupTransform("/world", "/gps", now, transform);
                 std::cout << "GPS data found" << std::endl;
+                double totalTraveledDist = transform.getOrigin().length();
+                static double lastTraveledDist = 0;
+
                 //compare old coordinates to new  coordinates
-                //need velocity from  IMU
-                int maxDist = calc_max_dist();
-                int traveledDist = transform.getOrigin().length();
-                if(traveledDist > maxDist){
-                     std::cout<< "GPS moved " << traveledDist << ", expected max distance: " << maxDist << std::endl;
+                double dDist = totalTraveledDist - lastTraveledDist;
+                double maxDist = calc_max_dist();
+                if(dDist > maxDist){
+                     std::cout<<"GPS moved " << dDist << ", expected max distance: " << maxDist <<std::endl;
                 }else{
                     //valid gps data
                     current_msg.gps =1;
@@ -101,14 +104,14 @@ ros::Time last_msg_time; //might need to initialize this
 ros::Time current_msg_time; //might need to initialize this
 static bool imu_accel_init = false;
 
-int calc_max_dist(){
+double calc_max_dist(){
    //last imu accel is in m/s^2 of x,y,z
-    double dtime = (last_msg_time - current_msg_time).toSec(); //time between imu messages
+    double dtime = (current_msg_time - last_msg_time).toSec(); //time between imu messages
     
-
    if(imu_accel_init == 0 || dtime ==  0){
       return max_velocity * 5;
     }
+
    return max_velocity * dtime;
 }
 
@@ -148,8 +151,8 @@ uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
     cv::resize(cv_ptr->image, resized, cv::Size(80, 45));
     cam_feat::status status = cf.test_frame(resized);
     if (status == cam_feat::OKAY)
-        return 0;
-    return 1;
+        return 1;
+    return 0;
 }
 
 // tentative 20 frames before consider camera to be faulty

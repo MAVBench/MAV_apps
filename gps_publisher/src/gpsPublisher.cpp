@@ -52,8 +52,8 @@ int main(int argc, char **argv)
               listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
 
               if (i++ % 50 == 0) {
-                  // ROS_ERROR("GPS FIAL ON PURPPOSE");
-                  // pos.x = 100; pos.y = 1000; pos.z = 17;
+                  ROS_ERROR("GPS FIAL ON PURPPOSE");
+                  pos.x = 100; pos.y = 1000; pos.z = 17;
               }
 
               transform.setOrigin(tf::Vector3(pos.x, pos.y - 4, pos.z));
