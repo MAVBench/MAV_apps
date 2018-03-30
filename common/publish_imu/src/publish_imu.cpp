@@ -123,7 +123,7 @@ int main(int argc, char **argv)
             misses++;
         }
 
-        if (last_t2 < IMUStats2.time_stamp) {
+        if (last_t2 < IMU_stats2.time_stamp) {
             last_t2 = IMU_stats2.time_stamp;
             IMU_pub2.publish(IMU_msg2);
         } else {
