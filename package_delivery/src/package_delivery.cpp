@@ -20,6 +20,7 @@
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
 #include <std_msgs/Bool.h>
+#include <phoenix_msg/error.h>
 #include "common.h"
 #include "timer.h"
 
@@ -32,6 +33,7 @@ bool should_panic = false;
 bool col_imminent = false;
 bool col_coming = false;
 bool slam_lost = false;
+bool return_to_home = false;
 
 long long g_panic_rlzd_t_accumulate = 0;
 int g_panic_ctr = 0;
@@ -95,6 +97,12 @@ double dist(coord t, geometry_msgs::Point m)
 // *** F:DN call back function for the panic_topic subscriber
 void panic_callback(const std_msgs::Bool::ConstPtr& msg) {
     should_panic = msg->data;
+}
+
+void error_callback(const phoenix_msg::error::ConstPtr& msg) {
+    if (!msg->camera_left || !msg->camera_right)
+        return_to_home = true;
+    ROS_ERROR("Must return to home!");
 }
 
 void panic_dir_callback(const geometry_msgs::Vector3::ConstPtr& msg) {
@@ -192,7 +200,7 @@ int main(int argc, char **argv)
 	// *** F:DN variables	
 	//----------------------------------------------------------------- 
     package_delivery_initialize_params();
-    geometry_msgs::Point start, goal;
+    geometry_msgs::Point start, goal, home;
 
     // Flight queues
     trajectory_t normal_traj, rev_normal_traj;
@@ -223,6 +231,8 @@ int main(int argc, char **argv)
 		nh.subscribe<std_msgs::Bool>("col_coming", 1, col_coming_callback);
 	ros::Subscriber slam_lost_sub = 
 		nh.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
+	ros::Subscriber error_sub = 
+		nh.subscribe<phoenix_msg::error>("/error", 1, error_callback);
 
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
@@ -257,7 +267,7 @@ int main(int argc, char **argv)
             control_drone(drone);
 
             goal = get_goal();
-            start = get_start(drone);
+            home = start = get_start(drone);
             profiling_data_srv_inst.request.key = "start_profiling";
             if (ros::service::waitForService("/record_profiling_data", 10)){ 
                 if(!record_profiling_data_client.call(profiling_data_srv_inst)){
@@ -364,7 +374,16 @@ int main(int argc, char **argv)
             follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, check_position);
 
             // Choose next state (failure, completion, or more flying)
-            if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj)) {
+            if (return_to_home) {
+                goal.x = home.x;
+                goal.y = home.y;
+                goal.z = home.z;
+
+                ROS_ERROR("Setting goal back to home!");
+
+                next_state = completed;
+            }
+            else if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj)) {
                 if (reset_slam(drone, "/slam_lost"))
                     next_state = completed;
                 else
