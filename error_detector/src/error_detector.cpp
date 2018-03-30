@@ -72,11 +72,7 @@ int main(int argc, char **argv)
     //thread to monitor gps
     std::thread transformThread(monitor_transform);
     
-    while(ros::ok()){
-        error_pub.publish(current_msg);
-        ros::spinOnce();
-        r.sleep();
-    }
+    ros::spinOnce();
     transformThread.join();
 }
 
