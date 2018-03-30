@@ -29,6 +29,9 @@
 #include <cstring>
 #include <string>
 #include "HelperFunctions/QuatRotEuler.h"
+
+#include <phoenix_msg/error.h>
+
 using namespace std;
 std::string ip_addr__global;
 using namespace msr::airlib;
@@ -77,6 +80,13 @@ sensor_msgs::Imu create_msg(IMUStats IMU_stats) {
     return IMU_msg;
 }
 
+phoenix_msg::error error_msg;
+
+void error_callback(const phoenix_msg::error::ConstPtr& msg)
+{
+    error_msg = *msg;
+}
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
@@ -97,10 +107,13 @@ int main(int argc, char **argv)
     int misses = 0;
 
     ros::Rate pub_rate(110);
-    sensor_msgs::Imu IMU_msg, IMU_msg2;
+    sensor_msgs::Imu IMU_msg, IMU_msg2, IMU_msg_official;
     ros::Publisher IMU_pub = nh.advertise <sensor_msgs::Imu>("imu_topic", 1);
     ros::Publisher IMU_pub2 = nh.advertise <sensor_msgs::Imu>("imu_topic2", 1);
+    ros::Publisher IMU_pub_official = nh.advertise <sensor_msgs::Imu>("imu_official", 1);
 
+    ros::Subscriber error_sub = nh.subscribe<phoenix_msg::error>("error", 1, error_callback);
+    
     IMUStats IMU_stats;
     IMUStats IMU_stats2;
 
@@ -115,12 +128,16 @@ int main(int argc, char **argv)
         IMU_msg = create_msg(IMU_stats);
         IMU_msg2 = create_msg(IMU_stats2);
 
+
+        bool imu1_ok = true;
+        bool imu2_ok = true;
         samples += 2;
         if (last_t < IMU_stats.time_stamp) {
             last_t = IMU_stats.time_stamp;
             IMU_pub.publish(IMU_msg);
         } else {
             misses++;
+            imu1_ok = false;
         }
 
         if (last_t2 < IMU_stats2.time_stamp) {
@@ -128,6 +145,33 @@ int main(int argc, char **argv)
             IMU_pub2.publish(IMU_msg2);
         } else {
             misses++;
+            imu2_ok = false;
+        }
+
+        if (error_msg.imu_0 == 0)
+            imu1_ok = false;
+        if (error_msg.imu_1 == 0)
+            imu2_ok = false;
+
+        // average the two IMU msgs if they're both okay
+        #define AVG(_field,_m) IMU_msg_official._field._m =\
+                               (IMU_msg._field._m + IMU_msg._field._m) / 2.0
+        if (imu1_ok && imu2_ok) {
+            IMU_msg_official = IMU_msg;
+            AVG(orientation,x);
+            AVG(orientation,y);
+            AVG(orientation,z);
+            AVG(angular_velocity,x);
+            AVG(angular_velocity,y);
+            AVG(angular_velocity,z);
+            AVG(linear_acceleration,x);
+            AVG(linear_acceleration,y);
+            AVG(linear_acceleration,z);
+            IMU_pub_official.publish(IMU_msg_official);
+        } else if (imu1_ok) {
+            IMU_pub_official.publish(IMU_msg);
+        } else if (imu2_ok) {
+            IMU_pub_official.publish(IMU_msg2);
         }
 
         pub_rate.sleep();
