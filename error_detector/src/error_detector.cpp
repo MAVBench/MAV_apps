@@ -10,6 +10,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include "cam-feat.hpp"
+#include <thread>
 
 //monitors IMU, camera, gps for errors, alerts subscribers
 
@@ -30,12 +31,16 @@ void camera_l_sub_callback(const sensor_msgs::ImageConstPtr&);
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr&);
 void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
 
+void monitor_transform(void);
+
 //timer init
 boost::asio::io_service io;
-boost::asio::deadline_timer imu_0_timer(io, boost::posix_time::seconds(5));
-boost::asio::deadline_timer camera_l_timer(io, boost::posix_time::seconds(5));
-boost::asio::deadline_timer camera_r_timer(io, boost::posix_time::seconds(5));
-boost::asio::deadline_timer gps_timer(io, boost::posix_time::seconds(5));
+boost::asio::deadline_timer imu_0_timer(io, boost::posix_time::seconds(.5));
+boost::asio::deadline_timer camera_l_timer(io, boost::posix_time::seconds(.5));
+boost::asio::deadline_timer camera_r_timer(io, boost::posix_time::seconds(.5));
+boost::asio::deadline_timer gps_timer(io, boost::posix_time::seconds(.5));
+
+
 
 int main(int argc, char **argv)
 {
@@ -45,7 +50,6 @@ int main(int argc, char **argv)
     image_transport::ImageTransport it(nh);
     std::cout << "Error Detector Node" << std::endl;
 
-    tf::TransformListener tfListen;
 
     ros::Subscriber imu_0_sub = nh.subscribe("imu_topic", 1, imu_0_sub_callback);
     image_transport::Subscriber camera_r_sub = it.subscribe("/Airsim/right/image_raw", 1, camera_r_sub_callback);
@@ -62,7 +66,21 @@ int main(int argc, char **argv)
     current_msg.camera_right = 1;
 
     // feature detection based camera fault detector
+    
+    //thread to monitor gps
+    std::thread transformThread(monitor_transform);
+    
+    while(ros::ok()){
+        error_pub.publish(current_msg);
+        ros::spinOnce();
+        r.sleep();
+    }
+    transformThread.join();
+}
 
+void monitor_transform(){
+  
+    tf::TransformListener tfListen;
     while(ros::ok()){
         ros::Time now = ros::Time::now();
         tf::StampedTransform transform;
@@ -101,7 +119,7 @@ int calc_max_dist(){
       //can't use imu accel to calc max dist
       return INT_MAX;
    int max_accel = last_imu_accel.distance();
-   int time = 5; //picked 5 seconds, cause that is the max time btwn
+   double time = .5; //picked 5 seconds, cause that is the max time btwn
                  //valid Imu msgs
    return max_accel * time * time; 
 }
