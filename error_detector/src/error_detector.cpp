@@ -25,9 +25,11 @@ double calc_max_dist(void);
 void camera_l_timer_callback(const boost::system::error_code& e);
 void camera_r_timer_callback(const boost::system::error_code& e);
 void imu_0_timer_callback(const boost::system::error_code& e);
+void imu_1_timer_callback(const boost::system::error_code& e);
 void gps_timer_callback(const boost::system::error_code& e);
 
 void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr&);
+void imu_1_sub_callback(const sensor_msgs::Imu::ConstPtr&);
 void camera_l_sub_callback(const sensor_msgs::ImageConstPtr&);
 void camera_r_sub_callback(const sensor_msgs::ImageConstPtr&);
 // void gps_sub_callback(const sensor_msgs::GPS::ConstPtr&
@@ -36,12 +38,11 @@ void monitor_transform(void);
 
 //timer init
 boost::asio::io_service io;
-boost::asio::deadline_timer imu_0_timer(io, boost::posix_time::seconds(.5));
+boost::asio::deadline_timer imu_0_timer(io, boost::posix_time::seconds(.02));
+boost::asio::deadline_timer imu_1_timer(io, boost::posix_time::seconds(.02));
 boost::asio::deadline_timer camera_l_timer(io, boost::posix_time::seconds(.5));
 boost::asio::deadline_timer camera_r_timer(io, boost::posix_time::seconds(.5));
 boost::asio::deadline_timer gps_timer(io, boost::posix_time::seconds(.5));
-
-
 
 int main(int argc, char **argv)
 {
@@ -52,7 +53,8 @@ int main(int argc, char **argv)
     std::cout << "Error Detector Node" << std::endl;
 
 
-    ros::Subscriber imu_0_sub = nh.subscribe("imu_topic", 1, imu_0_sub_callback);
+    ros::Subscriber imu_0_sub = nh.subscribe("/imu_topic", 1, imu_0_sub_callback);
+    ros::Subscriber imu_1_sub = nh.subscribe("/imu_topic2", 1, imu_1_sub_callback);
     image_transport::Subscriber camera_r_sub = it.subscribe("/Airsim/right/image_raw", 1, camera_r_sub_callback);
     image_transport::Subscriber camera_l_sub = it.subscribe("/Airsim/left/image_raw", 1, camera_l_sub_callback);
 
@@ -61,22 +63,32 @@ int main(int argc, char **argv)
     //start timers
 
     io.run();
-    ros::Rate r(10);
 
     current_msg.gps          = 1;
     current_msg.imu_0        = 1;
+    current_msg.imu_1        = 1;
     current_msg.camera_right = 1;
+    current_msg.camera_left = 1;
 
     // feature detection based camera fault detector
     
     //thread to monitor gps
     std::thread transformThread(monitor_transform);
     
-    ros::spin();
+    // ros::spin();
+    
+    ros::Rate r(200);
+    while (ros::ok()) {
+        error_pub.publish(current_msg);
+        ros::spinOnce();
+        r.sleep();
+    }
+    
     transformThread.join();
 }
 
 void monitor_transform(){
+    ros::Rate r(10);
   
     tf::TransformListener tfListen;
     while(ros::ok()){
@@ -107,8 +119,8 @@ void monitor_transform(){
             current_msg.gps = 0;
         }
 
-        error_pub.publish(current_msg);
-        ros::spinOnce();
+        // error_pub.publish(current_msg);
+        // ros::spinOnce();
         r.sleep();
     }
 }
@@ -156,6 +168,12 @@ void imu_0_timer_callback(const boost::system::error_code& e){
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
 
+void imu_1_timer_callback(const boost::system::error_code& e){
+    if(e) return; //timer canceled
+    current_msg.imu_1 = 0;
+    std::cout << "IMU 1 timed out" << std::endl;
+    imu_1_timer.async_wait(imu_1_timer_callback);
+}
 
 uint8_t test_frame(cam_feat & cf, const sensor_msgs::ImageConstPtr& msg)
 {
@@ -206,3 +224,14 @@ void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
 
+void imu_1_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
+    imu_1_timer.cancel();
+    if (current_msg.imu_1 == 0)
+        std::cout << "IMU data found" << std::endl;
+    last_msg_time = current_msg_time;
+    current_msg_time = msg->header.stamp;
+    current_msg.imu_1 = 1;
+    last_imu_accel = msg->linear_acceleration;
+    imu_accel_init = true;
+    imu_1_timer.async_wait(imu_1_timer_callback);
+}
