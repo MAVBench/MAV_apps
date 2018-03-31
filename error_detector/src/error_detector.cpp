@@ -38,11 +38,27 @@ void monitor_transform(void);
 
 //timer init
 boost::asio::io_service io;
-boost::asio::deadline_timer imu_0_timer(io, boost::posix_time::seconds(.02));
-boost::asio::deadline_timer imu_1_timer(io, boost::posix_time::seconds(.02));
-boost::asio::deadline_timer camera_l_timer(io, boost::posix_time::seconds(.5));
-boost::asio::deadline_timer camera_r_timer(io, boost::posix_time::seconds(.5));
-boost::asio::deadline_timer gps_timer(io, boost::posix_time::seconds(.5));
+boost::asio::deadline_timer imu_0_timer(io, boost::posix_time::milliseconds(50));
+boost::asio::deadline_timer imu_1_timer(io, boost::posix_time::milliseconds(50));
+boost::asio::deadline_timer camera_l_timer(io, boost::posix_time::milliseconds(500));
+boost::asio::deadline_timer camera_r_timer(io, boost::posix_time::milliseconds(500));
+boost::asio::deadline_timer gps_timer(io, boost::posix_time::milliseconds(500));
+
+void async_thread()
+{
+    ROS_WARN("Starting...");
+    camera_l_timer.expires_from_now(boost::posix_time::milliseconds(500));
+    camera_l_timer.async_wait(camera_l_timer_callback);
+    camera_r_timer.expires_from_now(boost::posix_time::milliseconds(500));
+    camera_r_timer.async_wait(camera_r_timer_callback);
+    imu_0_timer.expires_from_now(boost::posix_time::milliseconds(500));
+    imu_0_timer.async_wait(imu_0_timer_callback);
+    imu_1_timer.expires_from_now(boost::posix_time::milliseconds(500));
+    imu_1_timer.async_wait(imu_1_timer_callback);
+    ROS_ERROR("Running");
+    io.run();
+    ROS_ERROR("Finishing!");
+}
 
 int main(int argc, char **argv)
 {
@@ -61,8 +77,7 @@ int main(int argc, char **argv)
     error_pub = nh.advertise<phoenix_msg::error>("error", 1000);
 
     //start timers
-
-    io.run();
+    std::thread timersThread(async_thread);
 
     current_msg.gps          = 1;
     current_msg.imu_0        = 1;
@@ -85,6 +100,7 @@ int main(int argc, char **argv)
     }
     
     transformThread.join();
+    timersThread.join();
 }
 
 void monitor_transform(){
@@ -145,6 +161,7 @@ void camera_l_timer_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
     current_msg.camera_left = 0;
     std::cout << "Left camera timed out" << std::endl;
+    camera_l_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_l_timer.async_wait(camera_l_timer_callback);
 }
 
@@ -152,6 +169,7 @@ void camera_r_timer_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
     current_msg.camera_right = 0;
     std::cout << "Right camera timed out" << std::endl;
+    camera_r_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_r_timer.async_wait(camera_r_timer_callback);
 }
 
@@ -165,6 +183,7 @@ void imu_0_timer_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
     current_msg.imu_0 = 0;
     std::cout << "IMU 0 timed out" << std::endl;
+    imu_0_timer.expires_from_now(boost::posix_time::milliseconds(50));
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
 
@@ -172,6 +191,7 @@ void imu_1_timer_callback(const boost::system::error_code& e){
     if(e) return; //timer canceled
     current_msg.imu_1 = 0;
     std::cout << "IMU 1 timed out" << std::endl;
+    imu_1_timer.expires_from_now(boost::posix_time::milliseconds(50));
     imu_1_timer.async_wait(imu_1_timer_callback);
 }
 
@@ -197,6 +217,7 @@ void camera_l_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     if (current_msg.camera_left == 0)
         std::cout << "Left camera data found" << std::endl;
     current_msg.camera_left = 1;
+    camera_l_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_l_timer.async_wait(camera_l_timer_callback);
 
     current_msg.camera_left = test_frame(cf_l, msg);
@@ -207,6 +228,7 @@ void camera_r_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     if (current_msg.camera_right == 0)
         std::cout << "Right camera data found" << std::endl;
     current_msg.camera_right = 1;
+    camera_r_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_r_timer.async_wait(camera_r_timer_callback);
 
     current_msg.camera_right = test_frame(cf_r, msg);
@@ -221,6 +243,7 @@ void imu_0_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
     current_msg.imu_0 = 1;
     last_imu_accel = msg->linear_acceleration;
     imu_accel_init = true;
+    imu_0_timer.expires_from_now(boost::posix_time::milliseconds(50));
     imu_0_timer.async_wait(imu_0_timer_callback);
 }
 
@@ -233,5 +256,6 @@ void imu_1_sub_callback(const sensor_msgs::Imu::ConstPtr& msg){
     current_msg.imu_1 = 1;
     last_imu_accel = msg->linear_acceleration;
     imu_accel_init = true;
+    imu_1_timer.expires_from_now(boost::posix_time::milliseconds(50));
     imu_1_timer.async_wait(imu_1_timer_callback);
 }

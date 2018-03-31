@@ -52,11 +52,11 @@ int main(int argc, char **argv)
               listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
 
               if (i++ % 50 == 0) {
-                  ROS_ERROR("GPS FIAL ON PURPPOSE");
-                  pos.x = 100; pos.y = 1000; pos.z = 17;
+                  // ROS_ERROR("GPS FIAL ON PURPPOSE");
+                  // pos.x = 100; pos.y = 1000; pos.z = 17;
               }
 
-              transform.setOrigin(tf::Vector3(pos.x, pos.y - 4, pos.z));
+              transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
 
               // tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
               //         imu.orientation.z(), imu.orientation.w());
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
               br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
                           "world", "gps"));
 
-              cout << "Position: " << pos.x << " " << pos.y - 4 << " " << pos.z
+              cout << "Position: " << pos.x << " " << pos.y << " " << pos.z
                    << " @" << timestamp << std::endl;
           } catch (...) {
           }

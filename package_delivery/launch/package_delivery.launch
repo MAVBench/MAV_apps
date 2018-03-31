@@ -12,6 +12,8 @@
 
     <param name="/ip_addr" value="$(arg host_ip)" />
 
+    <param name="/slam_fps" value="20" />
+
     <!-- Drone's physical characteristics /-->
     <arg name="v_max" default="2"/> 
     <arg name="a_max" default="8"/> 
@@ -21,9 +23,9 @@
         
     <!-- Set the localization method /-->
     <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
-    <!--arg name="localization_method" default="vins_mono" /-->
+    <arg name="localization_method" default="vins_mono" />
     <!-- arg name="localization_method" default="gps" /-->
-    <arg name="localization_method" default="ground_truth" />
+    <!--arg name="localization_method" default="ground_truth" /-->
 
     <param name="localization_method" value="$(arg localization_method)" />
     <param name="data_collection_iteration_freq_ptCld" value="100" />
@@ -216,5 +218,10 @@
     </group>
 
   <node pkg="publish_imu" type="publish_imu" name="publish_imu"/> 
+
+  <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher"/> 
+  <node pkg="error_detector" type="error_detector" name="error_detector"/> 
+  <node pkg="position_estimator" type="position_estimator_node" name="position_estimator_node"/> 
+
 </launch>
 

@@ -34,6 +34,7 @@ bool col_imminent = false;
 bool col_coming = false;
 bool slam_lost = false;
 bool return_to_home = false;
+bool returning_to_home = false;
 
 long long g_panic_rlzd_t_accumulate = 0;
 int g_panic_ctr = 0;
@@ -100,9 +101,10 @@ void panic_callback(const std_msgs::Bool::ConstPtr& msg) {
 }
 
 void error_callback(const phoenix_msg::error::ConstPtr& msg) {
-    if (!msg->camera_left || !msg->camera_right)
+    if (!msg->camera_left || !msg->camera_right) {
         return_to_home = true;
-    ROS_ERROR("Must return to home!");
+        ROS_ERROR("Must return to home!");
+    }
 }
 
 void panic_dir_callback(const geometry_msgs::Vector3::ConstPtr& msg) {
@@ -251,7 +253,7 @@ int main(int argc, char **argv)
 	//----------------------------------------------------------------- 
     
     // Wait for the localization method to come online
-    waitForLocalization(localization_method);
+    // waitForLocalization(localization_method);
 
     //update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
     //log_time(stats_file_addr);
@@ -374,7 +376,9 @@ int main(int argc, char **argv)
             follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, check_position);
 
             // Choose next state (failure, completion, or more flying)
-            if (return_to_home) {
+            if (return_to_home && !returning_to_home) {
+                returning_to_home = true;
+
                 goal.x = home.x;
                 goal.y = home.y;
                 goal.z = home.z;

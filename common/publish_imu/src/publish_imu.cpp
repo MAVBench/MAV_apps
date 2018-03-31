@@ -148,15 +148,17 @@ int main(int argc, char **argv)
             imu2_ok = false;
         }
 
-        if (error_msg.imu_0 == 0)
+        if (!error_msg.imu_0) {
             imu1_ok = false;
-        if (error_msg.imu_1 == 0)
+        }
+        if (!error_msg.imu_1) {
             imu2_ok = false;
+        }
 
         // average the two IMU msgs if they're both okay
         #define AVG(_field,_m) IMU_msg_official._field._m =\
-                               (IMU_msg._field._m + IMU_msg._field._m) / 2.0
-        if (imu1_ok && imu2_ok) {
+                               (IMU_msg._field._m + IMU_msg2._field._m) / 2.0
+        if (imu1_ok && imu2_ok && IMU_stats.time_stamp == IMU_stats2.time_stamp) {
             IMU_msg_official = IMU_msg;
             AVG(orientation,x);
             AVG(orientation,y);
@@ -175,6 +177,7 @@ int main(int argc, char **argv)
         }
 
         pub_rate.sleep();
+        ros::spinOnce();
     }
 }
 

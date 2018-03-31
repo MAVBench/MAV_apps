@@ -36,7 +36,7 @@ private:
             if (old_count > 300)
                 old_count = 300;
             float ratio = (float) count / (float) old_count;
-            if (ratio < 0.30f) {
+            if (ratio < 0.15f) {
                 ++spuriosity;
             } else {
                 --spuriosity;
@@ -46,6 +46,7 @@ private:
     };
 
 public:
+    bool show = false;
     enum status
     {
         OKAY,
@@ -96,7 +97,8 @@ public:
         bool pushed = false;
         std::vector<cv::KeyPoint> * kp = new std::vector<cv::KeyPoint>();
         cv::Mat * desc = new cv::Mat();
-        cv::imshow("grey", grey);
+        if (this->show)
+            cv::imshow("grey", grey);
 
         this->orb->detectAndCompute(grey, cv::noArray(), *kp, *desc);
 
@@ -116,13 +118,17 @@ public:
             //float ratio_thresh = (mean[0] < 40.0) ? 0.30f : 0.20f;
             float ratio_thresh = 0.30f;
 
-            ratio_thresh = -(0.3)/(130.0) * mean + 0.44615;
+            /*
+            //ratio_thresh = -(0.3)/(130.0) * mean + 0.44615;
+            ratio_thresh = -(0.3)/(130.0) * mean + 0.54615;
             //ratio_thresh = -(0.3)/(130.0) * mean + 0.54615;
 
-            if (ratio_thresh > 0.40f)
-                ratio_thresh = 0.40f;
+            if (ratio_thresh > 0.50f)
+                ratio_thresh = 0.50f;
             if (ratio_thresh < 0.10f)
                 ratio_thresh = 0.10f;
+                */
+            ratio_thresh = 0.45f;
 
             // when we have previous frames, do a detection
             int count = 0;
