@@ -6,13 +6,13 @@
   
   <!-- important params affecting performance -->
   <!-- arg name="v_max" default="3.4"/-->
-  <arg name="v_max" default="3.4"/>
+  <arg name="v_max" default="2"/>
 
 
   <arg name="nbvp/gain/range" default="6"/>
   <arg name="nbvp/tree/extension_range" default="4"/>
   <arg name="sensor_max_range" default="7" />
-  <arg name="planning_resolution" default=".15"/>
+  <arg name="planning_resolution" default="0.5"/>
   <arg name="mapping_resolution" default="10" />
   <!-- distance_from_goal_threshold is a value betwen 0 and 1--> 
   <arg name="distance_from_goal_threshold" default=".30" />
@@ -26,17 +26,24 @@
   
   <!-- localization method -->
   <!--arg name="localization_method" value="orb_slam2_rgbd" /-->
-  <arg name="localization_method" value="ground_truth" />
+  <!-- arg name="localization_method" value="ground_truth" /-->
   <!--arg name="localization_method" value="gps" /-->
-  <!-- arg name="localization_method" value="vins_mono"/-->
+  <arg name="localization_method" value="vins_mono"/>
 
-  <!--- set according to the localizat5ion method--> 
-  <arg name="max_yaw_rate" default="90"/>
-  <arg name="max_yaw_rate_during_flight" default="90"/>
+  <comment>
+  <node pkg="last_transform_publisher" type="last_transform_publisher" name="last_transform_publisher">
+    <param name="loop_rate" value="100.0" />
+  </node>
+  </comment>
+
+  <!--- set according to the localization method--> 
+  <arg name="max_yaw_rate" default="30"/>
+  <arg name="max_yaw_rate_during_flight" default="30"/>
   <arg name="system/dyaw_max" default="$(eval arg('max_yaw_rate_during_flight') * 3.14159265359 / 180.0)"/>
   <param name="v_max" value="$(arg v_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
+
   
   <arg name="future_col_drone_radius" default="1.5"/>
   <arg name="future_col_drone_height" default="0.6"/>
@@ -54,10 +61,10 @@
 
 
   <!-- termination criteria-->
-  <arg name="coverage_threshold" default="30"/>
+  <arg name="coverage_threshold" default="60"/>
 
   <!-- DEBUGING-data collection params--> 
-  <arg name="DEBUG" value="false" />
+  <arg name="DEBUG" value="true" />
   <arg name="CLCT_DATA" value="true" />
   <param name="stats_file_addr" value="$(find mapping_and_sar)/../data/mapping/stats.json" />
   <param name="supervisor_mailbox" value="$(find mapping_and_sar)/../data/mapping/supervisor_mailbox.txt" />
@@ -72,12 +79,12 @@
 
   <!-- Behzad's workstation ip --> 
   <!-- arg name="host_ip" value="10.157.34.101" /--> 
-  <arg name="host_ip" value="10.157.90.51" />
+  <!--arg name="host_ip" value="10.157.90.51" /-->
   <!--arg name="host_ip" value="169.254.153.158" /-->
   <!-- Hasans's workstation ip --> 
   <!--arg name="host_ip" default="10.157.90.49" /-->
   <!-- Hasans's direct connection ip --> 
-  <!--arg name="host_ip" default="169.254.250.191" /-->
+  <arg name="host_ip" default="169.254.250.191" />
   <!-- Wenzhi's workstation ip -->
   <!-- arg name="host_ip" default="10.157.90.62" /-->
   <param name="/ip_addr" value="$(arg host_ip)" />
@@ -136,45 +143,45 @@
   <!-- img_publisher point cloud /-->
   <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
 
-  <!-- IP of the Airsim computer -->
-  <param name="all_front" value="$(arg all_front)"/>	
-  <param name="localization_method" value="$(arg localization_method)" />
-  <param name="Airsim_ip" value="$(arg host_ip)" />
+      <!-- IP of the Airsim computer -->
+      <param name="all_front" value="$(arg all_front)"/>	
+      <param name="localization_method" value="$(arg localization_method)" />
+      <param name="Airsim_ip" value="$(arg host_ip)" />
 
-  <param name="loop_rate" value="20" />
+      <!-- Port of the Airsim computer (this is default, do not change!) -->
+      <param name="Airsim_port" value="41451"/>
 
-  <!-- Port of the Airsim computer (this is default, do not change!) -->
-  <param name="Airsim_port" value="41451"/>
+      <param name="loop_rate" value="20.0" />
 
-  <!-- RGB camera parameters (parameters when calibrated) -->
-  <param name="Fx" value="256"/>
-  <param name="Fy" value="256"/>
-  <param name="cx" value="256"/>
-  <param name="cy" value="144"/>
-  <param name="scale_x" value="512"/>  <!-- Width when calibrated!-->
-  <param name="scale_y" value="288"/> <!-- Height when calibrated!-->
-  <param name="width" value="512"/>  <!-- Width when calibrated!-->
-  <param name="height" value="288"/> <!-- Height when calibrated!-->
+      <!-- RGB camera parameters (parameters when calibrated) -->
+      <param name="Fx" value="256"/>
+      <param name="Fy" value="256"/>
+      <param name="cx" value="256"/>
+      <param name="cy" value="144"/>
+      <param name="scale_x" value="512"/>  <!-- Width when calibrated!-->
+      <param name="scale_y" value="288"/> <!-- Height when calibrated!-->
+      <param name="width" value="512"/>  <!-- Width when calibrated!-->
+      <param name="height" value="288"/> <!-- Height when calibrated!-->
 
-  <comment> 
-  <param name="Fx" value="200"/>
-  <param name="Fy" value="200"/>
-  <param name="cx" value="200"/>
-  <param name="cy" value="150"/>
-  <param name="scale_x" value="400"/>  <!-- Width when calibrated!-->
-  <param name="scale_y" value="300"/> <!-- Height when calibrated!-->
-  <param name="width" value="400"/>  <!-- Width when calibrated!-->
-  <param name="height" value="300"/> <!-- Height when calibrated!-->
-  </comment>
+      <comment> 
+      <param name="Fx" value="200"/>
+      <param name="Fy" value="200"/>
+      <param name="cx" value="200"/>
+      <param name="cy" value="150"/>
+      <param name="scale_x" value="400"/>  <!-- Width when calibrated!-->
+      <param name="scale_y" value="300"/> <!-- Height when calibrated!-->
+      <param name="width" value="400"/>  <!-- Width when calibrated!-->
+      <param name="height" value="300"/> <!-- Height when calibrated!-->
+      </comment>
 
-  <param name="maxDist" value="50.0"/> 
-  <!-- Depth baseline -->
-  <param name="Tx" value="0.14"/>
-  <param name="scale" value="0.38"/> 
+      <param name="maxDist" value="50.0"/> 
+      <!-- Depth baseline -->
+      <param name="Tx" value="0.14"/>
+      <param name="scale" value="0.38"/> 
 
-  <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
-  <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
-  <param name="odomTopic" value="/mavros/local_position/odom"/>
+      <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
+      <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
+      <param name="odomTopic" value="/mavros/local_position/odom"/>
   </node>
 
   <!-- publishing pose values --> 
@@ -296,7 +303,7 @@
   </group>
 
   <node pkg="publish_imu" type="publish_imu" name="publish_imu"> 
-  <param name="loop_rate" value="150"/>
+      <param name="loop_rate" value="190"/>
   </node>
 
   <comment>

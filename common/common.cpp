@@ -272,14 +272,13 @@ void spin_around(Drone &drone) {
 
 
 // Follows trajectory, popping commands off the front of it and returning those commands in reverse order
-void follow_trajectory(Drone& drone, trajectory_t * traj,
+double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj, yaw_strategy_t yaw_strategy,
         bool check_position, float max_speed, float time){
 
-
     trajectory_t reversed_commands;
 
-    static double max_speed_so_far = 0;
+    double max_speed_so_far = 0;
     static int ctr    = 0;
     
     
@@ -299,7 +298,6 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
     
     ros::Time start_hook_t;
     while (time > 0 && traj->size() > 0) {
-         
         
         start_hook_t = ros::Time::now();  
         multiDOFpoint p = traj->front();
@@ -311,21 +309,6 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
         //ROS_ERROR_STREAM("point "<<p.x<< " "<< p.y<< " " <<p.z);
         //ROS_ERROR_STREAM("before correction"<<v_x<< " "<< v_y << " " <<v_z);
          
-        if (check_position) {
-            auto pos = drone.position();
-            v_x += 0.2*(p.x-pos.x);
-            v_y += 0.2*(p.y-pos.y);
-            v_z += 0.5*(p.z-pos.z);
-            /* 
-            if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>2) {
-                ROS_ERROR_STREAM("distance greater than 2"); 
-            }
-            else if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>1) {
-                ROS_ERROR_STREAM("distance greater than 1"); 
-            }
-            */
-        }
-        
         //ROS_ERROR_STREAM("before scaling"<<v_x<< " "<< v_y << " " <<v_z);
         // Calculate the yaw we should be flying with
         float yaw = p.yaw;
@@ -335,6 +318,21 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
             yaw = FACE_FORWARD;
         else if (yaw_strategy == face_backward) {
             yaw = FACE_BACKWARD;
+        }
+
+        if (check_position) {
+            auto pos = drone.position();
+            v_x += 0.2*(p.x-pos.x);
+            v_y += 0.2*(p.y-pos.y);
+            v_z += 1*(p.z-pos.z);
+            /* 
+            if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>2) {
+                ROS_ERROR_STREAM("distance greater than 2"); 
+            }
+            else if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>1) {
+                ROS_ERROR_STREAM("distance greater than 1"); 
+            }
+            */
         }
 
         // Make sure we're not going over the maximum speed
@@ -349,8 +347,25 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
             v_y *= scale;
             v_z *= scale;
             //ROS_ERROR_STREAM("AFTER speed scaling"<<v_x<< " "<< v_y << " " <<v_z);
-           speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         }
+
+        if (!check_position) {
+            auto pos = drone.position();
+            v_x += 0.2*(p.x-pos.x);
+            v_y += 0.2*(p.y-pos.y);
+            v_z += 1*(p.z-pos.z);
+            /* 
+            if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>2) {
+                ROS_ERROR_STREAM("distance greater than 2"); 
+            }
+            else if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>1) {
+                ROS_ERROR_STREAM("distance greater than 1"); 
+            }
+            */
+        }
+
+        speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
+
         /*
         if(ctr %50 == 0) {
             if (ctr %100 == 0) {
@@ -361,6 +376,10 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
         }
         ctr++;
         */
+
+        if (speed > max_speed_so_far)
+            max_speed_so_far = speed;
+
         // Calculate the time for which these flight commands should run
         double flight_time = p.duration <= time ? p.duration : time;
         double scaled_flight_time = flight_time / scale;
@@ -369,6 +388,7 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
         //ROS_ERROR_STREAM("Vs to send out"<<v_x<< " "<< v_y << " " <<v_z);
         auto segment_start_time = std::chrono::system_clock::now();
         drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time); 
+        // std::cout << "vx: " << v_z << ", vy: " << v_y << ", vz: " << v_z << "\n";
         
        //ROS_ERROR_STREAM("fly with: "<<v_x<< " "<<v_y<<" " <<v_z);
 
@@ -392,6 +412,8 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
 
     if (reverse_traj != nullptr)
         *reverse_traj = append_trajectory(reversed_commands, *reverse_traj);
+
+    return max_speed_so_far;
 }
 
 

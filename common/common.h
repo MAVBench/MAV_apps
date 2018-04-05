@@ -110,7 +110,7 @@ enum yaw_strategy_t { ignore_yaw, face_forward, face_backward, follow_yaw };
 trajectory_t create_trajectory(const trajectory_msgs::MultiDOFJointTrajectory&, bool face_forward = false);
 trajectory_msgs::MultiDOFJointTrajectory create_trajectory_msg(const trajectory_t&);
 
-void follow_trajectory(Drone& drone, trajectory_t * traj,
+double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj,
         yaw_strategy_t yaw_strategy = ignore_yaw,
         bool check_position = true,

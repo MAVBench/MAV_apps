@@ -78,6 +78,7 @@ std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, 
 long long g_planning_without_OM_PULL_time_acc = 0;
 static int g_number_of_planning = 0 ;
 float g_planning_budget;
+float g_out_of_bounds_allowance = 5;
 
 
 
@@ -87,6 +88,7 @@ trajectory_msgs::MultiDOFJointTrajectory traj_topic;
 ros::ServiceClient octo_client;
 bool g_requested_trajectory = false;
 bool path_found = false;
+geometry_msgs::Point g_start_pos;
 
 
 // The following block of global variables only exist for debugging purposes
@@ -116,6 +118,14 @@ bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::nod
 
 // *** F:DN Checks whether a cell in the occupancy grid is occupied.
 bool out_of_bounds(const graph::node& pos);
+
+
+// *** F:DN Checks whether a cell in the occupancy grid is occupied.
+bool out_of_bounds_strict(const graph::node& pos);
+
+
+// *** F:DN Checks whether a cell in the occupancy grid is occupied.
+bool out_of_bounds_lax(const graph::node& pos);
 
 
 // *** F:DN find all neighbours within "max_dist" meters of node
@@ -184,13 +194,12 @@ void postprocess(piecewise_trajectory& path);
 bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res)
 {
     g_requested_trajectory = true; 
-    auto hook_start_t = ros::Time::now();
-    x__low_bound__global = std::min(x__low_bound__global, req.start.x);
-    x__high_bound__global = std::max(x__high_bound__global, req.start.x);
-    y__low_bound__global = std::min(y__low_bound__global, req.start.y);
-    y__high_bound__global = std::max(y__high_bound__global, req.start.y);
-    z__low_bound__global = std::min(z__low_bound__global, req.start.z);
-    z__high_bound__global = std::max(z__high_bound__global, req.start.z);
+    // x__low_bound__global = std::min(x__low_bound__global, req.start.x);
+    // x__high_bound__global = std::max(x__high_bound__global, req.start.x);
+    // y__low_bound__global = std::min(y__low_bound__global, req.start.y);
+    // y__high_bound__global = std::max(y__high_bound__global, req.start.y);
+    // z__low_bound__global = std::min(z__low_bound__global, req.start.z);
+    // z__high_bound__global = std::max(z__high_bound__global, req.start.z);
 
 
     //----------------------------------------------------------------- 
@@ -203,8 +212,10 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
     // *** F:DN Body 
     //----------------------------------------------------------------- 
 
-    //request_octomap();
+    request_octomap();
     auto hook_end_t_2 = ros::Time::now(); 
+
+    auto hook_start_t = ros::Time::now();
     if (motion_planning_core_str != "lawn_mower"){
         if (octree == nullptr) {
             ROS_ERROR("Octomap is not available.");
@@ -214,11 +225,12 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
         // clear_octomap_bbx({req.start.x, req.start.y, req.start.z});
     }
     // octomap_msgs::binaryMapToMsg(*octree, omp);
-    //octree->writeBinary("/home/ubuntu/octomap.bt");
+    // octree->writeBinary("/home/ubuntu/octomap.bt");
 
     req.start.x += req.twist.linear.x*g_planning_budget;
     req.start.y += req.twist.linear.y*g_planning_budget;
     req.start.z += req.twist.linear.z*g_planning_budget;
+    g_start_pos = req.start;
 
     
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length ,req.n_pts_per_dir, octree);
@@ -230,13 +242,13 @@ bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_
         return true;
     }
 
-    //ROS_INFO("Path size: %u. Now post-processing...", piecewise_path.size());
+    // ROS_INFO("Path size: %u. Now post-processing...", piecewise_path.size());
 
     if (motion_planning_core_str != "lawn_mower") {
         postprocess(piecewise_path);
     }
 
-    //ROS_INFO("Path size: %u. Now smoothening...", piecewise_path.size());
+    // ROS_INFO("Path size: %u. Now smoothening...", piecewise_path.size());
 
     // Smoothen the path and build the multiDOFtrajectory response
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
@@ -370,8 +382,8 @@ int main(int argc, char ** argv)
     ros::Publisher octo_pub = nh.advertise<octomap_msgs::Octomap>("omap", 1);
     ros::Publisher pcl_pub = nh.advertise<PointCloud> ("graph", 1);
     graph_conn_pub = nh.advertise<visualization_msgs::Marker>("graph_conns", 100);
-    ros::Subscriber octomap_sub = nh.subscribe("octomap_binary", 1, generate_octomap);
-    //octo_client = nh.serviceClient<octomap_msgs::GetOctomap>("octomap_binary");///, true);
+    //ros::Subscriber octomap_sub = nh.subscribe("octomap_binary", 1, generate_octomap);
+    octo_client = nh.serviceClient<octomap_msgs::GetOctomap>("octomap_binary");///, true);
 	
     pcl_ptr->header.frame_id = graph_conn_list.header.frame_id = "world";
     graph_conn_list.type = visualization_msgs::Marker::LINE_LIST;
@@ -450,14 +462,76 @@ bool known(octomap::OcTree * octree, double x, double y, double z)
 	return octree->search(x, y, z) != nullptr;
 }
 
+bool is_between(double x, double min, double max) {
+    return x >= min && x <= max;
+}
 
 bool out_of_bounds(const graph::node& pos) {
-    return (pos.x < x__low_bound__global
-            || pos.x > x__high_bound__global
-            || pos.y < y__low_bound__global
-            || pos.y > y__high_bound__global
-            || pos.z < z__low_bound__global
-            || pos.z > z__high_bound__global);
+    bool x_correct = is_between(pos.x, x__low_bound__global, x__high_bound__global);
+    bool y_correct = is_between(pos.y, y__low_bound__global, y__high_bound__global);
+    bool z_correct = is_between(pos.z, z__low_bound__global, z__high_bound__global);
+
+    if (x_correct && y_correct && z_correct)
+        return false;
+
+    bool x_start_correct = is_between(g_start_pos.x, x__low_bound__global, x__high_bound__global);
+    bool y_start_correct = is_between(g_start_pos.y, y__low_bound__global, y__high_bound__global);
+    bool z_start_correct = is_between(g_start_pos.z, z__low_bound__global, z__high_bound__global);
+
+    if (x_start_correct && y_start_correct && !z_start_correct) {
+        if (is_between(pos.x, g_start_pos.x - g_out_of_bounds_allowance,
+                    g_start_pos.x + g_out_of_bounds_allowance)
+                && is_between(pos.y, g_start_pos.y - g_out_of_bounds_allowance,
+                    g_start_pos.y + g_out_of_bounds_allowance)) {
+            if (g_start_pos.z < z__low_bound__global && pos.z >= g_start_pos.z)
+                return false;
+            else if (g_start_pos.z > z__high_bound__global && pos.z <= g_start_pos.z)
+                return false;
+        }
+    }
+
+    return true;
+}
+
+
+bool out_of_bounds_strict(const graph::node& pos) {
+    bool x_correct = is_between(pos.x, x__low_bound__global, x__high_bound__global);
+    bool y_correct = is_between(pos.y, y__low_bound__global, y__high_bound__global);
+    bool z_correct = is_between(pos.z, z__low_bound__global, z__high_bound__global);
+
+    return !x_correct || !y_correct || !z_correct;
+}
+
+
+bool out_of_bounds_lax(const graph::node& pos) {
+    double x_low = std::min(g_start_pos.x, x__low_bound__global);
+    double x_high = std::max(g_start_pos.x, x__high_bound__global);
+    double y_low = std::min(g_start_pos.y, y__low_bound__global);
+    double y_high = std::max(g_start_pos.y, y__high_bound__global);
+    double z_low = std::min(g_start_pos.z, z__low_bound__global);
+    double z_high = std::max(g_start_pos.z, z__high_bound__global);
+
+    bool x_correct = is_between(pos.x, x_low, x_high);
+    bool y_correct = is_between(pos.y, y_low, y_high);
+    bool z_correct = is_between(pos.z, z_low, z_high);
+
+    // if (!x_correct) {
+    //     std::cout << "x_low: " << x_low << std::endl;
+    //     std::cout << "x_high: " << x_high << std::endl;
+    //     std::cout << "x_actual: " << pos.x << std::endl;
+    // }
+    // if (!y_correct) {
+    //     std::cout << "y_low: " << y_low << std::endl;
+    //     std::cout << "y_high: " << y_high << std::endl;
+    //     std::cout << "y_actual: " << pos.y << std::endl;
+    // }
+    // if (!z_correct) {
+    //     std::cout << "z_low: " << z_low << std::endl;
+    //     std::cout << "z_high: " << z_high << std::endl;
+    //     std::cout << "z_actual: " << pos.z << std::endl;
+    // }
+
+    return !x_correct || !y_correct || !z_correct;
 }
 
 
@@ -499,10 +573,26 @@ bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::nod
     
     
     RESET_TIMER();
-    // First, check if anything goes underground
-    if (n1.z <= 0 || n2.z <= 0)
+
+    // First, check if anything goes too close to the ground
+    if (n1.z <= drone_height__global || n2.z <= drone_height__global)
         return true;
-            
+
+    // Next, check if it goes out-of-bounds
+    bool z_out_of_bounds = !is_between(n1.z, z__low_bound__global, z__high_bound__global)
+        || !is_between(n2.z, z__low_bound__global, z__high_bound__global);
+    if (z_out_of_bounds) {
+        if (!is_between(n1.x, n2.x - g_out_of_bounds_allowance, n2.x + g_out_of_bounds_allowance)
+                || !is_between(n1.y, n2.y - g_out_of_bounds_allowance, n2.y + g_out_of_bounds_allowance)) {
+            if (end_ptr != nullptr) {
+                end_ptr->x = n1.x;
+                end_ptr->y = n1.y;
+                end_ptr->z = n1.z;
+            }
+            return true;
+        }
+    }
+
     const double pi = 3.14159265359;
 
 	// The drone is modeled as a cylinder.
@@ -898,20 +988,17 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
 	// Optimize until no collisions are present
 	bool col;
 	do {
-		//ROS_INFO("Checking for collisions...");
+		// ROS_INFO("Checking for collisions...");
 		col = false;
 
 		// Estimate the time the drone should take flying between each node
 		auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
-	
-        std::vector<double>  times;
-        for (auto el :segment_times) {
-            times.push_back(.8*el); 
-        }
 
+        for (auto& el : segment_times)
+            el *= 0.4;
 
 		// Optimize and create a smooth path from the vertices
-		opt.setupFromVertices(vertices, times, derivative_to_optimize);
+		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
 		opt.solveLinear();
 
 		// Return all the smooth segments in the path
@@ -921,6 +1008,7 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
 
 		// Loop through the vector of segments looking for collisions
 		for (int i = 0; !col && i < segments.size(); ++i) {
+            // ROS_INFO("Looping through segments...");
 			const double time_step = 0.1;
 			double segment_len = segments[i].getTime();
 
@@ -929,6 +1017,7 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
 
 			// Step through each individual segment, at increments of "time_step" seconds, looking for a collision
 			for (double t = 0; t < segment_len - time_step; t += time_step) {
+                // ROS_INFO("Stepping through individual...");
 				auto pos1 = segments[i].evaluate(t);
 				auto pos2 = segments[i].evaluate(t + time_step);
 
@@ -939,7 +1028,7 @@ smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_pat
 				
                 
             //if (motion_planning_core_str != "lawn_mower") {
-                if (out_of_bounds(n1) || out_of_bounds(n2) || collision(octree, n1, n2)) {
+                if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2)) {
 					
                     
                     // Add a new vertex in the middle of the segment we are currently on
@@ -1019,9 +1108,15 @@ void postprocess(piecewise_trajectory& path)
     // We connect non-adjacent nodes in the path that do not have collisions.
     
     for (auto it = path.begin(); it != path.end()-1; ) {
+        // if (out_of_bounds_strict(*it)) {
+        //     ++it;
+        //     continue;
+        // }
+
         bool shortened = false;
         for (auto it2 = path.end()-1; it2 != it+1 && !shortened; --it2) {
-            if (!collision(octree, *it, *it2)) {
+            if (!collision(octree, *it, *it2)
+                && out_of_bounds_strict(*it) == out_of_bounds_strict(*it2)) {
                 it = path.erase(it+1, it2);
                 shortened = true;
             }
@@ -1359,12 +1454,12 @@ piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point 
 
     // Set bounds
     ob::RealVectorBounds bounds(3);
-    bounds.setLow(0, x__low_bound__global);
-    bounds.setHigh(0, x__high_bound__global);
-    bounds.setLow(1, y__low_bound__global);
-    bounds.setHigh(1, y__high_bound__global);
-    bounds.setLow(2, z__low_bound__global);
-    bounds.setHigh(2, z__high_bound__global);
+    bounds.setLow(0, std::min(x__low_bound__global, g_start_pos.x));
+    bounds.setHigh(0, std::max(x__high_bound__global, g_start_pos.x));
+    bounds.setLow(1, std::min(y__low_bound__global, g_start_pos.y));
+    bounds.setHigh(1, std::max(y__high_bound__global, g_start_pos.y));
+    bounds.setLow(2, std::min(z__low_bound__global, g_start_pos.z));
+    bounds.setHigh(2, std::max(z__high_bound__global, g_start_pos.z));
 
     space->setBounds(bounds);
 

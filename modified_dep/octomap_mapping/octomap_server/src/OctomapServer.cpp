@@ -283,8 +283,9 @@ bool OctomapServer::openFile(const std::string& filename){
 }
 
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+    ros::Time start_time; 
     if(CLCT_DATA) {
-       ros::Time start_time = ros::Time::now();
+       start_time = ros::Time::now();
        pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
        octomap_ctr++;
        //ROS_INFO_STREAM("------------------------RIGHT HERE");
@@ -378,6 +379,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
   if(CLCT_DATA){
+      //ROS_INFO_STREAM("octomap integration"<<total_elapsed);
       octomap_integration_acc += total_elapsed*1e9;
       if ((octomap_ctr+1) % data_collection_iteration_freq == 0) {
           profile_manager::profiling_data_srv profiling_data_srv_inst;
@@ -398,7 +400,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
           }
       }
   }
-  publishAll(cloud->header.stamp);
+  //publishAll(cloud->header.stamp);
   //publishAll(start_time);
 }
 
@@ -748,6 +750,8 @@ void OctomapServer::publishAll(const ros::Time& rostime){
 
 
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
+  
+  ROS_INFO_STREAM("octomap integration"<<ros::Time::now() - rostime);
   ROS_DEBUG("Map publishing in OctomapServer took %f sec", total_elapsed);
 
 }

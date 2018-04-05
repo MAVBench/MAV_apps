@@ -33,7 +33,7 @@
         <param name="localization_method" value="$(arg localization_method)" />
         <param name="Airsim_ip" value="$(arg host_ip)" />
 
-        <param name="loop_rate" value="20" />
+        <param name="loop_rate" value="20.0" />
 
 		<!-- Port of the Airsim computer (this is default, do not change!) -->
 		<param name="Airsim_port" value="41451"/>
@@ -64,10 +64,6 @@
         <!-- Depth baseline -->
         <param name="Tx" value="0.14"/>
         <param name="scale" value="0.38"/> 
-    
-		<!-- Topic with odometry information for the vehicle (used to create tf tree) -->
-	    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
-        <param name="odomTopic" value="/mavros/local_position/odom"/>
 	</node>
 
     <!-- publishing pose values --> 

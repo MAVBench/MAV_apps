@@ -320,7 +320,7 @@ int main(int argc, char **argv){
         trajectory_t * forward_traj = nullptr;
         trajectory_t * rev_traj = nullptr;
         bool check_position = true;
-        yaw_strategy_t yaw_strategy = face_forward; // follow_yaw;
+        yaw_strategy_t yaw_strategy = face_forward; // follow_yaw; 
 
         if (should_panic) {
             ROS_INFO_STREAM("Panicking!");
@@ -345,7 +345,7 @@ int main(int argc, char **argv){
 
         if (g_future_col) {
             //ROS_WARN("follow_trajectory: future collision acknowledged");
-            //normal_traj.clear();
+            normal_traj.clear();
             g_future_col = false;
             //ROS_INFO_STREAM("g_future_collision"<< g_future_col_time); 
             g_img_to_follow_traj_acc += (ros::Time::now() - g_future_col_time).toSec()*1e9;
@@ -388,7 +388,7 @@ int main(int argc, char **argv){
         //     }
         // }
         
-        if(app_started){
+        if(app_started && drone.age_of_position() < 3){
             follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy,
                     check_position, g_v_max, g_fly_trajectory_time_out);
             
@@ -401,6 +401,12 @@ int main(int argc, char **argv){
             if (forward_traj->size() > 0)
                 next_steps_pub.publish(next_steps_msg(*forward_traj));
                 //ROS_INFO_STREAM("publish the next step"); 
+        } else if (drone.age_of_position() >= 3) {
+            static ros::Time last = ros::Time::now();
+            if ((ros::Time::now() - last).toSec() > 1) {
+                ROS_WARN("Last position update too old to move! %f", drone.age_of_position());
+                last = ros::Time::now();
+            }
         }
 
         if(forward_traj->size() != 0) {

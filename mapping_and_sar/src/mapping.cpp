@@ -493,13 +493,13 @@ int main(int argc, char** argv)
     ros::spinOnce(); 
     
     if (g_slam_lost) { //skip the iteration
-        continue;
-        // ROS_ERROR("Slam lost! Giving up!");
-        // g_mission_status = "failed";
-        // log_data_before_shutting_down();
-        // signal_supervisor(g_supervisor_mailbox, "kill"); 
-        // ros::shutdown(); 
-        // break;
+        // continue;
+        ROS_ERROR("Slam lost! Giving up!");
+        g_mission_status = "failed";
+        log_data_before_shutting_down();
+        signal_supervisor(g_supervisor_mailbox, "kill"); 
+        ros::shutdown(); 
+        break;
     }
     
     //ROS_INFO_THROTTLE(0.5, "Planning iteration %i", g_iteration);
@@ -509,7 +509,7 @@ int main(int argc, char** argv)
     planSrv.request.header.frame_id = "world";
 
     if (g_future_col) {
-        //ROS_WARN("follow_trajectory: future collision acknowledged");
+        ROS_WARN("follow_trajectory: future collision acknowledged");
         planSrv.request.exact_root = false;
         g_future_col = false;
     } else {

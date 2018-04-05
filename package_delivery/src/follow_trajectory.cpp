@@ -14,6 +14,7 @@
 #include <profile_manager/profiling_data_srv.h>
 #include <profile_manager/start_profiling_srv.h>
 #include <std_srvs/SetBool.h>
+#include <std_srvs/Empty.h>
 #include <package_delivery/multiDOF.h>
 #include <package_delivery/multiDOF_array.h>
 #include <package_delivery/follow_trajectory_status_srv.h>
@@ -22,7 +23,7 @@
 using namespace std;
 bool slam_lost = false;
 bool col_imminent = false;
-//bool col_coming = false;
+// bool col_coming = false;
 
 
 trajectory_t normal_traj;
@@ -30,6 +31,7 @@ trajectory_t rev_normal_traj;
 float g_localization_status = 1.0;
 std::string g_supervisor_mailbox; //file to write to when completed
 float g_v_max;
+float g_max_velocity_reached = 0;
 double g_fly_trajectory_time_out;
 long long g_planning_time_including_ros_overhead_acc  = 0;
 
@@ -40,6 +42,9 @@ bool should_panic = false;
 geometry_msgs::Vector3 panic_velocity;
 bool g_got_new_trajectory = false;
 ros::Time g_recieved_traj_t;
+
+Drone * g_drone_ptr = nullptr; // TODO: get rid of this
+ros::ServiceClient acknowledge_col_coming_service; // TODO: get rid of this
 
 // Profiling
 ros::Time col_coming_time_stamp;
@@ -62,13 +67,30 @@ void panic_velocity_callback(const geometry_msgs::Vector3::ConstPtr& msg) {
     panic_velocity = *msg;
 }
 
-void col_imminent_callback(const std_msgs::Bool::ConstPtr& msg) {
-    //col_imminent = false;
-    //ROS_INFO_STREAM("in collision iminent"); 
-    col_imminent = msg->data;
+void col_coming_callback(ros::ServiceClient& client, const package_delivery::BoolPlusHeader::ConstPtr& msg) {
+    normal_traj.clear();
+
+    ros::Rate r(10);
+    while (1) {
+        std::cout << "follow_trajectory: acknowledging..." << std::endl;
+
+        std_srvs::SetBool srv;
+        srv.request.data = 1;
+
+        if (!client.call(srv)) {
+            ROS_ERROR("follow_trajectory: Couldn't acknowledge!");
+            break;
+        }
+
+        if (srv.response.success)
+            break;
+
+        r.sleep();
+    }
+
+    normal_traj.clear(); 
+    ROS_INFO("follow_trajectory: coming out!");
 }
-
-
 
 void log_data_before_shutting_down(){
     profile_manager::profiling_data_srv profiling_data_srv_inst;
@@ -107,6 +129,18 @@ void log_data_before_shutting_down(){
             ros::shutdown();
         }
     }
+
+    profiling_data_srv_inst.request.key = "max_velocity_reached";
+    profiling_data_srv_inst.request.value = g_max_velocity_reached;
+    if (ros::service::waitForService("/record_profiling_data", 10)){ 
+        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+            ROS_ERROR_STREAM("could not probe data using stats manager");
+            ros::shutdown();
+        }
+    }
+
+    std::cout << "Max velocity: " << g_v_max << std::endl;
+    std::cout << "Max velocity reached: " << g_max_velocity_reached << std::endl;
 }
 
 void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
@@ -157,25 +191,77 @@ void sigIntHandlerPrivate(int signo){
     exit(0);
 }
 
+bool back_off_cb(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
+{
+    ROS_INFO("Backing off!");
+    normal_traj.clear();
+
+    // Acknowledge future collision
+    ros::Rate r(10);
+    while (1) {
+        std::cout << "follow_trajectory: acknowledging..." << std::endl;
+
+        std_srvs::SetBool srv;
+        srv.request.data = 1;
+
+        if (!acknowledge_col_coming_service.call(srv)) {
+            ROS_ERROR("follow_trajectory: Couldn't acknowledge!");
+            break;
+        }
+
+        if (srv.response.success)
+            break;
+
+        r.sleep();
+    }
+
+    ROS_INFO("Backing off: following");
+
+    ros::Duration wait(4);
+    for (ros::Time start = ros::Time::now(); ros::Time::now() - start < wait;) {
+        float velocity_reached = follow_trajectory(*g_drone_ptr, &rev_normal_traj, nullptr, face_backward, false, 1.0, g_fly_trajectory_time_out);
+
+        if (velocity_reached > g_max_velocity_reached)
+            g_max_velocity_reached = velocity_reached;
+    }
+
+    ROS_INFO("Backed off!");
+    return true;
+}
+
 bool follow_trajectory_status_cb(package_delivery::follow_trajectory_status_srv::Request &req, 
     package_delivery::follow_trajectory_status_srv::Response &res)
 {
     res.success.data = g_trajectory_done;// || col_coming;
 
-    const multiDOFpoint& current_point =
-        normal_traj.empty() ? rev_normal_traj.front() : normal_traj.front();
-    
-    geometry_msgs::Twist last_velocity;
-    last_velocity.linear.x = current_point.vx;
-    last_velocity.linear.y = current_point.vy;
-    last_velocity.linear.z = current_point.vz;
-    res.twist = last_velocity;
-  
-    geometry_msgs::Twist last_acceleration;
-    last_acceleration.linear.x = current_point.ax;
-    last_acceleration.linear.y = current_point.ay;
-    last_acceleration.linear.z = current_point.az;
-    res.acceleration = last_acceleration;
+    if (!normal_traj.empty()) {
+        const multiDOFpoint& current_point = normal_traj.front();
+        
+        geometry_msgs::Twist last_velocity;
+        last_velocity.linear.x = current_point.vx;
+        last_velocity.linear.y = current_point.vy;
+        last_velocity.linear.z = current_point.vz;
+        res.twist = last_velocity;
+      
+        geometry_msgs::Twist last_acceleration;
+        last_acceleration.linear.x = current_point.ax;
+        last_acceleration.linear.y = current_point.ay;
+        last_acceleration.linear.z = current_point.az;
+        res.acceleration = last_acceleration;
+    } else {
+        geometry_msgs::Twist last_velocity;
+        last_velocity.linear.x = 0;
+        last_velocity.linear.y = 0;
+        last_velocity.linear.z = 0;
+        res.twist = last_velocity;
+      
+        geometry_msgs::Twist last_acceleration;
+        last_acceleration.linear.x = 0;
+        last_acceleration.linear.y = 0;
+        last_acceleration.linear.z = 0;
+        res.acceleration = last_acceleration;
+    }
+
     return true;
 }
 
@@ -260,17 +346,25 @@ int main(int argc, char **argv){
         ROS_FATAL("Could not start follow_thrajectory. Parameter missing! fly_trajectory_time_out is not provided"); 
         return -1; 
     }
+
+    Drone drone(ip_addr.c_str(), port, localization_method,
+                g_max_yaw_rate, g_max_yaw_rate_during_flight);
+    g_drone_ptr = &drone;
     
     ros::ServiceServer trajectory_done_service = n.advertiseService("follow_trajectory_status", follow_trajectory_status_cb);
+    ros::ServiceServer back_off_service = n.advertiseService("/back_off", back_off_cb);
+	acknowledge_col_coming_service = 
+        n.serviceClient<std_srvs::SetBool>("/acknowledge_col_coming");
 
     ros::Publisher next_steps_pub = n.advertise<package_delivery::multiDOF_array>("/next_steps", 1);
 
     ros::Subscriber panic_sub =  n.subscribe<std_msgs::Bool>("panic_topic", 1, panic_callback);
     ros::Subscriber panic_velocity_sub = 
         n.subscribe<geometry_msgs::Vector3>("panic_velocity", 1, panic_velocity_callback);
+
+    // ros::Subscriber col_coming_sub =
+    //     n.subscribe<package_delivery::BoolPlusHeader>("/col_coming", 1, boost::bind(col_coming_callback, boost::ref(acknowledge_col_coming_service), _1));
     
-    Drone drone(ip_addr.c_str(), port, localization_method,
-                g_max_yaw_rate, g_max_yaw_rate_during_flight);
 	ros::Subscriber slam_lost_sub = 
 		n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
     ros::Subscriber trajectory_follower_sub = 
@@ -363,15 +457,20 @@ int main(int argc, char **argv){
                     }
                 } 
             }
+
+            double velocity_reached;
             
             // Back up if no trajectory was found
-            if (!forward_traj->empty())
-                follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, 
-                    check_position, g_v_max, g_fly_trajectory_time_out);
-            else {
-                //ROS_ERROR("New SLAMING BREAKS YO");
-                follow_trajectory(drone, &rev_normal_traj, nullptr, face_backward, true, 1, g_fly_trajectory_time_out);
-            }
+            // if (!forward_traj->empty())
+            velocity_reached = follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, 
+                check_position, g_v_max, g_fly_trajectory_time_out);
+            // else {
+            //     //ROS_ERROR("New SLAMING BREAKS YO");
+            //     velocity_reached = follow_trajectory(drone, &rev_normal_traj, nullptr, face_backward, false, 1.0, g_fly_trajectory_time_out);
+            // }
+
+            if (velocity_reached > g_max_velocity_reached)
+                g_max_velocity_reached = velocity_reached;
 
             if (forward_traj->size() > 0)
                 next_steps_pub.publish(next_steps_msg(*forward_traj));
@@ -383,7 +482,7 @@ int main(int argc, char **argv){
             signal_supervisor(g_supervisor_mailbox, "kill"); 
             ros::shutdown();
         }else if (trajectory_done(*forward_traj)){
-            loop_rate.sleep();
+            // loop_rate.sleep();
         }
         g_got_new_trajectory = false;
     }

@@ -9,6 +9,7 @@
 // ROS message headers
 #include "std_msgs/Bool.h"
 #include "std_msgs/Int32.h"
+#include "std_srvs/SetBool.h"
 #include "trajectory_msgs/MultiDOFJointTrajectory.h"
 
 // Octomap specific headers
@@ -42,6 +43,8 @@ long long g_checking_collision_kernel_acc = 0;
 ros::Time g_checking_collision_t;
 long long g_future_collision_main_loop = 0;
 int g_check_collision_ctr = 0;
+int collision_ctr = 0;
+long long g_img_to_follow_in_future_collision_now = 0;
 double g_distance_to_collision_first_realized = 0;
 bool CLCT_DATA = false;
 bool DEBUG = false;
@@ -62,7 +65,7 @@ std::string ip_addr__global;
 std::string localization_method;
 double drone_height__global;
 double drone_radius__global;
-
+bool g_acknowledgements[2];
 
 //Profiling
 int g_main_loop_ctr = 0;
@@ -292,6 +295,17 @@ void log_data_before_shutting_down(){
         }
     }
 
+
+
+    profiling_data_srv_inst.request.key = "image_to_follow_in_future_collision_now";
+    profiling_data_srv_inst.request.value = (((double)g_img_to_follow_in_future_collision_now)/1e9)/collision_ctr;
+    if (ros::service::waitForService("/record_profiling_data", 10)){ 
+        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+            ROS_ERROR_STREAM("could not probe data using stats manager");
+            ros::shutdown();
+        }
+    }
+
     /* 
     ROS_INFO_STREAM("done with the first");
     profiling_data_srv_inst.request.key = "img_to_futureCol_commun_t";
@@ -342,11 +356,63 @@ void sigIntHandlerPrivate(int signo){
     exit(0);
 }
 
+bool acknowledge_col_coming_cb (std_srvs::SetBool::Request &req, 
+    std_srvs::SetBool::Response &res) {
+
+    g_acknowledgements[req.data] = true;
+    res.success = /*g_acknowledgements[0] &&*/ g_acknowledgements[1];
+
+    return true;
+}
+
+void freeze(Drone& drone, ros::CallbackQueue& queue) {
+    ROS_INFO("Freeze!");
+
+    auto start_pos = drone.position();
+    const double pz = 0.5;
+
+    bool first_time = true; 
+    // Wait for message to be acknowledged
+    g_acknowledgements[0] = false;
+    g_acknowledgements[1] = false;
+
+    // ros::Rate acknowledgements_rate(100);
+    ros::Time start = ros::Time::now();
+    while (!(/*g_acknowledgements[0] &&*/ g_acknowledgements[1])) {
+        auto pos = drone.position();
+        double vz = (start_pos.z - pos.z) * pz;
+         
+        if (first_time){
+           first_time = false;
+           //ros::Duration image_to_follow = ros::Time::now() - g_pt_cloud_header;
+           g_img_to_follow_in_future_collision_now += (ros::Time::now() - g_pt_cloud_header).toSec()*1e9;
+           collision_ctr+=1;
+           //ROS_ERROR_STREAM("image to follow"<< image_to_follow);
+        
+        }
+        drone.fly_velocity(0, 0, vz);
+         
+        queue.callAvailable(ros::WallDuration());
+        // acknowledgements_rate.sleep();
+        
+        if ((ros::Time::now() - start).toSec() > 1.0) {
+            ROS_ERROR("Unfreezing due to timeout!");
+            break;
+        }
+    }
+    ROS_INFO("OK, you're free to go!");
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "future_collision");
-    ros::NodeHandle nh("~");
+    ros::NodeHandle nh("~"), nh_publish, nh_acknowledgement;
     std::string mapFilename(""), mapFilenameParam("");
+
+    ros::CallbackQueue publish_queue, acknowledgment_queue;
+    nh_publish.setCallbackQueue(&acknowledgment_queue);
+    nh_acknowledgement.setCallbackQueue(&acknowledgment_queue);
+
     signal(SIGINT, sigIntHandlerPrivate);
     //----------------------------------------------------------------- 
 	// *** F:DN variables	
@@ -368,7 +434,10 @@ int main(int argc, char** argv)
     ros::Subscriber new_traj_sub = nh.subscribe<trajectory_msgs::MultiDOFJointTrajectory>("/multidoftraj", 1, new_traj);
     ros::Subscriber traj_sub = nh.subscribe<traj_msg_t>("/next_steps", 1, boost::bind(pull_traj, boost::ref(drone), _1));
 
-    ros::Publisher col_coming_pub = nh.advertise<package_delivery::BoolPlusHeader>("/col_coming", 1);
+    ros::ServiceServer acknowledgeServer = nh_acknowledgement.advertiseService("acknowledge_col_coming", acknowledge_col_coming_cb);
+    ros::ServiceServer acknowledgeServerGlobal = nh.advertiseService("acknowledge_col_coming", acknowledge_col_coming_cb);
+
+    ros::Publisher col_coming_pub = nh_publish.advertise<package_delivery::BoolPlusHeader>("/col_coming", 1);
 
     State state, next_state;
     next_state = state = checking_for_collision;
@@ -399,8 +468,11 @@ int main(int argc, char** argv)
     while (ros::ok()) {
         main_loop_start_hook_t = ros::Time::now();
 
+         
         ros::spinOnce();
-        
+        ROS_INFO_STREAM("after spin and acknolwdge queue"<<ros::Time::now() - main_loop_start_hook_t);
+        acknowledgment_queue.callAvailable(ros::WallDuration());
+            
         if (CLCT_DATA){ 
             g_pt_cloud_header = server.rcvd_point_cld_time_stamp; 
             octomap_ctr = server.octomap_ctr;
@@ -412,12 +484,19 @@ int main(int argc, char** argv)
         if (state == checking_for_collision) {
             collision_coming = check_for_collisions(drone, time_to_warn);
             if (collision_coming) {
+                std::cout << "Collision coming!" << std::endl;
+
                 next_state = waiting_for_response;
 
                 col_coming_msg.header.stamp = g_pt_cloud_header;
                 col_coming_msg.data = collision_coming;
                 col_coming_pub.publish(col_coming_msg);
+
+                publish_queue.callAvailable(ros::WallDuration());
+
                 g_got_new_traj = false; 
+
+                freeze(drone, acknowledgment_queue);
 
                 // Profiling 
                 if(CLCT_DATA){ 
@@ -427,7 +506,7 @@ int main(int argc, char** argv)
                     ROS_INFO_STREAM("pt cloud to start of checking collision in future collision"<< g_pt_cloud_to_future_collision_t);
                 }
             }
-        }else if (state == waiting_for_response) {
+        } else if (state == waiting_for_response) {
             if (g_got_new_traj){
                 next_state = checking_for_collision;
             }
@@ -438,6 +517,7 @@ int main(int argc, char** argv)
         main_loop_end_hook_t = ros::Time::now();
         g_future_collision_main_loop += (main_loop_end_hook_t - main_loop_start_hook_t).toSec()*1e9; 
         
+        //ROS_INFO_STREAM("loop time"<< main_loop_end_hook_t - main_loop_start_hook_t);
         loop_rate.sleep();
     }
 }

@@ -50,6 +50,7 @@ public:
 
     // *** F:DN Localization functions
     coord position(); 
+    double age_of_position();
     geometry_msgs::Pose pose();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
     float get_pitch();

@@ -72,8 +72,9 @@ bool DEBUG;
 
 enum State { setup, waiting, flying, trajectory_completed, failed, invalid };
 
-void col_coming_callback(const package_delivery::BoolPlusHeader::ConstPtr& msg) {
-    col_coming = msg->data;
+void col_coming_callback(ros::ServiceClient& client, const package_delivery::BoolPlusHeader::ConstPtr& msg) {
+    if (msg->data)
+        col_coming = msg->data;
     if (CLCT_DATA){ 
         col_coming_time_stamp = msg->header.stamp;
         //col_coming_time_stamp = ros::Time::now();
@@ -82,6 +83,26 @@ void col_coming_callback(const package_delivery::BoolPlusHeader::ConstPtr& msg) 
     }
     //ROS_INFO_STREAM("col_coming to col_coming_cb"<<ros::Time::now() - col_coming_time_stamp);
 
+    // ros::Rate r(10);
+    // while (1) {
+    //     // std::cout << "package_delivery: acknowledging..." << std::endl;
+
+    //     std_srvs::SetBool srv;
+    //     srv.request.data = 0;
+
+    //     if (!client.call(srv)) {
+    //         ROS_ERROR("package_delivery: Couldn't acknowledge!");
+    //         break;
+    //     }
+
+    //     if (srv.response.success)
+    //         break;
+
+    //     r.sleep();
+    // }
+
+    // ROS_INFO("package_delivery: coming out!");
+    // ros::Duration(0.5).sleep(); // Give the motion_planner a little time to come up with a new trajectory
 }
 
 void log_data_before_shutting_down(){
@@ -268,16 +289,18 @@ trajectory_t request_trajectory(ros::ServiceClient& client, geometry_msgs::Point
     }
     */ 
    while(true){ 
+       ROS_INFO("Calling...");
        if(client.call(srv)) {
-           //ROS_INFO("Received trajectory.");
+           ROS_INFO("I'm in");
            if(!srv.response.path_found){
+               // ROS_ERROR("Empty path returned!");
                return trajectory_t();
            }else{
                break;
            }
        } else {
            ROS_ERROR("Failed to call service.");
-           //return trajectory_t();
+           // return trajectory_t();
        }
        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -298,8 +321,6 @@ int main(int argc, char **argv)
     signal(SIGINT, sigIntHandlerPrivate);
     ns = ros::this_node::getName();
 
-    //ROS_INFO("HEy!!");
-    
     //----------------------------------------------------------------- 
 	// *** F:DN variables	
 	//----------------------------------------------------------------- 
@@ -331,11 +352,20 @@ int main(int argc, char **argv)
 
     ros::ServiceClient follow_trajectory_status_client = 
       nh.serviceClient<package_delivery::follow_trajectory_status_srv>("/follow_trajectory_status", true);
+	ros::ServiceClient acknowledge_col_coming_service = 
+        nh.serviceClient<std_srvs::SetBool>("/acknowledge_col_coming");
+	ros::ServiceClient back_off_service = 
+        nh.serviceClient<std_srvs::Empty>("/back_off");
+
 
     ros::Publisher trajectory_pub = nh.advertise <package_delivery::multiDOF_array>("normal_traj", 1);
 
-    ros::Subscriber col_coming_sub = 
-        nh.subscribe<package_delivery::BoolPlusHeader>("col_coming", 1, col_coming_callback);
+    // ros::Subscriber col_coming_sub = 
+    //     nh.subscribe<package_delivery::BoolPlusHeader>("col_coming", 1, col_coming_callback);
+    //
+    ros::Subscriber col_coming_sub =
+        nh.subscribe<package_delivery::BoolPlusHeader>("/col_coming", 1, boost::bind(col_coming_callback, boost::ref(acknowledge_col_coming_service), _1));
+    
     
 
 
@@ -387,6 +417,7 @@ int main(int argc, char **argv)
         loop_start_t = ros::Time::now();
         if (state == setup)
         {
+            // ROS_INFO("State is setup!");
             control_drone(drone);
 
             goal = get_goal();
@@ -405,14 +436,32 @@ int main(int argc, char **argv)
         }
         else if (state == waiting)
         {
+            // ROS_INFO("State is waiting!");
             if (CLCT_DATA){ 
                 start_hook_t = ros::Time::now(); 
             }
-            
+
             start = get_start(drone);
+            ROS_INFO("Requesting trajectory...");
             normal_traj = request_trajectory(get_trajectory_client, start, goal, 
                     twist, acceleration);
-           
+            ROS_INFO("Got trajectory of size %d", normal_traj.size());
+
+            if (col_coming) {
+                if (!normal_traj.empty()) {
+                    ROS_INFO("Normal traj is empty");
+                    col_coming = false;
+                } else {
+                    // Back off buddy
+                    ROS_INFO("package delivery: calling back-off");
+                    std_srvs::Empty srv;
+                    if (!back_off_service.call(srv)) {
+                        ROS_ERROR("package_delivery: could not call back-off service!");
+                    }
+                    ROS_INFO("package delivery: done calling back-off!");
+                }
+            }
+
             // Profiling
             if (CLCT_DATA){ 
                 end_hook_t = ros::Time::now(); 
@@ -466,9 +515,9 @@ int main(int argc, char **argv)
 
             trajectory_pub.publish(array_of_point_msg);
 
-            if (!normal_traj.empty())
+            if (!normal_traj.empty()) {
                 next_state = flying;
-            else {
+            } else {
                 next_state = trajectory_completed;
             }
 
@@ -476,6 +525,7 @@ int main(int argc, char **argv)
         }
         else if (state == flying)
         {
+            // ROS_INFO("State is flying!");
             // Choose next state (failure, completion, or more flying)
             /* 
                if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj)) {
@@ -494,15 +544,22 @@ int main(int argc, char **argv)
                 ROS_INFO_STREAM("could not make a service all to trajectory done");
                 next_state = flying;
             }else if (follow_trajectory_status_srv_inst.response.success.data) {
-                next_state = trajectory_completed; 
+                next_state = trajectory_completed;
                 twist = follow_trajectory_status_srv_inst.response.twist;
                 acceleration = follow_trajectory_status_srv_inst.response.acceleration;
             }
-            else if (col_coming){
+            else if (col_coming) {
                 next_state = trajectory_completed; 
+
+                ROS_INFO("package delivery: calling back-off");
+                std_srvs::Empty srv;
+                if (!back_off_service.call(srv)) {
+                    ROS_ERROR("package_delivery: could not call back-off service!");
+                }
+                ROS_INFO("package delivery: done calling back-off!");
+
                 twist = follow_trajectory_status_srv_inst.response.twist;
                 acceleration = follow_trajectory_status_srv_inst.response.acceleration;
-                col_coming = false; 
                 clcted_col_coming_data = false;
             }
             else{
@@ -512,6 +569,7 @@ int main(int argc, char **argv)
         }
         else if (state == trajectory_completed)
         {
+            // ROS_INFO("State is trajectory_completed!");
             fail_ctr = normal_traj.empty() ? fail_ctr+1 : 0; 
             
             if (normal_traj.empty()){

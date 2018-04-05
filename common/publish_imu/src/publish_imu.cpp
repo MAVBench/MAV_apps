@@ -1,9 +1,7 @@
 #include "ros/ros.h"
 
 #include <iostream>
-#include <chrono>
 #include <math.h>
-#include <iterator>
 #include <stdio.h>
 #include <signal.h>
 #include <string>
@@ -20,7 +18,6 @@
 #include "common.h"
 #include "Profiling.h"
 #include <cstring>
-#include <string>
 #include "HelperFunctions/QuatRotEuler.h"
 
 using namespace std;

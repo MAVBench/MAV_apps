@@ -1,12 +1,12 @@
 <launch>
   <!-- args and params --> 
   <!-- Behzad's workstation ip --> 
-  <arg name="host_ip" default="10.157.90.51" />
+  <!-- arg name="host_ip" default="10.157.90.51" /-->
   <!--arg name="host_ip" default="169.254.153.158" /-->
   <!-- Hasans's workstation ip --> 
   <!-- arg name="host_ip" default="10.157.90.49" /-->
   <!-- Hasans's direct connection ip --> 
-  <!-- arg name="host_ip" default="169.254.250.191" /-->
+  <arg name="host_ip" default="169.254.250.191" />
   <!--Wenzhi's workstation ip-->
   <!--arg name="host_ip" default="10.157.90.62" /-->
   <!-- Sri's workstation ip --> 
@@ -17,9 +17,9 @@
   <arg name="a_max" default="5"/> 
   <arg name="v_max" default="2.5"/> 
   <arg name="future_col_drone_radius" default="1.5"/>
-  <arg name="future_col_drone_height" default="0.6"/>
-  <arg name="planner_drone_radius" default="2"/>
-  <arg name="planner_drone_height" default="0.6"/>
+  <arg name="future_col_drone_height" default="0.8"/>
+  <arg name="planner_drone_radius" default="3.0"/>
+  <arg name="planner_drone_height" default="1.0"/>
   
   <arg name="planning_resolution" default=".15"/>
   <arg name="sensor_max_range" default="7" />
@@ -49,13 +49,15 @@
 
   <param name="localization_method" value="$(arg localization_method)" />
 
+  <node pkg="tf" type="static_transform_publisher" name="static_broadcaster" args="0 0 0 0 0 0 $(arg localization_method) $(arg localization_method)_static 10" />
+
   <!-- stat file-->
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
   <param name="supervisor_mailbox" value="$(find package_delivery)/../data/package_delivery/supervisor_mailbox.txt" />
 
   <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
   <!-- also planning to prevent stdio stuff(if they really matter)-->
-  <arg name="DEBUG" default="true" />
+  <arg name="DEBUG" default="false" />
   <arg name="CLCT_DATA" value="true" />
   <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
   <param name="DEBUG"  value="$(arg DEBUG)" />
@@ -136,7 +138,7 @@
 		<!-- Port of the Airsim computer (this is default, do not change!) -->
 		<param name="Airsim_port" value="41451"/>
 
-		<param name="loop_rate" value="25"/>
+		<param name="loop_rate" value="25.0"/>
 
 		<!-- RGB camera parameters (parameters when calibrated) -->
 	    <param name="all_front" value="$(arg all_front)"/>	
@@ -241,12 +243,12 @@
         <param name="rrt_step_size" value="1.0"/>
         <param name="rrt_bias" value="10"/>
 		
-        <param name="x_dist_to_sample_from__low_bound" value="-50"/>
-		<param name="x_dist_to_sample_from__high_bound" value="50"/>
+        <param name="x_dist_to_sample_from__low_bound" value="-20"/>
+		<param name="x_dist_to_sample_from__high_bound" value="20"/>
         <param name="y_dist_to_sample_from__low_bound" value="-5"/>
-        <param name="y_dist_to_sample_from__high_bound" value="1000"/>
-        <param name="z_dist_to_sample_from__low_bound" value="5"/>
-        <param name="z_dist_to_sample_from__high_bound" value="9"/>
+        <param name="y_dist_to_sample_from__high_bound" value="300"/>
+        <param name="z_dist_to_sample_from__low_bound" value="3"/>
+        <param name="z_dist_to_sample_from__high_bound" value="5"/>
 
         <param name="sampling_interval" value="0.5"/>
 
@@ -255,7 +257,7 @@
         <!-- param name="motion_planning_core" value="RRT"/-->
         <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
         <param name="motion_planning_core" value="OMPL-RRTConnect"/>
-        <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
+        <!-- param name="motion_planning_core" value="OMPL-PRM"/-->
 	</node>
 
 	<!-- Demo program that controls drone -->

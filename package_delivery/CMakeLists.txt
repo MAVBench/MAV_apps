@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(package_delivery)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
+add_compile_options(-std=c++11 -fno-omit-frame-pointer)
 set (common_utility_src $ENV{HOME}/catkin_ws/src/mav-bench/common)
 set (common_utility_include $ENV{HOME}/catkin_ws/src/mav-bench/common)
 
