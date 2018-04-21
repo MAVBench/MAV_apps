@@ -23,16 +23,17 @@
         
     <!-- Set the localization method /-->
     <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
-    <arg name="localization_method" default="vins_mono" />
+    <!--arg name="localization_method" default="vins_mono" /-->
     <!-- arg name="localization_method" default="gps" /-->
     <!--arg name="localization_method" default="ground_truth" /-->
+    <arg name="localization_method" default="drone" />
 
     <param name="localization_method" value="$(arg localization_method)" />
     <param name="data_collection_iteration_freq_ptCld" value="100" />
     
     <!-- stat file-->
     <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
-   <param name="supervisor_mailbox" value="$(find package_delivery)/../data/mapping/supervisor_mailbox.txt" />
+    <param name="supervisor_mailbox" value="$(find package_delivery)/../data/mapping/supervisor_mailbox.txt" />
  
 
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
@@ -48,6 +49,7 @@
     <param name="enable_statistics" value="true"/>
     </group> 
 
+    <param name="planning_budget" value="2.0" />
 
     <!-- set this to "" if you don't want perf -->
     <arg name="my_launch_prefix" default="" /> 
@@ -106,7 +108,7 @@
 
 
 	<!-- Point-cloud publisher -->
- 	<node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
+ 	<node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher">
 		<!-- IP of the Airsim computer -->
 		<param name="Airsim_ip" value="$(arg host_ip)" />
 
@@ -221,7 +223,7 @@
 
   <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher"/> 
   <node pkg="error_detector" type="error_detector" name="error_detector"/> 
-  <node pkg="position_estimator" type="position_estimator_node" name="position_estimator_node"/> 
+  <node pkg="position_estimator" type="position_estimator_node" name="position_estimator_node" output="screen"/> 
 
 </launch>
 

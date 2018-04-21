@@ -85,10 +85,14 @@ void error_callback(const phoenix_msg::error::ConstPtr& msg) {
         }
         */
 
-        transform.child_frame_id_ = "drone";
-        tfBroadcast.sendTransform(transform);
+        if (transform.frame_id_ == "world") {
+            transform.child_frame_id_ = "drone";
+            tfBroadcast.sendTransform(transform);
+        } else {
+            // ROS_ERROR("world not frame");
+        }
     } catch (tf::TransformException& ex) {
-        ROS_ERROR("%s", ex.what());
+        // ROS_ERROR("%s", ex.what());
     }
 
     /*
