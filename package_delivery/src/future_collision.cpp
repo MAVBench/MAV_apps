@@ -470,7 +470,7 @@ int main(int argc, char** argv)
 
          
         ros::spinOnce();
-        ROS_INFO_STREAM("after spin and acknolwdge queue"<<ros::Time::now() - main_loop_start_hook_t);
+        // ROS_INFO_STREAM("after spin and acknolwdge queue"<<ros::Time::now() - main_loop_start_hook_t);
         acknowledgment_queue.callAvailable(ros::WallDuration());
             
         if (CLCT_DATA){ 

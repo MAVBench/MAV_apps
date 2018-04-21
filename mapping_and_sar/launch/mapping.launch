@@ -64,7 +64,7 @@
   <arg name="coverage_threshold" default="60"/>
 
   <!-- DEBUGING-data collection params--> 
-  <arg name="DEBUG" value="true" />
+  <arg name="DEBUG" value="false" />
   <arg name="CLCT_DATA" value="true" />
   <param name="stats_file_addr" value="$(find mapping_and_sar)/../data/mapping/stats.json" />
   <param name="supervisor_mailbox" value="$(find mapping_and_sar)/../data/mapping/supervisor_mailbox.txt" />

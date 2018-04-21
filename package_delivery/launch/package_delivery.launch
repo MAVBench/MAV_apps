@@ -15,15 +15,15 @@
 
   <!-- Drone's physical characteristics /-->
   <arg name="a_max" default="5"/> 
-  <arg name="v_max" default="2.5"/> 
-  <arg name="future_col_drone_radius" default="1.5"/>
+  <arg name="v_max" default="2.75"/> 
+  <arg name="future_col_drone_radius" default="0.5"/>
   <arg name="future_col_drone_height" default="0.8"/>
-  <arg name="planner_drone_radius" default="3.0"/>
+  <arg name="planner_drone_radius" default="0.75"/>
   <arg name="planner_drone_height" default="1.0"/>
   
-  <arg name="planning_resolution" default=".15"/>
+  <arg name="planning_resolution" default="0.85"/>
   <arg name="sensor_max_range" default="7" />
-  <arg name="fly_trajectory_time_out" default=".01"/> 
+  <arg name="fly_trajectory_time_out" default=".1"/> 
   <arg name="planning_budget" default=".3"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>
 
@@ -49,7 +49,7 @@
 
   <param name="localization_method" value="$(arg localization_method)" />
 
-  <node pkg="tf" type="static_transform_publisher" name="static_broadcaster" args="0 0 0 0 0 0 $(arg localization_method) $(arg localization_method)_static 10" />
+  <!-- node pkg="tf" type="static_transform_publisher" name="static_broadcaster" args="0 0 0 0 0 0 $(arg localization_method) $(arg localization_method)_static 10" / -->
 
   <!-- stat file-->
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
@@ -57,7 +57,7 @@
 
   <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
   <!-- also planning to prevent stdio stuff(if they really matter)-->
-  <arg name="DEBUG" default="false" />
+  <arg name="DEBUG" default="true" />
   <arg name="CLCT_DATA" value="true" />
   <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
   <param name="DEBUG"  value="$(arg DEBUG)" />
@@ -138,7 +138,7 @@
 		<!-- Port of the Airsim computer (this is default, do not change!) -->
 		<param name="Airsim_port" value="41451"/>
 
-		<param name="loop_rate" value="25.0"/>
+		<param name="loop_rate" value="50.0"/>
 
 		<!-- RGB camera parameters (parameters when calibrated) -->
 	    <param name="all_front" value="$(arg all_front)"/>	
@@ -243,12 +243,12 @@
         <param name="rrt_step_size" value="1.0"/>
         <param name="rrt_bias" value="10"/>
 		
-        <param name="x_dist_to_sample_from__low_bound" value="-20"/>
-		<param name="x_dist_to_sample_from__high_bound" value="20"/>
+        <param name="x_dist_to_sample_from__low_bound" value="-30"/>
+		<param name="x_dist_to_sample_from__high_bound" value="30"/>
         <param name="y_dist_to_sample_from__low_bound" value="-5"/>
-        <param name="y_dist_to_sample_from__high_bound" value="300"/>
-        <param name="z_dist_to_sample_from__low_bound" value="3"/>
-        <param name="z_dist_to_sample_from__high_bound" value="5"/>
+        <param name="y_dist_to_sample_from__high_bound" value="60"/>
+        <param name="z_dist_to_sample_from__low_bound" value="1"/>
+        <param name="z_dist_to_sample_from__high_bound" value="3"/>
 
         <param name="sampling_interval" value="0.5"/>
 

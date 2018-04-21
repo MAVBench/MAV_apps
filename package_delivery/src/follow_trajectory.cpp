@@ -67,29 +67,30 @@ void panic_velocity_callback(const geometry_msgs::Vector3::ConstPtr& msg) {
     panic_velocity = *msg;
 }
 
-void col_coming_callback(ros::ServiceClient& client, const package_delivery::BoolPlusHeader::ConstPtr& msg) {
+void col_coming_callback(const package_delivery::BoolPlusHeader::ConstPtr& msg) {
+    g_drone_ptr->fly_velocity(0,0,0);
     normal_traj.clear();
 
-    ros::Rate r(10);
-    while (1) {
-        std::cout << "follow_trajectory: acknowledging..." << std::endl;
+    // ros::Rate r(10);
+    // while (1) {
+    //     std::cout << "follow_trajectory: acknowledging..." << std::endl;
 
-        std_srvs::SetBool srv;
-        srv.request.data = 1;
+    //     std_srvs::SetBool srv;
+    //     srv.request.data = 1;
 
-        if (!client.call(srv)) {
-            ROS_ERROR("follow_trajectory: Couldn't acknowledge!");
-            break;
-        }
+    //     if (!client.call(srv)) {
+    //         ROS_ERROR("follow_trajectory: Couldn't acknowledge!");
+    //         break;
+    //     }
 
-        if (srv.response.success)
-            break;
+    //     if (srv.response.success)
+    //         break;
 
-        r.sleep();
-    }
+    //     r.sleep();
+    // }
 
-    normal_traj.clear(); 
-    ROS_INFO("follow_trajectory: coming out!");
+    // normal_traj.clear(); 
+    // ROS_INFO("follow_trajectory: coming out!");
 }
 
 void log_data_before_shutting_down(){
@@ -364,6 +365,8 @@ int main(int argc, char **argv){
 
     // ros::Subscriber col_coming_sub =
     //     n.subscribe<package_delivery::BoolPlusHeader>("/col_coming", 1, boost::bind(col_coming_callback, boost::ref(acknowledge_col_coming_service), _1));
+    ros::Subscriber col_coming_sub =
+         n.subscribe<package_delivery::BoolPlusHeader>("/col_coming", 1, col_coming_callback);
     
 	ros::Subscriber slam_lost_sub = 
 		n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
@@ -462,12 +465,20 @@ int main(int argc, char **argv){
             
             // Back up if no trajectory was found
             // if (!forward_traj->empty())
-            velocity_reached = follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, 
-                check_position, g_v_max, g_fly_trajectory_time_out);
+            if (drone.age_of_position() <= 2.5)
+                velocity_reached = follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, 
+                    check_position, g_v_max, g_fly_trajectory_time_out);
+            else {
+                ROS_ERROR("Age of position too high!");
+                ROS_INFO_STREAM(drone.age_of_position() << " s old");
+                ros::Duration(0.5).sleep();
+            }
             // else {
             //     //ROS_ERROR("New SLAMING BREAKS YO");
             //     velocity_reached = follow_trajectory(drone, &rev_normal_traj, nullptr, face_backward, false, 1.0, g_fly_trajectory_time_out);
             // }
+            
+            // std::cout << "v: " << velocity_reached << std::endl;
 
             if (velocity_reached > g_max_velocity_reached)
                 g_max_velocity_reached = velocity_reached;

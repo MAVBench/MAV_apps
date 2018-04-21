@@ -95,7 +95,7 @@ void control_drone(Drone& drone)
         } else if (cmd == "r") {
             spin_around(drone); 
         } else if (cmd != "c") {
-			cout << "Unknown command" << endl;
+			cout << "Unknown command: " << cmd << endl << "\t";
             // ros::shutdown();
             // exit(0);
 		}

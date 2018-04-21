@@ -400,7 +400,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
           }
       }
   }
-  //publishAll(cloud->header.stamp);
+  publishAll(cloud->header.stamp);
   //publishAll(start_time);
 }
 
@@ -751,7 +751,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
 
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
   
-  ROS_INFO_STREAM("octomap integration"<<ros::Time::now() - rostime);
+  // ROS_INFO_STREAM("octomap integration"<<ros::Time::now() - rostime);
   ROS_DEBUG("Map publishing in OctomapServer took %f sec", total_elapsed);
 
 }

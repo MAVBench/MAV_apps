@@ -313,6 +313,7 @@ int main(int argc, char** argv)
   waitForLocalization("ground_truth");
 
   double segment_dedicated_time = yaw_t + dt;
+  ROS_INFO("HASAN: Before");
   control_drone(drone);
 
   static int n_seq = 0;

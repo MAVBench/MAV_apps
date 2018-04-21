@@ -1,11 +1,15 @@
 #!/bin/bash
 #echo s 10
 
-echo fz 0 0 4 5
+#echo fz 0 0 4 5
 #echo s 3.5
 #echo fz 0 0 4 3
 #echo s 3.1
 
+echo f 0 0 1 2
+echo s 6
+echo f 0 0 1 2
+echo s 4
 
 echo fz -1 0 4.0 2
 #echo s 2.1

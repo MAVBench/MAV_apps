@@ -340,7 +340,7 @@ int main(int argc, char **argv)
    package_delivery::follow_trajectory_status_srv follow_trajectory_status_srv_inst;
 
    int fail_ctr = 0;
-   int fail_threshold = 50;
+   int fail_threshold = 10;
 
     ros::Time start_hook_t, end_hook_t;                                          
     // *** F:DN subscribers,publishers,servers,clients
@@ -575,7 +575,7 @@ int main(int argc, char **argv)
             if (normal_traj.empty()){
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            if (fail_ctr >fail_threshold) {
+            if (fail_ctr > fail_threshold) {
                 next_state = failed;
                 mission_status = "planning_failed_too_many_times";
             }else if (dist(drone.position(), goal) < goal_s_error_margin) {
@@ -637,6 +637,9 @@ int main(int argc, char **argv)
         }
     
     }
+
+    drone.land();
+
     //collect data before shutting down
     //end_stats = drone.getFlightStats();
     //output_flight_summary(init_stats, end_stats, mission_status, stats_file_addr);
