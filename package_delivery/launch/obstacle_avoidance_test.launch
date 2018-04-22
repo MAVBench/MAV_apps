@@ -1,0 +1,243 @@
+<launch>
+    <!-- args --> 
+    <!-- Behzad's workstation ip --> 
+    <arg name="host_ip" default="10.157.90.51" />
+    <!--arg name="host_ip" default="169.254.153.158" /-->
+    <!-- Hasans's workstation ip --> 
+    <!--arg name="host_ip" default="10.157.90.49" /-->
+    <!-- Hasans's direct connection ip --> 
+    <!-- arg name="host_ip" default="169.254.250.191" /-->
+    <!--Wenzhi's workstation ip-->
+    <!--arg name="host_ip" default="10.157.90.62" /-->
+
+    <param name="/ip_addr" value="$(arg host_ip)" />
+
+    <!-- Drone's physical characteristics /-->
+    <arg name="a_max" default="8"/> 
+    
+    <!-- parameters affecting perforamance -->
+    <arg name="v_max" default="3"/> 
+    <arg name="planning_resolution" default=".45"/>
+    <arg name="sensor_max_range" default="15" />
+
+
+    <!--- note that time out is very important since it determines the hz of the thread it runs in -->
+    <arg name="fly_trajectory_time_out" default=".1"/> 
+    <!-- orb slam location--> 
+    <arg name="orb_slam2_dir" default="$(find ORB_SLAM2)/../../.."/> 
+    
+    <arg name="hand_off_control_time" default="100"/>
+    <param name="hand_off_control_time" value="$(arg hand_off_control_time)"/>
+
+
+   <!-- sensors /-->
+   <arg name="all_front" default="false"/>	
+    
+    <!-- Set the localization method /-->
+    <!--arg name="localization_method" default="orb_slam2_rgbd" /-->
+    <!--arg name="localization_method" default="vins_mono" /-->
+    <!--arg name="localization_method" default="gps" /-->
+    <arg name="localization_method" default="ground_truth" />
+    
+    
+    <!-- stat file-->
+    <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
+   <param name="supervisor_mailbox" value="$(find package_delivery)/../data/package_delivery/supervisor_mailbox.txt" />
+ 
+
+    <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
+    <!-- also planning to prevent stdio stuff(if they really matter)-->
+    <arg name="DEBUG" default="true" />
+    <arg name="CLCT_DATA" value="true" />
+    <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
+
+
+    <group if="$(arg CLCT_DATA)">
+    <param name="enable_statistics" value="true"/>
+    </group> 
+
+
+    <!-- set this to "" if you don't want perf -->
+    <arg name="my_launch_prefix" default="" /> 
+    <!-- arg name="my_launch_prefix" default="/home/nvidia/install/perf/perf record -g fp"/ -->
+
+    <!-- starting nodes -->
+    <node pkg="profile_manager" type="profile_manager" name="profile_manager" output="screen">
+    <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
+    <param name="ip_addr" value="$(arg host_ip)"/>
+    </node>
+    
+         
+    <!--comment-->
+    <!-- Octomap -->
+	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+
+    <!--node pkg="nodelet" type="nodelet" name="standalone_nodelet" args="manager"/-->
+
+    <!--node pkg="nodelet" type="nodelet" name="octomap_server_nodelet" args="load octomap_server/OctomapServerNodelet depth_transforms_manager"/-->
+        <param name="resolution" value="0.45" />
+		
+		<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+		<param name="frame_id" type="string" value="world" />
+		
+		<!-- maximum range to integrate (speedup!) -->
+		<param name="sensor_model/max_range" value="$(arg sensor_max_range)"/>
+
+		<!-- data source to integrate (PointCloud2) -->
+		<remap from="cloud_in" to="/points" />
+
+		<!-- Filter ground for binary occupancy map -->
+		<param name="base_frame_id" value="world" />
+		<!-- <param name="filter_ground" value="true" />
+		<param name="ground_filter_plane_distance" value="1.00" />
+		<param name="ground_filter/distance" value="0.50" /> -->
+	    <param name="pointcloud_min_z" type="double" value="-2.0" />
+	    <param name="pointcloud_max_z" type="double" value="10.0" />
+	    <param name="occupancy_min_z" type="double" value="-2.00" />
+	    <param name="occupancy_max_z" type="double" value="10.0" />
+		<!-- <param name="ground_filter_plane_distance" value="0.07" />
+		<param name="ground_filter/distance" value="0.04" />
+		<param name="ground_filter/angle" value="0.4" /> -->
+	</node>
+
+    <comment>
+	<node pkg="octomap_world" type="octomap_manager" name="octomap_manager">
+       <remap from="cam0/camera_info" to="/Airsim/left/camera_info"/>
+       <remap from="cam1/camera_info" to="/Airsim/right/camera_info"/>
+	   <remap from="pointcloud" to="/points" />
+       <remap from="disparity" to="/Airsim/disparity"/> 
+       <param name="resolution" value="0.5"/>
+       <!--param name="octomap_file" value=""/-->
+    </node>
+    </comment>
+
+
+	<!-- Point-cloud publisher -->
+ 	<node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
+		<!-- IP of the Airsim computer -->
+		<param name="Airsim_ip" value="$(arg host_ip)" />
+        <param name="all_front" value="$(arg all_front)"/>	
+		
+        <!-- Port of the Airsim computer (this is default, do not change!) -->
+		<param name="Airsim_port" value="41451"/>
+
+		<!-- RGB camera parameters (parameters when calibrated) -->
+        <param name="Fx" value="256"/>
+		<param name="Fy" value="256"/>
+		<param name="cx" value="256"/>
+		<param name="cy" value="144"/>
+		<param name="scale_x" value="512"/>  <!-- Width when calibrated!-->
+		<param name="scale_y" value="288"/> <!-- Height when calibrated!-->
+
+		<!-- Depth baseline -->
+		<param name="Tx" value="0.14"/> 
+		<param name="scale" value="0.38"/> 
+
+        <!-- Localization of the depth images -->
+        <param name="localization_method" value="$(arg localization_method)" />
+	</node>
+
+
+
+	<!-- Nodelet manager for this pipeline -->
+    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager"/>
+    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager_2"/>
+    
+    <comment>	
+    <remap from="/points" to="/cloud_in" />
+    </comment>
+
+	<!-- Convert to point cloud -->
+	<node pkg="nodelet" type="nodelet" name="cloudify"
+	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond">
+
+		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
+		<!-- Input: Rectified depth image -->
+		<remap from="image_rect" to="/Airsim/depth_front"/>
+
+    </node>
+    
+	<node pkg="nodelet" type="nodelet" name="cloudify_2"
+ 	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager_2 --no-bond">
+
+		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
+		<!-- Input: Rectified depth image -->
+		<remap from="image_rect" to="/Airsim/depth_back"/>
+		<remap from="points" to="/points_back"/>
+    </node>
+  
+
+
+    
+    <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
+		<param name="panic_distance" value="7"/>
+    </node>
+    
+    <node pkg="package_delivery" type="future_collision" name="future_collision" output="screen">
+    </node>
+    
+    <?ignore 
+    <!-- Convert to point cloud -->
+	<node pkg="package_delivery" type="panic" name="panic">
+		<remap from="depth_img" to="/Airsim/depth_2"/>
+		<!-- remap from="depth_img" to="/stereo/left/image_raw"/ -->
+    </node>
+    ?>
+
+	<!-- Path-Planner -->
+	<node pkg="package_delivery" type="motion_planner" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)">
+		<param name="nodes_to_add_to_roadmap" value="300"/>
+		<param name="max_dist_to_connect_at" value="10"/>
+
+		<param name="v_max" value="$(arg v_max)"/>
+		<param name="a_max" value="$(arg a_max)"/>
+        <param name="drone_radius" value="2.0"/>
+        <param name="drone_height" value="0.6"/>
+
+		<param name="max_roadmap_size" value="1600"/>
+
+        <param name="rrt_step_size" value="1.0"/>
+        <param name="rrt_bias" value="10"/>
+		
+        <param name="x_dist_to_sample_from__low_bound" value="-35"/>
+		<param name="x_dist_to_sample_from__high_bound" value="35"/>
+        <param name="y_dist_to_sample_from__low_bound" value="-5"/>
+        <param name="y_dist_to_sample_from__high_bound" value="100"/>
+        <param name="z_dist_to_sample_from__low_bound" value="2"/>
+        <param name="z_dist_to_sample_from__high_bound" value="8"/>
+
+        <param name="sampling_interval" value="0.5"/>
+
+        <!-- options for motion_planning core --> 
+        <!-- param name="motion_planning_core" value="PRM"/-->
+        <!-- param name="motion_planning_core" value="RRT"/-->
+        <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
+        <param name="motion_planning_core" value="OMPL-RRTConnect"/>
+        <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
+	</node>
+
+	<!-- Demo program that controls drone -->
+	<!-- <node pkg="package_delivery" type="obstacle_avoidance_test" name="obstacle_avoidance_test" output="screen" launch-prefix="/home/nvidia/install/perf/perf record -g fp"> -->
+	<node pkg="package_delivery" type="obstacle_avoidance_test" name="obstacle_avoidance_test" output="screen">
+
+		<!-- param name="points_to_replan_after" value="1000000000"/-->
+        <param name="v_max" value="$(arg v_max)"/>
+        <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/>
+        <!-- Localization of the depth images -->
+        <param name="localization_method" value="$(arg localization_method)" />
+    </node>
+
+	<group if="$(eval localization_method == 'orb_slam2_rgbd')">
+        <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth" output="screen"/>
+	</group>
+    
+    <!-- rviz -->
+	<group if="$(arg DEBUG)">
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
+    </group>
+
+  <node pkg="publish_imu" type="publish_imu" name="publish_imu" output="screen"/> 
+</launch>
+

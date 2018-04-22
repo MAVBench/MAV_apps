@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   octomap_ros
   octomap_msgs
+  octomap_server
   message_generation
   trajectory_msgs
   mav_trajectory_generation
@@ -65,16 +66,18 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+ add_message_files(
+  FILES
+  multiDOF.msg
+  multiDOF_array.msg
+  BoolPlusHeader.msg
+  )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
   get_trajectory.srv
+  follow_trajectory_status_srv.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -187,12 +190,12 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-# add_executable(motion_planner src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
-# add_dependencies(motion_planner package_delivery_generate_messages_cpp)
-# target_link_libraries(motion_planner ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread  cuda cudart cublas curand )
+add_executable(motion_planner src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_dependencies(motion_planner package_delivery_generate_messages_cpp)
+target_link_libraries(motion_planner ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread  cuda cudart cublas curand )
 
 add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
-    ${common_utility_src}/common.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp)
+    ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(package_delivery package_delivery_generate_messages_cpp)
 target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
@@ -200,18 +203,26 @@ target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc
 #add_executable(panic src/panic.cpp)
 #target_link_libraries(panic ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
-# add_executable(panic_pcl ${common_utility_src}/panic_pcl.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
-# target_link_libraries(panic_pcl ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+add_executable(panic_pcl ${common_utility_src}/panic_pcl.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(panic_pcl ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
 add_executable(future_collision src/future_collision ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 target_link_libraries(future_collision ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
+add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
+    ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/scanning.cpp ${common_utility_src}/timer.cpp)
+add_dependencies(scanning package_delivery_generate_messages_cpp)
+target_link_libraries(scanning ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
-# add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
-#     ${common_utility_src}/control_drone.cpp src/scanning.cpp ${common_utility_src}/timer.cpp)
-# add_dependencies(scanning package_delivery_generate_messages_cpp)
-# target_link_libraries(scanning ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+add_executable(follow_trajectory src/follow_trajectory.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_dependencies(follow_trajectory package_delivery_generate_messages_cpp)
+target_link_libraries(follow_trajectory ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 
+
+add_executable(obstacle_avoidance_test ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
+     ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/obstacle_avoidance_test.cpp ${common_utility_src}/timer.cpp)
+add_dependencies(obstacle_avoidance_test obstacle_avoidance_test_generate_messages_cpp)
+target_link_libraries(obstacle_avoidance_test ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
 
 #

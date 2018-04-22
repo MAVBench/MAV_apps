@@ -15,11 +15,13 @@
     <param name="stats_file_addr" value="$(find package_delivery)/../data/scanning/stats.json" />
     <param name="supervisor_mailbox" value="$(find package_delivery)/../data/scanning/supervisor_mailbox.txt" />
 
+    <arg name="v_max" default="6.0"/> 
+    <arg name="a_max" default="8"/> 
     <!-- Set the localization method -->
     <!-- arg name="localization_method" value="orb_slam2_rgbd" /-->
-    <!-- arg name="localization_method" value="ground_truth" /-->
-    <arg name="localization_method" value="gps" />
-
+    <arg name="localization_method" value="ground_truth" />
+    <!--arg name="localization_method" value="gps" /-->
+    <param name="localization_method" value="$(arg localization_method)" />
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
     <!-- also planning to prevent stdio stuff(if they really matter)--> 
     <arg name="DEBUG" value="true" /> 
@@ -31,47 +33,30 @@
     <!-- arg name="my_launch_prefix" value="/home/nvidia/install/perf/perf record -g fp"/ -->
     
     
+    <!--- note that time out is very important since it determines the hz of the thread it runs in -->
+    <arg name="fly_trajectory_time_out" default=".1"/> 
+    
     <group if="$(arg CLCT_DATA)">
     <param name="enable_statistics" value="true"/>
+    
+    
     </group> 
+    <arg name="planning_budget" default=".3"/>
+    <param name="planning_budget" value="$(arg planning_budget)"/>
+
 
 
     <!-- starting nodes --> 
     <node pkg="profile_manager" type="profile_manager" name="profile_manager" output="screen">
     <param name="/ip_addr" value="$(arg host_ip)" />
     </node>
-
-
-    <!-- Octomap -->
-	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
-        <param name="resolution" value="0.5" />
-		
-		<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
-		<param name="frame_id" type="string" value="world" />
-		
-		<!-- maximum range to integrate (speedup!) -->
-		<param name="sensor_model/max_range" value="20" />
-
-		<!-- data source to integrate (PointCloud2) -->
-		<remap from="cloud_in" to="/points" />
-
-		<!-- Filter ground for binary occupancy map -->
-		<param name="base_frame_id" value="world" />
-		<!-- <param name="filter_ground" value="true" />
-		<param name="ground_filter_plane_distance" value="1.00" />
-		<param name="ground_filter/distance" value="0.50" /> -->
-	    <param name="pointcloud_min_z" type="double" value="-2.0" />
-	    <param name="pointcloud_max_z" type="double" value="10.0" />
-	    <param name="occupancy_min_z" type="double" value="-2.00" />
-	    <param name="occupancy_max_z" type="double" value="10.0" />
-		<!-- <param name="ground_filter_plane_distance" value="0.07" />
-		<param name="ground_filter/distance" value="0.04" />
-		<param name="ground_filter/angle" value="0.4" /> -->
-	</node>
+    <arg name="all_front" default="true"/>	
 
 	<!-- Point-cloud publisher -->
  	<node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher">
-		<!-- IP of the Airsim computer -->
+		<param name="loop_rate" value="25"/>
+	    <param name="all_front" value="$(arg all_front)"/>	
+        <!-- IP of the Airsim computer -->
 		<param name="Airsim_ip" value="$(arg host_ip)" />
 
 		<!-- Port of the Airsim computer (this is default, do not change!) -->
@@ -97,26 +82,6 @@
 
     </node>
 
-	<!-- Nodelet manager for this pipeline -->
-	<node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager"/>
-
-	<!-- Convert to point cloud -->
-	<node pkg="nodelet" type="nodelet" name="cloudify"
-	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond">
-
-		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
-		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
-		<!-- Input: Rectified depth image -->
-		<remap from="image_rect" to="/Airsim/depth"/>
-
-    </node>
-	
-    
-    <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
-		<param name="panic_distance" value="1.75"/>
-    </node>
- 
-    <!--node pkg="package_delivery" type="future_collision" name="future_collision" output="screen"/-->
     
     <?ignore 
     <!-- Convert to point cloud -->
@@ -130,9 +95,9 @@
 	<node pkg="package_delivery" type="motion_planner" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)">
 		<param name="nodes_to_add_to_roadmap" value="300"/>
 		<param name="max_dist_to_connect_at" value="10"/>
+        <param name="v_max" value="$(arg v_max)"/>
+		<param name="a_max" value="$(arg a_max)"/>
 
-		<param name="v_max" value="4.0"/>
-		<param name="a_max" value="10.0"/>
         <param name="drone_radius" value="2.0"/>
         <param name="drone_height" value="0.6"/>
 
@@ -161,7 +126,8 @@
         <param name="ip_addr" value="$(arg host_ip)"/>
         <!-- param name="issue_cmd__time_step" value=".05"/-->
 		<!-- param name="points_to_replan_after" value="1000000000"/-->
-    
+        <param name="v_max" value="$(arg v_max)"/>
+        <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/>
         <!-- Localization-->
         <param name="localization_method" value="$(arg localization_method)" />
     </node>

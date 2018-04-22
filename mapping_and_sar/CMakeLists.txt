@@ -6,47 +6,46 @@ set(darknet_lib_dir $ENV{HOME}/darknet/obj)
 set (common_utility_src $ENV{HOME}/catkin_ws/src/mav-bench/common)
 set (common_utility_include $ENV{HOME}/catkin_ws/src/mav-bench/common)
 
-
 #-- collecting all the files in the darknet_obj folder
 #file(GLOB darknet_obj_files
 #    "*.o"
 #)
 
 set (Airlib_addr  $ENV{HOME}/AirSim/AirLib)
-set (CUDA_OPENCVLIBS
-opencv_cudaoptflow3
-opencv_cudawarping3
-opencv_cudaimgproc3
-opencv_cudaobjdetect3
-opencv_cudacodec3
-opencv_cudaoptflow3
-opencv_cudastereo3
-opencv_cudacodec3
-opencv_cudalegacy3
-opencv_cudawarping3
-opencv_cudabgsegm3
-opencv_cudafilters3
-opencv_cudafilters3
-opencv_cudaarithm3
-opencv_cudabgsegm3
-opencv_cudastereo3
-opencv_cudalegacy3
-opencv_cudalegacy3
-opencv_cudafeatures2d3
-opencv_cudaimgproc3
-opencv_cudacodec3
-opencv_cudaimgproc3
-opencv_cudafilters3
-opencv_cudafeatures2d3
-opencv_cudabgsegm3
-opencv_cudaobjdetect3
-opencv_cudaobjdetect3
-opencv_cudaarithm3
-opencv_cudaoptflow3
-opencv_cudawarping3
-opencv_cudafeatures2d3
-opencv_cudaarithm3
-opencv_cudastereo3)
+#set (CUDA_OPENCVLIBS
+#opencv_cudaoptflow3
+#opencv_cudawarping3
+#opencv_cudaimgproc3
+#opencv_cudaobjdetect3
+#opencv_cudacodec3
+#opencv_cudaoptflow3
+#opencv_cudastereo3
+#opencv_cudacodec3
+#opencv_cudalegacy3
+#opencv_cudawarping3
+#opencv_cudabgsegm3
+#opencv_cudafilters3
+#opencv_cudafilters3
+#opencv_cudaarithm3
+#opencv_cudabgsegm3
+#opencv_cudastereo3
+#opencv_cudalegacy3
+#opencv_cudalegacy3
+#opencv_cudafeatures2d3
+#opencv_cudaimgproc3
+#opencv_cudacodec3
+#opencv_cudaimgproc3
+#opencv_cudafilters3
+#opencv_cudafeatures2d3
+#opencv_cudabgsegm3
+#opencv_cudaobjdetect3
+#opencv_cudaobjdetect3
+#opencv_cudaarithm3
+#opencv_cudaoptflow3
+#opencv_cudawarping3
+#opencv_cudafeatures2d3
+#opencv_cudaarithm3
+#opencv_cudastereo3)
 
 find_package(Eigen3 REQUIRED)
 find_package(CUDA REQUIRED)
@@ -62,6 +61,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   sensor_msgs
+  octomap_server
   pcl_conversions
   pcl_ros
   tf
@@ -90,7 +90,7 @@ include_directories(
     $ENV{HOME}/catkin_ws/src/mav-bench/follow_the_leader/
     ${common_utility_include} 
     ${darknet_include_dir}
-    ${CUDA_INCLUDE_DIRS}
+    #${CUDA_INCLUDE_DIRS}
 )
 
 link_directories(
@@ -118,19 +118,24 @@ catkin_package(
 add_executable(publish_pose src/publish_pose.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 target_link_libraries(publish_pose ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread )
 
-add_executable(follow_trajectory src/follow_trajectory.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_executable(follow_trajectory src/follow_trajectory.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 target_link_libraries(follow_trajectory ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 
-add_executable(SAR src/SAR.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/timer.cpp)
-target_link_libraries(SAR ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${CUDA_OPENCVLIBS})
-add_dependencies(SAR ${catkin_EXPORTED_TARGETS})
+add_executable(sar src/sar.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(sar ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
+#${CUDA_OPENCVLIBS})
+add_dependencies(sar ${catkin_EXPORTED_TARGETS})
 
-add_executable(mapping src/mapping.cpp ${common_utility_src}/control_drone.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/timer.cpp)
-target_link_libraries(mapping ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${CUDA_OPENCVLIBS})
+add_executable(mapping src/mapping.cpp ${common_utility_src}/control_drone.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(mapping ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
+#${CUDA_OPENCVLIBS})
 add_dependencies(mapping ${catkin_EXPORTED_TARGETS})
 
-add_executable(object_detection_node src/object_detection_node.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/objdetect.cpp ${common_utility_src}/timer.cpp)
-target_link_libraries(object_detection_node ${CUDA_OPENCVLIBS}  ${catkin_LIBRARIES}  ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_curand_LIBRARY} darknet AirLib MavLinkCom rpc pthread)
-add_dependencies(object_detection_node ${catkin_EXPORTED_TARGETS})
+add_executable(future_collision src/future_collision ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(future_collision ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+
+#add_executable(object_detection_node src/object_detection_node.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/objdetect.cpp ${common_utility_src}/timer.cpp)
+#target_link_libraries(object_detection_node  ${catkin_LIBRARIES}   darknet AirLib MavLinkCom rpc pthread)
+#add_dependencies(object_detection_node ${catkin_EXPORTED_TARGETS})
 
 

@@ -6,7 +6,7 @@
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <geometry_msgs/Vector3.h>
-
+#include "Profiling.h"
 #include "Drone.h"
 
 
@@ -41,6 +41,21 @@ typedef struct stats{
          this->stamp_age_max =  0;
          this->ctr = 0;
     }
+    /*    
+    stats(const statsStruct &other){
+         this->pub_rate_accumulate = other.pub_rate_accumulate;
+         this->pub_rate_accumulate_sqr = other.pub_rate_accumulate_sqr;
+         this->droppage_rate_accumulate = 0;
+         this->mean_pub_rate = 0; 
+         this->std_pub_rate = 0;
+         this->mean_droppage_rate = 0;
+         this->stamp_age_mean_accumulate = 0;
+         this->stamp_age_mean =  0;
+         this->stamp_age_max =  0;
+         this->ctr = 0;
+    }
+    */
+    
     /*
     stats(long long pub_rate_accumulate, double droppage_rate_accumulate, int ctr): 
                  pub_rate_accumulate(pub_rate_accumulate), 
@@ -67,8 +82,8 @@ typedef struct stats{
         double var = -1*pow((double)this->pub_rate_accumulate/this->ctr, 2);
         var +=  (double)this->pub_rate_accumulate_sqr/this->ctr;
         this->std_pub_rate = pow(var,.5);
-        this->mean_droppage_rate = ((double)this->droppage_rate_accumulate/this->ctr)*1000000000;
-        this->stamp_age_mean = ((double)this->stamp_age_mean_accumulate/this->ctr)*1000000000; 
+        this->mean_droppage_rate = ((double)this->droppage_rate_accumulate/this->ctr)/100;
+        this->stamp_age_mean = ((double)this->stamp_age_mean_accumulate/this->ctr)/1e9; 
     }
 } statsStruct;
 
@@ -85,6 +100,7 @@ void update_stats_file(const std::string& stats_file__addr, const std::string& c
 struct multiDOFpoint {
     double x, y, z;
     double vx, vy, vz;
+    double ax, ay, az;
     double yaw;
     double duration;
 };
@@ -100,7 +116,7 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),
         //float max_speed = 3,
-        float time = 2);
+        float time = 2); 
 
 
 // Recovery methods

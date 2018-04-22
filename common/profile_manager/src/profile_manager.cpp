@@ -7,11 +7,15 @@
 #include <profile_manager/profiling_data_srv.h>
 #include <profile_manager/start_profiling_srv.h>
 #include <rosgraph_msgs/TopicStatistics.h>
+#include <std_msgs/Bool.h>
+#include <ros/callback_queue.h>
 #include "Drone.h"
 #include "common.h"
+#include "Profiling.h"
+#include "slam_profiler.h"
+
 #include <map>
 using namespace std;
-
 
 #ifdef USE_NVML
 #include "nvml.h"
@@ -20,9 +24,7 @@ using namespace std;
 #include <chrono>
 #include <ctime>
 
-
-
-
+//global variables
 string g_ip_addr;
 string g_stats_fname;
 Drone *g_drone;//ip_addr.c_str(), port);
@@ -33,12 +35,14 @@ bool g_end_requested = false;
 msr::airlib::FlightStats g_init_stats, g_end_stats;
 string g_ns;
 uint16_t g_port; 
+string g_localization_method;
+bool g_slam_lost = false;
 
 //profiling variable
 vector<KeyValuePairStruct> g_highlevel_application_stats;
 std::map <std::string, statsStruct> g_topics_stats;
+std::map <std::string, statsStruct> g_topics_stats_filterd;
 bool g_start_profiling_data = false;
-
 
 #define MAX_CPUS    1024
 #define MAX_PACKAGES    16
@@ -47,12 +51,13 @@ bool g_start_profiling_data = false;
 static int total_cores=0,total_packages=0;
 static int package_map[MAX_PACKAGES];
 
+float g_worst_case_power;
+
 
 
 /* TODO: on Skylake, also may support  PSys "platform" domain,    */
 /* the whole SoC not just the package.                */
 /* see dcee75b3b7f025cc6765e6c92ba0a4e59a4d25f4            */
-
 
 static int detect_cpu(void) {
 
@@ -281,6 +286,7 @@ double read_gpu_power_sample(xpu_sample_stat *s = nullptr) {
     f1.close();
 
 #ifdef USE_NVML
+    //ROS_INFO_STREAM("using NVML");
     unsigned int num_devices = 0;
     if (nvmlDeviceGetCount(&num_devices) != NVML_SUCCESS) {
         std::cout << nvmlDeviceGetCount(&num_devices) << "nvmlDeviceGetCount() failed.\n";
@@ -319,7 +325,7 @@ double read_cpu_power_sample(xpu_sample_stat *s = nullptr) {
     std::ifstream f1("/sys/devices/3160000.i2c/i2c-0/0-0041/iio_device/in_power1_input");
     if (f1.good()) {
         f1 >> cpu_power_mwatts;
-        // std::cout << "CPU Power (tx2): " << cpu_power_mwatts << " mWatt\n";
+         //std::cout << "CPU Power (tx2): " << cpu_power_mwatts << " mWatt\n";
     }
     f1.close();
 
@@ -347,12 +353,11 @@ void initialize_params() {
       return; 
     }
     g_port = 41451;
-    /* 
-    if(!ros::param::get("/profile_manager/localization_method",localization_method)){
-        ROS_FATAL("Could not start exploration. Parameter missing! Looking for %s", 
-                (ns + "/localization_method").c_str());
+    if(!ros::param::get("/localization_method", g_localization_method)){
+        ROS_FATAL("Could not start exploration. Parameter missing! Looking for /localization_method");
        return; 
     }
+    /* 
     if(!ros::param::get("/stats_file_addr",stats_file_addr)){
         ROS_FATAL("Could not start exploration. Parameter missing! Looking for %s", 
                 (ns + "/stats_file_addr").c_str());
@@ -378,41 +383,55 @@ void output_flight_summary(void){
     stats_ss << "\t\"StateOfCharge\": " << 100 - (g_init_stats.state_of_charge  - g_end_stats.state_of_charge) << "," << endl;
     stats_ss << "\t\"rotor energy consumed \": " << g_end_stats.energy_consumed - g_init_stats.energy_consumed << ","<<endl; 
 
+    stats_ss << "\t\"absolute_slam_error\": " << absoluteTrajectoryError(P, Q) << "," << endl;
+    stats_ss << "\t\"slam_lost:\": " << (g_slam_lost ? "true" : "false") << "," << endl;
+
     // the rest of metrics 
+     
+    //the follow is only for the compute subsystem, so it doesn not include memory
+    //also, I think for dekstop it doesn't include the platform only gather processor data
     for (auto result_el: g_highlevel_application_stats) {
-        stats_ss<<  "\t\""<< result_el.key<<'"' <<": " << result_el.value<<"," << endl;
+        // only processor/device energy (not the whole platform)
         if(result_el.key == "gpu_compute_energy" || result_el.key == "cpu_compute_energy"){
+            // continue; 
             total_energy_consumed += result_el.value; 
         }
+        stats_ss<<  "\t\""<< result_el.key<<'"' <<": " << result_el.value<<"," << endl;
     }
+     
+    
+    //total_energy_consumed += ((g_end_stats.flight_time - g_init_stats.flight_time)*g_worst_case_power)
     total_energy_consumed +=  (g_end_stats.energy_consumed - g_init_stats.energy_consumed);
     stats_ss << "\t\"" <<"total_energy_consumed"<<'"'<<":" << total_energy_consumed << "," << endl;
     // topic rates
     stats_ss << "\t\""  <<"topic_statistics"<<'"'<<":{" << endl;
+    
+    
+    //filter out all the empty ones
     for (auto it = std::begin(g_topics_stats); it !=std::end(g_topics_stats); ++it) {
+
         if (it->second.ctr != 0){
-            it->second.calc_stats(); 
-            if (next(it) ==  g_topics_stats.end()){
-                stats_ss << "\t\t\"" <<it->first<<'"'<<":{" << endl;
-                stats_ss << "\t\t\t\""<<"mean"<<'"'<<":"<< it->second.mean_pub_rate <<","<< endl;
-                stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << ","<< endl;
-                stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << ","<< endl;
-                stats_ss << "\t\t\t\""<<"msg_avg_age"<<'"'<<":"<< it->second.stamp_age_mean<< ","<< endl;
-                stats_ss << "\t\t\t\""<<"msg_max_age"<<'"'<<":"<< it->second.stamp_age_max<< ","<< endl;
-                stats_ss << "\t\t\t\""<<"droppage_rate"<<'"'<<":"<< it->second.mean_droppage_rate << endl <<"\t\t}" << endl;
-                stats_ss <<"\t}" << ","<<endl;
-            }
-            else{
-                stats_ss << "\t\t\"" <<it->first<<'"'<<":{" << endl;
-                stats_ss << "\t\t\t\""<<"mean"<<'"'<<":"<< it->second.mean_pub_rate<<","<< endl;
-                stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << "," << endl;
-                stats_ss << "\t\t\t\""<<"droppage_rate"<<'"'<<":"<<it->second.mean_droppage_rate << endl <<"\t\t}," << endl;
-                stats_ss << "\t\t\t\""<<"msg_avg_age"<<'"'<<":"<< it->second.stamp_age_mean<< ","<< endl;
-                stats_ss << "\t\t\t\""<<"msg_max_age"<<'"'<<":"<< it->second.stamp_age_max<<","<< endl;
-            }
+            g_topics_stats_filterd[it->first] = it->second;
         }
     }
+    
+    for (auto it = std::begin(g_topics_stats_filterd); it !=std::end(g_topics_stats_filterd); ++it) {
+        it->second.calc_stats(); 
+        stats_ss << "\t\t\"" <<it->first<<'"'<<":{" << endl;
+        stats_ss << "\t\t\t\""<<"mean"<<'"'<<":"<< it->second.mean_pub_rate <<","<< endl;
+        stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << ","<< endl;
+        stats_ss << "\t\t\t\""<<"std"<<'"'<<":"<< it->second.std_pub_rate << ","<< endl;
+        stats_ss << "\t\t\t\""<<"msg_avg_age"<<'"'<<":"<< it->second.stamp_age_mean<< ","<< endl;
+        stats_ss << "\t\t\t\""<<"msg_max_age"<<'"'<<":"<< it->second.stamp_age_max<< ","<< endl;
+        stats_ss << "\t\t\t\""<<"droppage_rate"<<'"'<<":"<< it->second.mean_droppage_rate << endl <<"\t\t}";
 
+        if (next(it) !=  g_topics_stats_filterd.end()){
+                stats_ss << ","<<endl;
+        }else{
+            stats_ss << endl<<"},"<<endl;
+        }
+    }
+    
     update_stats_file(g_stats_fname, stats_ss.str());
 }
 
@@ -458,7 +477,6 @@ bool record_profiling_data_cb(profile_manager::profiling_data_srv::Request &req,
     return true; 
 }
 
-
 void topic_statistics_cb(const rosgraph_msgs::TopicStatistics::ConstPtr& msg) {
     if (g_topics_stats.size() == 0) {//while not populated with the topic, return
         return;
@@ -468,39 +486,49 @@ void topic_statistics_cb(const rosgraph_msgs::TopicStatistics::ConstPtr& msg) {
     long long window_start_nsec =  msg->window_start.nsec;
     long long window_stop_nsec =  msg->window_stop.nsec;
     double window_duration = (window_stop_sec - window_start_sec)+
-        (window_stop_nsec - window_start_nsec)/1000000000;
-    long long msg_droppage_rate = msg->dropped_msgs/window_duration;
-    
-    long long stamp_age_mean = (msg->stamp_age_mean.toSec())*1000000000;
-    double stamp_age_max = (msg->stamp_age_max.toSec())*1000000000;
+        (window_stop_nsec - window_start_nsec)/1e9; //the reason to have this in nano second 
+                                                    //is for division to be greater than zero
+    long long msg_droppage_rate = (msg->dropped_msgs*100)/window_duration;
+    long long stamp_age_mean = (msg->stamp_age_mean.toSec())*1e9;
+    double stamp_age_max = (msg->stamp_age_max.toSec());
 
     int pub_rate  = (int) ((double)1.0/(double)msg->period_mean.toSec());
     int pub_rate_sqr = pub_rate*pub_rate; 
     
+    if (g_start_profiling_data){
     g_topics_stats[msg->topic].acc(pub_rate, msg_droppage_rate, 
                                    stamp_age_mean, stamp_age_max);
-    
-    /* 
-    if(msg->topic == "/airsim_qc/nbvPlanner/octomap_free"){
-        ROS_ERROR_STREAM(pub_rate);
     }
-    */
-    //ROS_INFO_STREAM(g_topics_stats[msg->topic].accumulate);
+}
+
+void slam_lost_cb(const std_msgs::Bool::ConstPtr& msg) {
+    if (msg->data == true)
+        g_slam_lost = true;
+}
+
+void statistics_queue_timer_callback (const ros::TimerEvent& te, ros::CallbackQueue * cbq) {
+     cbq->callAvailable(ros::WallDuration());
 }
 
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "profile_manager");
-    ros::NodeHandle nh;
+    ros::NodeHandle nh, nh_statistics_topic;
     ros::ServiceServer record_profiling_data_service = nh.advertiseService("record_profiling_data", record_profiling_data_cb);
     ros::ServiceServer start_profiling = nh.advertiseService("start_profiling", start_profiling_cb);
+    ros::Subscriber slam_lost_sub = nh.subscribe<std_msgs::Bool>("/slam_lost", 10, slam_lost_cb);
     
     initialize_params();
-    ros::Subscriber topic_statistics_sub =  
-		nh.subscribe<rosgraph_msgs::TopicStatistics>("/statistics", 20, topic_statistics_cb);
-    g_drone = new Drone(g_ip_addr.c_str(), g_port);
 
+    ros::CallbackQueue statistics_queue;
+    ros::Subscriber topic_statistics_sub =  
+		nh_statistics_topic.subscribe<rosgraph_msgs::TopicStatistics>("/statistics", 20, topic_statistics_cb);
+    nh_statistics_topic.setCallbackQueue(&statistics_queue);
+
+    g_drone = new Drone(g_ip_addr.c_str(), g_port, g_localization_method);
+
+    
 #ifdef USE_NVML
     if (nvmlInit() != NVML_SUCCESS) {
         std::cout << "nvmlInit() failed.\n";
@@ -508,17 +536,25 @@ int main(int argc, char **argv)
     }
 #endif
 
-    ros::Rate loop_rate(2);
+    ros::Rate loop_rate(10);
+
+    ros::Timer statistics_timer = nh_statistics_topic.createTimer(ros::Duration(0.5), boost::bind(statistics_queue_timer_callback, _1, &statistics_queue));
+
     while (ros::ok()) {
+        ros::spinOnce();
+
         read_gpu_power_sample(&xs_gpu);
         #ifndef USE_INTEL
+        //ROS_INFO_STREAM("using nvidia"); 
         read_cpu_power_sample(&xs_cpu);
         #endif // NOT USE_INTEL
         
+        collectSLAMData(g_localization_method);
+
         if (g_drone->getFlightStats().collision_count > 1) {
-           ; 
             //ROS_INFO_STREAM("collision count too high");
         }
+
         loop_rate.sleep();
         ros::spinOnce();
     }
@@ -537,9 +573,11 @@ int main(int argc, char **argv)
     
     g_end_stats = g_drone->getFlightStats();
     ROS_ERROR_STREAM("shouldn't be here yet"); 
-    g_highlevel_application_stats.push_back(KeyValuePairStruct("gpu_compute_energy", gpu_compute_energy));
-    g_highlevel_application_stats.push_back(KeyValuePairStruct("cpu_compute_energy", cpu_compute_energy));
-    output_flight_summary();//g_init_stats, g_end_stats, g_highlevel_application_stats, g_topics_stats, g_stats_fname);
+    g_highlevel_application_stats.push_back(
+            KeyValuePairStruct("gpu_compute_energy", gpu_compute_energy));
+    g_highlevel_application_stats.push_back(
+            KeyValuePairStruct("cpu_compute_energy", cpu_compute_energy));
+    output_flight_summary();
     return 0;
 }
 

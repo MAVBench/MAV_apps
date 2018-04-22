@@ -37,7 +37,7 @@ def action_upon_termination():
         if(len(ros_process_list_filtered)<= len(process_ignore_list) -1):#rosmaster doesn't show up
             break
         else:
-            if (ctr > 5): #a time out
+            if (ctr > 25): #a time out
                 break
         ctr+=1
 #    sys.exit(0)
@@ -82,21 +82,19 @@ def should_terminate(stat_file):
                     
 
 def main():
-    # for debugging 
-     
+    
     stat_file = "../data/"+"mapping"+"/supervisor_mailbox.txt"
     max_run_time = 90000 
     
-
     polling_freq = 5  #polling 
-    """ 
-    assert(len(sys.argv) == 4)
-    mav_bench_dir = sys.argv[1]
-    app =  sys.argv[2]
-    max_run_time= sys.argv[3]
-    stat_file = mav_bench_dir+"/data/"+app+"/supervisor_mailbox.txt"
-    """ 
-    
+    if (len(sys.argv) == 4): 
+        assert(len(sys.argv) == 4)
+        mav_bench_dir = sys.argv[1]
+        app =  sys.argv[2]
+        max_run_time= sys.argv[3]
+        stat_file = mav_bench_dir+"/data/"+app+"/supervisor_mailbox.txt"
+        
+
     stat_f_hndlr = open(stat_file, "w")
     stat_f_hndlr.close()
     initial_time = time() 

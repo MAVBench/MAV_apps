@@ -63,6 +63,7 @@ catkin_package(
 
 
 add_executable(publish_imu ${common_utility_src}/publish_imu/src/publish_imu.cpp 
+    ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp 
     ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/publish_imu/src/HelperFunctions/QuatRotEuler.cpp) 
 target_link_libraries(publish_imu ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 add_dependencies(publish_imu ${catkin_EXPORTED_TARGETS})

@@ -1,31 +1,24 @@
 #include "ros/ros.h"
-#include <std_msgs/String.h>
-//#include "template_library.hpp"
-#include <sstream>
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+
 #include <iostream>
 #include <chrono>
 #include <math.h>
 #include <iterator>
-#include <chrono>
-#include <thread>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
-//#include "controllers/DroneControllerBase.hpp"
-//#include "common/Common.hpp"
-#include "common.h"
-#include <fstream>
-#include "Drone.h"
-#include <cstdlib>
+#include <stdio.h>
+#include <signal.h>
+#include <string>
+#include <numeric>
+
+#include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/Imu.h>
-#include <stdio.h>
-#include <time.h>
-#include "std_msgs/Bool.h"
-#include <signal.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Int32.h>
+
 #include "common.h"
+#include "Profiling.h"
 #include <cstring>
 #include <string>
 #include "HelperFunctions/QuatRotEuler.h"
@@ -48,7 +41,6 @@ sensor_msgs::Imu create_msg(IMUStats IMU_stats) {
 	tf::Matrix3x3 rotationMatrix(qOrientation);
 	tf::Matrix3x3 rotationMatrixTransposed = rotationMatrix.transpose();
 	tf::Vector3 accelerationWorld(IMU_stats.linear_acceleration[0], IMU_stats.linear_acceleration[1], IMU_stats.linear_acceleration[2]);
-
 	
 	tf::Transform tfMatrix(qOrientation);
 	tf::Vector3 accelerationBody =  accelerationWorld;
@@ -106,19 +98,35 @@ int main(int argc, char **argv)
     int samples = 0;
     int misses = 0;
 
-    ros::Rate pub_rate(110);
     sensor_msgs::Imu IMU_msg, IMU_msg2, IMU_msg_official;
     ros::Publisher IMU_pub = nh.advertise <sensor_msgs::Imu>("imu_topic", 1);
     ros::Publisher IMU_pub2 = nh.advertise <sensor_msgs::Imu>("imu_topic2", 1);
     ros::Publisher IMU_pub_official = nh.advertise <sensor_msgs::Imu>("imu_official", 1);
 
-    ros::Subscriber error_sub = nh.subscribe<phoenix_msg::error>("error", 1, error_callback);
+    // ros::Subscriber error_sub = nh.subscribe<phoenix_msg::error>("error", 1, error_callback);
+
+    double loop_rate_hz;
+    if (!ros::param::get("/publish_imu/loop_rate", loop_rate_hz))
+        loop_rate_hz = 100;
+    ros::Rate pub_rate(loop_rate_hz);
     
     IMUStats IMU_stats;
     IMUStats IMU_stats2;
 
     uint64_t last_t = 0;
     uint64_t last_t2 = 0;
+
+    //geometry_msgs::Vector3 linear_acceleration; 
+    //geometry_msgs::Vector3 angular_velocity; 
+    //geometry_msgs::Quaternion orientation;     
+    //float roll, yaw, pitch;
+    //msr::airlib::VectorMath::toEulerianAngle(IMU_stats.orientation, pitch, roll, yaw);
+    //ROS_INFO_STREAM(yaw*180/M_PI);
+    
+    // std::list<double> x_list;
+    // std::list<double> y_list;
+    // std::list<double> z_list;
+    // const int max_list_size = 1;
 
     while (ros::ok())
 	{
@@ -127,7 +135,6 @@ int main(int argc, char **argv)
 
         IMU_msg = create_msg(IMU_stats);
         IMU_msg2 = create_msg(IMU_stats2);
-
 
         bool imu1_ok = true;
         bool imu2_ok = true;
@@ -148,12 +155,12 @@ int main(int argc, char **argv)
             imu2_ok = false;
         }
 
-        if (!error_msg.imu_0) {
-            imu1_ok = false;
-        }
-        if (!error_msg.imu_1) {
-            imu2_ok = false;
-        }
+        // if (!error_msg.imu_0) {
+        //     imu1_ok = false;
+        // }
+        // if (!error_msg.imu_1) {
+        //     imu2_ok = false;
+        // }
 
         // average the two IMU msgs if they're both okay
         #define AVG(_field,_m) IMU_msg_official._field._m =\
@@ -176,8 +183,8 @@ int main(int argc, char **argv)
             IMU_pub_official.publish(IMU_msg2);
         }
 
-        pub_rate.sleep();
         ros::spinOnce();
+        pub_rate.sleep();
     }
 }
 

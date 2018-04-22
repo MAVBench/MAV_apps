@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <string>
 #include <limits>
-//#include <opencv2/opencv.hpp>
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include <geometry_msgs/Pose.h>
 #include "coord.h"
@@ -43,7 +42,9 @@ public:
     void disarm();
     bool takeoff(double h);
     bool set_yaw(int y);
+    bool set_yaw_at_z(int y, double z);
     bool fly_velocity(double vx, double vy, double vz, float yaw = YAW_UNCHANGED, double duration = 3);
+    bool fly_velocity_at_z(double vx, double vy, double z, float yaw = YAW_UNCHANGED, double duration = 3);
     bool land();
     bool set_yaw_based_on_quaternion(geometry_msgs::Quaternion q);
 
@@ -51,12 +52,13 @@ public:
     coord position(); 
     geometry_msgs::Pose pose();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
-    coord gps(uint64_t& timestamp);
 
     // *** F:DN Query data
     float get_pitch();
     float get_yaw();
     float get_roll();
+
+    coord gps(uint64_t& timestamp);
 
     // *** F:DN Stats functions
     msr::airlib::FlightStats getFlightStats();

@@ -36,23 +36,6 @@ static T last_msg (std::string topic) {
 }
 
 
-void signal_supervisor(std::string file_to_write_to, std::string msg){
-    std::ofstream file_to_write_to_h; //file handle write to when completed
-    file_to_write_to_h.open(file_to_write_to, std::ofstream::out);
-    file_to_write_to_h<< msg;
-    file_to_write_to_h.close();
-}
-
-
-void update_stats_file(const std::string& stats_file__addr, const std::string& content){
-    printf("insed update stats file"); 
-    std::ofstream myfile;
-    myfile.open(stats_file__addr, std::ofstream::out | std::ofstream::app);
-    myfile << content << std::endl;
-    myfile.close();
-    return;
-}
-
 
 void sigIntHandler(int sig)
 {
@@ -60,15 +43,15 @@ void sigIntHandler(int sig)
     exit(0);
 }
 
-trajectory_t create_panic_trajectory(Drone& drone, const geometry_msgs::Vector3& panic_dir)
+trajectory_t create_panic_trajectory(Drone& drone, const geometry_msgs::Vector3& panic_velocity)
 {
     multiDOFpoint p;
 
     p.yaw = drone.get_yaw();
 
-    p.vx = panic_dir.x * std::sin(p.yaw*M_PI/180);
-    p.vy = panic_dir.y * std::cos(p.yaw*M_PI/180);
-    p.vz = panic_dir.z + 0.1; // Counter-act AirSim's slight downward drift
+    p.vx = panic_velocity.x * std::cos(M_PI/90 - p.yaw*M_PI/180);
+    p.vy = panic_velocity.y * std::cos(p.yaw*M_PI/180);
+    p.vz = panic_velocity.z + 0.1; // Counter-act AirSim's slight downward drift
 
     // p.vx = -std::sin(p.yaw*M_PI/180);
     // p.vy = -std::cos(p.yaw*M_PI/180);
@@ -264,38 +247,87 @@ void spin_around(Drone &drone) {
     drone.fly_velocity(0, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     ROS_INFO("Spinning around...");
-
+    ros::Time last_time;
     float init_yaw = drone.get_yaw();
+    double start_z = drone.pose().position.z; // Get drone's current position
+
+    int angle_corrected;
     for (int i = 0; i <= 360; i += 90) {
         int angle = init_yaw + i;
-        drone.set_yaw(angle <= 180 ? angle : angle - 360);
+        angle_corrected  = (angle <= 180 ? angle : angle - 360);
+        drone.set_yaw_at_z(angle_corrected, start_z);
+        //drone.set_yaw(angle <= 180 ? angle : angle - 360);
     }
+
+    // to correct 
+    double dz = start_z - drone.pose().position.z;
+    double vz = dz > 0 ? 1 : -1;
+    double dt = dz > 0 ? dz : -dz;
+    
+    drone.fly_velocity(0, 0, vz, YAW_UNCHANGED, dt);
+    std::this_thread::sleep_for(std::chrono::milliseconds(int(dt*1000.0)));
+    drone.fly_velocity(0, 0, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 
 
 // Follows trajectory, popping commands off the front of it and returning those commands in reverse order
 void follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj, yaw_strategy_t yaw_strategy,
-        bool check_position, float max_speed, float time) {
+        bool check_position, float max_speed, float time){
+
 
     trajectory_t reversed_commands;
 
+    static double max_speed_so_far = 0;
+    static int ctr    = 0;
     
+    
+    // if (traj->size() == 0) { //this is the scenario
+    //                          //when the planner fails
+    //                          //and an empty trajectory
+    //                          //is pushed
+    //     drone.fly_velocity(0,0,0);
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    //     // drone.fly_velocity(-2,-2,0, drone.get_yaw(),.5);
+    //     // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    //     //ros::sleep::Duration(.3); 
+    //     ROS_ERROR_STREAM("SLAMING ON BREAKS YO");
+    //     //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    //     return; 
+    // }
+    
+    ros::Time start_hook_t;
     while (time > 0 && traj->size() > 0) {
+         
+        
+        start_hook_t = ros::Time::now();  
         multiDOFpoint p = traj->front();
 
         // Calculate the velocities we should be flying at
         double v_x = p.vx;
         double v_y = p.vy;
         double v_z = p.vz;
-
+        //ROS_ERROR_STREAM("point "<<p.x<< " "<< p.y<< " " <<p.z);
+        //ROS_ERROR_STREAM("before correction"<<v_x<< " "<< v_y << " " <<v_z);
+         
         if (check_position) {
             auto pos = drone.position();
+
             v_x += 0.5*(p.x-pos.x);
             v_y += 0.5*(p.y-pos.y);
             v_z += 1.0*(p.z-pos.z);
+            /* 
+            if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>2) {
+                ROS_ERROR_STREAM("distance greater than 2"); 
+            }
+            else if (distance(p.x-pos.y, p.y-pos.y, p.z-pos.z)>1) {
+                ROS_ERROR_STREAM("distance greater than 1"); 
+            }
+            */
         }
-
+        
+        //ROS_ERROR_STREAM("before scaling"<<v_x<< " "<< v_y << " " <<v_z);
         // Calculate the yaw we should be flying with
         float yaw = p.yaw;
         if (yaw_strategy == ignore_yaw)
@@ -307,23 +339,39 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
         }
 
         // Make sure we're not going over the maximum speed
-        double speed = std::sqrt(v_x*v_x + v_y*v_y + v_z*v_z);
+        double speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         double scale = 1;
+        //ROS_ERROR_STREAM("BEFORE speed scaling"<<v_x<< " "<< v_y << " " <<v_z);
         if (speed > max_speed) {
             scale = max_speed / speed;
-
+            //ROS_ERROR_STREAM("exceed max speed "<< "max_speed"<<max_speed<< " speed"<<speed<<"scael"<<scale);
+            
             v_x *= scale;
             v_y *= scale;
             v_z *= scale;
+            //ROS_ERROR_STREAM("AFTER speed scaling"<<v_x<< " "<< v_y << " " <<v_z);
+           speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         }
-
+        /*
+        if(ctr %50 == 0) {
+            if (ctr %100 == 0) {
+                max_speed_so_far = 0; 
+            } 
+            max_speed_so_far = max(max_speed_so_far, speed);
+            ROS_ERROR_STREAM("max_speed_so_far "<<max_speed_so_far);
+        }
+        ctr++;
+        */
         // Calculate the time for which these flight commands should run
         double flight_time = p.duration <= time ? p.duration : time;
         double scaled_flight_time = flight_time / scale;
 
         // Fly for flight_time seconds
+        //ROS_ERROR_STREAM("Vs to send out"<<v_x<< " "<< v_y << " " <<v_z);
         auto segment_start_time = std::chrono::system_clock::now();
-        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time+0.1); 
+        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time); 
+        
+       //ROS_ERROR_STREAM("fly with: "<<v_x<< " "<<v_y<<" " <<v_z);
 
         std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));
 
@@ -334,11 +382,14 @@ void follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Update trajectory
         traj->front().duration -= flight_time;
-        if (traj->front().duration <= 0)
+        if (traj->front().duration <= 0){
+            //ROS_INFO_STREAM("pop a command"<< traj->front().x<< " " << traj->front().y<< " "<<traj->front().z); 
             traj->pop_front();
+        }
 
         time -= flight_time;
     }
+
 
     if (reverse_traj != nullptr)
         *reverse_traj = append_trajectory(reversed_commands, *reverse_traj);
@@ -394,6 +445,11 @@ trajectory_t create_trajectory(const trajectory_msgs::MultiDOFJointTrajectory& t
         mdp.vx = it->velocities[0].linear.x;
         mdp.vy = it->velocities[0].linear.y;
         mdp.vz = it->velocities[0].linear.z;
+
+        mdp.ax = it->accelerations[0].linear.x;
+        mdp.ay = it->accelerations[0].linear.y;
+        mdp.az = it->accelerations[0].linear.z;
+
 
         if (face_forward) {
             if (mdp.vx == 0 && mdp.vy == 0)

@@ -3,12 +3,6 @@ project(control_drone)
 set (common_utility_src $ENV{HOME}/catkin_ws/src/mav-bench/common)
 set (common_utility_include $ENV{HOME}/catkin_ws/src/mav-bench/common)
 
-
-#-- collecting all the files in the darknet_obj folder
-#file(GLOB darknet_obj_files
-#    "*.o"
-#)
-
 set (Airlib_addr  $ENV{HOME}/AirSim/AirLib)
 
 find_package(Eigen3 REQUIRED)
@@ -45,7 +39,6 @@ generate_messages(
   geometry_msgs
 )
 
-#message(cuda_include_dirs )
 include_directories(
     ${Eigen_INCLUDE_DIRS} 
     ${catkin_INCLUDE_DIRS}

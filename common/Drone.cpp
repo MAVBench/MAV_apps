@@ -111,6 +111,80 @@ bool Drone::takeoff(double h)
     return true;
 }
 
+/*
+static double cap_vz (double vz)
+{
+    if (vz < -10)
+        vz = -10;
+    else if (vz > 10)
+        vz = 10;
+    // else if (vz < -5)
+    //     vz = -5;
+    // else if (vz > 5)
+    //     vz = 5;
+    // else if (vz < -2)
+    //     vz = -2;
+    // else if (vz > 2)
+    //     vz = 2;
+    // else if (vz < -1)
+    //     vz = -1;
+    // else if (vz > 1)
+    //     vz = 1;
+    // else if (vz < -0.1)
+    //     vz = -0.1;
+    // else if (vz > 0.1)
+    //     vz = 0.1;
+
+    return vz;
+}
+*/
+
+bool Drone::set_yaw_at_z (int y, double z)
+{
+    int pos_dist = (y - int(get_yaw()) + 360) % 360;
+    int yaw_diff = pos_dist <= 180 ? pos_dist : pos_dist - 360;
+
+    float duration = yaw_diff / max_yaw_rate;
+    if (duration < 0)
+        duration = -duration;
+
+    float yaw_rate = max_yaw_rate;
+    if (yaw_diff < 0)
+        yaw_rate = -yaw_rate;
+
+	try {
+        auto drivetrain = msr::airlib::DrivetrainType::MaxDegreeOfFreedom;
+        msr::airlib::YawMode yawmode(true, yaw_rate);
+
+        auto t = std::chrono::system_clock::now();
+        auto end_t = t + std::chrono::milliseconds(int(duration*1000));
+        const double t_step = 0.05; // 50 ms
+        const auto t_step_ms = std::chrono::milliseconds(int(t_step*1000));
+
+        for (; t < end_t; t += t_step_ms) {
+            double current_z = pose().position.z;
+            double v_z = (z - current_z) * 0.5;
+
+            // if (std::abs(start_z - current_z) < 0.25)
+            //     v_z = 0;
+            // else
+            //     v_z = cap_vz(v_z);
+
+            // ROS_INFO("%f\t%f\t%f", start_z, current_z, v_z);
+
+            client->moveByVelocity(0, 0, -v_z, duration, drivetrain, yawmode);
+
+            std::this_thread::sleep_until(t);
+        }
+        
+        client->moveByVelocity(0, 0, 0, 1);
+	} catch(...) {
+		std::cerr << "set_yaw failed" << std::endl;
+		return false;
+	}
+}
+
+
 bool Drone::set_yaw(int y)
 {
     int pos_dist = (y - int(get_yaw()) + 360) % 360;
@@ -222,6 +296,13 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
 
             float yaw_diff = (int(target_yaw - get_yaw()) + 360) % 360;
             yaw_diff = yaw_diff <= 180 ? yaw_diff : yaw_diff - 360;
+            
+            if (yaw_diff >= 5)
+                yaw_diff -= 5;
+            else if (yaw_diff <= -5)
+                yaw_diff += 5;
+            else
+                yaw_diff = 0;
 
             float yaw_rate = yaw_diff / duration;
 
@@ -243,6 +324,28 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
 	}
 
 	return true;
+}
+
+bool Drone::fly_velocity_at_z(double vx, double vy, double z, float yaw, double duration)
+{
+    auto t = std::chrono::system_clock::now();
+    auto end_t = t + std::chrono::milliseconds(int(duration*1000));
+    const double t_step = 0.05; // 50 ms
+    const auto t_step_ms = std::chrono::milliseconds(int(t_step*1000));
+
+    for (; t < end_t; t += t_step_ms) {
+        double current_z = pose().position.z;
+        double vz = (z - current_z) * 0.5;
+
+        if (!fly_velocity(vx, vy, vz, yaw, duration))
+            return false;
+
+        std::this_thread::sleep_until(t);
+    }
+
+    fly_velocity(0, 0, 0);
+
+    return true;
 }
 
 bool Drone::land()
@@ -479,7 +582,7 @@ msr::airlib::IMUStats Drone::getIMUStats()
     try {
         return client->getIMUStats();
     } catch (const std::exception& e) {
-        std::cerr << "getIMUStats() failed!" << e.what()<<std::endl;
+        std::cerr << "getIMUStats() failed!" << e.what() << std::endl;
         return msr::airlib::IMUStats();
     }
 }
@@ -490,7 +593,7 @@ msr::airlib::IMUStats Drone::getIMUStats2()
     try {
         return client->getIMUStats2();
     } catch (const std::exception& e) {
-        std::cerr << "getIMUStats() failed!" << e.what()<<std::endl;
+        std::cerr << "getIMUStats() failed!" << e.what() << std::endl;
         return msr::airlib::IMUStats();
     }
 }
