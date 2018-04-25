@@ -25,7 +25,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   signal(SIGINT, sigIntHandler);
 
-  ros::Rate loop_rate(5);
+  ros::Rate loop_rate(10);
 
   tf::TransformBroadcaster br;
   tf::TransformListener listen;
@@ -38,6 +38,16 @@ int main(int argc, char **argv)
   }
 
   Drone drone(ip_addr.c_str(), port);
+
+  // Initialize gps
+  for (ros::Time start = ros::Time::now();
+          (ros::Time::now() - start).toSec() < 5;) {
+      uint64_t timestamp;
+      drone.gps(timestamp);
+      ros::Duration(0.2).sleep();
+  }
+  uint64_t offset_timestamp;
+  auto offset = drone.gps(offset_timestamp);
 
   uint64_t gps_last_timestamp = 0;
   while (ros::ok()) {
@@ -54,7 +64,8 @@ int main(int argc, char **argv)
           try {
               listen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
 
-              transform.setOrigin(tf::Vector3(pos.x, pos.y, pos.z));
+              transform.setOrigin(tf::Vector3(pos.x-offset.x, pos.y-offset.y,
+                          pos.z-offset.z));
 
               // tf::Quaternion q(imu.orientation.x(), imu.orientation.y(),
               //         imu.orientation.z(), imu.orientation.w());

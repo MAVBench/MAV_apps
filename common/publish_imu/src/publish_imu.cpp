@@ -29,7 +29,7 @@ using namespace std;
 std::string ip_addr__global;
 using namespace msr::airlib;
 
-sensor_msgs::Imu create_msg(IMUStats IMU_stats) {
+sensor_msgs::Imu create_msg(const IMUStats& IMU_stats) {
     sensor_msgs::Imu IMU_msg;
 
 	geometry_msgs::Quaternion q = setQuat(IMU_stats.orientation.x(),
@@ -115,6 +115,7 @@ int main(int argc, char **argv)
 
     uint64_t last_t = 0;
     uint64_t last_t2 = 0;
+    uint64_t last_official_t = 0;
 
     //geometry_msgs::Vector3 linear_acceleration; 
     //geometry_msgs::Vector3 angular_velocity; 
@@ -167,6 +168,7 @@ int main(int argc, char **argv)
                                (IMU_msg._field._m + IMU_msg2._field._m) / 2.0
         if (imu1_ok && imu2_ok && IMU_stats.time_stamp == IMU_stats2.time_stamp) {
             IMU_msg_official = IMU_msg;
+
             AVG(orientation,x);
             AVG(orientation,y);
             AVG(orientation,z);
@@ -176,11 +178,27 @@ int main(int argc, char **argv)
             AVG(linear_acceleration,x);
             AVG(linear_acceleration,y);
             AVG(linear_acceleration,z);
-            IMU_pub_official.publish(IMU_msg_official);
+
+            if (last_official_t < IMU_stats.time_stamp) {
+                IMU_pub_official.publish(IMU_msg_official);
+                last_official_t = IMU_stats.time_stamp;
+            } else {
+                ROS_ERROR("imu message in disorder!");
+            }
         } else if (imu1_ok) {
-            IMU_pub_official.publish(IMU_msg);
+            if (last_official_t < IMU_stats.time_stamp) {
+                IMU_pub_official.publish(IMU_msg);
+                last_official_t = IMU_stats.time_stamp;
+            } else {
+                ROS_ERROR("imu message in disorder!");
+            }
         } else if (imu2_ok) {
-            IMU_pub_official.publish(IMU_msg2);
+            if (last_official_t < IMU_stats2.time_stamp) {
+                IMU_pub_official.publish(IMU_msg2);
+                last_official_t = IMU_stats2.time_stamp;
+            } else {
+                ROS_ERROR("imu message in disorder!");
+            }
         }
 
         ros::spinOnce();

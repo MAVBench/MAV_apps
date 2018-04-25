@@ -17,14 +17,14 @@
 
     <!-- Drone's physical characteristics /-->
     <arg name="a_max" default="5"/> 
-    <arg name="v_max" default="2.5"/> 
+    <arg name="v_max" default="2"/> 
     <arg name="future_col_drone_radius" default="1.5"/>
     <arg name="future_col_drone_height" default="0.6"/>
     <arg name="planner_drone_radius" default="2"/>
     <arg name="planner_drone_height" default="0.6"/>
     
-    <arg name="planning_resolution" default=".15"/>
-    <arg name="sensor_max_range" default="7" />
+    <arg name="planning_resolution" default=".9"/>
+    <arg name="sensor_max_range" default="15" />
     <arg name="fly_trajectory_time_out" default=".01"/> 
     <arg name="planning_budget" default=".3"/>
     <param name="planning_budget" value="$(arg planning_budget)"/>
@@ -32,8 +32,8 @@
     <!-- orb slam location--> 
     <arg name="orb_slam2_dir" default="$(find ORB_SLAM2)/../../.."/> 
 
-    <arg name="max_yaw_rate" default="90"/>
-    <arg name="max_yaw_rate_during_flight" default="90"/>
+    <arg name="max_yaw_rate" default="60"/>
+    <arg name="max_yaw_rate_during_flight" default="20"/>
     <param name="v_max" value="$(arg v_max)"/>
     <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
     <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
@@ -57,7 +57,7 @@
 
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
     <!-- also planning to prevent stdio stuff(if they really matter)-->
-    <arg name="DEBUG" default="true" />
+    <arg name="DEBUG" default="false" />
     <arg name="CLCT_DATA" value="true" />
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
     <param name="DEBUG"  value="$(arg DEBUG)" />
@@ -80,7 +80,7 @@
 
 
     <!-- starting nodes -->
-    <node pkg="profile_manager" type="profile_manager" name="profile_manager" output="screen">
+    <node pkg="profile_manager" type="profile_manager" name="profile_manager">
     <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
     <param name="ip_addr" value="$(arg host_ip)"/>
     </node>
@@ -153,7 +153,7 @@
         <!-- Localization of the depth images -->
         <param name="localization_method" value="$(arg localization_method)" />
 
-        <param name="loop_rate" value="20" />
+        <param name="loop_rate" value="10" />
         <param name="all_front" value="true" />
 	</node>
 
@@ -243,12 +243,12 @@
         <param name="rrt_step_size" value="1.0"/>
         <param name="rrt_bias" value="10"/>
 		
-        <param name="x_dist_to_sample_from__low_bound" value="-50"/>
-		<param name="x_dist_to_sample_from__high_bound" value="50"/>
-        <param name="y_dist_to_sample_from__low_bound" value="-5"/>
-        <param name="y_dist_to_sample_from__high_bound" value="1000"/>
-        <param name="z_dist_to_sample_from__low_bound" value="5"/>
-        <param name="z_dist_to_sample_from__high_bound" value="9"/>
+        <param name="x_dist_to_sample_from__low_bound" value="-35"/>
+		<param name="x_dist_to_sample_from__high_bound" value="35"/>
+        <param name="y_dist_to_sample_from__low_bound" value="-2"/>
+        <param name="y_dist_to_sample_from__high_bound" value="175"/>
+        <param name="z_dist_to_sample_from__low_bound" value="3"/>
+        <param name="z_dist_to_sample_from__high_bound" value="6"/>
 
         <param name="sampling_interval" value="0.5"/>
 
@@ -289,8 +289,8 @@
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
     </group>
 
-  <node pkg="publish_imu" type="publish_imu" name="publish_imu"> 
-    <param name="loop_rate" value="120"/>
+  <node pkg="publish_imu" type="publish_imu" name="publish_imu" output="screen"> 
+    <param name="loop_rate" value="150"/>
   </node>
 
   <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher"/> 

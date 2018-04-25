@@ -21,6 +21,7 @@
 //#include <geometry_msgs/Accel.h>
 using namespace std;
 bool slam_lost = false;
+bool land_now = false;
 bool col_imminent = false;
 //bool col_coming = false;
 
@@ -109,9 +110,18 @@ void log_data_before_shutting_down(){
     }
 }
 
+
+/*
 void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
     slam_lost = msg->data;
 }
+*/
+
+
+void land_now_callback (const std_msgs::Bool::ConstPtr& msg) {
+    land_now = msg->data;
+}
+
 
 void callback_trajectory(const package_delivery::multiDOF_array::ConstPtr& msg, Drone * drone)//, trajectory_t * normal_traj)
 {
@@ -271,8 +281,11 @@ int main(int argc, char **argv){
     
     Drone drone(ip_addr.c_str(), port, localization_method,
                 g_max_yaw_rate, g_max_yaw_rate_during_flight);
-	ros::Subscriber slam_lost_sub = 
-		n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
+
+	// ros::Subscriber slam_lost_sub = 
+	// 	n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
+	ros::Subscriber land_now_sub = 
+		n.subscribe<std_msgs::Bool>("/land_now", 1, land_now_callback);
     ros::Subscriber trajectory_follower_sub = 
         n.subscribe<package_delivery::multiDOF_array>("normal_traj", 
                 1, boost::bind(callback_trajectory, _1, &drone));//, &normal_traj));
@@ -296,6 +309,7 @@ int main(int argc, char **argv){
             panic_traj.clear();
         }
 
+        /*
         if (slam_lost) {
             ROS_WARN("SLAM lost!");
             if (!created_slam_loss_traj)
@@ -306,6 +320,7 @@ int main(int argc, char **argv){
             slam_loss_traj.clear();
             created_slam_loss_traj = false;
         }
+        */
 
         // Handle future_collision queue
         /*
@@ -339,7 +354,6 @@ int main(int argc, char **argv){
             rev_traj = &rev_normal_traj;
         }
 
-        
         if (normal_traj.size() > 0) {
             app_started = true;
         }
@@ -364,25 +378,30 @@ int main(int argc, char **argv){
                 } 
             }
             
-            // Back up if no trajectory was found
             if (!forward_traj->empty())
-                follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy, 
+                follow_trajectory(drone, forward_traj, rev_traj, yaw_strategy,
                     check_position, g_v_max, g_fly_trajectory_time_out);
             else {
-                //ROS_ERROR("New SLAMING BREAKS YO");
-                follow_trajectory(drone, &rev_normal_traj, nullptr, face_backward, true, 1, g_fly_trajectory_time_out);
+                // Back up if no trajectory was found
+                ROS_ERROR("Reversing...");
+                follow_trajectory(drone, &rev_normal_traj, nullptr, ignore_yaw, true, 1, g_fly_trajectory_time_out);
             }
 
             if (forward_traj->size() > 0)
                 next_steps_pub.publish(next_steps_msg(*forward_traj));
         }
-        if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj)){
-            ROS_INFO_STREAM("slam loss");
-            log_data_before_shutting_down(); 
-            g_localization_status = 0; 
-            signal_supervisor(g_supervisor_mailbox, "kill"); 
+
+        if (land_now) {
+            drone.land();
             ros::shutdown();
-        }else if (trajectory_done(*forward_traj)){
+            exit(0);
+        } else if (slam_lost && created_slam_loss_traj && trajectory_done(slam_loss_traj)) {
+            ROS_INFO_STREAM("slam loss");
+            log_data_before_shutting_down();
+            g_localization_status = 0;
+            signal_supervisor(g_supervisor_mailbox, "kill");
+            ros::shutdown();
+        } else if (trajectory_done(*forward_traj)){
             loop_rate.sleep();
         }
         g_got_new_trajectory = false;

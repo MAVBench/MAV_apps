@@ -40,7 +40,7 @@ ros::Time col_coming_time_stamp;
 long long g_pt_cld_to_pkg_delivery_commun_acc = 0;
 int g_col_com_ctr = 0;
 
-bool slam_lost = false;
+// bool slam_lost = false;
 bool return_to_home = false;
 bool returning_to_home = false;
 bool col_coming = false;
@@ -156,9 +156,11 @@ void col_coming_callback(const std_msgs::Bool::ConstPtr& msg) {
     col_coming = msg->data;
 }
 
+/*
 void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
     slam_lost = msg->data;
 }
+*/
 
 void package_delivery_initialize_params() {
     if(!ros::param::get("/supervisor_mailbox",g_supervisor_mailbox))  {
@@ -327,8 +329,8 @@ int main(int argc, char **argv)
 
     ros::Subscriber col_coming_sub = 
         nh.subscribe<package_delivery::BoolPlusHeader>("col_coming", 1, col_coming_callback);
-	ros::Subscriber slam_lost_sub = 
-		nh.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
+	// ros::Subscriber slam_lost_sub = 
+	// 	nh.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
 	ros::Subscriber error_sub = 
 		nh.subscribe<phoenix_msg::error>("/error", 1, error_callback);
 
@@ -390,7 +392,7 @@ int main(int argc, char **argv)
                 }
             }
             
-            spin_around(drone);
+            // spin_around(drone);
             next_state = waiting;
         }
         else if (state == waiting)
@@ -488,14 +490,13 @@ int main(int argc, char **argv)
                 twist = follow_trajectory_status_srv_inst.response.twist;
                 acceleration = follow_trajectory_status_srv_inst.response.acceleration;
             }
-            else if (col_coming){
-                next_state = trajectory_completed; 
-                twist = follow_trajectory_status_srv_inst.response.twist;
-                acceleration = follow_trajectory_status_srv_inst.response.acceleration;
-                col_coming = false; 
-                clcted_col_coming_data = false;
-            }
             else if (return_to_home && !returning_to_home) {
+                package_delivery::multiDOF_array array_of_point_msg; 
+                trajectory_pub.publish(array_of_point_msg);
+                ros::spinOnce();
+                ros::shutdown();
+                exit(0);
+
                 returning_to_home = true;
 
                 goal.x = home.x;
@@ -505,6 +506,13 @@ int main(int argc, char **argv)
                 ROS_ERROR("Setting goal back to home!");
 
                 next_state = trajectory_completed;
+            }
+            else if (col_coming){
+                next_state = trajectory_completed; 
+                twist = follow_trajectory_status_srv_inst.response.twist;
+                acceleration = follow_trajectory_status_srv_inst.response.acceleration;
+                col_coming = false; 
+                clcted_col_coming_data = false;
             }
             else{
                 next_state = flying;

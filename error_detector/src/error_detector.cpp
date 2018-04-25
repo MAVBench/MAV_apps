@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <ros/callback_queue.h>
 #include <std_msgs/String.h>
 #include <tf/transform_listener.h>
 #include <phoenix_msg/error.h>
@@ -47,10 +48,12 @@ boost::asio::deadline_timer gps_timer(io, boost::posix_time::milliseconds(500));
 void async_thread()
 {
     ROS_WARN("Starting...");
+    /*
     camera_l_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_l_timer.async_wait(camera_l_timer_callback);
     camera_r_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_r_timer.async_wait(camera_r_timer_callback);
+    */
     imu_0_timer.expires_from_now(boost::posix_time::milliseconds(500));
     imu_0_timer.async_wait(imu_0_timer_callback);
     imu_1_timer.expires_from_now(boost::posix_time::milliseconds(500));
@@ -64,15 +67,20 @@ int main(int argc, char **argv)
 {
     //ros node init
     ros::init(argc, argv, "error_detector");
-    ros::NodeHandle nh;
-    image_transport::ImageTransport it(nh);
+    ros::NodeHandle nh, nh_camera;
+    image_transport::ImageTransport it(nh_camera);
     std::cout << "Error Detector Node" << std::endl;
-
 
     ros::Subscriber imu_0_sub = nh.subscribe("/imu_topic", 1, imu_0_sub_callback);
     ros::Subscriber imu_1_sub = nh.subscribe("/imu_topic2", 1, imu_1_sub_callback);
     image_transport::Subscriber camera_r_sub = it.subscribe("/Airsim/right/image_raw", 1, camera_r_sub_callback);
     image_transport::Subscriber camera_l_sub = it.subscribe("/Airsim/left/image_raw", 1, camera_l_sub_callback);
+
+    // Run camera queue in another thread
+    ros::CallbackQueue camera_queue;
+    nh_camera.setCallbackQueue(&camera_queue);
+    ros::AsyncSpinner camera_spinner(2, &camera_queue);
+    camera_spinner.start();
 
     error_pub = nh.advertise<phoenix_msg::error>("error", 1000);
 
@@ -83,22 +91,21 @@ int main(int argc, char **argv)
     current_msg.imu_0        = 1;
     current_msg.imu_1        = 1;
     current_msg.camera_right = 1;
-    current_msg.camera_left = 1;
+    current_msg.camera_left  = 1;
 
     // feature detection based camera fault detector
     
     //thread to monitor gps
     std::thread transformThread(monitor_transform);
     
-    // ros::spin();
-    
-    ros::Rate r(200);
+    ros::Rate r(50);
     while (ros::ok()) {
         error_pub.publish(current_msg);
         ros::spinOnce();
         r.sleep();
     }
     
+    camera_spinner.stop();
     transformThread.join();
     timersThread.join();
 }
@@ -130,7 +137,6 @@ void monitor_transform(){
             }
         } else {
             if (current_msg.gps == 1)
-
                 std::cout << "GPS data timed out" << std::endl;
             current_msg.gps = 0;
         }
@@ -216,9 +222,11 @@ void camera_l_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_l_timer.cancel();
     if (current_msg.camera_left == 0)
         std::cout << "Left camera data found" << std::endl;
-    current_msg.camera_left = 1;
+    //current_msg.camera_left = 1;
+    /*
     camera_l_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_l_timer.async_wait(camera_l_timer_callback);
+    */
 
     current_msg.camera_left = test_frame(cf_l, msg);
 }
@@ -227,9 +235,11 @@ void camera_r_sub_callback(const sensor_msgs::ImageConstPtr& msg){
     camera_r_timer.cancel();
     if (current_msg.camera_right == 0)
         std::cout << "Right camera data found" << std::endl;
-    current_msg.camera_right = 1;
+    //current_msg.camera_right = 1;
+    /*
     camera_r_timer.expires_from_now(boost::posix_time::milliseconds(500));
     camera_r_timer.async_wait(camera_r_timer_callback);
+    */
 
     current_msg.camera_right = test_frame(cf_r, msg);
 }
