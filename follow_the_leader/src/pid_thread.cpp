@@ -37,7 +37,8 @@
 #include "follow_the_leader/cmd_srv.h"
 #include "error.h"
 #include <profile_manager/profiling_data_srv.h>
-
+long long pid_accumulate = 0;
+int g_pid_ctr = 0;
 using namespace std;
 std::string ip_addr__global;
 std::string localization_method;
@@ -63,6 +64,15 @@ float vz__D__global; //= .1;
 void log_data_before_shutting_down(){
     std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
+
+    profiling_data_srv_inst.request.key = "pid_time";
+    profiling_data_srv_inst.request.value = ((double)pid_accumulate/g_pid_ctr)/1e9;
+    if (ros::service::waitForService("/record_profiling_data", 10)){ 
+        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+            ROS_ERROR_STREAM("could not probe data using stats manager");
+            ros::shutdown();
+        }
+    }   
 
     /* 
     profiling_data_srv_inst.request.key = "error";
@@ -105,7 +115,8 @@ void fly_towards_target(Drone& drone, const bounding_box& bb,
         int img_height, int img_width, PID& pid_vx, PID& pid_vy, PID& pid_vz,
         double dt)
 {
-	static float hover_height = drone.pose().position.z;
+    ros::Time start = ros::Time::now();	
+    static float hover_height = drone.pose().position.z;
 
 	auto yaw = drone.get_yaw();
 	if (yaw > 15 || yaw < -15) {
@@ -133,6 +144,9 @@ void fly_towards_target(Drone& drone, const bounding_box& bb,
     if (vy >=3 || vy<=-3) {
         ROS_INFO_STREAM("vy:"<<vy);
     }
+    ros::Time end = ros::Time::now();	
+    pid_accumulate += ((end - start).toSec()*1e9);
+    g_pid_ctr++; 
     drone.fly_velocity(vx, vy, vz);
 }
 
