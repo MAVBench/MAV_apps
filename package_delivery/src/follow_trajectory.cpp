@@ -358,7 +358,7 @@ int main(int argc, char **argv){
             app_started = true;
         }
        
-        if(app_started){
+        if(app_started && drone.age_of_position() < 5) {
             // Profiling 
              
             if (CLCT_DATA) { 
@@ -389,6 +389,9 @@ int main(int argc, char **argv){
 
             if (forward_traj->size() > 0)
                 next_steps_pub.publish(next_steps_msg(*forward_traj));
+        } else if (app_started) {
+            ROS_WARN("Waiting for position estimation to catch up from: %f", drone.age_of_position());
+            ros::Duration(0.1).sleep();
         }
 
         if (land_now) {

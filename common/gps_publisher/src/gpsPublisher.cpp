@@ -8,6 +8,8 @@
 #include <fstream>
 #include <signal.h>
 
+#include <std_msgs/Bool.h>
+
 #include "Drone.h"
 
 using namespace std;
@@ -25,7 +27,10 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   signal(SIGINT, sigIntHandler);
 
-  ros::Rate loop_rate(10);
+  double loop_rate_hz;
+  if (!ros::param::get("/gps_publisher/loop_rate", loop_rate_hz))
+          loop_rate_hz = 100;
+  ros::Rate loop_rate(loop_rate_hz);
 
   tf::TransformBroadcaster br;
   tf::TransformListener listen;
@@ -48,6 +53,10 @@ int main(int argc, char **argv)
   }
   uint64_t offset_timestamp;
   auto offset = drone.gps(offset_timestamp);
+
+  // ros::Publisher debug_pub = n.advertise<std_msgs::Bool>("gps_debug", 1);
+  // std_msgs::Bool dummy;
+  // dummy.data = true;
 
   uint64_t gps_last_timestamp = 0;
   while (ros::ok()) {
@@ -76,9 +85,15 @@ int main(int argc, char **argv)
               ros::Time timestamp_ros(timestamp_s, timestamp_ns);
               br.sendTransform(tf::StampedTransform(transform, timestamp_ros,
                           "world", "gps"));
+              br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+                          "world", "gps_now"));
           } catch (...) {
           }
       }
+
+      // debug_pub.publish(dummy);
+      // ros::spinOnce();
+
       loop_rate.sleep();
   }
 

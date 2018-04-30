@@ -36,7 +36,7 @@ private:
             if (old_count > 300)
                 old_count = 300;
             float ratio = (float) count / (float) old_count;
-            if (ratio < 0.05f) {
+            if (ratio < 0.15f) {
                 ++spuriosity;
             } else {
                 --spuriosity;

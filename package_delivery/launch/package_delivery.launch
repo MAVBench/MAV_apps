@@ -57,7 +57,7 @@
 
     <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
     <!-- also planning to prevent stdio stuff(if they really matter)-->
-    <arg name="DEBUG" default="false" />
+    <arg name="DEBUG" default="true" />
     <arg name="CLCT_DATA" value="true" />
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
     <param name="DEBUG"  value="$(arg DEBUG)" />
@@ -153,7 +153,7 @@
         <!-- Localization of the depth images -->
         <param name="localization_method" value="$(arg localization_method)" />
 
-        <param name="loop_rate" value="10" />
+        <param name="loop_rate" value="25" />
         <param name="all_front" value="true" />
 	</node>
 
@@ -293,8 +293,10 @@
     <param name="loop_rate" value="150"/>
   </node>
 
-  <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher"/> 
+  <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher"> 
+    <param name="loop_rate" value="10"/>
+  </node>
   <node pkg="error_detector" type="error_detector" name="error_detector"/> 
-  <node pkg="position_estimator" type="position_estimator_node" name="position_estimator_node" output="screen"/> 
+  <node pkg="position_estimator" type="position_estimator_node" name="position_estimator_node" output="screen"/>
 </launch>
 

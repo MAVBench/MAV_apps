@@ -183,21 +183,21 @@ int main(int argc, char **argv)
                 IMU_pub_official.publish(IMU_msg_official);
                 last_official_t = IMU_stats.time_stamp;
             } else {
-                ROS_ERROR("imu message in disorder!");
+                // ROS_ERROR("imu message in disorder!");
             }
         } else if (imu1_ok) {
             if (last_official_t < IMU_stats.time_stamp) {
                 IMU_pub_official.publish(IMU_msg);
                 last_official_t = IMU_stats.time_stamp;
             } else {
-                ROS_ERROR("imu message in disorder!");
+                // ROS_ERROR("imu message in disorder!");
             }
         } else if (imu2_ok) {
             if (last_official_t < IMU_stats2.time_stamp) {
                 IMU_pub_official.publish(IMU_msg2);
                 last_official_t = IMU_stats2.time_stamp;
             } else {
-                ROS_ERROR("imu message in disorder!");
+                // ROS_ERROR("imu message in disorder!");
             }
         }
 

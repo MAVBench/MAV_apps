@@ -440,6 +440,22 @@ geometry_msgs::Pose Drone::pose()
     return result;
 }
 
+
+double Drone::age_of_position()
+{
+    tf::StampedTransform transform;
+    try{
+        tfListen.lookupTransform("/world", "/"+localization_method,
+                ros::Time(0), transform);
+    }
+    catch (tf::TransformException ex){
+        return std::numeric_limits<float>::infinity();
+    }
+
+    return (ros::Time::now()-transform.stamp_).toSec();
+}
+
+
 coord Drone::position() {
     coord result;
     geometry_msgs::Pose result_pose = pose();

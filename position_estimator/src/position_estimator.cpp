@@ -79,11 +79,11 @@ int main(int argc, char **argv)
             else if (estimator == IMU) {
                 // broadcast IMU as true transform
                 ROS_ERROR("IMU estimator not available");
-                tfListen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
+                // tfListen.lookupTransform("world", "ground_truth", ros::Time(0), transform);
 
-                std_msgs::Bool msg;
-                msg.data = true;
-                land_pub.publish(msg);
+                // std_msgs::Bool msg;
+                // msg.data = true;
+                // land_pub.publish(msg);
             }
 
             if (transform.frame_id_ == "world") {

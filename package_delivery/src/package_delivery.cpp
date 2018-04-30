@@ -276,7 +276,7 @@ trajectory_t request_trajectory(ros::ServiceClient& client, geometry_msgs::Point
        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     
-    return create_trajectory(srv.response.multiDOFtrajectory, true);
+    return  create_trajectory(srv.response.multiDOFtrajectory, true);
 }
 
 bool trajectory_done(const trajectory_t& trajectory) {
@@ -358,7 +358,7 @@ int main(int argc, char **argv)
 	//----------------------------------------------------------------- 
     
     // Wait for the localization method to come online
-    waitForLocalization("ground_truth");
+    waitForLocalization("drone");
 
     //update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
     //log_time(stats_file_addr);
