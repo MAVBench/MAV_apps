@@ -111,6 +111,8 @@ void log_data_before_shutting_down(){
 
     profiling_data_srv_inst.request.key = "mission_status";
     profiling_data_srv_inst.request.value = (g_mission_status == "completed" ? 1.0: 0.0);
+    if (g_mission_status == "failed_to_start")
+        profiling_data_srv_inst.request.value = 4.0;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
             ROS_ERROR_STREAM("could not probe data using stats manager");
@@ -313,7 +315,8 @@ int main(int argc, char** argv)
   waitForLocalization("ground_truth");
 
   double segment_dedicated_time = yaw_t + dt;
-  control_drone(drone);
+  
+  bool initialized_correctly = control_drone(drone);
 
   static int n_seq = 0;
 
@@ -490,7 +493,6 @@ int main(int argc, char** argv)
   last_position_before_planning.position_W.y() = drone.pose().position.y;
   last_position_before_planning.position_W.z() = drone.pose().position.z;
 
-
   int time_out_ctr_threshold = 10; 
   const float goal_s_error_margin = 3.0; //ok distance to be away from the goal.
   int time_out_ctr = 0;
@@ -498,10 +500,26 @@ int main(int argc, char** argv)
   int srv_call_status_ctr = 0;
   ros::Time start_hook_t, end_hook_t;
   int path_zero_ctr = 0;
+  bool failed_to_start = true;
+
+  if (!initialized_correctly) {
+      g_mission_status = "failed_to_start";
+      log_data_before_shutting_down();
+      signal_supervisor(g_supervisor_mailbox, "kill"); 
+      ros::shutdown();
+  }
+
   while (ros::ok()) {
     loop_start_t = ros::Time::now();
     ros::spinOnce(); 
-    
+    if (drone.position().z > 20) {
+        g_mission_status = "failed_to_start";
+        log_data_before_shutting_down();
+        signal_supervisor(g_supervisor_mailbox, "kill"); 
+        ros::shutdown();
+        break;
+    }
+   
     if (g_slam_lost) { //skip the iteration
         continue;
         // ROS_ERROR("Slam lost! Giving up!");
@@ -519,7 +537,7 @@ int main(int argc, char** argv)
     planSrv.request.header.frame_id = "world";
 
     if (g_future_col) {
-        ROS_WARN("follow_trajectory: future collision acknowledged");
+        //ROS_WARN("follow_trajectory: future collision acknowledged");
         planSrv.request.exact_root = false;
         g_future_col = false;
     } else {
@@ -554,7 +572,11 @@ int main(int argc, char** argv)
         //ROS_INFO_STREAM("time out ctr"<<time_out_ctr); 
         time_out_ctr = 0;
     }
-    
+     // TODO: Only check for g_future_col once. Also, only call ros::spinOnce() once
+    ros::spinOnce();
+    if (g_future_col)
+        continue;
+   
     do{
         start_hook_t = ros::Time::now();
         srv_call_status = nbvplanner_client.call(planSrv);
@@ -572,6 +594,9 @@ int main(int argc, char** argv)
         signal_supervisor(g_supervisor_mailbox, "kill"); 
         ros::shutdown();
     }else if(path_zero_ctr > 10) {
+        if (failed_to_start)
+            g_mission_status = "failed_to_start";
+
         log_data_before_shutting_down();
         signal_supervisor(g_supervisor_mailbox, "kill"); 
         ros::shutdown();
@@ -584,6 +609,7 @@ int main(int argc, char** argv)
             path_zero_ctr++; 
             ros::Duration(1.0).sleep();
         }else{
+            failed_to_start = false;
             path_zero_ctr = 0;
         }
         for (int i = 0; i < planSrv.response.path.size(); i++) {
@@ -636,8 +662,7 @@ int main(int argc, char** argv)
             if(!srv_call_status){
                 ROS_INFO_STREAM("could not make a service all to trajectory done");
             }else if (!trajectory_done_srv_inst.response.success) {
-                ; 
-                ROS_INFO_STREAM("havn't finished last path");
+             // ROS_INFO_STREAM("havn't finished last path");
             }
             ros::Duration(.2).sleep();     
         }while(!srv_call_status|| !trajectory_done_srv_inst.response.success);

@@ -5,8 +5,7 @@
   <arg name="log_file" default="$(arg mav_name)" />
   
   <!-- important params affecting performance -->
-  <!-- arg name="v_max" default="3.4"/-->
-  <arg name="v_max" default="3.4"/>
+  <arg name="v_max" default="3"/>
 
 
   <arg name="nbvp/gain/range" default="6"/>
@@ -38,8 +37,8 @@
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
   
-  <arg name="future_col_drone_radius" default="1.5"/>
-  <arg name="future_col_drone_height" default="0.6"/>
+  <arg name="future_col_drone_radius" default="1.0"/>
+  <arg name="future_col_drone_height" default="0.75"/>
   <param name="drone_radius" value="$(arg future_col_drone_radius)"/>
   <param name="drone_height" value="$(arg future_col_drone_height)"/>
 
@@ -54,7 +53,7 @@
 
 
   <!-- termination criteria-->
-  <arg name="coverage_threshold" default="30"/>
+  <arg name="coverage_threshold" default="85"/>
 
   <!-- DEBUGING-data collection params--> 
   <arg name="DEBUG" value="false" />
@@ -72,12 +71,12 @@
 
   <!-- Behzad's workstation ip --> 
   <!-- arg name="host_ip" value="10.157.34.101" /--> 
-  <arg name="host_ip" value="10.157.90.51" />
+  <!-- arg name="host_ip" value="10.157.90.51" /-->
   <!--arg name="host_ip" value="169.254.153.158" /-->
   <!-- Hasans's workstation ip --> 
   <!--arg name="host_ip" default="10.157.90.49" /-->
   <!-- Hasans's direct connection ip --> 
-  <!--arg name="host_ip" default="169.254.250.191" /-->
+  <arg name="host_ip" default="169.254.250.191" />
   <!-- Wenzhi's workstation ip -->
   <!-- arg name="host_ip" default="10.157.90.62" /-->
   <param name="/ip_addr" value="$(arg host_ip)" />
