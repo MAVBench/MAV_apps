@@ -6,6 +6,7 @@
   
   <!-- important params affecting performance -->
   <arg name="v_max" default="3"/>
+  <arg name="a_max" default="5"/>
 
 
   <arg name="nbvp/gain/range" default="6"/>
@@ -34,6 +35,7 @@
   <arg name="max_yaw_rate_during_flight" default="90"/>
   <arg name="system/dyaw_max" default="$(eval arg('max_yaw_rate_during_flight') * 3.14159265359 / 180.0)"/>
   <param name="v_max" value="$(arg v_max)"/>
+  <param name="a_max" value="$(arg a_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
   
@@ -56,7 +58,7 @@
   <arg name="coverage_threshold" default="85"/>
 
   <!-- DEBUGING-data collection params--> 
-  <arg name="DEBUG" value="false" />
+  <arg name="DEBUG" value="true" />
   <arg name="CLCT_DATA" value="true" />
   <param name="stats_file_addr" value="$(find mapping_and_sar)/../data/sar/stats.json" />
   <param name="supervisor_mailbox" value="$(find mapping_and_sar)/../data/sar/supervisor_mailbox.txt" />

@@ -23,7 +23,7 @@ using namespace std;
 bool slam_lost = false;
 float g_localization_status = 1.0;
 std::string g_supervisor_mailbox; //file to write to when completed
-float g_v_max;
+float g_v_max, g_a_max;
 double g_fly_trajectory_time_out;
 bool g_future_col = false;
 long long g_planning_time_including_ros_overhead_acc  = 0;
@@ -215,6 +215,28 @@ void callback_trajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPt
 
         normal_traj->push_back(mdp_next);
     }
+
+    // Now, decelerate at the end
+    if (normal_traj->empty())
+        return;
+
+    double speed = 0;
+    for (auto it = normal_traj->rbegin(); it != normal_traj->rend(); ++it) {
+        speed += g_a_max * (it->duration);
+        if (speed > g_v_max)
+            break;
+
+        double v = std::sqrt((it->vx)*(it->vx)+(it->vy)*(it->vy)+(it->vz)*(it->vz));
+        if (v > speed) {
+            double scale = v / speed;
+
+            it->vx /= scale;
+            it->vy /= scale;
+            it->vz /= scale;
+
+            it->duration *= scale;
+        }
+    }
 }
 
 bool trajectory_done(const trajectory_t& trajectory) {
@@ -264,6 +286,11 @@ int main(int argc, char **argv){
 
     if(!ros::param::get("v_max",g_v_max))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory vmax not provided");
+        return -1;
+    }
+
+    if(!ros::param::get("a_max",g_a_max))  {
+        ROS_FATAL_STREAM("Could not start follow_trajectory amax not provided");
         return -1;
     }
 
