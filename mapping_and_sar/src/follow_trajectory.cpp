@@ -216,6 +216,7 @@ void callback_trajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPt
         normal_traj->push_back(mdp_next);
     }
 
+    /*
     // Now, decelerate at the end
     if (normal_traj->empty())
         return;
@@ -237,6 +238,7 @@ void callback_trajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPt
             it->duration *= scale;
         }
     }
+    */
 }
 
 bool trajectory_done(const trajectory_t& trajectory) {
