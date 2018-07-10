@@ -6,8 +6,6 @@
 #include "common.h"
 #include "Drone.h"
 #include <std_msgs/Bool.h>
-#include <profile_manager/profiling_data_srv.h>
-#include <profile_manager/start_profiling_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
 
@@ -58,14 +56,11 @@ double distance(const P1& p1, const P2& p2) {
     return distance(x_diff, y_diff, z_diff);
 }
 
-
+/*
 void log_data_before_shutting_down()
 {
     std::cout << "\n\nMax velocity reached by drone: " << g_max_velocity_reached << "\n" << std::endl;
 
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
-    profiling_data_srv_inst.request.key = "localization_status";
-    profiling_data_srv_inst.request.value = g_localization_status;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
             ROS_ERROR_STREAM("could not probe data using stats manager");
@@ -109,7 +104,7 @@ void log_data_before_shutting_down()
         }
     }
 }
-
+*/
 void future_collision_callback(const mavbench_msgs::future_collision::ConstPtr& msg) {
     if (msg->future_collision_seq > future_collision_seq) {
         future_collision_seq = msg->future_collision_seq;
@@ -231,7 +226,7 @@ bool trajectory_done(const trajectory_t& trajectory) {
     return g_trajectory_done;
 }
 
-
+/*
 void sigIntHandlerPrivate(int signo){
     if (signo == SIGINT) {
         log_data_before_shutting_down(); 
@@ -240,7 +235,7 @@ void sigIntHandlerPrivate(int signo){
     }
     exit(0);
 }
-
+*/
 
 void initialize_global_params() {
     if(!ros::param::get("v_max", g_v_max))  {
@@ -289,7 +284,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "follow_trajectory", ros::init_options::NoSigintHandler);
     ros::NodeHandle n;
-    signal(SIGINT, sigIntHandlerPrivate);
+    signal(SIGINT, sigIntHandler);
 
     initialize_global_params();
 
@@ -377,7 +372,6 @@ int main(int argc, char **argv)
 
         if (slam_lost){
             ROS_INFO_STREAM("slam loss");
-            log_data_before_shutting_down();
             g_localization_status = 0;
             signal_supervisor(g_supervisor_mailbox, "kill");
             ros::shutdown();

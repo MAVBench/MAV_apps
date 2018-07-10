@@ -4,8 +4,8 @@
 #include <cmath>
 
 // MAVBench headers
-#include <profile_manager/profiling_data_srv.h>
-#include <profile_manager/start_profiling_srv.h>
+//#include <profile_manager/profiling_data_srv.h>
+//#include <profile_manager/start_profiling_srv.h>
 
 
 bool FutureCollisionChecker::collision(const octomap::OcTree * octree, const multiDOFpoint& n1, const multiDOFpoint& n2) const
@@ -122,11 +122,11 @@ void FutureCollisionChecker::future_collision_initialize_params()
         return;
     }
 }
-
+/*
 void FutureCollisionChecker::log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    //profile_manager::profiling_data_srv profiling_data_srv_inst;
 
     profiling_data_srv_inst.request.key = "future_collision_kernel";
     profiling_data_srv_inst.request.value = (((double)g_checking_collision_kernel_acc)/1e9)/g_check_collision_ctr;
@@ -166,7 +166,7 @@ void FutureCollisionChecker::log_data_before_shutting_down()
 
     ROS_INFO_STREAM("done with the octomap profiles");
 }
-
+*/
 
 void FutureCollisionChecker::stop_drone()
 {

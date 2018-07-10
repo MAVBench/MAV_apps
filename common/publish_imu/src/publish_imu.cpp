@@ -9,6 +9,8 @@
 #include <string>
 #include <numeric>
 
+#include "control_drone.h"
+
 #include <std_msgs/String.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
@@ -36,13 +38,13 @@ int main(int argc, char **argv)
     signal(SIGINT, sigIntHandler);
     std::string ns = ros::this_node::getName();
     uint16_t port = 41451;
+    ROS_INFO_STREAM("ok in here"); 
     if (!ros::param::get("/ip_addr", ip_addr__global)) {
         ROS_FATAL("Could not start mapping. Parameter missing! Looking for %s",
                 (ns + "/ip_addr").c_str());
         return -1;
     }
     Drone drone(ip_addr__global.c_str(), port);
-    
     int samples = 0;
     int misses = 0;
 

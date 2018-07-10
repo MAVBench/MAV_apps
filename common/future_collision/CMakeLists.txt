@@ -3,8 +3,8 @@ project(future_collision)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
-set (common_utility_src $ENV{HOME}/catkin_ws/src/mav-bench/common)
-set (common_utility_include $ENV{HOME}/catkin_ws/src/mav-bench/common)
+set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
 
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
@@ -126,7 +126,7 @@ catkin_package(
 ## Build ##
 ###########
 
-set (Airlib_addr  $ENV{HOME}/AirSim/AirLib)
+set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
@@ -136,13 +136,12 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
   ${common_utility_include} 
-  $ENV{HOME}/AirSim/AirLib/include
+  /home/sifive/other_libs/AirSim/AirLib/include
 )
 
 link_directories(
-  $ENV{HOME}/AirSim/AirLib/lib
-  $ENV{HOME}/AirSim/AirLib/deps/rpclib/lib
-  /usr/local/cuda/lib64  #added by Behzad (for Behzad)
+  /home/sifive/other_libs/AirSim/AirLib/lib
+  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
   ${Airlib_addr}/deps/MavLinkCom/lib  
 )
 

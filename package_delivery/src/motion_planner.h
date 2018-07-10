@@ -29,7 +29,7 @@
 // Trajectory smoothening headers
 #include <mav_trajectory_generation/polynomial_optimization_linear.h>
 #include <mav_trajectory_generation/trajectory.h>
-#include <mav_trajectory_generation_ros/trajectory_sampling.h>
+#include <mav_trajectory_generation/trajectory_sampling.h>
 #include <mav_trajectory_generation_ros/ros_visualization.h>
 
 // OMPL specific headers
@@ -70,14 +70,17 @@ public:
         traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
     }
 
-    void spinOnce()
+    int spinOnce()
     {
         callback_queue.callAvailable(ros::WallDuration());
+    
+   	return this->num_of_plans; 
     }
 
     void log_data_before_shutting_down();
 
 private:
+    int num_of_plans = 0;
     bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res);
 
     // ***F:DN Plans new paths when collisions are detected

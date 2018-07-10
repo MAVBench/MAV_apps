@@ -10,8 +10,8 @@
 #include <limits>
 #include <signal.h>
 
-#include <profile_manager/profiling_data_srv.h>
-#include <profile_manager/start_profiling_srv.h>
+//#include <profile_manager/profiling_data_srv.h>
+//#include <profile_manager/start_profiling_srv.h>
 #include "control_drone.h"
 #include "common/Common.hpp"
 #include "Drone.h"
@@ -42,7 +42,7 @@ long long g_accumulate_loop_time = 0; //it is in ms
 long long g_panic_rlzd_t_accumulate = 0;
 int g_main_loop_ctr = 0;
 int g_panic_ctr = 0;
-bool g_start_profiling = false; 
+//bool g_start_profiling = false; 
 
 double v_max__global, a_max__global, g_fly_trajectory_time_out;
 float g_max_yaw_rate;
@@ -97,7 +97,7 @@ void trajectory_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
         ROS_ERROR("package_delivery: Trajectories arrived out of order! New seq: %d, old seq: %d", msg->trajectory_seq, normal_traj_msg.trajectory_seq);
 }
 
-
+/*
 void log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
@@ -172,7 +172,7 @@ void sigIntHandlerPrivate(int signo){
     }
     exit(0);
 }
-
+*/
 
 double dist(coord t, geometry_msgs::Point m)
 {
@@ -362,7 +362,7 @@ int main(int argc, char **argv)
     // ROS node initialization
     ros::init(argc, argv, "package_delivery", ros::init_options::NoSigintHandler);
     ros::NodeHandle nh;
-    signal(SIGINT, sigIntHandlerPrivate);
+    signal(SIGINT, sigIntHandler);
     ns = ros::this_node::getName();
 
     //----------------------------------------------------------------- 
@@ -399,13 +399,13 @@ int main(int argc, char **argv)
 
 	ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("/get_trajectory_srv");
-	ros::ServiceClient record_profiling_data_client = 
-        nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
-    ros::ServiceClient start_profiling_client = 
-      nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
+//	ros::ServiceClient record_profiling_data_client = 
+//        nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
+  //  ros::ServiceClient start_profiling_client = 
+//k      nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
 
-    profile_manager::start_profiling_srv start_profiling_srv_inst;
-    start_profiling_srv_inst.request.key = "";
+    //profile_manager::start_profiling_srv start_profiling_srv_inst;
+    //start_profiling_srv_inst.request.key = "";
 
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
@@ -431,7 +431,7 @@ int main(int argc, char **argv)
     //update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
     //log_time(stats_file_addr);
     //update_stats_file(stats_file_addr,"###\n");
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    //profile_manager::profiling_data_srv profiling_data_srv_inst;
     
     ros::Time loop_start_t(0,0); 
     ros::Time loop_end_t(0,0); //if zero, it's not valid
@@ -449,15 +449,15 @@ int main(int argc, char **argv)
 
             goal = get_goal();
             start = get_start(drone);
-            
-            profiling_data_srv_inst.request.key = "start_profiling";
+            /* 
+            //profiling_data_srv_inst.request.key = "start_profiling";
             if (ros::service::waitForService("/record_profiling_data", 10)){ 
                 if(!record_profiling_data_client.call(profiling_data_srv_inst)){
                     ROS_ERROR_STREAM("could not probe data using stats manager");
                     ros::shutdown();
                 }
             }
-            
+           */ 
             spin_around(drone);
             next_state = waiting;
         }
@@ -530,8 +530,8 @@ int main(int argc, char **argv)
                 g_mission_status = mission_status;
                 //update_stats_file(stats_file_addr,"mission_status completed");
                 next_state = setup;
-                log_data_before_shutting_down();
-                signal_supervisor(g_supervisor_mailbox, "kill"); 
+                //log_data_before_shutting_down();
+                //signal_supervisor(g_supervisor_mailbox, "kill"); 
                 ros::shutdown();
             } else {
                 // If we're too far off from the destination
@@ -543,8 +543,8 @@ int main(int argc, char **argv)
             ROS_ERROR("Failed to reach destination");
             //mission_status = "time_out"; 
             g_mission_status = mission_status;            
-            log_data_before_shutting_down();
-            signal_supervisor(g_supervisor_mailbox, "kill"); 
+            //log_data_before_shutting_down();
+            //signal_supervisor(g_supervisor_mailbox, "kill"); 
             ros::shutdown();
             //update_stats_file(stats_file_addr,"mission_status failed");
             next_state = setup;
@@ -556,7 +556,7 @@ int main(int argc, char **argv)
         }
 
         state = next_state;
-        
+       /* 
         if (clct_data){
             if(!g_start_profiling) { 
                 if (ros::service::waitForService("/start_profiling", 10)){ 
@@ -565,7 +565,7 @@ int main(int argc, char **argv)
                         ros::shutdown();
                     }
                     //ROS_INFO_STREAM("now it is true");
-                    g_start_profiling = start_profiling_srv_inst.response.start; 
+                    //g_start_profiling = start_profiling_srv_inst.response.start; 
                 }
             }
             else{
@@ -575,7 +575,7 @@ int main(int argc, char **argv)
                 g_main_loop_ctr++;
             }
         }
-    
+   	*/ 
     }
     //collect data before shutting down
     //end_stats = drone.getFlightStats();

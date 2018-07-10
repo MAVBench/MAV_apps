@@ -77,7 +77,7 @@ target_link_libraries(octomap_saver ${PROJECT_NAME} ${LINK_LIBS})
 add_executable(octomap_tracking_server_node src/octomap_tracking_server_node.cpp)
 target_link_libraries(octomap_tracking_server_node ${PROJECT_NAME} ${LINK_LIBS})
 
-
+set (CMAKE_CXX_FLAGS "-pg")
 
 # Nodelet
 add_library(octomap_server_nodelet src/octomap_server_nodelet.cpp)

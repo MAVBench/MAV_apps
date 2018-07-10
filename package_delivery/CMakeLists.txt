@@ -3,17 +3,16 @@ project(package_delivery)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
-set (common_utility_src $ENV{HOME}/catkin_ws/src/mav-bench/common)
-set (common_utility_include $ENV{HOME}/catkin_ws/src/mav-bench/common)
+set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
 
 
-set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
-  image_transport
+	#cv_bridge
+	#  image_transport
   roscpp
   std_msgs
   geometry_msgs
@@ -124,7 +123,6 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
-find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(ompl REQUIRED)
 
@@ -139,23 +137,21 @@ catkin_package(
 ## Build ##
 ###########
 
-set (Airlib_addr  $ENV{HOME}/AirSim/AirLib)
+set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
   ${common_utility_include} 
-  $ENV{HOME}/AirSim/AirLib/include
+  /home/sifive/other_libs/AirSim/AirLib/include
 )
 
 link_directories(
-  $ENV{HOME}/AirSim/AirLib/lib
-  $ENV{HOME}/AirSim/AirLib/deps/rpclib/lib
-  /usr/local/cuda/lib64  #added by Behzad (for Behzad)
+  /home/sifive/other_libs/AirSim/AirLib/lib
+  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
   ${Airlib_addr}/deps/MavLinkCom/lib  
 )
 
@@ -189,27 +185,26 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-### Package-Delivery executables
 
-add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+
+### Package-Delivery executables
+#set (CMAKE_CXX_FLAGS "-pg")
+#set_directory_properties(PROPERTIES COMPILE_OPTIONS "-pg")
+
+add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(occupancy_map_node future_collision package_delivery_generate_messages_cpp)
-target_link_libraries(occupancy_map_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand )
+target_link_libraries(occupancy_map_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread)
 
 add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
-    ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp)
+    ${common_utility_src}/common.cpp  src/package_delivery.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(package_delivery package_delivery_generate_messages_cpp)
-target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread )
 
 ### Scanning executables
 
-add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
-    ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/scanning.cpp ${common_utility_src}/timer.cpp)
-add_dependencies(scanning package_delivery_generate_messages_cpp)
-target_link_libraries(scanning ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
-
-add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(motion_planner_node package_delivery_generate_messages_cpp)
-target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand )
+target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread )
 
 # add_executable(obstacle_avoidance_test ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
 #      ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/obstacle_avoidance_test.cpp ${common_utility_src}/timer.cpp)

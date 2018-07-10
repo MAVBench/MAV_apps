@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(publish_imu)
-set (common_utility_src $ENV{HOME}/catkin_ws/src/mav-bench/common)
-set (common_utility_include $ENV{HOME}/catkin_ws/src/mav-bench/common)
+set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
 
 
-set (Airlib_addr  $ENV{HOME}/AirSim/AirLib)
+set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -41,17 +41,17 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    $ENV{HOME}/AirSim/AirLib/include
+    /home/sifive/other_libs/AirSim/AirLib/include
     ${common_utility_include} 
     ${CUDA_INCLUDE_DIRS}
     ${common_utility_src}/publish_imu/src
 )
 
 link_directories(
-  $ENV{HOME}/AirSim/AirLib/lib
-  $ENV{HOME}/AirSim/AirLib/deps/rpclib/lib
-  $ENV{HOME}/AirSim/AirLib/deps/rpclib/lib
-  /usr/local/cuda/lib64  #added by Behzad (for Behzad)
+  /home/sifive/other_libs/AirSim/AirLib/lib
+  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
+  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
+  #  /usr/local/cuda/lib64  #added by Behzad (for Behzad)
   ${Airlib_addr}/deps/MavLinkCom/lib  
   /usr/lib 
   /opt/ros/kinetic/lib
@@ -66,7 +66,7 @@ catkin_package(
 
 add_executable(publish_imu ${common_utility_src}/publish_imu/src/publish_imu.cpp 
     ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp 
-    ${common_utility_src}/publish_imu/src/HelperFunctions/QuatRotEuler.cpp) 
+    ${common_utility_src}/publish_imu/src/HelperFunctions/QuatRotEuler.cpp ${common_utility_src}/control_drone.cpp) 
 target_link_libraries(publish_imu ${catkin_LIBRARIES}  ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_curand_LIBRARY} AirLib MavLinkCom rpc pthread)
 add_dependencies(publish_imu ${catkin_EXPORTED_TARGETS})
 

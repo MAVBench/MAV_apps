@@ -1,0 +1,4 @@
+#!/bin/bash
+sshpass -p 'compass' ssh behzad@10.16.0.172
+#echo blah > C:\Users\Behzad\Documents\AirSim\restart
+

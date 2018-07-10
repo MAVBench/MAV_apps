@@ -43,7 +43,6 @@ Drone::Drone(const std::string& ip_addr, uint16_t port,
              float max_yaw_rate_during_flight) : client(0), collision_count(0)
 {
 	connect(ip_addr, port);
-
 	auto pos = client->getPosition();
     initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
     this->localization_method = localization_method;
@@ -63,7 +62,7 @@ void Drone::connect()
 	if (client != 0)
 		delete client;
 	client = new msr::airlib::MultirotorRpcLibClient();
-    client->enableApiControl(true);
+    	client->enableApiControl(true);
 }
 
 void Drone::set_localization_method(std::string localization_method) {

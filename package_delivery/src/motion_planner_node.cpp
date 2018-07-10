@@ -12,6 +12,7 @@
 #include <profile_manager/start_profiling_srv.h>
 
 MotionPlanner * mp_ptr = nullptr;
+/*
 void sigIntHandlerPrivate(int signo) {
     if (signo == SIGINT) {
         mp_ptr->log_data_before_shutting_down();
@@ -19,12 +20,12 @@ void sigIntHandlerPrivate(int signo) {
     }
     exit(0);
 }
-
+*/
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "motion_planner_node");
     ros::NodeHandle nh("~");
-    signal(SIGINT, sigIntHandlerPrivate);
+    signal(SIGINT, sigIntHandler);
 
     ROS_WARN("This node has no OctoMap instantiated! It's only useful for the scanning application");
 
