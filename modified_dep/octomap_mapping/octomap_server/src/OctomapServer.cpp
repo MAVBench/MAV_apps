@@ -374,9 +374,10 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     pc_nonground.header = pc.header;
   }
 
+  
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
-
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
+  //ROS_INFO_STREAM("octomap insertCloud time"<<total_elapsed);
   if(CLCT_DATA){
       octomap_integration_acc += total_elapsed*1e9;
       if ((octomap_ctr+1) % data_collection_iteration_freq == 0) {
