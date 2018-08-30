@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(control_drone)
-set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
-set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_src /home/nvidia/catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/nvidia/catkin_ws/src/mav-bench/common)
 
-set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
+set (Airlib_addr  /home/nvidia/AirSim/AirLib)
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -43,14 +43,14 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    /home/sifive/other_libs/AirSim/AirLib/include
+    /home/nvidia/AirSim/AirLib/include
     ${common_utility_include} 
 )
 
 link_directories(
-  /home/sifive/other_libs/AirSim/AirLib/lib
-  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
-  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
+  /home/nvidia/AirSim/AirLib/lib
+  /home/nvidia/AirSim/AirLib/deps/rpclib/lib
+  /home/nvidia/AirSim/AirLib/deps/rpclib/lib
   ${Airlib_addr}/deps/MavLinkCom/lib  
   /usr/lib 
   /opt/ros/kinetic/lib

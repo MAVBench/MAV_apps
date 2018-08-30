@@ -74,42 +74,47 @@ int main(int argc, char** argv)
     }
 
     // Create FutureCollisionChecker
-    FutureCollisionChecker fcc (octree, &drone);
-    fcc.setOctomapServer(&server); // This is only used for profiling purposes.
-    fcc_ptr = &fcc;
+    //FutureCollisionChecker fcc (octree, &drone);
+    //fcc.setOctomapServer(&server); // This is only used for profiling purposes.
+    //fcc_ptr = &fcc;
 
     // Create MotionPlanner
-    MotionPlanner mp (octree, &drone);
-    mp_ptr = &mp;
+    //MotionPlanner mp (octree, &drone);
+    //mp_ptr = &mp;
     ros::Time begin = ros::Time::now();
     while (ros::ok()) {
-	// ROS_INFO("Start octo");
- //       ros::Time start_octo = ros::Time::now();
+        // ROS_INFO("Start octo");
+        ros::Time start_octo = ros::Time::now();
         ros::spinOnce();
-//         ros::Time end_octo = ros::Time::now();
+        ros::Time end_octo = ros::Time::now();
         // ROS_INFO("End octo");
         //std::cout << "octomap takes " << (end_octo - start_octo).toSec() << "\n";
-
-  //       ros::Time start_fcc = ros::Time::now();
-        fcc.spinOnce();
-   //      ros::Time end_fcc = ros::Time::now();
-    //     std::cout << "fcc takes " << (end_fcc - start_fcc).toSec() << "\n";
-
-        // ROS_INFO("Start mp");
-     //    ros::Time start_mp = ros::Time::now();
-       int	num_of_plans =  mp.spinOnce();
-       ROS_INFO_STREAM("num_of_plans"<<num_of_plans);
-// ROS_INFO("End mp");
-      //  ros::Time end_mp = ros::Time::now();
-       /* 
+/*
+//
+//        ros::Time start_fcc = ros::Time::now();
+//        fcc.spinOnce();
+//        ros::Time end_fcc = ros::Time::now();
+//        std::cout << "fcc takes " << (end_fcc - start_fcc).toSec() << "\n";
+//
+//        ROS_INFO("Start mp");
+//        ros::Time start_mp = ros::Time::now();
+//        int	num_of_plans =  mp.spinOnce();
+//        ROS_INFO_STREAM("num_of_plans"<<num_of_plans);
+//        ROS_INFO("End mp");
+//        ros::Time end_mp = ros::Time::now();
+        
        	std::cout << "mp takes " << (end_mp - start_mp).toSec() << "\n";
         if ((ros::Time::now() - begin).toSec() > 100) {
 		ros::shutdown();
 	}	
 	*/
-        if ( num_of_plans > 10){
-		ros::shutdown();
-	}
+      //  if ( num_of_plans > 10){
+	//	ros::shutdown();
+	//}
+        if ((ros::Time::now() - begin).toSec() > 100) {
+            std::cout << "octomap takes " << (end_octo - start_octo).toSec() << "\n";
+            ros::shutdown();
+        }
     }
 }
 

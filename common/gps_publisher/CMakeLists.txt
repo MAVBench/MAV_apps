@@ -3,8 +3,8 @@ project(gps_publisher)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
-set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
-set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_src /home/nvidia/catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/nvidia/catkin_ws/src/mav-bench/common)
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 ## Find catkin macros and libraries
@@ -114,7 +114,7 @@ catkin_package(
 ## Build ##
 ###########
 
-set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
+set (Airlib_addr  /home/nvidia/AirSim/AirLib)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories (
@@ -122,12 +122,12 @@ include_directories (
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${common_utility_include} 
-  /home/sifive/other_libs/AirSim/AirLib/include
+  /home/nvidia/AirSim/AirLib/include
 )
 
 link_directories (
-  /home/sifive/other_libs/AirSim/AirLib/lib
-  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
+  /home/nvidia/AirSim/AirLib/lib
+  /home/nvidia/AirSim/AirLib/deps/rpclib/lib
   ${Airlib_addr}/deps/MavLinkCom/lib
 )
 

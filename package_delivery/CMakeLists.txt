@@ -3,8 +3,8 @@ project(package_delivery)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
-set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
-set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_src /home/nvidia/catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/nvidia/catkin_ws/src/mav-bench/common)
 
 
 ## Find catkin macros and libraries
@@ -30,6 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   mavbench_msgs
   future_collision
 )
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -123,8 +124,15 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
+
+#MESSAGE(status ${CMAKE_MODULE_PATH})
+#MESSAGE(status ${OMPL_ROOT})
 find_package(Eigen3 REQUIRED)
-find_package(ompl REQUIRED)
+#find_package(OMPL REQUIRED)
+
+#MESSAGE(status ${catkin_LIBRARIES})
+#find_package(ola REQUIRED)
+
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -137,7 +145,7 @@ catkin_package(
 ## Build ##
 ###########
 
-set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
+set (Airlib_addr  /home/nvidia/AirSim/AirLib)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
@@ -146,12 +154,13 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
   ${common_utility_include} 
-  /home/sifive/other_libs/AirSim/AirLib/include
+  ${OMPL_INCLUDE_DIRS} 
+  /home/nvidia/AirSim/AirLib/include
 )
 
 link_directories(
-  /home/sifive/other_libs/AirSim/AirLib/lib
-  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
+  /home/nvidia/AirSim/AirLib/lib
+  /home/nvidia/AirSim/AirLib/deps/rpclib/lib
   ${Airlib_addr}/deps/MavLinkCom/lib  
 )
 
@@ -191,9 +200,11 @@ link_directories(
 #set (CMAKE_CXX_FLAGS "-pg")
 #set_directory_properties(PROPERTIES COMPILE_OPTIONS "-pg")
 
+set(ompl_lib /opt/ros/lunar/lib/aarch64-linux-gnu/libompl.so)
+
 add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(occupancy_map_node future_collision package_delivery_generate_messages_cpp)
-target_link_libraries(occupancy_map_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread)
+target_link_libraries(occupancy_map_node ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread ${ompl_lib})
 
 add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
     ${common_utility_src}/common.cpp  src/package_delivery.cpp ${common_utility_src}/timer.cpp)
@@ -204,7 +215,7 @@ target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc
 
 add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(motion_planner_node package_delivery_generate_messages_cpp)
-target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread )
+target_link_libraries(motion_planner_node ${catkin_LIBRARIES}   AirLib MavLinkCom rpc pthread  ${ompl_lib})
 
 # add_executable(obstacle_avoidance_test ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
 #      ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/obstacle_avoidance_test.cpp ${common_utility_src}/timer.cpp)
