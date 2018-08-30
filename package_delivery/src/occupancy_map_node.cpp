@@ -106,6 +106,11 @@ int main(int argc, char** argv)
        	std::cout << "mp takes " << (end_mp - start_mp).toSec() << "\n";
         if ((ros::Time::now() - begin).toSec() > 100) {
 		ros::shutdown();
+	}
+       	
+       if ((ros::Time::now() - begin).toSec() > 100) {
+              std::cout << "octomap takes " << (end_octo - start_octo).toSec() << "\n";
+	      ros::shutdown();
 	}	
 	*/
       //  if ( num_of_plans > 10){
