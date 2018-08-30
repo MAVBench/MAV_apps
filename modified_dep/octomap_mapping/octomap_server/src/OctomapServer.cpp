@@ -54,7 +54,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_useHeightMap(true),
   m_useColoredMap(false),
   m_colorFactor(0.8),
-  m_latchedTopics(true),
+  m_latchedTopics(false),
   m_publishFreeSpace(false),
   m_res(0.05),
   m_treeDepth(0),
