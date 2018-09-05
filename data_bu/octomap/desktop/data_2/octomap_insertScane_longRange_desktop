@@ -1,0 +1,2281 @@
+[31mWARNING: disk usage in log directory [/home/wcui/.ros/log] is over 1GB.
+It's recommended that you use the 'rosclean' command.[0m
+[31mWARNING: unrecognized tag comment[0m
+[31mWARNING: unrecognized tag comment[0m
+... logging to /home/wcui/.ros/log/6e86d6c8-2ae3-11e8-99e4-9c5c8e90c845/roslaunch-wcui-All-Series-29554.log
+Checking log directory for disk usage. This may take awhile.
+Press Ctrl-C to interrupt
+]2;/home/wcui/catkin_ws/src/mav-bench/package_delivery/launch/package_delivery.launch
+[1mstarted roslaunch server http://wcui-All-Series:46013/[0m
+
+SUMMARY
+========
+
+PARAMETERS
+ * /airsim_imgPublisher/Airsim_ip: 10.157.90.51
+ * /airsim_imgPublisher/Airsim_port: 41451
+ * /airsim_imgPublisher/Fx: 256
+ * /airsim_imgPublisher/Fy: 256
+ * /airsim_imgPublisher/Tx: 0.14
+ * /airsim_imgPublisher/all_front: True
+ * /airsim_imgPublisher/cx: 256
+ * /airsim_imgPublisher/cy: 144
+ * /airsim_imgPublisher/localization_method: ground_truth
+ * /airsim_imgPublisher/scale: 0.38
+ * /airsim_imgPublisher/scale_x: 512
+ * /airsim_imgPublisher/scale_y: 288
+ * /enable_statistics: True
+ * /fly_trajectory_time_out: 0.1
+ * /follow_trajectory/ip_addr: 10.157.90.51
+ * /follow_trajectory/localization_method: ground_truth
+ * /ip_addr: 10.157.90.51
+ * /max_yaw_rate: 90
+ * /max_yaw_rate_during_flight: 90
+ * /motion_planner/a_max: 4.5
+ * /motion_planner/drone_height: 0.6
+ * /motion_planner/drone_radius: 2.0
+ * /motion_planner/max_dist_to_connect_at: 10
+ * /motion_planner/max_roadmap_size: 1600
+ * /motion_planner/motion_planning_core: OMPL-RRTConnect
+ * /motion_planner/nodes_to_add_to_roadmap: 300
+ * /motion_planner/rrt_bias: 10
+ * /motion_planner/rrt_step_size: 1.0
+ * /motion_planner/sampling_interval: 0.5
+ * /motion_planner/v_max: 10
+ * /motion_planner/x_dist_to_sample_from__high_bound: 50
+ * /motion_planner/x_dist_to_sample_from__low_bound: -50
+ * /motion_planner/y_dist_to_sample_from__high_bound: 500
+ * /motion_planner/y_dist_to_sample_from__low_bound: -5
+ * /motion_planner/z_dist_to_sample_from__high_bound: 8
+ * /motion_planner/z_dist_to_sample_from__low_bound: 2
+ * /octomap_server/base_frame_id: world
+ * /octomap_server/frame_id: world
+ * /octomap_server/occupancy_max_z: 10.0
+ * /octomap_server/occupancy_min_z: -2.0
+ * /octomap_server/pointcloud_max_z: 10.0
+ * /octomap_server/pointcloud_min_z: -2.0
+ * /octomap_server/resolution: 0.1
+ * /octomap_server/sensor_model/max_range: 7
+ * /package_delivery/fly_trajectory_time_out: 0.1
+ * /package_delivery/ip_addr: 10.157.90.51
+ * /package_delivery/localization_method: ground_truth
+ * /package_delivery/v_max: 10
+ * /panic_pcl/panic_distance: 1.5
+ * /profile_manager/ip_addr: 10.157.90.51
+ * /profile_manager/stats_file_addr: /home/wcui/catkin...
+ * /ros_DEBUG: True
+ * /rosdistro: kinetic
+ * /rosversion: 1.12.13
+ * /stats_file_addr: /home/wcui/catkin...
+ * /supervisor_mailbox: /home/wcui/catkin...
+ * /v_max: 10
+
+NODES
+  /
+    airsim_imgPublisher (airsim_img_publisher/airsim_imgPublisher)
+    cloudify (nodelet/nodelet)
+    cloudify_2 (nodelet/nodelet)
+    depth_transforms_manager (nodelet/nodelet)
+    depth_transforms_manager_2 (nodelet/nodelet)
+    follow_trajectory (package_delivery/follow_trajectory)
+    future_collision (package_delivery/future_collision)
+    motion_planner (package_delivery/motion_planner)
+    octomap_server (octomap_server/octomap_server_node)
+    package_delivery (package_delivery/package_delivery)
+    panic_pcl (package_delivery/panic_pcl)
+    profile_manager (profile_manager/profile_manager)
+    publish_imu (publish_imu/publish_imu)
+    rviz (rviz/rviz)
+
+auto-starting new master
+[1mprocess[master]: started with pid [29564][0m
+[1mROS_MASTER_URI=http://localhost:11311[0m
+]2;/home/wcui/catkin_ws/src/mav-bench/package_delivery/launch/package_delivery.launch http://localhost:11311
+[1msetting /run_id to 6e86d6c8-2ae3-11e8-99e4-9c5c8e90c845[0m
+[1mprocess[rosout-1]: started with pid [29577][0m
+started core service [/rosout]
+[1mprocess[profile_manager-2]: started with pid [29595][0m
+[1mprocess[octomap_server-3]: started with pid [29596][0m
+[1mprocess[airsim_imgPublisher-4]: started with pid [29597][0m
+[1mprocess[depth_transforms_manager-5]: started with pid [29612][0m
+[1mprocess[depth_transforms_manager_2-6]: started with pid [29627][0m
+[1mprocess[cloudify-7]: started with pid [29641][31m[ERROR] [1521401694.655750327]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.657824767]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.659605977]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.661391232]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.663081798]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.664824004]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.666510389]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.668101547]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.669704458]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.671430951]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.673513344]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.675083573]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.676627809]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.678722938]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.680201406]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.682158166]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.687160024]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.688815840]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.690571073]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.805648557]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.807483939]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.809287625]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.811675002]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.813283177]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.814715499]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.816794571]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.818407775]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.820157352]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.821816027]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.845498378]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1521401694.851843687]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+Initialize drone:
+	a: arm
+	d: disarm
+	t h: takeoff to h m
+	l: land
+	f x y z d: fly at (x,y,z) m/s for d s
+	y x: set yaw to x
+	p: print pitch, roll, yaw, height
+	c: complete drone setup and continue
+	s: sleep for 5 seconds
+	r: rotate slowly
+	Ctrl-c/q: quit
+[31m[ERROR] [1521401695.014522512]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.156424 sec)[0m
+[31m[ERROR] [1521401695.167875101]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.149010 sec)[0m
+[31m[ERROR] [1521401695.297725336]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.127017 sec)[0m
+[31m[ERROR] [1521401695.417155091]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.116864 sec)[0m
+[31m[ERROR] [1521401695.537610435]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.117792 sec)[0m
+[31m[ERROR] [1521401695.633834170]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.093753 sec)[0m
+[31m[ERROR] [1521401695.732904053]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.096674 sec)[0m
+[31m[ERROR] [1521401695.827180192]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092156 sec)[0m
+[31m[ERROR] [1521401695.930028203]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.100700 sec)[0m
+[31m[ERROR] [1521401696.024309004]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092180 sec)[0m
+[31m[ERROR] [1521401696.123935739]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.096838 sec)[0m
+[31m[ERROR] [1521401696.228249839]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.102231 sec)[0m
+[31m[ERROR] [1521401696.333937860]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.103518 sec)[0m
+[31m[ERROR] [1521401696.434327255]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.098044 sec)[0m
+[31m[ERROR] [1521401696.543236428]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.106818 sec)[0m
+[31m[ERROR] [1521401696.643635505]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.098106 sec)[0m
+[31m[ERROR] [1521401696.741438171]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.094726 sec)[0m
+[31m[ERROR] [1521401696.835178689]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091537 sec)[0m
+[31m[ERROR] [1521401696.942658886]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.105330 sec)[0m
+[31m[ERROR] [1521401697.039412986]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.094138 sec)[0m
+[31m[ERROR] [1521401697.135485203]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.093871 sec)[0m
+[31m[ERROR] [1521401697.230110830]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092299 sec)[0m
+[31m[ERROR] [1521401697.322590214]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090183 sec)[0m
+[31m[ERROR] [1521401697.418641964]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.093649 sec)[0m
+[31m[ERROR] [1521401697.508438459]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.087696 sec)[0m
+[31m[ERROR] [1521401697.601027545]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090165 sec)[0m
+[31m[ERROR] [1521401697.691352246]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.088213 sec)[0m
+[31m[ERROR] [1521401697.784483913]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091036 sec)[0m
+[31m[ERROR] [1521401697.876486989]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089774 sec)[0m
+[31m[ERROR] [1521401697.969984180]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091399 sec)[0m
+[31m[ERROR] [1521401698.062181456]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090025 sec)[0m
+[31m[ERROR] [1521401698.156211321]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091883 sec)[0m
+[31m[ERROR] [1521401698.251187887]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092644 sec)[0m
+[31m[ERROR] [1521401698.344653076]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.090776 sec)[0m
+[31m[ERROR] [1521401698.439501022]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092235 sec)[0m
+[31m[ERROR] [1521401698.533613325]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091899 sec)[0m
+[31m[ERROR] [1521401698.627042645]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091126 sec)[0m
+[31m[ERROR] [1521401698.721690021]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091995 sec)[0m
+[31m[ERROR] [1521401698.815397076]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091212 sec)[0m
+[31m[ERROR] [1521401698.907121890]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089503 sec)[0m
+[31m[ERROR] [1521401699.000352749]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091019 sec)[0m
+[31m[ERROR] [1521401699.094419281]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091621 sec)[0m
+[31m[ERROR] [1521401699.187707098]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090769 sec)[0m
+[31m[ERROR] [1521401699.282970134]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.092948 sec)[0m
+[31m[ERROR] [1521401699.374489690]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.089429 sec)[0m
+[31m[ERROR] [1521401699.468950344]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092052 sec)[0m
+[31m[ERROR] [1521401699.561762912]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090728 sec)[0m
+[31m[ERROR] [1521401699.656459504]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092258 sec)[0m
+[31m[ERROR] [1521401699.748819055]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089940 sec)[0m
+[31m[ERROR] [1521401699.842222755]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091246 sec)[0m
+[31m[ERROR] [1521401699.935564017]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091106 sec)[0m
+[31m[ERROR] [1521401700.029605229]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091936 sec)[0m
+[31m[ERROR] [1521401700.124362476]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092544 sec)[0m
+[31m[ERROR] [1521401700.216321123]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089777 sec)[0m
+[31m[ERROR] [1521401700.314253223]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.095577 sec)[0m
+[31m[ERROR] [1521401700.405806734]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089227 sec)[0m
+[31m[ERROR] [1521401700.499008921]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091117 sec)[0m
+[31m[ERROR] [1521401700.591313048]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090173 sec)[0m
+[31m[ERROR] [1521401700.685368600]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091860 sec)[0m
+[31m[ERROR] [1521401700.781805596]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.094295 sec)[0m
+[31m[ERROR] [1521401700.877810621]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092969 sec)[0m
+[31m[ERROR] [1521401700.972268176]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.092256 sec)[0m
+[31m[ERROR] [1521401701.065481037]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090444 sec)[0m
+[31m[ERROR] [1521401701.159670231]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092103 sec)[0m
+[31m[ERROR] [1521401701.255812167]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.093504 sec)[0m
+[31m[ERROR] [1521401701.351553454]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.093227 sec)[0m
+[31m[ERROR] [1521401701.446341057]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092282 sec)[0m
+[31m[ERROR] [1521401701.540406909]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091751 sec)[0m
+[31m[ERROR] [1521401701.638285904]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.095521 sec)[0m
+[31m[ERROR] [1521401701.730674317]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.090206 sec)[0m
+[31m[ERROR] [1521401701.825817798]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092829 sec)[0m
+[31m[ERROR] [1521401701.921407036]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.093313 sec)[0m
+[31m[ERROR] [1521401702.023004502]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.097532 sec)[0m
+[31m[ERROR] [1521401702.114587154]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089011 sec)[0m
+[31m[ERROR] [1521401702.207607334]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090846 sec)[0m
+[31m[ERROR] [1521401702.300468092]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.090430 sec)[0m
+[31m[ERROR] [1521401702.393251762]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.090259 sec)[0m
+[31m[ERROR] [1521401702.486938105]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091326 sec)[0m
+[31m[ERROR] [1521401702.580249062]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091171 sec)[0m
+[31m[ERROR] [1521401702.673953515]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091410 sec)[0m
+[31m[ERROR] [1521401702.767086357]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090948 sec)[0m
+[31m[ERROR] [1521401702.859377280]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.090150 sec)[0m
+[31m[ERROR] [1521401702.954303689]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.092291 sec)[0m
+[31m[ERROR] [1521401703.046959199]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090506 sec)[0m
+[31m[ERROR] [1521401703.140670369]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.091552 sec)[0m
+[31m[ERROR] [1521401703.234643620]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091420 sec)[0m
+[31m[ERROR] [1521401703.326803763]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.089981 sec)[0m
+[31m[ERROR] [1521401703.423623365]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.094690 sec)[0m
+[31m[ERROR] [1521401703.517483560]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.091586 sec)[0m
+[31m[ERROR] [1521401703.609647967]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090042 sec)[0m
+[31m[ERROR] [1521401703.703187929]: Pointcloud insertion in OctomapServer done (0+109491 pts (ground/nonground), 0.090849 sec)[0m
+[31m[ERROR] [1521401703.795859956]: Pointcloud insertion in OctomapServer done (0+109490 pts (ground/nonground), 0.090478 sec)[0m
+[31m[ERROR] [1521401703.887664400]: Pointcloud insertion in OctomapServer done (0+109472 pts (ground/nonground), 0.089630 sec)[0m
+[31m[ERROR] [1521401703.978643858]: Pointcloud insertion in OctomapServer done (0+109462 pts (ground/nonground), 0.088493 sec)[0m
+[31m[ERROR] [1521401704.073523443]: Pointcloud insertion in OctomapServer done (0+109383 pts (ground/nonground), 0.092155 sec)[0m
+[31m[ERROR] [1521401704.173651593]: Pointcloud insertion in OctomapServer done (0+109260 pts (ground/nonground), 0.096957 sec)[0m
+[31m[ERROR] [1521401704.282646968]: Pointcloud insertion in OctomapServer done (0+109163 pts (ground/nonground), 0.105422 sec)[0m
+[31m[ERROR] [1521401704.394349605]: Pointcloud insertion in OctomapServer done (0+108892 pts (ground/nonground), 0.108488 sec)[0m
+[31m[ERROR] [1521401704.511623126]: Pointcloud insertion in OctomapServer done (0+108725 pts (ground/nonground), 0.113836 sec)[0m
+[31m[ERROR] [1521401704.794523801]: Pointcloud insertion in OctomapServer done (0+108044 pts (ground/nonground), 0.161259 sec)[0m
+[31m[ERROR] [1521401704.946493852]: Pointcloud insertion in OctomapServer done (0+107933 pts (ground/nonground), 0.147472 sec)[0m
+[31m[ERROR] [1521401705.115663308]: Pointcloud insertion in OctomapServer done (0+107242 pts (ground/nonground), 0.164784 sec)[0m
+[31m[ERROR] [1521401705.288481989]: Pointcloud insertion in OctomapServer done (0+107084 pts (ground/nonground), 0.167001 sec)[0m
+[31m[ERROR] [1521401705.461281814]: Pointcloud insertion in OctomapServer done (0+106923 pts (ground/nonground), 0.167064 sec)[0m
+Please input your destination in x,y,z format.
+[31m[ERROR] [1521401705.643008416]: Pointcloud insertion in OctomapServer done (0+106707 pts (ground/nonground), 0.176061 sec)[0m
+[31m[ERROR] [1521401705.830363173]: Pointcloud insertion in OctomapServer done (0+106183 pts (ground/nonground), 0.181837 sec)[0m
+[31m[ERROR] [1521401706.020385634]: Pointcloud insertion in OctomapServer done (0+105875 pts (ground/nonground), 0.184170 sec)[0m
+[31m[ERROR] [1521401706.212898677]: Pointcloud insertion in OctomapServer done (0+105477 pts (ground/nonground), 0.186407 sec)[0m
+[31m[ERROR] [1521401706.408923281]: Pointcloud insertion in OctomapServer done (0+105164 pts (ground/nonground), 0.188024 sec)[0m
+[31m[ERROR] [1521401706.609670407]: Pointcloud insertion in OctomapServer done (0+104779 pts (ground/nonground), 0.193654 sec)[0m
+[31m[ERROR] [1521401706.809925644]: Pointcloud insertion in OctomapServer done (0+104492 pts (ground/nonground), 0.193770 sec)[0m
+[31m[ERROR] [1521401707.018290499]: Pointcloud insertion in OctomapServer done (0+103990 pts (ground/nonground), 0.201097 sec)[0m
+[31m[ERROR] [1521401707.224132548]: Pointcloud insertion in OctomapServer done (0+103528 pts (ground/nonground), 0.199489 sec)[0m
+[31m[ERROR] [1521401707.427636196]: Pointcloud insertion in OctomapServer done (0+103224 pts (ground/nonground), 0.196636 sec)[0m
+[31m[ERROR] [1521401707.635958908]: Pointcloud insertion in OctomapServer done (0+102501 pts (ground/nonground), 0.201642 sec)[0m
+[31m[ERROR] [1521401707.838429107]: Pointcloud insertion in OctomapServer done (0+101687 pts (ground/nonground), 0.195574 sec)[0m
+Current position is -1.75916e-16 0 3.60438
+[31m[ERROR] [1521401708.034443697]: inside the call back[0m
+[31m[ERROR] [1521401708.040478129]: Pointcloud insertion in OctomapServer done (0+100808 pts (ground/nonground), 0.195307 sec)[0m
+[31m[ERROR] [1521401708.239604596]: Pointcloud insertion in OctomapServer done (0+100379 pts (ground/nonground), 0.192524 sec)[0m
+[31m[ERROR] [1521401708.443670459]: Pointcloud insertion in OctomapServer done (0+100470 pts (ground/nonground), 0.197480 sec)[0m
+[31m[ERROR] [1521401708.635878411]: Pointcloud insertion in OctomapServer done (0+100618 pts (ground/nonground), 0.185790 sec)[0m
+[31m[ERROR] [1521401708.825073624]: Pointcloud insertion in OctomapServer done (0+100640 pts (ground/nonground), 0.183691 sec)[0m
+[31m[ERROR] [1521401709.009964516]: Pointcloud insertion in OctomapServer done (0+100770 pts (ground/nonground), 0.179946 sec)[0m
+[31m[ERROR] [1521401709.196657143]: Pointcloud insertion in OctomapServer done (0+100820 pts (ground/nonground), 0.178798 sec)[0m
+[31m[ERROR] [1521401709.381302962]: Pointcloud insertion in OctomapServer done (0+100916 pts (ground/nonground), 0.180429 sec)[0m
+[31m[ERROR] [1521401709.567210240]: Pointcloud insertion in OctomapServer done (0+100934 pts (ground/nonground), 0.180663 sec)[0m
+[31m[ERROR] [1521401709.761226818]: Pointcloud insertion in OctomapServer done (0+101304 pts (ground/nonground), 0.186270 sec)[0m
+[31m[ERROR] [1521401709.967989787]: Pointcloud insertion in OctomapServer done (0+103218 pts (ground/nonground), 0.200654 sec)[0m
+[31m[ERROR] [1521401710.191192020]: Pointcloud insertion in OctomapServer done (0+104023 pts (ground/nonground), 0.216151 sec)[0m
+[31m[ERROR] [1521401710.420711413]: Pointcloud insertion in OctomapServer done (0+100136 pts (ground/nonground), 0.220977 sec)[0m
+[31m[ERROR] [1521401710.657041109]: Pointcloud insertion in OctomapServer done (0+93280 pts (ground/nonground), 0.223169 sec)[0m
+[31m[ERROR] [1521401710.888929549]: Pointcloud insertion in OctomapServer done (0+88924 pts (ground/nonground), 0.215058 sec)[0m
+[31m[ERROR] [1521401711.112227525]: Pointcloud insertion in OctomapServer done (0+80303 pts (ground/nonground), 0.204446 sec)[0m
+[31m[ERROR] [1521401711.331519994]: Pointcloud insertion in OctomapServer done (0+76518 pts (ground/nonground), 0.196358 sec)[0m
+[31m[ERROR] [1521401711.549389189]: Pointcloud insertion in OctomapServer done (0+74904 pts (ground/nonground), 0.193801 sec)[0m
+[31m[ERROR] [1521401711.775268325]: Pointcloud insertion in OctomapServer done (0+73051 pts (ground/nonground), 0.198138 sec)[0m
+[31m[ERROR] [1521401712.004578797]: Pointcloud insertion in OctomapServer done (0+73095 pts (ground/nonground), 0.201555 sec)[0m
+[31m[ERROR] [1521401712.228854817]: Pointcloud insertion in OctomapServer done (0+75275 pts (ground/nonground), 0.191340 sec)[0m
+[31m[ERROR] [1521401712.457567669]: Pointcloud insertion in OctomapServer done (0+75930 pts (ground/nonground), 0.196055 sec)[0m
+[31m[ERROR] [1521401712.698271845]: Pointcloud insertion in OctomapServer done (0+76538 pts (ground/nonground), 0.203635 sec)[0m
+[31m[ERROR] [1521401712.950186783]: Pointcloud insertion in OctomapServer done (0+80036 pts (ground/nonground), 0.213877 sec)[0m
+[31m[ERROR] [1521401713.210609849]: Pointcloud insertion in OctomapServer done (0+87773 pts (ground/nonground), 0.219882 sec)[0m
+[31m[ERROR] [1521401713.490385199]: Pointcloud insertion in OctomapServer done (0+97353 pts (ground/nonground), 0.238256 sec)[0m
+[31m[ERROR] [1521401713.770075227]: Pointcloud insertion in OctomapServer done (0+104725 pts (ground/nonground), 0.235488 sec)[0m
+[31m[ERROR] [1521401714.051896319]: Pointcloud insertion in OctomapServer done (0+104601 pts (ground/nonground), 0.235642 sec)[0m
+[31m[ERROR] [1521401714.336455674]: Pointcloud insertion in OctomapServer done (0+105468 pts (ground/nonground), 0.240915 sec)[0m
+[31m[ERROR] [1521401714.621626444]: Pointcloud insertion in OctomapServer done (0+100697 pts (ground/nonground), 0.238586 sec)[0m
+[31m[ERROR] [1521401714.891773080]: Pointcloud insertion in OctomapServer done (0+100112 pts (ground/nonground), 0.227482 sec)[0m
+[0m[ INFO] [1521401709.052167069]: Spinning around...[0m
+[0m[ INFO] [1521401715.034486127]: Waiting to receive trajectory...[0m
+Current position is 0.317981 -0.127603 3.1938
+Debug:   RRTConnect: Planner range detected to be 102.968150
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.011725 seconds
+[0m[ INFO] [1521401715.092650792]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.020652 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401715.148852292]: Pointcloud insertion in OctomapServer done (0+101250 pts (ground/nonground), 0.213745 sec)[0m
+[31m[ERROR] [1521401715.408535234]: Pointcloud insertion in OctomapServer done (0+100999 pts (ground/nonground), 0.213495 sec)[0m
+[0m[ INFO] [1521401715.560318873]:  in completed[0m
+[33m[ WARN] [1521401715.578944410]: We're a little off...[0m
+Pos: 0.313563 -0.127335 3.08763
+Goal: 30 450 3
+Dist: 451.105
+Current position is 0.313563 -0.127335 3.08763
+[0m[ INFO] [1521401715.579010158]: Waiting to receive trajectory...[0m
+Current position is 0.313563 -0.127335 3.08763
+[31m[ERROR] [1521401715.663231830]: Pointcloud insertion in OctomapServer done (0+100945 pts (ground/nonground), 0.211386 sec)[0m
+[0m[ INFO] [1521401715.113445640]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.115757299]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.117886724]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.126561990]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.142545381]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.166044600]: Smoothened path![0m
+[0m[ INFO] [1521401715.169351512]: planning 0.0905132[0m
+Debug:   RRTConnect: Planner range detected to be 102.968150
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.011712 seconds
+[0m[ INFO] [1521401715.692244624]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.022554 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401715.913517011]: Pointcloud insertion in OctomapServer done (0+100948 pts (ground/nonground), 0.208113 sec)[0m
+[31m[ERROR] [1521401716.167135855]: Pointcloud insertion in OctomapServer done (0+101007 pts (ground/nonground), 0.211384 sec)[0m
+[31m[ERROR] [1521401716.425126674]: Pointcloud insertion in OctomapServer done (0+100741 pts (ground/nonground), 0.216576 sec)[0m
+[31m[ERROR] [1521401716.688971194]: Pointcloud insertion in OctomapServer done (0+100590 pts (ground/nonground), 0.221566 sec)[0m
+[31m[ERROR] [1521401716.954470356]: Pointcloud insertion in OctomapServer done (0+100544 pts (ground/nonground), 0.222940 sec)[0m
+[31m[ERROR] [1521401717.236251465]: Pointcloud insertion in OctomapServer done (0+101123 pts (ground/nonground), 0.234615 sec)[0m
+[31m[ERROR] [1521401717.525559553]: Pointcloud insertion in OctomapServer done (0+101259 pts (ground/nonground), 0.239640 sec)[0m
+[31m[ERROR] [1521401717.795910539]: distance greater than 1[0m
+[31m[ERROR] [1521401717.838073330]: Pointcloud insertion in OctomapServer done (0+104060 pts (ground/nonground), 0.261357 sec)[0m
+[31m[ERROR] [1521401717.896175416]: distance greater than 1[0m
+[31m[ERROR] [1521401718.096983091]: distance greater than 1[0m
+[31m[ERROR] [1521401718.141245979]: Pointcloud insertion in OctomapServer done (0+102719 pts (ground/nonground), 0.250560 sec)[0m
+[31m[ERROR] [1521401718.197212125]: distance greater than 1[0m
+[31m[ERROR] [1521401718.297357702]: distance greater than 1[0m
+[31m[ERROR] [1521401718.397498997]: distance greater than 1[0m
+[31m[ERROR] [1521401718.448644922]: Pointcloud insertion in OctomapServer done (0+100668 pts (ground/nonground), 0.249587 sec)[0m
+[31m[ERROR] [1521401718.497615888]: distance greater than 1[0m
+[31m[ERROR] [1521401718.498236267]: distance greater than 1[0m
+[31m[ERROR] [1521401718.598543365]: distance greater than 1[0m
+[31m[ERROR] [1521401718.698718002]: distance greater than 1[0m
+[31m[ERROR] [1521401718.772076371]: Pointcloud insertion in OctomapServer done (0+101130 pts (ground/nonground), 0.262767 sec)[0m
+[31m[ERROR] [1521401718.798963466]: distance greater than 2[0m
+[31m[ERROR] [1521401718.899126553]: distance greater than 2[0m
+[31m[ERROR] [1521401718.999269639]: distance greater than 2[0m
+[31m[ERROR] [1521401719.001828331]: distance greater than 2[0m
+[31m[ERROR] [1521401719.095275643]: Pointcloud insertion in OctomapServer done (0+101045 pts (ground/nonground), 0.260249 sec)[0m
+[31m[ERROR] [1521401719.101960243]: distance greater than 2[0m
+[31m[ERROR] [1521401719.202129099]: distance greater than 2[0m
+[31m[ERROR] [1521401719.302409115]: distance greater than 2[0m
+[31m[ERROR] [1521401719.402576565]: distance greater than 2[0m
+[31m[ERROR] [1521401719.427946749]: Pointcloud insertion in OctomapServer done (0+101430 pts (ground/nonground), 0.267701 sec)[0m
+[31m[ERROR] [1521401719.502726120]: distance greater than 2[0m
+[31m[ERROR] [1521401719.516284077]: distance greater than 2[0m
+[31m[ERROR] [1521401719.616446279]: distance greater than 2[0m
+[31m[ERROR] [1521401719.716597970]: distance greater than 2[0m
+[31m[ERROR] [1521401719.772113614]: Pointcloud insertion in OctomapServer done (0+103962 pts (ground/nonground), 0.274468 sec)[0m
+[31m[ERROR] [1521401719.816805196]: distance greater than 2[0m
+[31m[ERROR] [1521401719.916940652]: distance greater than 2[0m
+[31m[ERROR] [1521401720.017064497]: distance greater than 2[0m
+[31m[ERROR] [1521401720.017504621]: distance greater than 2[0m
+[31m[ERROR] [1521401720.110869112]: Pointcloud insertion in OctomapServer done (0+104662 pts (ground/nonground), 0.266307 sec)[0m
+[31m[ERROR] [1521401720.117694691]: distance greater than 2[0m
+[31m[ERROR] [1521401720.217830359]: distance greater than 2[0m
+[31m[ERROR] [1521401720.317953030]: distance greater than 2[0m
+[0m[ INFO] [1521401720.317731859]:  in completed[0m
+[33m[ WARN] [1521401720.318117744]: We're a little off...[0m
+Pos: 3.77668 9.07144 5.87563
+Goal: 30 450 3
+Dist: 441.717
+Current position is 3.77668 9.07144 5.87563
+[0m[ INFO] [1521401720.318155830]: Waiting to receive trajectory...[0m
+Current position is 3.77668 9.07144 5.87563
+[0m[ INFO] [1521401715.714888386]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.717096917]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.719234221]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.727385921]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.742840881]: Checking for collisions...[0m
+[0m[ INFO] [1521401715.767717522]: Smoothened path![0m
+[0m[ INFO] [1521401715.769800277]: planning 0.0909612[0m
+Debug:   RRTConnect: Planner range detected to be 102.968150
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 23 states (2 start + 21 goal)
+Info:    Solution found in 0.029554 seconds
+[31m[ERROR] [1521401720.418077011]: distance greater than 2[0m
+[31m[ERROR] [1521401720.436801907]: Pointcloud insertion in OctomapServer done (0+104302 pts (ground/nonground), 0.248937 sec)[0m
+[0m[ INFO] [1521401720.411118281]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.077975 seconds and changed from 10 to 17 states
+[31m[ERROR] [1521401720.518300323]: distance greater than 2[0m
+[31m[ERROR] [1521401720.518885825]: distance greater than 2[0m
+[31m[ERROR] [1521401720.619024202]: distance greater than 2[0m
+[31m[ERROR] [1521401720.719270663]: distance greater than 2[0m
+[31m[ERROR] [1521401720.748756194]: Pointcloud insertion in OctomapServer done (0+103084 pts (ground/nonground), 0.232487 sec)[0m
+[31m[ERROR] [1521401721.050259855]: Pointcloud insertion in OctomapServer done (0+109379 pts (ground/nonground), 0.216002 sec)[0m
+[31m[ERROR] [1521401721.324909706]: Pointcloud insertion in OctomapServer done (0+113499 pts (ground/nonground), 0.187072 sec)[0m
+[31m[ERROR] [1521401721.593414830]: Pointcloud insertion in OctomapServer done (0+111519 pts (ground/nonground), 0.178335 sec)[0m
+[0m[ INFO] [1521401721.720319611]:  in completed[0m
+[33m[ WARN] [1521401721.724642035]: We're a little off...[0m
+Pos: 5.74176 12.336 7.15482
+Goal: 30 450 3
+Dist: 438.355
+Current position is 5.74176 12.336 7.15482
+[0m[ INFO] [1521401721.724734545]: Waiting to receive trajectory...[0m
+Current position is 5.74176 12.336 7.15482
+[0m[ INFO] [1521401720.501829391]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.502156799]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.502446104]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.502770843]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.503087450]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.503440277]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.503768289]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.504551362]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.505649698]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.507434222]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.514442762]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.523998403]: Checking for collisions...[0m
+[0m[ INFO] [1521401720.552043158]: Smoothened path![0m
+[0m[ INFO] [1521401720.554707305]: planning 0.175846[0m
+Debug:   RRTConnect: Planner range detected to be 102.968150
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.012695 seconds
+[0m[ INFO] [1521401721.794474735]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.020306 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401721.901310494]: Pointcloud insertion in OctomapServer done (0+95683 pts (ground/nonground), 0.215513 sec)[0m
+[31m[ERROR] [1521401722.020348781]: distance greater than 2[0m
+[31m[ERROR] [1521401722.120507560]: distance greater than 2[0m
+[31m[ERROR] [1521401722.220649629]: distance greater than 2[0m
+[0m[ INFO] [1521401722.220389896]:  in completed[0m
+[33m[ WARN] [1521401722.220837411]: We're a little off...[0m
+Pos: 7.48588 11.6925 7.34984
+Goal: 30 450 3
+Dist: 438.907
+Current position is 7.48588 11.6925 7.34984
+[0m[ INFO] [1521401722.220888397]: Waiting to receive trajectory...[0m
+Current position is 7.48588 11.6925 7.34984
+[31m[ERROR] [1521401722.239732380]: Pointcloud insertion in OctomapServer done (0+83927 pts (ground/nonground), 0.237897 sec)[0m
+[0m[ INFO] [1521401721.814861519]: Checking for collisions...[0m
+[0m[ INFO] [1521401721.815880981]: Checking for collisions...[0m
+[0m[ INFO] [1521401721.816845456]: Checking for collisions...[0m
+[0m[ INFO] [1521401721.817975546]: Checking for collisions...[0m
+[0m[ INFO] [1521401721.833391940]: Checking for collisions...[0m
+[0m[ INFO] [1521401721.854607293]: Smoothened path![0m
+[0m[ INFO] [1521401721.856619925]: planning 0.077769[0m
+Debug:   RRTConnect: Planner range detected to be 102.968150
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.011698 seconds
+[0m[ INFO] [1521401722.293555807]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.020671 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401722.320851224]: distance greater than 2[0m
+[31m[ERROR] [1521401722.421039291]: distance greater than 2[0m
+[31m[ERROR] [1521401722.521183901]: distance greater than 2[0m
+[31m[ERROR] [1521401722.521654804]: distance greater than 2[0m
+[31m[ERROR] [1521401722.575530007]: Pointcloud insertion in OctomapServer done (0+83081 pts (ground/nonground), 0.235272 sec)[0m
+[31m[ERROR] [1521401722.621879455]: distance greater than 2[0m
+[31m[ERROR] [1521401722.722040538]: distance greater than 2[0m
+[31m[ERROR] [1521401722.822297658]: distance greater than 2[0m
+[31m[ERROR] [1521401722.917372885]: Pointcloud insertion in OctomapServer done (0+86831 pts (ground/nonground), 0.239638 sec)[0m
+[31m[ERROR] [1521401722.922587125]: distance greater than 2[0m
+[31m[ERROR] [1521401723.022748124]: distance greater than 2[0m
+[31m[ERROR] [1521401723.122910113]: distance greater than 2[0m
+[31m[ERROR] [1521401723.123536974]: distance greater than 2[0m
+[31m[ERROR] [1521401723.223735899]: distance greater than 2[0m
+[31m[ERROR] [1521401723.248232831]: Pointcloud insertion in OctomapServer done (0+82905 pts (ground/nonground), 0.226303 sec)[0m
+[31m[ERROR] [1521401723.323890656]: distance greater than 2[0m
+[31m[ERROR] [1521401723.424065558]: distance greater than 2[0m
+[31m[ERROR] [1521401723.524321007]: distance greater than 2[0m
+[31m[ERROR] [1521401723.584656658]: Pointcloud insertion in OctomapServer done (0+79372 pts (ground/nonground), 0.226305 sec)[0m
+[31m[ERROR] [1521401723.624463888]: distance greater than 2[0m
+[31m[ERROR] [1521401723.625039922]: distance greater than 2[0m
+[31m[ERROR] [1521401723.725184827]: distance greater than 2[0m
+[31m[ERROR] [1521401723.825424811]: distance greater than 2[0m
+[31m[ERROR] [1521401723.925583961]: distance greater than 2[0m
+[31m[ERROR] [1521401723.926678944]: Pointcloud insertion in OctomapServer done (0+79844 pts (ground/nonground), 0.227787 sec)[0m
+[31m[ERROR] [1521401724.025754126]: distance greater than 2[0m
+[31m[ERROR] [1521401724.125901667]: distance greater than 2[0m
+[31m[ERROR] [1521401724.137455088]: distance greater than 2[0m
+[31m[ERROR] [1521401724.237614137]: distance greater than 2[0m
+[31m[ERROR] [1521401724.277069068]: Pointcloud insertion in OctomapServer done (0+80868 pts (ground/nonground), 0.236211 sec)[0m
+[31m[ERROR] [1521401724.337784103]: distance greater than 2[0m
+[31m[ERROR] [1521401724.438094575]: distance greater than 2[0m
+[31m[ERROR] [1521401724.538279587]: distance greater than 2[0m
+[31m[ERROR] [1521401724.634149870]: Pointcloud insertion in OctomapServer done (0+84750 pts (ground/nonground), 0.238473 sec)[0m
+[31m[ERROR] [1521401724.638415772]: distance greater than 2[0m
+[31m[ERROR] [1521401724.658840919]: distance greater than 2[0m
+[31m[ERROR] [1521401724.759003121]: distance greater than 2[0m
+[31m[ERROR] [1521401724.859175165]: distance greater than 2[0m
+[0m[ INFO] [1521401724.858913918]:  in completed[0m
+[33m[ WARN] [1521401724.859600292]: We're a little off...[0m
+Pos: 8.94635 20.4186 8.43698
+Goal: 30 450 3
+Dist: 430.131
+Current position is 8.94635 20.4186 8.43698
+[0m[ INFO] [1521401724.859646015]: Waiting to receive trajectory...[0m
+Current position is 8.94635 20.4186 8.43698
+[0m[ INFO] [1521401722.314301687]: Checking for collisions...[0m
+[0m[ INFO] [1521401722.315187334]: Checking for collisions...[0m
+[0m[ INFO] [1521401722.316412042]: Checking for collisions...[0m
+[0m[ INFO] [1521401722.317720483]: Checking for collisions...[0m
+[0m[ INFO] [1521401722.341746437]: Checking for collisions...[0m
+[0m[ INFO] [1521401722.376330077]: Smoothened path![0m
+[0m[ INFO] [1521401722.379436474]: planning 0.100587[0m
+Debug:   RRTConnect: Planner range detected to be 102.969206
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 14 states (3 start + 11 goal)
+Info:    Solution found in 0.033886 seconds
+[31m[ERROR] [1521401724.959326113]: distance greater than 2[0m
+[31m[ERROR] [1521401724.978111385]: Pointcloud insertion in OctomapServer done (0+89984 pts (ground/nonground), 0.220986 sec)[0m
+[0m[ INFO] [1521401724.916610908]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.076695 seconds and changed from 7 to 17 states
+[31m[ERROR] [1521401725.059494829]: distance greater than 2[0m
+[31m[ERROR] [1521401725.159637794]: distance greater than 2[0m
+[31m[ERROR] [1521401725.160410876]: distance greater than 2[0m
+[31m[ERROR] [1521401725.260680016]: distance greater than 2[0m
+[31m[ERROR] [1521401725.320181401]: Pointcloud insertion in OctomapServer done (0+98307 pts (ground/nonground), 0.215129 sec)[0m
+[31m[ERROR] [1521401725.360851716]: distance greater than 2[0m
+[31m[ERROR] [1521401725.461033615]: distance greater than 2[0m
+[31m[ERROR] [1521401725.561292022]: distance greater than 2[0m
+[31m[ERROR] [1521401725.658875506]: Pointcloud insertion in OctomapServer done (0+93090 pts (ground/nonground), 0.210474 sec)[0m
+[31m[ERROR] [1521401725.661440712]: distance greater than 2[0m
+[31m[ERROR] [1521401725.761571216]: distance greater than 2[0m
+[31m[ERROR] [1521401725.762265708]: distance greater than 2[0m
+[31m[ERROR] [1521401725.862443839]: distance greater than 2[0m
+[31m[ERROR] [1521401725.962580120]: distance greater than 2[0m
+[31m[ERROR] [1521401726.026971556]: Pointcloud insertion in OctomapServer done (0+79114 pts (ground/nonground), 0.238129 sec)[0m
+[31m[ERROR] [1521401726.062714965]: distance greater than 2[0m
+[0m[ INFO] [1521401726.062498164]:  in completed[0m
+[33m[ WARN] [1521401726.063035379]: We're a little off...[0m
+Pos: 9.45615 25.3391 8.63766
+Goal: 30 450 3
+Dist: 425.195
+Current position is 9.45615 25.3391 8.63766
+[0m[ INFO] [1521401726.063112535]: Waiting to receive trajectory...[0m
+Current position is 9.45615 25.3391 8.63766
+[0m[ INFO] [1521401725.021020202]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021117680]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021213487]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021317553]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021437946]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021570591]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021718585]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.021879365]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.022360503]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.022987851]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.024128666]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.025234059]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.026642351]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.028461541]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.031361986]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.034228630]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.037215218]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.040270732]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.055769504]: Checking for collisions...[0m
+[0m[ INFO] [1521401725.078576349]: Smoothened path![0m
+[0m[ INFO] [1521401725.080809512]: planning 0.201935[0m
+Debug:   RRTConnect: Planner range detected to be 102.969716
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.010596 seconds
+[0m[ INFO] [1521401726.095930273]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.020825 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401726.162848045]: distance greater than 2[0m
+[31m[ERROR] [1521401726.262977810]: distance greater than 2[0m
+[31m[ERROR] [1521401726.264410765]: distance greater than 2[0m
+[31m[ERROR] [1521401726.364696529]: distance greater than 2[0m
+[31m[ERROR] [1521401726.401167463]: Pointcloud insertion in OctomapServer done (0+79251 pts (ground/nonground), 0.235701 sec)[0m
+[31m[ERROR] [1521401726.464868968]: distance greater than 2[0m
+[31m[ERROR] [1521401726.565028087]: distance greater than 2[0m
+[31m[ERROR] [1521401726.665252395]: distance greater than 2[0m
+[31m[ERROR] [1521401726.765406117]: distance greater than 2[0m
+[31m[ERROR] [1521401726.770771610]: Pointcloud insertion in OctomapServer done (0+78880 pts (ground/nonground), 0.234419 sec)[0m
+[31m[ERROR] [1521401726.865538247]: distance greater than 2[0m
+[31m[ERROR] [1521401726.874547520]: distance greater than 2[0m
+[31m[ERROR] [1521401726.974708380]: distance greater than 2[0m
+[31m[ERROR] [1521401727.074860358]: distance greater than 2[0m
+[31m[ERROR] [1521401727.155921113]: Pointcloud insertion in OctomapServer done (0+78236 pts (ground/nonground), 0.236426 sec)[0m
+[31m[ERROR] [1521401727.175110076]: distance greater than 2[0m
+[31m[ERROR] [1521401727.275293061]: distance greater than 2[0m
+[31m[ERROR] [1521401727.375457248]: distance greater than 2[0m
+[31m[ERROR] [1521401727.392872221]: distance greater than 2[0m
+[31m[ERROR] [1521401727.493023112]: distance greater than 2[0m
+[31m[ERROR] [1521401727.534506400]: Pointcloud insertion in OctomapServer done (0+75674 pts (ground/nonground), 0.232142 sec)[0m
+[31m[ERROR] [1521401727.593155978]: distance greater than 2[0m
+[31m[ERROR] [1521401727.693380847]: distance greater than 2[0m
+[31m[ERROR] [1521401727.793532324]: distance greater than 2[0m
+[31m[ERROR] [1521401727.893680157]: distance greater than 2[0m
+[31m[ERROR] [1521401727.898289179]: distance greater than 2[0m
+[31m[ERROR] [1521401727.917831203]: Pointcloud insertion in OctomapServer done (0+74486 pts (ground/nonground), 0.232533 sec)[0m
+[31m[ERROR] [1521401727.998427514]: distance greater than 2[0m
+[31m[ERROR] [1521401728.098685052]: distance greater than 2[0m
+[31m[ERROR] [1521401728.199091962]: distance greater than 2[0m
+[31m[ERROR] [1521401728.299239223]: distance greater than 2[0m
+[31m[ERROR] [1521401728.300806435]: Pointcloud insertion in OctomapServer done (0+74302 pts (ground/nonground), 0.229759 sec)[0m
+[31m[ERROR] [1521401728.399364706]: distance greater than 2[0m
+[31m[ERROR] [1521401728.419607583]: distance greater than 2[0m
+[31m[ERROR] [1521401728.519756600]: distance greater than 2[0m
+[31m[ERROR] [1521401728.619925776]: distance greater than 2[0m
+[31m[ERROR] [1521401728.684348814]: Pointcloud insertion in OctomapServer done (0+73902 pts (ground/nonground), 0.229772 sec)[0m
+[31m[ERROR] [1521401728.720167428]: distance greater than 2[0m
+[31m[ERROR] [1521401728.820335002]: distance greater than 2[0m
+[31m[ERROR] [1521401728.920496449]: distance greater than 2[0m
+[31m[ERROR] [1521401728.921023131]: distance greater than 2[0m
+[31m[ERROR] [1521401729.021267384]: distance greater than 2[0m
+[31m[ERROR] [1521401729.080295332]: Pointcloud insertion in OctomapServer done (0+76302 pts (ground/nonground), 0.234397 sec)[0m
+[31m[ERROR] [1521401729.121424984]: distance greater than 2[0m
+[31m[ERROR] [1521401729.221589868]: distance greater than 2[0m
+[31m[ERROR] [1521401729.321828386]: distance greater than 2[0m
+[31m[ERROR] [1521401729.421970280]: distance greater than 2[0m
+[31m[ERROR] [1521401729.422471448]: distance greater than 2[0m
+[31m[ERROR] [1521401729.469411441]: Pointcloud insertion in OctomapServer done (0+77369 pts (ground/nonground), 0.226669 sec)[0m
+[31m[ERROR] [1521401729.522611217]: distance greater than 2[0m
+[31m[ERROR] [1521401729.622887467]: distance greater than 2[0m
+[31m[ERROR] [1521401729.723048525]: distance greater than 2[0m
+[31m[ERROR] [1521401729.823211485]: distance greater than 2[0m
+[31m[ERROR] [1521401729.876393796]: Pointcloud insertion in OctomapServer done (0+78641 pts (ground/nonground), 0.242773 sec)[0m
+[31m[ERROR] [1521401729.923334623]: distance greater than 2[0m
+[31m[ERROR] [1521401729.924413639]: distance greater than 2[0m
+[31m[ERROR] [1521401730.024558383]: distance greater than 2[0m
+[31m[ERROR] [1521401730.124730472]: distance greater than 2[0m
+[31m[ERROR] [1521401730.224969813]: distance greater than 2[0m
+[31m[ERROR] [1521401730.287405136]: Pointcloud insertion in OctomapServer done (0+80925 pts (ground/nonground), 0.242888 sec)[0m
+[31m[ERROR] [1521401730.325143555]: distance greater than 2[0m
+[31m[ERROR] [1521401730.425291033]: distance greater than 2[0m
+[31m[ERROR] [1521401730.426014469]: distance greater than 2[0m
+[31m[ERROR] [1521401730.526144833]: distance greater than 2[0m
+[31m[ERROR] [1521401730.626311797]: distance greater than 2[0m
+[31m[ERROR] [1521401730.703569094]: Pointcloud insertion in OctomapServer done (0+83131 pts (ground/nonground), 0.251500 sec)[0m
+[31m[ERROR] [1521401730.726550834]: distance greater than 2[0m
+[31m[ERROR] [1521401730.826707764]: distance greater than 2[0m
+[31m[ERROR] [1521401730.926844248]: distance greater than 2[0m
+[31m[ERROR] [1521401730.927379792]: distance greater than 2[0m
+[31m[ERROR] [1521401731.115073767]: Pointcloud insertion in OctomapServer done (0+83396 pts (ground/nonground), 0.237644 sec)[0m
+[0m[ INFO] [1521401731.477965309]:  in completed[0m
+[33m[ WARN] [1521401731.478791057]: We're a little off...[0m
+Pos: 10.3016 42.7495 8.90249
+Goal: 30 450 3
+Dist: 407.769
+Current position is 10.3016 42.7495 8.90249
+[0m[ INFO] [1521401731.478852726]: Waiting to receive trajectory...[0m
+Current position is 10.3016 42.7495 8.90249
+[0m[ INFO] [1521401726.116837615]: Checking for collisions...[0m
+[0m[ INFO] [1521401726.117327504]: Checking for collisions...[0m
+[0m[ INFO] [1521401726.117714573]: Checking for collisions...[0m
+[0m[ INFO] [1521401726.118373368]: Checking for collisions...[0m
+[0m[ INFO] [1521401726.118781750]: Checking for collisions...[0m
+[0m[ INFO] [1521401726.141558180]: Smoothened path![0m
+[0m[ INFO] [1521401726.143539836]: planning 0.062514[0m
+Debug:   RRTConnect: Planner range detected to be 102.970412
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.012902 seconds
+[31m[ERROR] [1521401731.504462205]: Pointcloud insertion in OctomapServer done (0+102157 pts (ground/nonground), 0.213051 sec)[0m
+[0m[ INFO] [1521401731.499421705]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.018935 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401731.727953611]: distance greater than 2[0m
+[31m[ERROR] [1521401731.828122805]: distance greater than 2[0m
+[31m[ERROR] [1521401731.928283958]: distance greater than 2[0m
+[0m[ INFO] [1521401731.928049827]:  in completed[0m
+[33m[ WARN] [1521401731.928513759]: We're a little off...[0m
+Pos: 9.94679 44.4846 9.44064
+Goal: 30 450 3
+Dist: 406.062
+Current position is 9.94679 44.4846 9.44064
+[0m[ INFO] [1521401731.928575858]: Waiting to receive trajectory...[0m
+Current position is 9.94679 44.4846 9.44064
+[31m[ERROR] [1521401731.927912320]: Pointcloud insertion in OctomapServer done (0+78471 pts (ground/nonground), 0.244041 sec)[0m
+[0m[ INFO] [1521401731.518439131]: Checking for collisions...[0m
+[0m[ INFO] [1521401731.538564537]: Smoothened path![0m
+[0m[ INFO] [1521401731.540368348]: planning 0.0593691[0m
+Debug:   RRTConnect: Planner range detected to be 102.971911
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.009556 seconds
+[0m[ INFO] [1521401731.996116641]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.017770 seconds and changed from 5 to 2 states
+[31m[ERROR] [1521401732.028437366]: distance greater than 2[0m
+[31m[ERROR] [1521401732.128598474]: distance greater than 2[0m
+[31m[ERROR] [1521401732.228740352]: distance greater than 2[0m
+[31m[ERROR] [1521401732.229355286]: distance greater than 2[0m
+[31m[ERROR] [1521401732.329499125]: distance greater than 2[0m
+[31m[ERROR] [1521401732.357566753]: Pointcloud insertion in OctomapServer done (0+77333 pts (ground/nonground), 0.242775 sec)[0m
+[31m[ERROR] [1521401732.429679000]: distance greater than 2[0m
+[31m[ERROR] [1521401732.529942824]: distance greater than 2[0m
+[31m[ERROR] [1521401732.630095901]: distance greater than 2[0m
+[31m[ERROR] [1521401732.730258694]: distance greater than 2[0m
+[31m[ERROR] [1521401732.730929263]: distance greater than 2[0m
+[31m[ERROR] [1521401732.781276353]: Pointcloud insertion in OctomapServer done (0+77436 pts (ground/nonground), 0.230426 sec)[0m
+[31m[ERROR] [1521401732.831153265]: distance greater than 2[0m
+[31m[ERROR] [1521401732.931304665]: distance greater than 2[0m
+[31m[ERROR] [1521401733.031456280]: distance greater than 2[0m
+[31m[ERROR] [1521401733.131705191]: distance greater than 2[0m
+[31m[ERROR] [1521401733.200039366]: Pointcloud insertion in OctomapServer done (0+77142 pts (ground/nonground), 0.228514 sec)[0m
+[31m[ERROR] [1521401733.231850171]: distance greater than 2[0m
+[31m[ERROR] [1521401733.232538349]: distance greater than 2[0m
+[31m[ERROR] [1521401733.332670490]: distance greater than 2[0m
+[31m[ERROR] [1521401733.432960796]: distance greater than 2[0m
+[31m[ERROR] [1521401733.533142176]: distance greater than 2[0m
+[31m[ERROR] [1521401733.629698585]: Pointcloud insertion in OctomapServer done (0+73728 pts (ground/nonground), 0.234663 sec)[0m
+[31m[ERROR] [1521401733.633299612]: distance greater than 2[0m
+[31m[ERROR] [1521401733.733418505]: distance greater than 2[0m
+[31m[ERROR] [1521401733.734424942]: distance greater than 2[0m
+[31m[ERROR] [1521401733.834570230]: distance greater than 2[0m
+[31m[ERROR] [1521401733.934741564]: distance greater than 2[0m
+[0m[ INFO] [1521401733.934509072]:  in completed[0m
+[33m[ WARN] [1521401733.934917516]: We're a little off...[0m
+Pos: 10.7079 55.8936 9.87234
+Goal: 30 450 3
+Dist: 394.638
+Current position is 10.7079 55.8936 9.87234
+[0m[ INFO] [1521401733.934954578]: Waiting to receive trajectory...[0m
+Current position is 10.7079 55.8936 9.87234
+[0m[ INFO] [1521401732.013961949]: Checking for collisions...[0m
+[0m[ INFO] [1521401732.033290010]: Smoothened path![0m
+[0m[ INFO] [1521401732.035149595]: planning 0.0541307[0m
+Debug:   RRTConnect: Planner range detected to be 102.973195
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.010721 seconds
+[0m[ INFO] [1521401733.997935058]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.017232 seconds and changed from 5 to 2 states
+[31m[ERROR] [1521401734.034887659]: distance greater than 2[0m
+[31m[ERROR] [1521401734.060877021]: Pointcloud insertion in OctomapServer done (0+73728 pts (ground/nonground), 0.231619 sec)[0m
+[31m[ERROR] [1521401734.135051530]: distance greater than 2[0m
+[31m[ERROR] [1521401734.235187971]: distance greater than 2[0m
+[31m[ERROR] [1521401734.237374105]: distance greater than 2[0m
+[31m[ERROR] [1521401734.337538573]: distance greater than 2[0m
+[31m[ERROR] [1521401734.437728352]: distance greater than 2[0m
+[31m[ERROR] [1521401734.495138250]: Pointcloud insertion in OctomapServer done (0+74242 pts (ground/nonground), 0.232932 sec)[0m
+[31m[ERROR] [1521401734.537964662]: distance greater than 2[0m
+[31m[ERROR] [1521401734.638098783]: distance greater than 2[0m
+[31m[ERROR] [1521401734.738243400]: distance greater than 2[0m
+[31m[ERROR] [1521401734.738708727]: distance greater than 2[0m
+[31m[ERROR] [1521401734.838934777]: distance greater than 2[0m
+[31m[ERROR] [1521401734.926583846]: Pointcloud insertion in OctomapServer done (0+75010 pts (ground/nonground), 0.224705 sec)[0m
+[31m[ERROR] [1521401735.331236646]: Pointcloud insertion in OctomapServer done (0+78991 pts (ground/nonground), 0.192617 sec)[0m
+[0m[ INFO] [1521401735.589705898]:  in completed[0m
+[33m[ WARN] [1521401735.590316095]: We're a little off...[0m
+Pos: 10.7049 66.7716 10.2102
+Goal: 30 450 3
+Dist: 383.782
+Current position is 10.7049 66.7716 10.2102
+[0m[ INFO] [1521401735.590402130]: Waiting to receive trajectory...[0m
+Current position is 10.7049 66.7716 10.2102
+[0m[ INFO] [1521401734.015237650]: Checking for collisions...[0m
+[0m[ INFO] [1521401734.033836268]: Smoothened path![0m
+[0m[ INFO] [1521401734.035684577]: planning 0.0546869[0m
+Debug:   RRTConnect: Planner range detected to be 102.974251
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.009684 seconds
+[0m[ INFO] [1521401735.697145166]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.017253 seconds and changed from 5 to 2 states
+[31m[ERROR] [1521401735.779358606]: Pointcloud insertion in OctomapServer done (0+74325 pts (ground/nonground), 0.231637 sec)[0m
+[31m[ERROR] [1521401735.889651465]: distance greater than 2[0m
+[31m[ERROR] [1521401735.989879276]: distance greater than 2[0m
+[31m[ERROR] [1521401736.090094691]: distance greater than 2[0m
+[0m[ INFO] [1521401736.089675245]:  in completed[0m
+[33m[ WARN] [1521401736.090149358]: We're a little off...[0m
+Pos: 10.0563 67.9489 10.8293
+Goal: 30 450 3
+Dist: 382.651
+Current position is 10.0563 67.9489 10.8293
+[0m[ INFO] [1521401736.090205748]: Waiting to receive trajectory...[0m
+Current position is 10.0563 67.9489 10.8293
+[0m[ INFO] [1521401735.714469928]: Checking for collisions...[0m
+[0m[ INFO] [1521401735.733786679]: Smoothened path![0m
+[0m[ INFO] [1521401735.735686082]: planning 0.0546792[0m
+Debug:   RRTConnect: Planner range detected to be 102.976299
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+[31m[ERROR] [1521401736.190244429]: distance greater than 2[0m
+Info:    RRTConnect: Created 8 states (2 start + 6 goal)
+Info:    Solution found in 0.011841 seconds
+[0m[ INFO] [1521401736.199633432]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.016892 seconds and changed from 7 to 2 states
+[31m[ERROR] [1521401736.245832009]: Pointcloud insertion in OctomapServer done (0+72544 pts (ground/nonground), 0.252314 sec)[0m
+[31m[ERROR] [1521401736.290377572]: distance greater than 2[0m
+[31m[ERROR] [1521401736.390513279]: distance greater than 2[0m
+[31m[ERROR] [1521401736.391011359]: distance greater than 2[0m
+[31m[ERROR] [1521401736.491147333]: distance greater than 2[0m
+[31m[ERROR] [1521401736.591311346]: distance greater than 2[0m
+[31m[ERROR] [1521401736.691594100]: distance greater than 2[0m
+[31m[ERROR] [1521401736.697592434]: Pointcloud insertion in OctomapServer done (0+68908 pts (ground/nonground), 0.226676 sec)[0m
+[31m[ERROR] [1521401736.791749838]: distance greater than 2[0m
+[31m[ERROR] [1521401736.891902980]: distance greater than 2[0m
+[31m[ERROR] [1521401736.892449151]: distance greater than 2[0m
+[31m[ERROR] [1521401736.992653459]: distance greater than 2[0m
+[31m[ERROR] [1521401737.092809268]: distance greater than 2[0m
+[31m[ERROR] [1521401737.143841438]: Pointcloud insertion in OctomapServer done (0+69640 pts (ground/nonground), 0.221333 sec)[0m
+[31m[ERROR] [1521401737.192954350]: distance greater than 2[0m
+[31m[ERROR] [1521401737.293214113]: distance greater than 2[0m
+[31m[ERROR] [1521401737.393366339]: distance greater than 2[0m
+[31m[ERROR] [1521401737.393906780]: distance greater than 2[0m
+[31m[ERROR] [1521401737.494047591]: distance greater than 2[0m
+[31m[ERROR] [1521401737.592760701]: Pointcloud insertion in OctomapServer done (0+69982 pts (ground/nonground), 0.221093 sec)[0m
+[31m[ERROR] [1521401737.594282415]: distance greater than 2[0m
+[31m[ERROR] [1521401737.694438752]: distance greater than 2[0m
+[31m[ERROR] [1521401737.794645281]: distance greater than 2[0m
+[31m[ERROR] [1521401737.894797996]: distance greater than 2[0m
+[31m[ERROR] [1521401737.895422574]: distance greater than 2[0m
+[31m[ERROR] [1521401737.995559439]: distance greater than 2[0m
+[31m[ERROR] [1521401738.055772852]: Pointcloud insertion in OctomapServer done (0+69031 pts (ground/nonground), 0.233332 sec)[0m
+[31m[ERROR] [1521401738.095719333]: distance greater than 2[0m
+[31m[ERROR] [1521401738.195984777]: distance greater than 2[0m
+[31m[ERROR] [1521401738.296166577]: distance greater than 2[0m
+[31m[ERROR] [1521401738.396340714]: distance greater than 2[0m
+[31m[ERROR] [1521401738.397377465]: distance greater than 2[0m
+[31m[ERROR] [1521401738.497534258]: distance greater than 2[0m
+[31m[ERROR] [1521401738.540361359]: Pointcloud insertion in OctomapServer done (0+68456 pts (ground/nonground), 0.233874 sec)[0m
+[31m[ERROR] [1521401738.597740520]: distance greater than 2[0m
+[31m[ERROR] [1521401738.698011675]: distance greater than 2[0m
+[31m[ERROR] [1521401738.798196331]: distance greater than 2[0m
+[31m[ERROR] [1521401738.898366964]: distance greater than 2[0m
+[31m[ERROR] [1521401738.899216886]: distance greater than 2[0m
+[31m[ERROR] [1521401738.999372133]: distance greater than 2[0m
+[31m[ERROR] [1521401739.022492334]: Pointcloud insertion in OctomapServer done (0+68185 pts (ground/nonground), 0.240795 sec)[0m
+[31m[ERROR] [1521401739.099595052]: distance greater than 2[0m
+[31m[ERROR] [1521401739.199862400]: distance greater than 2[0m
+[31m[ERROR] [1521401739.300023255]: distance greater than 2[0m
+[31m[ERROR] [1521401739.400165725]: distance greater than 2[0m
+[31m[ERROR] [1521401739.400859988]: distance greater than 2[0m
+[31m[ERROR] [1521401739.501137124]: distance greater than 2[0m
+[31m[ERROR] [1521401739.510962764]: Pointcloud insertion in OctomapServer done (0+67183 pts (ground/nonground), 0.218672 sec)[0m
+[31m[ERROR] [1521401739.601303474]: distance greater than 2[0m
+[31m[ERROR] [1521401739.919740141]: Pointcloud insertion in OctomapServer done (0+48256 pts (ground/nonground), 0.160750 sec)[0m
+[0m[ INFO] [1521401740.252063737]:  in completed[0m
+[33m[ WARN] [1521401740.252542032]: We're a little off...[0m
+Pos: 10.0725 91.1628 11.0782
+Goal: 30 450 3
+Dist: 359.481
+Current position is 10.0725 91.1628 11.0782
+[0m[ INFO] [1521401740.252618707]: Waiting to receive trajectory...[0m
+Current position is 10.0725 91.1628 11.0782
+[0m[ INFO] [1521401736.216620616]: Checking for collisions...[0m
+[0m[ INFO] [1521401736.235366604]: Smoothened path![0m
+[0m[ INFO] [1521401736.237328841]: planning 0.0563088[0m
+Debug:   RRTConnect: Planner range detected to be 102.977165
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.009536 seconds
+[0m[ INFO] [1521401740.299186693]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.016296 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401740.417139544]: Pointcloud insertion in OctomapServer done (0+65181 pts (ground/nonground), 0.232322 sec)[0m
+[31m[ERROR] [1521401740.502028919]: distance greater than 2[0m
+[31m[ERROR] [1521401740.602216848]: distance greater than 2[0m
+[31m[ERROR] [1521401740.702367368]: distance greater than 2[0m
+[0m[ INFO] [1521401740.702116721]:  in completed[0m
+[33m[ WARN] [1521401740.708325717]: We're a little off...[0m
+Pos: 9.37515 91.7052 11.2727
+Goal: 30 450 3
+Dist: 358.983
+Current position is 9.37515 91.7052 11.2727
+[0m[ INFO] [1521401740.708398821]: Waiting to receive trajectory...[0m
+Current position is 9.37515 91.7052 11.2727
+[0m[ INFO] [1521401740.315559382]: Checking for collisions...[0m
+[0m[ INFO] [1521401740.332314050]: Smoothened path![0m
+[0m[ INFO] [1521401740.333974981]: planning 0.0529691[0m
+Debug:   RRTConnect: Planner range detected to be 102.977858
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.009654 seconds
+[31m[ERROR] [1521401740.802514648]: distance greater than 2[0m
+[0m[ INFO] [1521401740.798557094]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.016364 seconds and changed from 5 to 2 states
+[31m[ERROR] [1521401740.902666779]: distance greater than 2[0m
+[31m[ERROR] [1521401740.926494289]: Pointcloud insertion in OctomapServer done (0+68540 pts (ground/nonground), 0.232695 sec)[0m
+[31m[ERROR] [1521401741.002807488]: distance greater than 2[0m
+[31m[ERROR] [1521401741.003385615]: distance greater than 2[0m
+[31m[ERROR] [1521401741.103532557]: distance greater than 2[0m
+[31m[ERROR] [1521401741.203697747]: distance greater than 2[0m
+[31m[ERROR] [1521401741.303916328]: distance greater than 2[0m
+[31m[ERROR] [1521401741.404080079]: distance greater than 2[0m
+[31m[ERROR] [1521401741.425302818]: Pointcloud insertion in OctomapServer done (0+69173 pts (ground/nonground), 0.234343 sec)[0m
+[31m[ERROR] [1521401741.504228040]: distance greater than 2[0m
+[31m[ERROR] [1521401741.525236891]: distance greater than 2[0m
+[31m[ERROR] [1521401741.625423791]: distance greater than 2[0m
+[31m[ERROR] [1521401741.725594900]: distance greater than 2[0m
+[31m[ERROR] [1521401741.825822348]: distance greater than 2[0m
+[31m[ERROR] [1521401741.914375273]: Pointcloud insertion in OctomapServer done (0+68303 pts (ground/nonground), 0.225559 sec)[0m
+[31m[ERROR] [1521401741.925982708]: distance greater than 2[0m
+[31m[ERROR] [1521401742.026126209]: distance greater than 2[0m
+[31m[ERROR] [1521401742.026662715]: distance greater than 2[0m
+[31m[ERROR] [1521401742.126958374]: distance greater than 2[0m
+[31m[ERROR] [1521401742.227120585]: distance greater than 2[0m
+[31m[ERROR] [1521401742.327279416]: distance greater than 2[0m
+[31m[ERROR] [1521401742.395477085]: Pointcloud insertion in OctomapServer done (0+58503 pts (ground/nonground), 0.212644 sec)[0m
+[31m[ERROR] [1521401742.427494071]: distance greater than 2[0m
+[31m[ERROR] [1521401742.527629748]: distance greater than 2[0m
+[31m[ERROR] [1521401742.528022551]: distance greater than 2[0m
+[31m[ERROR] [1521401742.628214649]: distance greater than 2[0m
+[31m[ERROR] [1521401742.728461871]: distance greater than 2[0m
+[31m[ERROR] [1521401742.828610462]: distance greater than 2[0m
+[31m[ERROR] [1521401742.909349244]: Pointcloud insertion in OctomapServer done (0+69303 pts (ground/nonground), 0.225563 sec)[0m
+[31m[ERROR] [1521401742.928770836]: distance greater than 2[0m
+[31m[ERROR] [1521401743.028902509]: distance greater than 2[0m
+[31m[ERROR] [1521401743.029548322]: distance greater than 2[0m
+[31m[ERROR] [1521401743.129715993]: distance greater than 2[0m
+[31m[ERROR] [1521401743.229890650]: distance greater than 2[0m
+[31m[ERROR] [1521401743.330126590]: distance greater than 2[0m
+[31m[ERROR] [1521401743.430280718]: distance greater than 2[0m
+[31m[ERROR] [1521401743.443622990]: Pointcloud insertion in OctomapServer done (0+69278 pts (ground/nonground), 0.243655 sec)[0m
+[31m[ERROR] [1521401743.530409102]: distance greater than 2[0m
+[31m[ERROR] [1521401743.546267882]: distance greater than 2[0m
+[31m[ERROR] [1521401743.646431075]: distance greater than 2[0m
+[31m[ERROR] [1521401743.746602346]: distance greater than 2[0m
+[31m[ERROR] [1521401743.847612962]: distance greater than 2[0m
+[31m[ERROR] [1521401743.947779186]: distance greater than 2[0m
+[31m[ERROR] [1521401743.975359571]: Pointcloud insertion in OctomapServer done (0+69232 pts (ground/nonground), 0.251382 sec)[0m
+[31m[ERROR] [1521401744.047921947]: distance greater than 2[0m
+[31m[ERROR] [1521401744.048533896]: distance greater than 2[0m
+[31m[ERROR] [1521401744.148752750]: distance greater than 2[0m
+[31m[ERROR] [1521401744.248925618]: distance greater than 2[0m
+[31m[ERROR] [1521401744.349116193]: distance greater than 2[0m
+[31m[ERROR] [1521401744.449368488]: distance greater than 2[0m
+[31m[ERROR] [1521401744.524924987]: Pointcloud insertion in OctomapServer done (0+68850 pts (ground/nonground), 0.248321 sec)[0m
+[31m[ERROR] [1521401744.549501441]: distance greater than 2[0m
+[31m[ERROR] [1521401744.550056624]: distance greater than 2[0m
+[31m[ERROR] [1521401744.650212265]: distance greater than 2[0m
+[31m[ERROR] [1521401744.750476267]: distance greater than 2[0m
+[31m[ERROR] [1521401744.850635714]: distance greater than 2[0m
+[31m[ERROR] [1521401744.950804868]: distance greater than 2[0m
+[31m[ERROR] [1521401745.050962120]: distance greater than 2[0m
+[31m[ERROR] [1521401745.062335488]: distance greater than 2[0m
+[31m[ERROR] [1521401745.079728933]: Pointcloud insertion in OctomapServer done (0+69012 pts (ground/nonground), 0.256068 sec)[0m
+[31m[ERROR] [1521401745.162481655]: distance greater than 2[0m
+[31m[ERROR] [1521401745.262634142]: distance greater than 2[0m
+[31m[ERROR] [1521401745.362889177]: distance greater than 2[0m
+[31m[ERROR] [1521401745.463053512]: distance greater than 2[0m
+[31m[ERROR] [1521401745.563217720]: distance greater than 2[0m
+[31m[ERROR] [1521401745.565075475]: distance greater than 2[0m
+[31m[ERROR] [1521401745.627770790]: Pointcloud insertion in OctomapServer done (0+69059 pts (ground/nonground), 0.243314 sec)[0m
+[31m[ERROR] [1521401745.665234495]: distance greater than 2[0m
+[31m[ERROR] [1521401745.765413914]: distance greater than 2[0m
+[31m[ERROR] [1521401745.865689658]: distance greater than 2[0m
+[31m[ERROR] [1521401745.965856727]: distance greater than 2[0m
+[31m[ERROR] [1521401746.066001495]: distance greater than 2[0m
+[31m[ERROR] [1521401746.066564341]: distance greater than 2[0m
+[31m[ERROR] [1521401746.155243164]: Pointcloud insertion in OctomapServer done (0+68485 pts (ground/nonground), 0.238511 sec)[0m
+[31m[ERROR] [1521401746.166783160]: distance greater than 2[0m
+[31m[ERROR] [1521401746.266939450]: distance greater than 2[0m
+[31m[ERROR] [1521401746.367109055]: distance greater than 2[0m
+[31m[ERROR] [1521401746.467413971]: distance greater than 2[0m
+[31m[ERROR] [1521401746.684504983]: Pointcloud insertion in OctomapServer done (0+65800 pts (ground/nonground), 0.227808 sec)[0m
+[31m[ERROR] [1521401747.093491848]: Pointcloud insertion in OctomapServer done (0+19210 pts (ground/nonground), 0.095438 sec)[0m
+[31m[ERROR] [1521401747.540885598]: Pointcloud insertion in OctomapServer done (0+27306 pts (ground/nonground), 0.130094 sec)[0m
+[0m[ INFO] [1521401747.969484525]:  in completed[0m
+[33m[ WARN] [1521401747.983152374]: We're a little off...[0m
+Pos: 12.4622 127.993 11.2362
+Goal: 30 450 3
+Dist: 322.59
+Current position is 12.4622 127.993 11.2362
+[0m[ INFO] [1521401747.983268704]: Waiting to receive trajectory...[0m
+Current position is 12.4622 127.993 11.2362
+[31m[ERROR] [1521401748.000815091]: Pointcloud insertion in OctomapServer done (0+33961 pts (ground/nonground), 0.144644 sec)[0m
+[0m[ INFO] [1521401740.814993262]: Checking for collisions...[0m
+[0m[ INFO] [1521401740.831860889]: Smoothened path![0m
+[0m[ INFO] [1521401740.833472315]: planning 0.0524857[0m
+Debug:   RRTConnect: Planner range detected to be 102.977858
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.009606 seconds
+[0m[ INFO] [1521401748.100179799]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.015211 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401748.320237390]: distance greater than 2[0m
+[31m[ERROR] [1521401748.420433523]: distance greater than 2[0m
+[31m[ERROR] [1521401748.505705702]: Pointcloud insertion in OctomapServer done (0+41294 pts (ground/nonground), 0.185617 sec)[0m
+[31m[ERROR] [1521401748.520567062]: distance greater than 2[0m
+[0m[ INFO] [1521401748.520237909]:  in completed[0m
+[33m[ WARN] [1521401748.530210194]: We're a little off...[0m
+Pos: 13.359 127.077 11.1621
+Goal: 30 450 3
+Dist: 323.455
+Current position is 13.359 127.077 11.1621
+[0m[ INFO] [1521401748.530279458]: Waiting to receive trajectory...[0m
+Current position is 13.359 127.077 11.1621
+[0m[ INFO] [1521401748.115465128]: Checking for collisions...[0m
+[0m[ INFO] [1521401748.131539385]: Smoothened path![0m
+[0m[ INFO] [1521401748.133103346]: planning 0.0520781[0m
+Debug:   RRTConnect: Planner range detected to be 102.977858
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.008485 seconds
+[0m[ INFO] [1521401748.599921683]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.015356 seconds and changed from 5 to 2 states
+[31m[ERROR] [1521401748.620719077]: distance greater than 2[0m
+[31m[ERROR] [1521401748.720873348]: distance greater than 2[0m
+[31m[ERROR] [1521401748.821011225]: distance greater than 2[0m
+[31m[ERROR] [1521401748.826351978]: distance greater than 2[0m
+[31m[ERROR] [1521401748.926534727]: distance greater than 2[0m
+[31m[ERROR] [1521401749.026716940]: distance greater than 2[0m
+[31m[ERROR] [1521401749.066258022]: Pointcloud insertion in OctomapServer done (0+56021 pts (ground/nonground), 0.206176 sec)[0m
+[31m[ERROR] [1521401749.126946537]: distance greater than 2[0m
+[31m[ERROR] [1521401749.227120656]: distance greater than 2[0m
+[31m[ERROR] [1521401749.327270558]: distance greater than 2[0m
+[31m[ERROR] [1521401749.327874691]: distance greater than 2[0m
+[31m[ERROR] [1521401749.428077787]: distance greater than 2[0m
+[31m[ERROR] [1521401749.528222917]: distance greater than 2[0m
+[31m[ERROR] [1521401749.594626442]: Pointcloud insertion in OctomapServer done (0+53722 pts (ground/nonground), 0.206311 sec)[0m
+[31m[ERROR] [1521401749.628367429]: distance greater than 2[0m
+[31m[ERROR] [1521401749.728634280]: distance greater than 2[0m
+[31m[ERROR] [1521401749.828780610]: distance greater than 2[0m
+[31m[ERROR] [1521401749.829484891]: distance greater than 2[0m
+[31m[ERROR] [1521401749.929660307]: distance greater than 2[0m
+[31m[ERROR] [1521401750.029897564]: distance greater than 2[0m
+[31m[ERROR] [1521401750.130062016]: distance greater than 2[0m
+[31m[ERROR] [1521401750.145470583]: Pointcloud insertion in OctomapServer done (0+63183 pts (ground/nonground), 0.235510 sec)[0m
+[31m[ERROR] [1521401750.230226256]: distance greater than 2[0m
+[31m[ERROR] [1521401750.330348590]: distance greater than 2[0m
+[31m[ERROR] [1521401750.331187824]: distance greater than 2[0m
+[31m[ERROR] [1521401750.431339000]: distance greater than 2[0m
+[31m[ERROR] [1521401750.531511986]: distance greater than 2[0m
+[31m[ERROR] [1521401750.631705462]: distance greater than 2[0m
+[31m[ERROR] [1521401750.696005209]: Pointcloud insertion in OctomapServer done (0+62691 pts (ground/nonground), 0.219167 sec)[0m
+[31m[ERROR] [1521401750.731864834]: distance greater than 2[0m
+[31m[ERROR] [1521401750.831996871]: distance greater than 2[0m
+[31m[ERROR] [1521401750.832624702]: distance greater than 2[0m
+[31m[ERROR] [1521401750.932922809]: distance greater than 2[0m
+[31m[ERROR] [1521401751.033074481]: distance greater than 2[0m
+[31m[ERROR] [1521401751.133213343]: distance greater than 2[0m
+[31m[ERROR] [1521401751.213425702]: Pointcloud insertion in OctomapServer done (0+54603 pts (ground/nonground), 0.203233 sec)[0m
+[31m[ERROR] [1521401751.233455262]: distance greater than 2[0m
+[31m[ERROR] [1521401751.333588898]: distance greater than 2[0m
+[31m[ERROR] [1521401751.334124420]: distance greater than 2[0m
+[31m[ERROR] [1521401751.434273379]: distance greater than 2[0m
+[31m[ERROR] [1521401751.534519669]: distance greater than 2[0m
+[31m[ERROR] [1521401751.634676154]: distance greater than 2[0m
+[31m[ERROR] [1521401751.734840025]: distance greater than 2[0m
+[31m[ERROR] [1521401751.793833309]: Pointcloud insertion in OctomapServer done (0+67036 pts (ground/nonground), 0.253714 sec)[0m
+[31m[ERROR] [1521401751.834970757]: distance greater than 2[0m
+[31m[ERROR] [1521401751.838557678]: distance greater than 2[0m
+[31m[ERROR] [1521401751.938684886]: distance greater than 2[0m
+[31m[ERROR] [1521401752.038813190]: distance greater than 2[0m
+[31m[ERROR] [1521401752.139044447]: distance greater than 2[0m
+[31m[ERROR] [1521401752.239199711]: distance greater than 2[0m
+[31m[ERROR] [1521401752.339329325]: distance greater than 2[0m
+[31m[ERROR] [1521401752.339835278]: distance greater than 2[0m
+[31m[ERROR] [1521401752.386197318]: Pointcloud insertion in OctomapServer done (0+67017 pts (ground/nonground), 0.254072 sec)[0m
+[31m[ERROR] [1521401752.440057772]: distance greater than 2[0m
+[31m[ERROR] [1521401752.540206392]: distance greater than 2[0m
+[31m[ERROR] [1521401752.640378780]: distance greater than 2[0m
+[31m[ERROR] [1521401752.740675263]: distance greater than 2[0m
+[31m[ERROR] [1521401752.840813631]: distance greater than 2[0m
+[31m[ERROR] [1521401752.856467710]: distance greater than 2[0m
+[31m[ERROR] [1521401752.956696881]: distance greater than 2[0m
+[31m[ERROR] [1521401752.976295096]: Pointcloud insertion in OctomapServer done (0+67215 pts (ground/nonground), 0.237364 sec)[0m
+[31m[ERROR] [1521401753.056851695]: distance greater than 2[0m
+[31m[ERROR] [1521401753.157014393]: distance greater than 2[0m
+[31m[ERROR] [1521401753.257353472]: distance greater than 2[0m
+[31m[ERROR] [1521401753.357519024]: distance greater than 2[0m
+[31m[ERROR] [1521401753.358493409]: distance greater than 2[0m
+[31m[ERROR] [1521401753.458677745]: distance greater than 2[0m
+[31m[ERROR] [1521401753.531142492]: Pointcloud insertion in OctomapServer done (0+67440 pts (ground/nonground), 0.233804 sec)[0m
+[31m[ERROR] [1521401753.558835720]: distance greater than 2[0m
+[31m[ERROR] [1521401753.659025556]: distance greater than 2[0m
+[31m[ERROR] [1521401753.759354111]: distance greater than 2[0m
+[31m[ERROR] [1521401753.859530076]: distance greater than 2[0m
+[31m[ERROR] [1521401753.860336705]: distance greater than 2[0m
+[31m[ERROR] [1521401753.960500338]: distance greater than 2[0m
+[31m[ERROR] [1521401754.060737851]: distance greater than 2[0m
+[31m[ERROR] [1521401754.099481010]: Pointcloud insertion in OctomapServer done (0+64422 pts (ground/nonground), 0.238681 sec)[0m
+[31m[ERROR] [1521401754.160918189]: distance greater than 2[0m
+[31m[ERROR] [1521401754.641006079]: Pointcloud insertion in OctomapServer done (0+52059 pts (ground/nonground), 0.189637 sec)[0m
+[0m[ INFO] [1521401754.811453500]:  in completed[0m
+[33m[ WARN] [1521401754.811993587]: We're a little off...[0m
+Pos: 15.679 167.111 11.574
+Goal: 30 450 3
+Dist: 283.381
+Current position is 15.679 167.111 11.574
+[0m[ INFO] [1521401754.812082623]: Waiting to receive trajectory...[0m
+Current position is 15.679 167.111 11.574
+[0m[ INFO] [1521401748.615422373]: Checking for collisions...[0m
+[0m[ INFO] [1521401748.631169552]: Smoothened path![0m
+[0m[ INFO] [1521401748.632670225]: planning 0.0516432[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 7 states (2 start + 5 goal)
+Info:    Solution found in 0.018063 seconds
+[0m[ INFO] [1521401754.913779377]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.022230 seconds and changed from 6 to 2 states
+[31m[ERROR] [1521401755.111346579]: distance greater than 2[0m
+[31m[ERROR] [1521401755.211559698]: distance greater than 2[0m
+[31m[ERROR] [1521401755.210909095]: Pointcloud insertion in OctomapServer done (0+69828 pts (ground/nonground), 0.242040 sec)[0m
+[31m[ERROR] [1521401755.311722904]: distance greater than 2[0m
+[31m[ERROR] [1521401755.411876594]: distance greater than 2[0m
+[31m[ERROR] [1521401755.512119257]: distance greater than 2[0m
+[31m[ERROR] [1521401755.612246984]: distance greater than 2[0m
+[31m[ERROR] [1521401755.618426190]: distance greater than 2[0m
+[31m[ERROR] [1521401755.718645554]: distance greater than 2[0m
+[31m[ERROR] [1521401755.782150386]: Pointcloud insertion in OctomapServer done (0+67396 pts (ground/nonground), 0.232080 sec)[0m
+[31m[ERROR] [1521401755.818778387]: distance greater than 2[0m
+[31m[ERROR] [1521401755.918925047]: distance greater than 2[0m
+[31m[ERROR] [1521401756.019281120]: distance greater than 2[0m
+[31m[ERROR] [1521401756.119483715]: distance greater than 2[0m
+[31m[ERROR] [1521401756.119960603]: distance greater than 2[0m
+[31m[ERROR] [1521401756.220103024]: distance greater than 2[0m
+[31m[ERROR] [1521401756.320294696]: distance greater than 2[0m
+[31m[ERROR] [1521401756.362643394]: Pointcloud insertion in OctomapServer done (0+67438 pts (ground/nonground), 0.237596 sec)[0m
+[31m[ERROR] [1521401756.420455072]: distance greater than 2[0m
+[31m[ERROR] [1521401756.520602214]: distance greater than 2[0m
+[31m[ERROR] [1521401756.620740877]: distance greater than 2[0m
+[31m[ERROR] [1521401756.640792024]: distance greater than 2[0m
+[31m[ERROR] [1521401756.740962231]: distance greater than 2[0m
+[31m[ERROR] [1521401756.841119523]: distance greater than 2[0m
+[31m[ERROR] [1521401756.934120083]: Pointcloud insertion in OctomapServer done (0+64076 pts (ground/nonground), 0.229076 sec)[0m
+[31m[ERROR] [1521401756.941330377]: distance greater than 2[0m
+[31m[ERROR] [1521401757.041486966]: distance greater than 2[0m
+[31m[ERROR] [1521401757.141614516]: distance greater than 2[0m
+[31m[ERROR] [1521401757.153875873]: distance greater than 2[0m
+[31m[ERROR] [1521401757.254043804]: distance greater than 2[0m
+[31m[ERROR] [1521401757.354235486]: distance greater than 2[0m
+[31m[ERROR] [1521401757.454478022]: distance greater than 2[0m
+[31m[ERROR] [1521401757.511649659]: Pointcloud insertion in OctomapServer done (0+63409 pts (ground/nonground), 0.230332 sec)[0m
+[31m[ERROR] [1521401757.554650004]: distance greater than 2[0m
+[31m[ERROR] [1521401757.654795753]: distance greater than 2[0m
+[31m[ERROR] [1521401757.655329907]: distance greater than 2[0m
+[31m[ERROR] [1521401757.755605269]: distance greater than 2[0m
+[31m[ERROR] [1521401757.855815319]: distance greater than 2[0m
+[31m[ERROR] [1521401757.956036705]: distance greater than 2[0m
+[31m[ERROR] [1521401758.056303274]: distance greater than 2[0m
+[31m[ERROR] [1521401758.093421067]: Pointcloud insertion in OctomapServer done (0+64056 pts (ground/nonground), 0.228312 sec)[0m
+[31m[ERROR] [1521401758.156439946]: distance greater than 2[0m
+[31m[ERROR] [1521401758.156903600]: distance greater than 2[0m
+[31m[ERROR] [1521401758.257089117]: distance greater than 2[0m
+[31m[ERROR] [1521401758.357426741]: distance greater than 2[0m
+[31m[ERROR] [1521401758.457610194]: distance greater than 2[0m
+[31m[ERROR] [1521401758.557795622]: distance greater than 2[0m
+[31m[ERROR] [1521401758.657932702]: distance greater than 2[0m
+[31m[ERROR] [1521401758.658535154]: distance greater than 2[0m
+[31m[ERROR] [1521401758.671046661]: Pointcloud insertion in OctomapServer done (0+57430 pts (ground/nonground), 0.217121 sec)[0m
+[31m[ERROR] [1521401758.758677996]: distance greater than 2[0m
+[31m[ERROR] [1521401758.858845638]: distance greater than 2[0m
+[31m[ERROR] [1521401758.959159134]: distance greater than 2[0m
+[31m[ERROR] [1521401759.059347379]: distance greater than 2[0m
+[31m[ERROR] [1521401759.159497577]: distance greater than 2[0m
+[31m[ERROR] [1521401759.160329815]: distance greater than 2[0m
+[31m[ERROR] [1521401759.255776440]: Pointcloud insertion in OctomapServer done (0+58401 pts (ground/nonground), 0.224061 sec)[0m
+[31m[ERROR] [1521401759.260523720]: distance greater than 2[0m
+[31m[ERROR] [1521401759.360676225]: distance greater than 2[0m
+[31m[ERROR] [1521401759.460863371]: distance greater than 2[0m
+[31m[ERROR] [1521401759.561183210]: distance greater than 2[0m
+[31m[ERROR] [1521401759.661318663]: distance greater than 2[0m
+[31m[ERROR] [1521401759.661779869]: distance greater than 2[0m
+[31m[ERROR] [1521401759.761910789]: distance greater than 2[0m
+[31m[ERROR] [1521401759.856364672]: Pointcloud insertion in OctomapServer done (0+68101 pts (ground/nonground), 0.237201 sec)[0m
+[31m[ERROR] [1521401759.862123130]: distance greater than 2[0m
+[31m[ERROR] [1521401759.962261689]: distance greater than 2[0m
+[31m[ERROR] [1521401760.062402864]: distance greater than 2[0m
+[31m[ERROR] [1521401760.162557160]: distance greater than 2[0m
+[31m[ERROR] [1521401760.163116669]: distance greater than 2[0m
+[31m[ERROR] [1521401760.263253341]: distance greater than 2[0m
+[31m[ERROR] [1521401760.363426056]: distance greater than 2[0m
+[31m[ERROR] [1521401760.462052962]: Pointcloud insertion in OctomapServer done (0+68374 pts (ground/nonground), 0.238918 sec)[0m
+[31m[ERROR] [1521401760.463645189]: distance greater than 2[0m
+[31m[ERROR] [1521401760.563791562]: distance greater than 2[0m
+[31m[ERROR] [1521401760.663958279]: distance greater than 2[0m
+[31m[ERROR] [1521401760.664414286]: distance greater than 2[0m
+[31m[ERROR] [1521401760.764729010]: distance greater than 2[0m
+[31m[ERROR] [1521401760.864925433]: distance greater than 2[0m
+[31m[ERROR] [1521401760.965161792]: distance greater than 2[0m
+[31m[ERROR] [1521401761.065415516]: distance greater than 2[0m
+[31m[ERROR] [1521401761.071074998]: Pointcloud insertion in OctomapServer done (0+68897 pts (ground/nonground), 0.242398 sec)[0m
+[31m[ERROR] [1521401761.165549139]: distance greater than 2[0m
+[31m[ERROR] [1521401761.166052146]: distance greater than 2[0m
+[31m[ERROR] [1521401761.266219826]: distance greater than 2[0m
+[31m[ERROR] [1521401761.366534366]: distance greater than 2[0m
+[31m[ERROR] [1521401761.466717142]: distance greater than 2[0m
+[31m[ERROR] [1521401761.566897256]: distance greater than 2[0m
+[31m[ERROR] [1521401761.667041701]: distance greater than 2[0m
+[31m[ERROR] [1521401761.680084406]: distance greater than 2[0m
+[31m[ERROR] [1521401761.685292134]: Pointcloud insertion in OctomapServer done (0+67927 pts (ground/nonground), 0.241443 sec)[0m
+[31m[ERROR] [1521401761.780259406]: distance greater than 2[0m
+[31m[ERROR] [1521401761.880414476]: distance greater than 2[0m
+[31m[ERROR] [1521401761.980726002]: distance greater than 2[0m
+[31m[ERROR] [1521401762.080900612]: distance greater than 2[0m
+[31m[ERROR] [1521401762.181037868]: distance greater than 2[0m
+[31m[ERROR] [1521401762.181523478]: distance greater than 2[0m
+[31m[ERROR] [1521401762.281751888]: distance greater than 2[0m
+[31m[ERROR] [1521401762.295297084]: Pointcloud insertion in OctomapServer done (0+64208 pts (ground/nonground), 0.234910 sec)[0m
+[31m[ERROR] [1521401762.381917400]: distance greater than 2[0m
+[31m[ERROR] [1521401762.482094580]: distance greater than 2[0m
+[31m[ERROR] [1521401762.582385508]: distance greater than 2[0m
+[31m[ERROR] [1521401762.682553110]: distance greater than 2[0m
+[31m[ERROR] [1521401762.683069352]: distance greater than 2[0m
+[31m[ERROR] [1521401762.783211950]: distance greater than 2[0m
+[31m[ERROR] [1521401762.883472855]: distance greater than 2[0m
+[31m[ERROR] [1521401762.922311909]: Pointcloud insertion in OctomapServer done (0+71063 pts (ground/nonground), 0.252036 sec)[0m
+[31m[ERROR] [1521401762.983631282]: distance greater than 2[0m
+[31m[ERROR] [1521401763.083803589]: distance greater than 2[0m
+[31m[ERROR] [1521401763.183934587]: distance greater than 2[0m
+[31m[ERROR] [1521401763.193161062]: distance greater than 2[0m
+[31m[ERROR] [1521401763.293388802]: distance greater than 2[0m
+[31m[ERROR] [1521401763.393564055]: distance greater than 2[0m
+[31m[ERROR] [1521401763.493812849]: distance greater than 2[0m
+[31m[ERROR] [1521401763.593990384]: distance greater than 2[0m
+[31m[ERROR] [1521401763.615802155]: Pointcloud insertion in OctomapServer done (0+71997 pts (ground/nonground), 0.264412 sec)[0m
+[31m[ERROR] [1521401763.694142636]: distance greater than 2[0m
+[31m[ERROR] [1521401763.694682485]: distance greater than 2[0m
+[31m[ERROR] [1521401763.794917540]: distance greater than 2[0m
+[31m[ERROR] [1521401763.895111663]: distance greater than 2[0m
+[31m[ERROR] [1521401763.995333097]: distance greater than 2[0m
+[31m[ERROR] [1521401764.095594036]: distance greater than 2[0m
+[31m[ERROR] [1521401764.195727772]: distance greater than 2[0m
+[31m[ERROR] [1521401764.199038260]: distance greater than 2[0m
+[31m[ERROR] [1521401764.280009786]: Pointcloud insertion in OctomapServer done (0+72505 pts (ground/nonground), 0.281476 sec)[0m
+[31m[ERROR] [1521401764.299215738]: distance greater than 2[0m
+[31m[ERROR] [1521401764.399381207]: distance greater than 2[0m
+[31m[ERROR] [1521401764.499563032]: distance greater than 2[0m
+[31m[ERROR] [1521401764.599841752]: distance greater than 2[0m
+[31m[ERROR] [1521401764.700032314]: distance greater than 2[0m
+[31m[ERROR] [1521401764.700448204]: distance greater than 2[0m
+[31m[ERROR] [1521401764.800609111]: distance greater than 2[0m
+[31m[ERROR] [1521401764.900913458]: distance greater than 2[0m
+[31m[ERROR] [1521401764.964378213]: Pointcloud insertion in OctomapServer done (0+72783 pts (ground/nonground), 0.279714 sec)[0m
+[31m[ERROR] [1521401765.001085669]: distance greater than 2[0m
+[31m[ERROR] [1521401765.101260315]: distance greater than 2[0m
+[31m[ERROR] [1521401765.201406307]: distance greater than 2[0m
+[31m[ERROR] [1521401765.201924922]: distance greater than 2[0m
+[31m[ERROR] [1521401765.302093950]: distance greater than 2[0m
+[31m[ERROR] [1521401765.402304028]: distance greater than 2[0m
+[31m[ERROR] [1521401765.502557922]: distance greater than 2[0m
+[31m[ERROR] [1521401765.602735309]: distance greater than 2[0m
+[31m[ERROR] [1521401765.671749055]: Pointcloud insertion in OctomapServer done (0+73728 pts (ground/nonground), 0.255536 sec)[0m
+[31m[ERROR] [1521401765.702876778]: distance greater than 2[0m
+[31m[ERROR] [1521401765.722081313]: distance greater than 2[0m
+[31m[ERROR] [1521401765.822243858]: distance greater than 2[0m
+[31m[ERROR] [1521401765.922431250]: distance greater than 2[0m
+[31m[ERROR] [1521401766.022705409]: distance greater than 2[0m
+[31m[ERROR] [1521401766.122886461]: distance greater than 2[0m
+[31m[ERROR] [1521401766.223135975]: distance greater than 2[0m
+[31m[ERROR] [1521401766.223637763]: distance greater than 2[0m
+[31m[ERROR] [1521401766.323885311]: distance greater than 2[0m
+[31m[ERROR] [1521401766.352793658]: Pointcloud insertion in OctomapServer done (0+74168 pts (ground/nonground), 0.263165 sec)[0m
+[31m[ERROR] [1521401766.424050903]: distance greater than 2[0m
+[31m[ERROR] [1521401766.524224742]: distance greater than 2[0m
+[31m[ERROR] [1521401766.624484118]: distance greater than 2[0m
+[31m[ERROR] [1521401766.724664907]: distance greater than 2[0m
+[31m[ERROR] [1521401766.746992865]: distance greater than 2[0m
+[31m[ERROR] [1521401766.847296944]: distance greater than 2[0m
+[31m[ERROR] [1521401766.947522974]: distance greater than 2[0m
+[31m[ERROR] [1521401767.038782220]: Pointcloud insertion in OctomapServer done (0+73902 pts (ground/nonground), 0.270003 sec)[0m
+[31m[ERROR] [1521401767.047697909]: distance greater than 2[0m
+[31m[ERROR] [1521401767.147903819]: distance greater than 2[0m
+[31m[ERROR] [1521401767.248033592]: distance greater than 2[0m
+[31m[ERROR] [1521401767.248485364]: distance greater than 2[0m
+[31m[ERROR] [1521401767.348661542]: distance greater than 2[0m
+[31m[ERROR] [1521401767.448926286]: distance greater than 2[0m
+[31m[ERROR] [1521401767.549104024]: distance greater than 2[0m
+[31m[ERROR] [1521401767.649313698]: distance greater than 2[0m
+[31m[ERROR] [1521401767.749454282]: distance greater than 2[0m
+[31m[ERROR] [1521401767.749977264]: distance greater than 2[0m
+[31m[ERROR] [1521401767.760546644]: Pointcloud insertion in OctomapServer done (0+74489 pts (ground/nonground), 0.278781 sec)[0m
+[31m[ERROR] [1521401767.850127668]: distance greater than 2[0m
+[31m[ERROR] [1521401767.950264784]: distance greater than 2[0m
+[31m[ERROR] [1521401768.050622147]: distance greater than 2[0m
+[31m[ERROR] [1521401768.150812979]: distance greater than 2[0m
+[31m[ERROR] [1521401768.250960039]: distance greater than 2[0m
+[31m[ERROR] [1521401768.255460439]: distance greater than 2[0m
+[31m[ERROR] [1521401768.355627173]: distance greater than 2[0m
+[31m[ERROR] [1521401768.455792763]: distance greater than 2[0m
+[31m[ERROR] [1521401768.473931218]: Pointcloud insertion in OctomapServer done (0+74702 pts (ground/nonground), 0.270977 sec)[0m
+[31m[ERROR] [1521401768.556035659]: distance greater than 2[0m
+[31m[ERROR] [1521401768.656206840]: distance greater than 2[0m
+[31m[ERROR] [1521401768.756451309]: distance greater than 2[0m
+[31m[ERROR] [1521401768.757034912]: distance greater than 2[0m
+[31m[ERROR] [1521401768.857283328]: distance greater than 2[0m
+[31m[ERROR] [1521401768.957446494]: distance greater than 2[0m
+[31m[ERROR] [1521401769.057620134]: distance greater than 2[0m
+[31m[ERROR] [1521401769.157886293]: distance greater than 2[0m
+[31m[ERROR] [1521401769.172527860]: Pointcloud insertion in OctomapServer done (0+75384 pts (ground/nonground), 0.272625 sec)[0m
+[31m[ERROR] [1521401769.258033938]: distance greater than 2[0m
+[31m[ERROR] [1521401769.258546853]: distance greater than 2[0m
+[31m[ERROR] [1521401769.358702877]: distance greater than 2[0m
+[31m[ERROR] [1521401769.458982752]: distance greater than 2[0m
+[31m[ERROR] [1521401769.559184930]: distance greater than 2[0m
+[31m[ERROR] [1521401769.659370246]: distance greater than 2[0m
+[31m[ERROR] [1521401769.759496862]: distance greater than 2[0m
+[31m[ERROR] [1521401769.765204437]: distance greater than 2[0m
+[31m[ERROR] [1521401769.865358467]: distance greater than 2[0m
+[31m[ERROR] [1521401769.906119669]: Pointcloud insertion in OctomapServer done (0+76056 pts (ground/nonground), 0.288824 sec)[0m
+[31m[ERROR] [1521401769.965520651]: distance greater than 2[0m
+[31m[ERROR] [1521401770.065806699]: distance greater than 2[0m
+[31m[ERROR] [1521401770.165981141]: distance greater than 2[0m
+[31m[ERROR] [1521401770.266201145]: distance greater than 2[0m
+[31m[ERROR] [1521401770.266689376]: distance greater than 2[0m
+[31m[ERROR] [1521401770.366926439]: distance greater than 2[0m
+[31m[ERROR] [1521401770.467101051]: distance greater than 2[0m
+[31m[ERROR] [1521401770.567267995]: distance greater than 2[0m
+[31m[ERROR] [1521401770.657295620]: Pointcloud insertion in OctomapServer done (0+77967 pts (ground/nonground), 0.285320 sec)[0m
+[31m[ERROR] [1521401770.667474202]: distance greater than 2[0m
+[31m[ERROR] [1521401770.767631957]: distance greater than 2[0m
+[31m[ERROR] [1521401770.783894291]: distance greater than 2[0m
+[31m[ERROR] [1521401770.884178498]: distance greater than 2[0m
+[31m[ERROR] [1521401770.984383930]: distance greater than 2[0m
+[31m[ERROR] [1521401771.084578181]: distance greater than 2[0m
+[31m[ERROR] [1521401771.184817172]: distance greater than 2[0m
+[31m[ERROR] [1521401771.284940317]: distance greater than 2[0m
+[31m[ERROR] [1521401771.285430919]: distance greater than 2[0m
+[31m[ERROR] [1521401771.372668276]: Pointcloud insertion in OctomapServer done (0+78042 pts (ground/nonground), 0.280314 sec)[0m
+[31m[ERROR] [1521401771.385602360]: distance greater than 2[0m
+[31m[ERROR] [1521401771.485875721]: distance greater than 2[0m
+[31m[ERROR] [1521401771.586047787]: distance greater than 2[0m
+[31m[ERROR] [1521401771.686291908]: distance greater than 2[0m
+[31m[ERROR] [1521401771.786443892]: distance greater than 2[0m
+[31m[ERROR] [1521401771.786963880]: distance greater than 2[0m
+[31m[ERROR] [1521401771.887114143]: distance greater than 2[0m
+[31m[ERROR] [1521401771.987296470]: distance greater than 2[0m
+[31m[ERROR] [1521401772.087549120]: distance greater than 2[0m
+[31m[ERROR] [1521401772.095238711]: Pointcloud insertion in OctomapServer done (0+92728 pts (ground/nonground), 0.281945 sec)[0m
+[31m[ERROR] [1521401772.187720054]: distance greater than 2[0m
+[31m[ERROR] [1521401772.287865509]: distance greater than 2[0m
+[31m[ERROR] [1521401772.288356228]: distance greater than 2[0m
+[31m[ERROR] [1521401772.388631132]: distance greater than 2[0m
+[31m[ERROR] [1521401772.488813255]: distance greater than 2[0m
+[31m[ERROR] [1521401772.588987692]: distance greater than 2[0m
+[31m[ERROR] [1521401772.689186703]: distance greater than 2[0m
+[31m[ERROR] [1521401772.789320379]: distance greater than 2[0m
+[31m[ERROR] [1521401772.789862160]: distance greater than 2[0m
+[31m[ERROR] [1521401772.824510563]: Pointcloud insertion in OctomapServer done (0+80020 pts (ground/nonground), 0.287815 sec)[0m
+[0m[ INFO] [1521401772.889234254]:  in completed[0m
+[33m[ WARN] [1521401772.889766496]: We're a little off...[0m
+Pos: 21.8834 290.548 8.24618
+Goal: 30 450 3
+Dist: 159.745
+Current position is 21.8834 290.548 8.24618
+[0m[ INFO] [1521401772.889826359]: Waiting to receive trajectory...[0m
+Current position is 21.8834 290.548 8.24618
+[31m[ERROR] [1521401772.889988854]: distance greater than 2[0m
+[0m[ INFO] [1521401754.936107219]: Checking for collisions...[0m
+[0m[ INFO] [1521401754.957602368]: Smoothened path![0m
+[0m[ INFO] [1521401754.959723475]: planning 0.0787058[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.006438 seconds
+[0m[ INFO] [1521401772.981839001]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.007479 seconds and changed from 4 to 2 states
+[31m[ERROR] [1521401772.990133825]: distance greater than 2[0m
+[31m[ERROR] [1521401773.090285938]: distance greater than 2[0m
+[31m[ERROR] [1521401773.190576728]: distance greater than 2[0m
+[31m[ERROR] [1521401773.290753531]: distance greater than 2[0m
+[31m[ERROR] [1521401773.390932563]: distance greater than 2[0m
+[31m[ERROR] [1521401773.491171568]: distance greater than 2[0m
+[31m[ERROR] [1521401773.557894278]: Pointcloud insertion in OctomapServer done (0+90877 pts (ground/nonground), 0.270088 sec)[0m
+[31m[ERROR] [1521401773.591344539]: distance greater than 2[0m
+[31m[ERROR] [1521401773.691484781]: distance greater than 2[0m
+[31m[ERROR] [1521401773.712634857]: distance greater than 2[0m
+[31m[ERROR] [1521401773.812797103]: distance greater than 2[0m
+[31m[ERROR] [1521401773.913013195]: distance greater than 2[0m
+[31m[ERROR] [1521401774.013272790]: distance greater than 2[0m
+[31m[ERROR] [1521401774.113447071]: distance greater than 2[0m
+[31m[ERROR] [1521401774.213578532]: distance greater than 2[0m
+[31m[ERROR] [1521401774.214247527]: distance greater than 2[0m
+[31m[ERROR] [1521401774.289960195]: Pointcloud insertion in OctomapServer done (0+78534 pts (ground/nonground), 0.284818 sec)[0m
+[31m[ERROR] [1521401774.314489885]: distance greater than 2[0m
+[31m[ERROR] [1521401774.414651095]: distance greater than 2[0m
+[31m[ERROR] [1521401774.514827750]: distance greater than 2[0m
+[0m[ INFO] [1521401774.514552482]:  in completed[0m
+[33m[ WARN] [1521401774.515128808]: We're a little off...[0m
+Pos: 22.4364 301.474 7.81604
+Goal: 30 450 3
+Dist: 148.796
+Current position is 22.4364 301.474 7.81604
+[0m[ INFO] [1521401774.515181772]: Waiting to receive trajectory...[0m
+Current position is 22.4364 301.474 7.81604
+[0m[ INFO] [1521401772.989377475]: Checking for collisions...[0m
+[0m[ INFO] [1521401772.997483709]: Smoothened path![0m
+[0m[ INFO] [1521401772.998347354]: planning 0.0373299[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.005336 seconds
+[0m[ INFO] [1521401774.600677735]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.006878 seconds and changed from 3 to 2 states
+[31m[ERROR] [1521401774.614989957]: distance greater than 2[0m
+[31m[ERROR] [1521401774.715148916]: distance greater than 2[0m
+[31m[ERROR] [1521401774.720191283]: distance greater than 2[0m
+[31m[ERROR] [1521401774.820485073]: distance greater than 2[0m
+[31m[ERROR] [1521401774.920654996]: distance greater than 2[0m
+[31m[ERROR] [1521401775.020803559]: distance greater than 2[0m
+[0m[ INFO] [1521401775.020525674]:  in completed[0m
+[33m[ WARN] [1521401775.021063236]: We're a little off...[0m
+Pos: 22.6034 304.782 7.68768
+Goal: 30 450 3
+Dist: 145.482
+Current position is 22.6034 304.782 7.68768
+[0m[ INFO] [1521401775.021132982]: Waiting to receive trajectory...[0m
+Current position is 22.6034 304.782 7.68768
+[31m[ERROR] [1521401775.037288484]: Pointcloud insertion in OctomapServer done (0+78044 pts (ground/nonground), 0.285358 sec)[0m
+[0m[ INFO] [1521401774.607639248]: Checking for collisions...[0m
+[0m[ INFO] [1521401774.615207997]: Smoothened path![0m
+[0m[ INFO] [1521401774.616420636]: planning 0.0368742[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.007567 seconds
+[0m[ INFO] [1521401775.056036268]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.008881 seconds and changed from 3 to 2 states
+[31m[ERROR] [1521401775.120967212]: distance greater than 2[0m
+[31m[ERROR] [1521401775.221143992]: distance greater than 2[0m
+[31m[ERROR] [1521401775.321284702]: distance greater than 2[0m
+[31m[ERROR] [1521401775.330588698]: distance greater than 2[0m
+[31m[ERROR] [1521401775.430776764]: distance greater than 2[0m
+[31m[ERROR] [1521401775.530986402]: distance greater than 2[0m
+[31m[ERROR] [1521401775.631221436]: distance greater than 2[0m
+[31m[ERROR] [1521401775.731384522]: distance greater than 2[0m
+[31m[ERROR] [1521401775.791787164]: Pointcloud insertion in OctomapServer done (0+78865 pts (ground/nonground), 0.278758 sec)[0m
+[31m[ERROR] [1521401775.831523749]: distance greater than 2[0m
+[31m[ERROR] [1521401775.838861685]: distance greater than 2[0m
+[31m[ERROR] [1521401775.939049969]: distance greater than 2[0m
+[31m[ERROR] [1521401776.039222587]: distance greater than 2[0m
+[31m[ERROR] [1521401776.139448352]: distance greater than 2[0m
+[31m[ERROR] [1521401776.239622253]: distance greater than 2[0m
+[31m[ERROR] [1521401776.339767122]: distance greater than 2[0m
+[31m[ERROR] [1521401776.356664498]: distance greater than 2[0m
+[31m[ERROR] [1521401776.456873748]: distance greater than 2[0m
+[31m[ERROR] [1521401776.554481407]: Pointcloud insertion in OctomapServer done (0+79851 pts (ground/nonground), 0.296388 sec)[0m
+[31m[ERROR] [1521401776.557061701]: distance greater than 2[0m
+[31m[ERROR] [1521401776.657304703]: distance greater than 2[0m
+[31m[ERROR] [1521401776.757469322]: distance greater than 2[0m
+[31m[ERROR] [1521401776.857618353]: distance greater than 2[0m
+[31m[ERROR] [1521401776.858162721]: distance greater than 2[0m
+[31m[ERROR] [1521401776.958415159]: distance greater than 2[0m
+[31m[ERROR] [1521401777.058608012]: distance greater than 2[0m
+[31m[ERROR] [1521401777.158844907]: distance greater than 2[0m
+[31m[ERROR] [1521401777.259154896]: distance greater than 2[0m
+[31m[ERROR] [1521401777.314878734]: Pointcloud insertion in OctomapServer done (0+81637 pts (ground/nonground), 0.294999 sec)[0m
+[31m[ERROR] [1521401777.359301078]: distance greater than 2[0m
+[31m[ERROR] [1521401777.359791506]: distance greater than 2[0m
+[31m[ERROR] [1521401777.460015566]: distance greater than 2[0m
+[31m[ERROR] [1521401777.560355747]: distance greater than 2[0m
+[31m[ERROR] [1521401777.660574555]: distance greater than 2[0m
+[31m[ERROR] [1521401777.760774522]: distance greater than 2[0m
+[31m[ERROR] [1521401777.860909402]: distance greater than 2[0m
+[31m[ERROR] [1521401777.861540636]: distance greater than 2[0m
+[31m[ERROR] [1521401777.961681035]: distance greater than 2[0m
+[31m[ERROR] [1521401778.061863780]: distance greater than 2[0m
+[31m[ERROR] [1521401778.097612847]: Pointcloud insertion in OctomapServer done (0+86049 pts (ground/nonground), 0.310434 sec)[0m
+[31m[ERROR] [1521401778.162109425]: distance greater than 2[0m
+[31m[ERROR] [1521401778.262280088]: distance greater than 2[0m
+[31m[ERROR] [1521401778.362405746]: distance greater than 2[0m
+[31m[ERROR] [1521401778.363542789]: distance greater than 2[0m
+[31m[ERROR] [1521401778.463737849]: distance greater than 2[0m
+[31m[ERROR] [1521401778.563952039]: distance greater than 2[0m
+[31m[ERROR] [1521401778.664181477]: distance greater than 2[0m
+[31m[ERROR] [1521401778.764350997]: distance greater than 2[0m
+[31m[ERROR] [1521401778.864488168]: distance greater than 2[0m
+[31m[ERROR] [1521401778.864988481]: distance greater than 2[0m
+[31m[ERROR] [1521401778.897354689]: Pointcloud insertion in OctomapServer done (0+88771 pts (ground/nonground), 0.319044 sec)[0m
+[31m[ERROR] [1521401779.617732203]: Pointcloud insertion in OctomapServer done (0+115852 pts (ground/nonground), 0.237689 sec)[0m
+[0m[ INFO] [1521401779.766012710]:  in completed[0m
+[33m[ WARN] [1521401779.766458073]: We're a little off...[0m
+Pos: 24.6397 331.596 6.9614
+Goal: 30 450 3
+Dist: 118.591
+Current position is 24.6397 331.596 6.9614
+[0m[ INFO] [1521401779.766521394]: Waiting to receive trajectory...[0m
+Current position is 24.6397 331.596 6.9614
+[0m[ INFO] [1521401775.064999544]: Checking for collisions...[0m
+[0m[ INFO] [1521401775.072132813]: Smoothened path![0m
+[0m[ INFO] [1521401775.072900618]: planning 0.0445117[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.011793 seconds
+[0m[ INFO] [1521401779.872018033]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.035576 seconds and changed from 5 to 17 states
+[31m[ERROR] [1521401780.166655349]: distance greater than 2[0m
+[31m[ERROR] [1521401780.266841626]: distance greater than 2[0m
+[31m[ERROR] [1521401780.367008028]: distance greater than 2[0m
+[0m[ INFO] [1521401780.366697359]:  in completed[0m
+[33m[ WARN] [1521401780.367074182]: We're a little off...[0m
+Pos: 25.9803 329.976 6.83457
+Goal: 30 450 3
+Dist: 120.153
+Current position is 25.9803 329.976 6.83457
+[0m[ INFO] [1521401780.367141063]: Waiting to receive trajectory...[0m
+Current position is 25.9803 329.976 6.83457
+[31m[ERROR] [1521401780.378893789]: Pointcloud insertion in OctomapServer done (0+103726 pts (ground/nonground), 0.257643 sec)[0m
+[0m[ INFO] [1521401779.915808113]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.916214151]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.916533723]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.916881136]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.917232721]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.917591363]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.917983967]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.919031880]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.920506093]: Checking for collisions...[0m
+[0m[ INFO] [1521401779.936172161]: Smoothened path![0m
+[0m[ INFO] [1521401779.937537629]: planning 0.0943205[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (2 start + 4 goal)
+Info:    Solution found in 0.017591 seconds
+[31m[ERROR] [1521401780.467183870]: distance greater than 2[0m
+[0m[ INFO] [1521401780.410470424]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.073857 seconds and changed from 5 to 29 states
+[31m[ERROR] [1521401780.567354521]: distance greater than 2[0m
+[31m[ERROR] [1521401780.667494002]: distance greater than 2[0m
+[31m[ERROR] [1521401780.680443391]: distance greater than 2[0m
+[31m[ERROR] [1521401780.780647949]: distance greater than 2[0m
+[31m[ERROR] [1521401780.880857315]: distance greater than 2[0m
+[31m[ERROR] [1521401780.981094022]: distance greater than 2[0m
+[31m[ERROR] [1521401781.081253133]: distance greater than 2[0m
+[31m[ERROR] [1521401781.171613002]: Pointcloud insertion in OctomapServer done (0+95009 pts (ground/nonground), 0.297055 sec)[0m
+[31m[ERROR] [1521401781.181365829]: distance greater than 2[0m
+[31m[ERROR] [1521401781.181896969]: distance greater than 2[0m
+[31m[ERROR] [1521401781.282130199]: distance greater than 2[0m
+[31m[ERROR] [1521401781.382295102]: distance greater than 2[0m
+[31m[ERROR] [1521401781.482465950]: distance greater than 2[0m
+[0m[ INFO] [1521401781.482186606]:  in completed[0m
+[33m[ WARN] [1521401781.486714119]: We're a little off...[0m
+Pos: 26.6037 332.259 8.70038
+Goal: 30 450 3
+Dist: 117.928
+Current position is 26.6037 332.259 8.70038
+[0m[ INFO] [1521401781.486765842]: Waiting to receive trajectory...[0m
+Current position is 26.6037 332.259 8.70038
+[31m[ERROR] [1521401781.582650245]: distance greater than 2[0m
+[31m[ERROR] [1521401781.682804901]: distance greater than 2[0m
+[31m[ERROR] [1521401781.684277734]: distance greater than 2[0m
+[0m[ INFO] [1521401780.490413686]: Checking for collisions...[0m
+[0m[ INFO] [1521401780.499343294]: Smoothened path![0m
+[0m[ INFO] [1521401780.500331701]: planning 0.129201[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.008571 seconds
+[0m[ INFO] [1521401781.762934709]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.005950 seconds and changed from 4 to 2 states
+[31m[ERROR] [1521401781.784419420]: distance greater than 2[0m
+[31m[ERROR] [1521401781.884569651]: distance greater than 2[0m
+[31m[ERROR] [1521401781.960922560]: Pointcloud insertion in OctomapServer done (0+77393 pts (ground/nonground), 0.296474 sec)[0m
+[31m[ERROR] [1521401781.984850762]: distance greater than 2[0m
+[31m[ERROR] [1521401782.085015165]: distance greater than 2[0m
+[31m[ERROR] [1521401782.185182432]: distance greater than 2[0m
+[31m[ERROR] [1521401782.285500235]: distance greater than 2[0m
+[31m[ERROR] [1521401782.385708284]: distance greater than 2[0m
+[31m[ERROR] [1521401782.485859659]: distance greater than 2[0m
+[31m[ERROR] [1521401782.486359052]: distance greater than 2[0m
+[31m[ERROR] [1521401782.586545801]: distance greater than 2[0m
+[31m[ERROR] [1521401782.686716463]: distance greater than 2[0m
+[31m[ERROR] [1521401782.743493760]: Pointcloud insertion in OctomapServer done (0+79762 pts (ground/nonground), 0.295187 sec)[0m
+[31m[ERROR] [1521401782.786938562]: distance greater than 2[0m
+[31m[ERROR] [1521401782.887186744]: distance greater than 2[0m
+[31m[ERROR] [1521401782.987327008]: distance greater than 2[0m
+[31m[ERROR] [1521401783.502883655]: Pointcloud insertion in OctomapServer done (0+103169 pts (ground/nonground), 0.260495 sec)[0m
+[0m[ INFO] [1521401783.840814564]:  in completed[0m
+[33m[ WARN] [1521401783.841614144]: We're a little off...[0m
+Pos: 26.7052 345.105 9.30096
+Goal: 30 450 3
+Dist: 105.135
+Current position is 26.7052 345.105 9.30096
+[0m[ INFO] [1521401783.841664625]: Waiting to receive trajectory...[0m
+Current position is 26.7052 345.105 9.30096
+[0m[ INFO] [1521401781.768932847]: Checking for collisions...[0m
+[0m[ INFO] [1521401781.774878733]: Smoothened path![0m
+[0m[ INFO] [1521401781.775479287]: planning 0.0379512[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.004289 seconds
+[0m[ INFO] [1521401784.090838854]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.005170 seconds and changed from 3 to 2 states
+[31m[ERROR] [1521401784.290737955]: distance greater than 2[0m
+[31m[ERROR] [1521401784.290344127]: Pointcloud insertion in OctomapServer done (0+76382 pts (ground/nonground), 0.292886 sec)[0m
+[31m[ERROR] [1521401784.390906460]: distance greater than 2[0m
+[31m[ERROR] [1521401784.491051237]: distance greater than 2[0m
+[0m[ INFO] [1521401784.490813481]:  in completed[0m
+[33m[ WARN] [1521401784.496380486]: We're a little off...[0m
+Pos: 26.3391 345.674 9.32688
+Goal: 30 450 3
+Dist: 104.582
+Current position is 26.3391 345.674 9.32688
+[0m[ INFO] [1521401784.496458643]: Waiting to receive trajectory...[0m
+Current position is 26.3391 345.674 9.32688
+[0m[ INFO] [1521401784.096051377]: Checking for collisions...[0m
+[0m[ INFO] [1521401784.101411396]: Smoothened path![0m
+[0m[ INFO] [1521401784.101987222]: planning 0.0331095[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+[31m[ERROR] [1521401784.591216196]: distance greater than 2[0m
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.005344 seconds
+[0m[ INFO] [1521401784.592565089]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.005239 seconds and changed from 3 to 2 states
+[31m[ERROR] [1521401784.691390180]: distance greater than 2[0m
+[31m[ERROR] [1521401784.791536731]: distance greater than 2[0m
+[31m[ERROR] [1521401784.792151847]: distance greater than 2[0m
+[31m[ERROR] [1521401784.892349142]: distance greater than 2[0m
+[31m[ERROR] [1521401784.992518714]: distance greater than 2[0m
+[31m[ERROR] [1521401785.087287194]: Pointcloud insertion in OctomapServer done (0+75841 pts (ground/nonground), 0.287808 sec)[0m
+[31m[ERROR] [1521401785.092748423]: distance greater than 2[0m
+[31m[ERROR] [1521401785.192891449]: distance greater than 2[0m
+[31m[ERROR] [1521401785.293040749]: distance greater than 2[0m
+[31m[ERROR] [1521401785.295551490]: distance greater than 2[0m
+[31m[ERROR] [1521401785.395706817]: distance greater than 2[0m
+[31m[ERROR] [1521401785.495927123]: distance greater than 2[0m
+[31m[ERROR] [1521401785.596212771]: distance greater than 2[0m
+[31m[ERROR] [1521401785.696396198]: distance greater than 2[0m
+[31m[ERROR] [1521401785.796557570]: distance greater than 2[0m
+[31m[ERROR] [1521401785.797051607]: distance greater than 2[0m
+[31m[ERROR] [1521401785.873324658]: Pointcloud insertion in OctomapServer done (0+74383 pts (ground/nonground), 0.281707 sec)[0m
+[31m[ERROR] [1521401785.897312769]: distance greater than 2[0m
+[31m[ERROR] [1521401785.997479062]: distance greater than 2[0m
+[31m[ERROR] [1521401786.097660010]: distance greater than 2[0m
+[31m[ERROR] [1521401786.197979240]: distance greater than 2[0m
+[31m[ERROR] [1521401786.298158996]: distance greater than 2[0m
+[31m[ERROR] [1521401786.304488894]: distance greater than 2[0m
+[31m[ERROR] [1521401786.404756304]: distance greater than 2[0m
+[31m[ERROR] [1521401786.504939064]: distance greater than 2[0m
+[31m[ERROR] [1521401786.605087630]: distance greater than 2[0m
+[31m[ERROR] [1521401786.676041330]: Pointcloud insertion in OctomapServer done (0+74588 pts (ground/nonground), 0.286056 sec)[0m
+[31m[ERROR] [1521401786.705311967]: distance greater than 2[0m
+[31m[ERROR] [1521401786.805431978]: distance greater than 2[0m
+[31m[ERROR] [1521401786.808256607]: distance greater than 2[0m
+[31m[ERROR] [1521401786.908500439]: distance greater than 2[0m
+[31m[ERROR] [1521401787.008675182]: distance greater than 2[0m
+[31m[ERROR] [1521401787.108876797]: distance greater than 2[0m
+[31m[ERROR] [1521401787.209214231]: distance greater than 2[0m
+[31m[ERROR] [1521401787.309366294]: distance greater than 2[0m
+[31m[ERROR] [1521401787.310033391]: distance greater than 2[0m
+[31m[ERROR] [1521401787.410246091]: distance greater than 2[0m
+[31m[ERROR] [1521401787.485131717]: Pointcloud insertion in OctomapServer done (0+75150 pts (ground/nonground), 0.286463 sec)[0m
+[31m[ERROR] [1521401787.510551809]: distance greater than 2[0m
+[31m[ERROR] [1521401787.610731020]: distance greater than 2[0m
+[31m[ERROR] [1521401787.710926900]: distance greater than 2[0m
+[31m[ERROR] [1521401787.811053845]: distance greater than 2[0m
+[31m[ERROR] [1521401787.811668218]: distance greater than 2[0m
+[31m[ERROR] [1521401787.911836134]: distance greater than 2[0m
+[31m[ERROR] [1521401788.012019360]: distance greater than 2[0m
+[31m[ERROR] [1521401788.112272260]: distance greater than 2[0m
+[31m[ERROR] [1521401788.212432284]: distance greater than 2[0m
+[31m[ERROR] [1521401788.290536032]: Pointcloud insertion in OctomapServer done (0+78164 pts (ground/nonground), 0.280549 sec)[0m
+[31m[ERROR] [1521401788.312572899]: distance greater than 2[0m
+[31m[ERROR] [1521401788.313518334]: distance greater than 2[0m
+[31m[ERROR] [1521401788.413675190]: distance greater than 2[0m
+[31m[ERROR] [1521401789.027646818]: Pointcloud insertion in OctomapServer done (0+112427 pts (ground/nonground), 0.214189 sec)[0m
+[0m[ INFO] [1521401789.364775591]:  in completed[0m
+[33m[ WARN] [1521401789.365297799]: We're a little off...[0m
+Pos: 27.0065 368.528 8.79847
+Goal: 30 450 3
+Dist: 81.7324
+Current position is 27.0065 368.528 8.79847
+[0m[ INFO] [1521401789.365352529]: Waiting to receive trajectory...[0m
+Current position is 27.0065 368.528 8.79847
+[0m[ INFO] [1521401784.597881029]: Checking for collisions...[0m
+[0m[ INFO] [1521401784.603268625]: Smoothened path![0m
+[0m[ INFO] [1521401784.603843421]: planning 0.0348922[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.010719 seconds
+[0m[ INFO] [1521401789.652805265]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.033229 seconds and changed from 4 to 25 states
+[31m[ERROR] [1521401789.813898043]: Pointcloud insertion in OctomapServer done (0+100908 pts (ground/nonground), 0.254816 sec)[0m
+[31m[ERROR] [1521401789.865295525]: distance greater than 2[0m
+[31m[ERROR] [1521401789.965469658]: distance greater than 2[0m
+[31m[ERROR] [1521401790.065642654]: distance greater than 2[0m
+[0m[ INFO] [1521401790.065343929]:  in completed[0m
+[33m[ WARN] [1521401790.065882255]: We're a little off...[0m
+Pos: 25.5404 366.791 8.96315
+Goal: 30 450 3
+Dist: 83.5419
+Current position is 25.5404 366.791 8.96315
+[0m[ INFO] [1521401790.065930063]: Waiting to receive trajectory...[0m
+Current position is 25.5404 366.791 8.96315
+[0m[ INFO] [1521401789.690111243]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.690377643]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.690648380]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.690920426]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.691203490]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.691493751]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.691956828]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.692481298]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.693267864]: Checking for collisions...[0m
+[0m[ INFO] [1521401789.701744294]: Smoothened path![0m
+[0m[ INFO] [1521401789.702549260]: planning 0.0784804[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (3 start + 2 goal)
+Info:    Solution found in 0.007478 seconds
+[0m[ INFO] [1521401790.127707877]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.004768 seconds and changed from 4 to 2 states
+[31m[ERROR] [1521401790.165829845]: distance greater than 2[0m
+[31m[ERROR] [1521401790.266126162]: distance greater than 2[0m
+[31m[ERROR] [1521401790.366308036]: distance greater than 2[0m
+[31m[ERROR] [1521401790.383351988]: distance greater than 2[0m
+[31m[ERROR] [1521401790.483528296]: distance greater than 2[0m
+[31m[ERROR] [1521401790.583707013]: distance greater than 2[0m
+[31m[ERROR] [1521401790.630953352]: Pointcloud insertion in OctomapServer done (0+84923 pts (ground/nonground), 0.283788 sec)[0m
+[31m[ERROR] [1521401790.683983574]: distance greater than 2[0m
+[31m[ERROR] [1521401790.784155210]: distance greater than 2[0m
+[31m[ERROR] [1521401790.884326201]: distance greater than 2[0m
+[31m[ERROR] [1521401790.884970638]: distance greater than 2[0m
+[31m[ERROR] [1521401790.985255151]: distance greater than 2[0m
+[31m[ERROR] [1521401791.085453443]: distance greater than 2[0m
+[31m[ERROR] [1521401791.185669532]: distance greater than 2[0m
+[31m[ERROR] [1521401791.285911131]: distance greater than 2[0m
+[31m[ERROR] [1521401791.386040072]: distance greater than 2[0m
+[31m[ERROR] [1521401791.386543899]: distance greater than 2[0m
+[31m[ERROR] [1521401791.432760337]: Pointcloud insertion in OctomapServer done (0+71268 pts (ground/nonground), 0.265750 sec)[0m
+[31m[ERROR] [1521401791.486719532]: distance greater than 2[0m
+[31m[ERROR] [1521401791.586960127]: distance greater than 2[0m
+[31m[ERROR] [1521401791.687127860]: distance greater than 2[0m
+[31m[ERROR] [1521401791.787325815]: distance greater than 2[0m
+[31m[ERROR] [1521401791.887499179]: distance greater than 2[0m
+[31m[ERROR] [1521401791.888147088]: distance greater than 2[0m
+[31m[ERROR] [1521401791.988313012]: distance greater than 2[0m
+[31m[ERROR] [1521401792.088494922]: distance greater than 2[0m
+[31m[ERROR] [1521401792.188719189]: distance greater than 2[0m
+[31m[ERROR] [1521401792.238943927]: Pointcloud insertion in OctomapServer done (0+70609 pts (ground/nonground), 0.268347 sec)[0m
+[31m[ERROR] [1521401792.288880574]: distance greater than 2[0m
+[31m[ERROR] [1521401792.389024826]: distance greater than 2[0m
+[31m[ERROR] [1521401792.395903071]: distance greater than 2[0m
+[31m[ERROR] [1521401792.496075156]: distance greater than 2[0m
+[31m[ERROR] [1521401792.596387999]: distance greater than 2[0m
+[31m[ERROR] [1521401792.696717038]: distance greater than 2[0m
+[31m[ERROR] [1521401792.796906212]: distance greater than 2[0m
+[31m[ERROR] [1521401792.897073734]: distance greater than 2[0m
+[31m[ERROR] [1521401792.897531807]: distance greater than 2[0m
+[31m[ERROR] [1521401792.997764598]: distance greater than 2[0m
+[31m[ERROR] [1521401793.038169020]: Pointcloud insertion in OctomapServer done (0+70401 pts (ground/nonground), 0.262758 sec)[0m
+[31m[ERROR] [1521401793.097931530]: distance greater than 2[0m
+[31m[ERROR] [1521401793.198088857]: distance greater than 2[0m
+[31m[ERROR] [1521401793.298363545]: distance greater than 2[0m
+[31m[ERROR] [1521401793.398493834]: distance greater than 2[0m
+[31m[ERROR] [1521401793.403258737]: distance greater than 2[0m
+[31m[ERROR] [1521401793.503571083]: distance greater than 2[0m
+[31m[ERROR] [1521401793.603748180]: distance greater than 2[0m
+[31m[ERROR] [1521401793.703930781]: distance greater than 2[0m
+[31m[ERROR] [1521401793.804159552]: distance greater than 2[0m
+[31m[ERROR] [1521401793.852901815]: Pointcloud insertion in OctomapServer done (0+73786 pts (ground/nonground), 0.271259 sec)[0m
+[31m[ERROR] [1521401793.904290087]: distance greater than 2[0m
+[31m[ERROR] [1521401793.917842947]: distance greater than 2[0m
+[31m[ERROR] [1521401794.018074683]: distance greater than 2[0m
+[31m[ERROR] [1521401794.118287480]: distance greater than 2[0m
+[31m[ERROR] [1521401794.218506342]: distance greater than 2[0m
+[31m[ERROR] [1521401794.318739240]: distance greater than 2[0m
+[31m[ERROR] [1521401794.418890592]: distance greater than 2[0m
+[31m[ERROR] [1521401794.649066944]: Pointcloud insertion in OctomapServer done (0+79231 pts (ground/nonground), 0.255705 sec)[0m
+[0m[ INFO] [1521401794.769769128]:  in completed[0m
+[33m[ WARN] [1521401794.781358700]: We're a little off...[0m
+Pos: 26.8647 395.318 9.62197
+Goal: 30 450 3
+Dist: 55.1702
+Current position is 26.8647 395.318 9.62197
+[0m[ INFO] [1521401794.781452193]: Waiting to receive trajectory...[0m
+Current position is 26.8647 395.318 9.62197
+[0m[ INFO] [1521401790.132539809]: Checking for collisions...[0m
+[0m[ INFO] [1521401790.136968291]: Smoothened path![0m
+[0m[ INFO] [1521401790.137492058]: planning 0.0347714[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 8 states (2 start + 6 goal)
+Info:    Solution found in 0.017111 seconds
+[0m[ INFO] [1521401794.882832783]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.002692 seconds and changed from 4 to 2 states
+[31m[ERROR] [1521401795.069783318]: distance greater than 2[0m
+[31m[ERROR] [1521401795.169963471]: distance greater than 2[0m
+[31m[ERROR] [1521401795.270148520]: distance greater than 2[0m
+[0m[ INFO] [1521401795.269833664]:  in completed[0m
+[33m[ WARN] [1521401795.270307453]: We're a little off...[0m
+Pos: 26.6774 397.479 10.2503
+Goal: 30 450 3
+Dist: 53.1232
+Current position is 26.6774 397.479 10.2503
+[0m[ INFO] [1521401795.270372794]: Waiting to receive trajectory...[0m
+Current position is 26.6774 397.479 10.2503
+[0m[ INFO] [1521401794.885586649]: Checking for collisions...[0m
+[0m[ INFO] [1521401794.888325602]: Smoothened path![0m
+[0m[ INFO] [1521401794.888677055]: planning 0.042057[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.008481 seconds
+[0m[ INFO] [1521401795.331810098]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.002743 seconds and changed from 4 to 2 states
+[31m[ERROR] [1521401795.370348474]: distance greater than 2[0m
+[31m[ERROR] [1521401795.470528107]: distance greater than 2[0m
+[31m[ERROR] [1521401795.485395051]: Pointcloud insertion in OctomapServer done (0+74294 pts (ground/nonground), 0.285013 sec)[0m
+[31m[ERROR] [1521401795.570665918]: distance greater than 2[0m
+[31m[ERROR] [1521401795.571274613]: distance greater than 2[0m
+[31m[ERROR] [1521401795.671422335]: distance greater than 2[0m
+[31m[ERROR] [1521401795.771606978]: distance greater than 2[0m
+[31m[ERROR] [1521401795.871893727]: distance greater than 2[0m
+[31m[ERROR] [1521401795.972081165]: distance greater than 2[0m
+[31m[ERROR] [1521401796.072232755]: distance greater than 2[0m
+[31m[ERROR] [1521401796.073254178]: distance greater than 2[0m
+[31m[ERROR] [1521401796.173407781]: distance greater than 2[0m
+[31m[ERROR] [1521401796.273578023]: distance greater than 2[0m
+[31m[ERROR] [1521401796.304539189]: Pointcloud insertion in OctomapServer done (0+72599 pts (ground/nonground), 0.278090 sec)[0m
+[31m[ERROR] [1521401796.373846030]: distance greater than 2[0m
+[31m[ERROR] [1521401796.474012745]: distance greater than 2[0m
+[31m[ERROR] [1521401796.574151106]: distance greater than 2[0m
+[31m[ERROR] [1521401796.574647551]: distance greater than 2[0m
+[31m[ERROR] [1521401796.674914399]: distance greater than 2[0m
+[31m[ERROR] [1521401796.775124085]: distance greater than 2[0m
+[31m[ERROR] [1521401796.875326297]: distance greater than 2[0m
+[31m[ERROR] [1521401796.975583172]: distance greater than 2[0m
+[31m[ERROR] [1521401797.075727316]: distance greater than 2[0m
+[31m[ERROR] [1521401797.076515288]: distance greater than 2[0m
+[31m[ERROR] [1521401797.144976492]: Pointcloud insertion in OctomapServer done (0+70728 pts (ground/nonground), 0.282323 sec)[0m
+[31m[ERROR] [1521401797.176666387]: distance greater than 2[0m
+[31m[ERROR] [1521401797.276917908]: distance greater than 2[0m
+[31m[ERROR] [1521401797.377114882]: distance greater than 2[0m
+[31m[ERROR] [1521401797.477303496]: distance greater than 2[0m
+[31m[ERROR] [1521401797.577456932]: distance greater than 2[0m
+[31m[ERROR] [1521401797.578516538]: distance greater than 2[0m
+[31m[ERROR] [1521401797.678668236]: distance greater than 2[0m
+[31m[ERROR] [1521401797.778870220]: distance greater than 2[0m
+[31m[ERROR] [1521401797.879154616]: distance greater than 2[0m
+[31m[ERROR] [1521401797.979328520]: distance greater than 2[0m
+[31m[ERROR] [1521401797.978742673]: Pointcloud insertion in OctomapServer done (0+74264 pts (ground/nonground), 0.275566 sec)[0m
+[31m[ERROR] [1521401798.079459675]: distance greater than 2[0m
+[31m[ERROR] [1521401798.091716220]: distance greater than 2[0m
+[31m[ERROR] [1521401798.191888005]: distance greater than 2[0m
+[31m[ERROR] [1521401798.292064573]: distance greater than 2[0m
+[31m[ERROR] [1521401798.392342823]: distance greater than 2[0m
+[31m[ERROR] [1521401798.492538490]: distance greater than 2[0m
+[31m[ERROR] [1521401798.592683991]: distance greater than 2[0m
+[31m[ERROR] [1521401798.593347540]: distance greater than 2[0m
+[31m[ERROR] [1521401798.811765259]: Pointcloud insertion in OctomapServer done (0+80587 pts (ground/nonground), 0.275757 sec)[0m
+[31m[ERROR] [1521401799.584443945]: Pointcloud insertion in OctomapServer done (0+108006 pts (ground/nonground), 0.205603 sec)[0m
+[0m[ INFO] [1521401799.794777008]:  in completed[0m
+[33m[ WARN] [1521401799.804668094]: We're a little off...[0m
+Pos: 26.121 416.535 8.48532
+Goal: 30 450 3
+Dist: 34.1326
+Current position is 26.121 416.535 8.48532
+[0m[ INFO] [1521401799.804744209]: Waiting to receive trajectory...[0m
+Current position is 26.121 416.535 8.48532
+[0m[ INFO] [1521401795.334601852]: Checking for collisions...[0m
+[0m[ INFO] [1521401795.337209108]: Smoothened path![0m
+[0m[ INFO] [1521401795.337507944]: planning 0.0338388[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.009707 seconds
+[0m[ INFO] [1521401799.837054279]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.033814 seconds and changed from 4 to 41 states
+[31m[ERROR] [1521401800.044956879]: distance greater than 2[0m
+[31m[ERROR] [1521401800.145262560]: distance greater than 2[0m
+[0m[ INFO] [1521401800.244992649]:  in completed[0m
+[33m[ WARN] [1521401800.245449722]: We're a little off...[0m
+Pos: 25.531 415.852 8.96348
+Goal: 30 450 3
+Dist: 34.9516
+Current position is 25.531 415.852 8.96348
+[31m[ERROR] [1521401800.245479170]: distance greater than 2[0m
+[0m[ INFO] [1521401800.245492889]: Waiting to receive trajectory...[0m
+Current position is 25.531 415.852 8.96348
+[0m[ INFO] [1521401799.873873659]: Checking for collisions...[0m
+[0m[ INFO] [1521401799.874570701]: Checking for collisions...[0m
+[0m[ INFO] [1521401799.875103890]: Checking for collisions...[0m
+[0m[ INFO] [1521401799.875534712]: Checking for collisions...[0m
+[0m[ INFO] [1521401799.876000773]: Checking for collisions...[0m
+[0m[ INFO] [1521401799.877196013]: Checking for collisions...[0m
+[0m[ INFO] [1521401799.882508576]: Smoothened path![0m
+[0m[ INFO] [1521401799.883038803]: planning 0.0756567[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.004310 seconds
+[0m[ INFO] [1521401800.291561269]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.011055 seconds and changed from 3 to 17 states
+[31m[ERROR] [1521401800.345621512]: distance greater than 2[0m
+[31m[ERROR] [1521401800.438032786]: Pointcloud insertion in OctomapServer done (0+90612 pts (ground/nonground), 0.290593 sec)[0m
+[31m[ERROR] [1521401800.445787178]: distance greater than 2[0m
+[31m[ERROR] [1521401800.545917945]: distance greater than 2[0m
+[31m[ERROR] [1521401800.547039208]: distance greater than 2[0m
+[31m[ERROR] [1521401800.647220472]: distance greater than 2[0m
+[31m[ERROR] [1521401800.747404800]: distance greater than 2[0m
+[31m[ERROR] [1521401800.847671597]: distance greater than 2[0m
+[31m[ERROR] [1521401800.947867645]: distance greater than 2[0m
+[31m[ERROR] [1521401801.048022555]: distance greater than 2[0m
+[31m[ERROR] [1521401801.049466865]: distance greater than 2[0m
+[31m[ERROR] [1521401801.149647827]: distance greater than 2[0m
+[31m[ERROR] [1521401801.249828578]: distance greater than 2[0m
+[31m[ERROR] [1521401801.265630345]: Pointcloud insertion in OctomapServer done (0+75940 pts (ground/nonground), 0.253890 sec)[0m
+[31m[ERROR] [1521401801.350054425]: distance greater than 2[0m
+[31m[ERROR] [1521401801.450238170]: distance greater than 2[0m
+[31m[ERROR] [1521401801.550398733]: distance greater than 2[0m
+[31m[ERROR] [1521401801.560080726]: distance greater than 2[0m
+[31m[ERROR] [1521401801.660406233]: distance greater than 2[0m
+[31m[ERROR] [1521401801.760676702]: distance greater than 2[0m
+[31m[ERROR] [1521401801.860948267]: distance greater than 2[0m
+[31m[ERROR] [1521401801.961110716]: distance greater than 2[0m
+[31m[ERROR] [1521401802.061243750]: distance greater than 2[0m
+[31m[ERROR] [1521401802.061852061]: distance greater than 2[0m
+[31m[ERROR] [1521401802.142352846]: Pointcloud insertion in OctomapServer done (0+73728 pts (ground/nonground), 0.288623 sec)[0m
+[31m[ERROR] [1521401802.162044065]: distance greater than 2[0m
+[31m[ERROR] [1521401802.262232286]: distance greater than 2[0m
+[31m[ERROR] [1521401802.362378110]: distance greater than 2[0m
+[31m[ERROR] [1521401802.462635052]: distance greater than 2[0m
+[31m[ERROR] [1521401802.562784983]: distance greater than 2[0m
+[31m[ERROR] [1521401802.564614339]: distance greater than 2[0m
+[31m[ERROR] [1521401802.664828062]: distance greater than 2[0m
+[31m[ERROR] [1521401802.765029846]: distance greater than 2[0m
+[31m[ERROR] [1521401802.865213436]: distance greater than 2[0m
+[31m[ERROR] [1521401802.965441295]: distance greater than 2[0m
+[31m[ERROR] [1521401803.000441632]: Pointcloud insertion in OctomapServer done (0+75644 pts (ground/nonground), 0.283651 sec)[0m
+[31m[ERROR] [1521401803.065579717]: distance greater than 2[0m
+[31m[ERROR] [1521401803.066079614]: distance greater than 2[0m
+[31m[ERROR] [1521401803.166247678]: distance greater than 2[0m
+[31m[ERROR] [1521401803.266467911]: distance greater than 2[0m
+[31m[ERROR] [1521401803.366646251]: distance greater than 2[0m
+[31m[ERROR] [1521401803.466859409]: distance greater than 2[0m
+[31m[ERROR] [1521401803.567025625]: distance greater than 2[0m
+[31m[ERROR] [1521401803.589774499]: distance greater than 2[0m
+[31m[ERROR] [1521401803.689938335]: distance greater than 2[0m
+[31m[ERROR] [1521401803.790120192]: distance greater than 2[0m
+[31m[ERROR] [1521401803.890363789]: distance greater than 2[0m
+[31m[ERROR] [1521401803.889177862]: Pointcloud insertion in OctomapServer done (0+79192 pts (ground/nonground), 0.302303 sec)[0m
+[31m[ERROR] [1521401803.990513471]: distance greater than 2[0m
+[31m[ERROR] [1521401804.090645027]: distance greater than 2[0m
+[31m[ERROR] [1521401804.091163495]: distance greater than 2[0m
+[31m[ERROR] [1521401804.191369457]: distance greater than 2[0m
+[31m[ERROR] [1521401804.291568844]: distance greater than 2[0m
+[31m[ERROR] [1521401804.391769083]: distance greater than 2[0m
+[31m[ERROR] [1521401804.492031775]: distance greater than 2[0m
+[31m[ERROR] [1521401804.592169808]: distance greater than 2[0m
+[31m[ERROR] [1521401804.592902970]: distance greater than 2[0m
+[31m[ERROR] [1521401804.693066644]: distance greater than 2[0m
+[31m[ERROR] [1521401804.793209683]: distance greater than 2[0m
+[31m[ERROR] [1521401804.790984540]: Pointcloud insertion in OctomapServer done (0+84969 pts (ground/nonground), 0.311989 sec)[0m
+[31m[ERROR] [1521401804.893412874]: distance greater than 2[0m
+[31m[ERROR] [1521401804.993636401]: distance greater than 2[0m
+[31m[ERROR] [1521401805.093766304]: distance greater than 2[0m
+[31m[ERROR] [1521401805.100386962]: distance greater than 2[0m
+[31m[ERROR] [1521401805.200688559]: distance greater than 2[0m
+[31m[ERROR] [1521401805.300895857]: distance greater than 2[0m
+[31m[ERROR] [1521401805.401090435]: distance greater than 2[0m
+[31m[ERROR] [1521401805.501327682]: distance greater than 2[0m
+[31m[ERROR] [1521401805.601457866]: distance greater than 2[0m
+[31m[ERROR] [1521401805.605468026]: distance greater than 2[0m
+[31m[ERROR] [1521401805.705661384]: distance greater than 2[0m
+[31m[ERROR] [1521401805.713802578]: Pointcloud insertion in OctomapServer done (0+91569 pts (ground/nonground), 0.336780 sec)[0m
+[31m[ERROR] [1521401805.805830451]: distance greater than 2[0m
+[31m[ERROR] [1521401805.906007565]: distance greater than 2[0m
+[31m[ERROR] [1521401806.006259839]: distance greater than 2[0m
+[31m[ERROR] [1521401806.106458067]: distance greater than 2[0m
+[31m[ERROR] [1521401806.106863990]: distance greater than 2[0m
+[31m[ERROR] [1521401806.207071052]: distance greater than 2[0m
+[31m[ERROR] [1521401806.307362226]: distance greater than 2[0m
+[31m[ERROR] [1521401806.407543132]: distance greater than 2[0m
+[31m[ERROR] [1521401806.507737715]: distance greater than 2[0m
+[31m[ERROR] [1521401806.607905727]: distance greater than 2[0m
+[31m[ERROR] [1521401806.608801035]: distance greater than 2[0m
+[31m[ERROR] [1521401806.659205029]: Pointcloud insertion in OctomapServer done (0+95275 pts (ground/nonground), 0.337751 sec)[0m
+[31m[ERROR] [1521401806.708974672]: distance greater than 2[0m
+[31m[ERROR] [1521401806.809164860]: distance greater than 2[0m
+[31m[ERROR] [1521401806.909421284]: distance greater than 2[0m
+[31m[ERROR] [1521401807.009602518]: distance greater than 2[0m
+[31m[ERROR] [1521401807.109759363]: distance greater than 2[0m
+[31m[ERROR] [1521401807.124909276]: distance greater than 2[0m
+[31m[ERROR] [1521401807.225095662]: distance greater than 2[0m
+[31m[ERROR] [1521401807.325273948]: distance greater than 2[0m
+[31m[ERROR] [1521401807.425505347]: distance greater than 2[0m
+[31m[ERROR] [1521401807.525678831]: distance greater than 2[0m
+[31m[ERROR] [1521401807.570733600]: Pointcloud insertion in OctomapServer done (0+102136 pts (ground/nonground), 0.310508 sec)[0m
+[31m[ERROR] [1521401807.625817437]: distance greater than 2[0m
+[31m[ERROR] [1521401807.628148982]: distance greater than 2[0m
+[0m[ INFO] [1521401808.078673714]:  in completed[0m
+[33m[ WARN] [1521401808.079221272]: We're a little off...[0m
+Pos: 22.9973 450.83 3.47345
+Goal: 30 450 3
+Dist: 7.06756
+Current position is 22.9973 450.83 3.47345
+[0m[ INFO] [1521401808.079274915]: Waiting to receive trajectory...[0m
+Current position is 22.9973 450.83 3.47345
+[0m[ INFO] [1521401800.304607984]: Checking for collisions...[0m
+[0m[ INFO] [1521401800.308761578]: Smoothened path![0m
+[0m[ INFO] [1521401800.309142606]: planning 0.0406388[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.008487 seconds
+[0m[ INFO] [1521401808.315674791]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.015952 seconds and changed from 3 to 17 states
+[31m[ERROR] [1521401808.453474752]: Pointcloud insertion in OctomapServer done (0+120260 pts (ground/nonground), 0.266356 sec)[0m
+[0m[ INFO] [1521401809.280074523]:  in completed[0m
+[33m[ WARN] [1521401809.286481661]: We're a little off...[0m
+Pos: 21.8 449.859 3.44
+Goal: 30 450 3
+Dist: 8.21305
+Current position is 21.8 449.859 3.44
+[0m[ INFO] [1521401809.286569296]: Waiting to receive trajectory...[0m
+Current position is 21.8 449.859 3.44
+[31m[ERROR] [1521401809.354059139]: Pointcloud insertion in OctomapServer done (0+118672 pts (ground/nonground), 0.282354 sec)[0m
+[0m[ INFO] [1521401808.332728247]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.332942067]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.333197658]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.333495194]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.333780314]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.334166838]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.334415882]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.335717546]: Checking for collisions...[0m
+[0m[ INFO] [1521401808.341758551]: Smoothened path![0m
+[0m[ INFO] [1521401808.342361305]: planning 0.0578761[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.009576 seconds
+[0m[ INFO] [1521401809.413317726]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.024752 seconds and changed from 4 to 25 states
+[31m[ERROR] [1521401809.630059487]: distance greater than 2[0m
+[31m[ERROR] [1521401809.730231421]: distance greater than 2[0m
+[31m[ERROR] [1521401809.830443777]: distance greater than 2[0m
+[0m[ INFO] [1521401809.830113887]:  in completed[0m
+[33m[ WARN] [1521401809.830750412]: We're a little off...[0m
+Pos: 21.56 449.601 3.45611
+Goal: 30 450 3
+Dist: 8.46172
+Current position is 21.56 449.601 3.45611
+[0m[ INFO] [1521401809.830806738]: Waiting to receive trajectory...[0m
+Current position is 21.56 449.601 3.45611
+[31m[ERROR] [1521401809.930622349]: distance greater than 2[0m
+[31m[ERROR] [1521401810.030808099]: distance greater than 2[0m
+[0m[ INFO] [1521401809.439275625]: Checking for collisions...[0m
+[0m[ INFO] [1521401809.442244128]: Smoothened path![0m
+[0m[ INFO] [1521401809.442539438]: planning 0.059933[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 5 states (2 start + 3 goal)
+Info:    Solution found in 0.008463 seconds
+[0m[ INFO] [1521401810.096374922]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.021016 seconds and changed from 4 to 17 states
+[31m[ERROR] [1521401810.130963592]: distance greater than 2[0m
+[31m[ERROR] [1521401810.131514131]: distance greater than 2[0m
+[31m[ERROR] [1521401810.231706172]: distance greater than 2[0m
+[31m[ERROR] [1521401810.294823687]: Pointcloud insertion in OctomapServer done (0+109459 pts (ground/nonground), 0.314233 sec)[0m
+[31m[ERROR] [1521401810.331938382]: distance greater than 2[0m
+[31m[ERROR] [1521401810.432101024]: distance greater than 2[0m
+[31m[ERROR] [1521401810.532272128]: distance greater than 2[0m
+[31m[ERROR] [1521401810.632527957]: distance greater than 2[0m
+[31m[ERROR] [1521401810.732719155]: distance greater than 2[0m
+[31m[ERROR] [1521401810.832872248]: distance greater than 2[0m
+[31m[ERROR] [1521401811.195027163]: Pointcloud insertion in OctomapServer done (0+111635 pts (ground/nonground), 0.276713 sec)[0m
+[0m[ INFO] [1521401811.891042385]:  in completed[0m
+[33m[ WARN] [1521401811.891491696]: We're a little off...[0m
+Pos: 21.607 450.867 3.64995
+Goal: 30 450 3
+Dist: 8.46269
+Current position is 21.607 450.867 3.64995
+[0m[ INFO] [1521401811.891526391]: Waiting to receive trajectory...[0m
+Current position is 21.607 450.867 3.64995
+[0m[ INFO] [1521401810.118533476]: Checking for collisions...[0m
+[0m[ INFO] [1521401810.121457170]: Smoothened path![0m
+[0m[ INFO] [1521401810.121740312]: planning 0.0544247[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 6 states (4 start + 2 goal)
+Info:    Solution found in 0.011650 seconds
+[0m[ INFO] [1521401811.969638234]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.024478 seconds and changed from 4 to 25 states
+[31m[ERROR] [1521401812.107924379]: Pointcloud insertion in OctomapServer done (0+111216 pts (ground/nonground), 0.294848 sec)[0m
+[31m[ERROR] [1521401812.191462814]: distance greater than 2[0m
+[31m[ERROR] [1521401812.291636739]: distance greater than 2[0m
+[31m[ERROR] [1521401812.391797230]: distance greater than 2[0m
+[0m[ INFO] [1521401812.391529715]:  in completed[0m
+[33m[ WARN] [1521401812.392179376]: We're a little off...[0m
+Pos: 21.034 450.261 3.51013
+Goal: 30 450 3
+Dist: 8.98433
+Current position is 21.034 450.261 3.51013
+[0m[ INFO] [1521401812.392220855]: Waiting to receive trajectory...[0m
+Current position is 21.034 450.261 3.51013
+[0m[ INFO] [1521401811.995491274]: Checking for collisions...[0m
+[0m[ INFO] [1521401811.998420880]: Smoothened path![0m
+[0m[ INFO] [1521401811.998696560]: planning 0.0623739[0m
+Debug:   RRTConnect: Planner range detected to be 102.978961
+Info:    RRTConnect: Starting planning with 1 states already in datastructure
+Info:    RRTConnect: Created 4 states (2 start + 2 goal)
+Info:    Solution found in 0.008596 seconds
+[0m[ INFO] [1521401812.466125228]: Solution found![0m
+Info:    SimpleSetup: Path simplification took 0.018225 seconds and changed from 3 to 17 states
+[31m[ERROR] [1521401812.491947260]: distance greater than 2[0m
+[31m[ERROR] [1521401812.592137426]: distance greater than 2[0m
+[31m[ERROR] [1521401812.692289067]: distance greater than 2[0m
+[31m[ERROR] [1521401812.693344198]: distance greater than 2[0m
+[31m[ERROR] [1521401812.793512107]: distance greater than 2[0m
+[31m[ERROR] [1521401812.893715329]: distance greater than 2[0m
+[31m[ERROR] [1521401812.993953771]: distance greater than 2[0m
+[31m[ERROR] [1521401813.035897507]: Pointcloud insertion in OctomapServer done (0+108279 pts (ground/nonground), 0.304549 sec)[0m
+[31m[ERROR] [1521401813.094111749]: distance greater than 2[0m
+[31m[ERROR] [1521401813.194254957]: distance greater than 2[0m
+[31m[ERROR] [1521401813.194810059]: distance greater than 2[0m
+[31m[ERROR] [1521401813.295057691]: distance greater than 2[0m
+[31m[ERROR] [1521401813.395216379]: distance greater than 2[0m
+[31m[ERROR] [1521401813.495472414]: distance greater than 2[0m
+[31m[ERROR] [1521401813.595765910]: distance greater than 2[0m
+[31m[ERROR] [1521401813.695913087]: distance greater than 2[0m
+[31m[ERROR] [1521401813.703775782]: distance greater than 2[0m
+[31m[ERROR] [1521401813.804027873]: distance greater than 2[0m
+[31m[ERROR] [1521401813.904219558]: distance greater than 2[0m
+[31m[ERROR] [1521401813.998634407]: Pointcloud insertion in OctomapServer done (0+94112 pts (ground/nonground), 0.321101 sec)[0m
+[31m[ERROR] [1521401814.004416579]: distance greater than 2[0m
+[31m[ERROR] [1521401814.104706902]: distance greater than 2[0m
+[31m[ERROR] [1521401814.204865434]: distance greater than 2[0m
+[31m[ERROR] [1521401814.222826519]: distance greater than 2[0m
+[31m[ERROR] [1521401814.323080437]: distance greater than 2[0m
+[31m[ERROR] [1521401814.423268710]: distance greater than 2[0m
+[31m[ERROR] [1521401814.523478893]: distance greater than 2[0m
+[31m[ERROR] [1521401814.623759862]: distance greater than 2[0m
+[31m[ERROR] [1521401814.723915732]: distance greater than 2[0m
+[31m[ERROR] [1521401814.724428995]: distance greater than 2[0m
+[31m[ERROR] [1521401814.824590530]: distance greater than 2[0m
+[31m[ERROR] [1521401814.924851061]: distance greater than 2[0m
+[31m[ERROR] [1521401814.977659321]: Pointcloud insertion in OctomapServer done (0+86600 pts (ground/nonground), 0.356336 sec)[0m
+[31m[ERROR] [1521401815.025015245]: distance greater than 2[0m
+[31m[ERROR] [1521401815.125185384]: distance greater than 2[0m
+[31m[ERROR] [1521401815.225339251]: distance greater than 2[0m
+[31m[ERROR] [1521401815.226195662]: distance greater than 2[0m
+[31m[ERROR] [1521401815.326341639]: distance greater than 2[0m
+[31m[ERROR] [1521401815.426551278]: distance greater than 2[0m
+[31m[ERROR] [1521401815.526837756]: distance greater than 2[0m
+[31m[ERROR] [1521401815.627026361]: distance greater than 2[0m
+[31m[ERROR] [1521401815.727178730]: distance greater than 2[0m
+[31m[ERROR] [1521401815.727787113]: distance greater than 2[0m
+[31m[ERROR] [1521401815.827992942]: distance greater than 2[0m
+[31m[ERROR] [1521401815.920901673]: Pointcloud insertion in OctomapServer done (0+86672 pts (ground/nonground), 0.316776 sec)[0m
+[31m[ERROR] [1521401815.928171199]: distance greater than 2[0m
+[31m[ERROR] [1521401816.028342885]: distance greater than 2[0m
+[31m[ERROR] [1521401816.128631518]: distance greater than 2[0m
+[31m[ERROR] [1521401816.228773009]: distance greater than 2[0m
+[31m[ERROR] [1521401816.229832345]: distance greater than 2[0m
+[31m[ERROR] [1521401816.330031511]: distance greater than 2[0m
+[31m[ERROR] [1521401816.430410509]: distance greater than 2[0m
+[31m[ERROR] [1521401816.530611645]: distance greater than 2[0m
+[31m[ERROR] [1521401816.630838771]: distance greater than 2[0m
+[31m[ERROR] [1521401816.730996710]: distance greater than 2[0m
+[31m[ERROR] [1521401816.731704742]: distance greater than 2[0m
+[31m[ERROR] [1521401816.831940119]: distance greater than 2[0m
+[31m[ERROR] [1521401816.875947786]: Pointcloud insertion in OctomapServer done (0+87872 pts (ground/nonground), 0.325106 sec)[0m
+[31m[ERROR] [1521401816.932135901]: distance greater than 2[0m
+[31m[ERROR] [1521401817.032377473]: distance greater than 2[0m
+[31m[ERROR] [1521401817.132594679]: distance greater than 2[0m
+[31m[ERROR] [1521401817.232749713]: distance greater than 2[0m
+[31m[ERROR] [1521401817.233363356]: distance greater than 2[0m
+[31m[ERROR] [1521401817.333638329]: distance greater than 2[0m
+[31m[ERROR] [1521401817.433839591]: distance greater than 2[0m
+[31m[ERROR] [1521401817.534055895]: distance greater than 2[0m
+[31m[ERROR] [1521401817.634392756]: distance greater than 2[0m
+[31m[ERROR] [1521401817.734531048]: distance greater than 2[0m
+[31m[ERROR] [1521401817.753259028]: distance greater than 2[0m
+[31m[ERROR] [1521401817.845710323]: Pointcloud insertion in OctomapServer done (0+89276 pts (ground/nonground), 0.332619 sec)[0m
+[31m[ERROR] [1521401817.853493551]: distance greater than 2[0m
+[31m[ERROR] [1521401817.953668666]: distance greater than 2[0m
+[31m[ERROR] [1521401818.053835573]: distance greater than 2[0m
+[31m[ERROR] [1521401818.154085489]: distance greater than 2[0m
+[31m[ERROR] [1521401818.254266733]: distance greater than 2[0m
+[31m[ERROR] [1521401818.271111241]: distance greater than 2[0m
+[31m[ERROR] [1521401818.371460027]: distance greater than 2[0m
+[31m[ERROR] [1521401818.471685585]: distance greater than 2[0m
+[31m[ERROR] [1521401818.571906913]: distance greater than 2[0m
+[31m[ERROR] [1521401818.672203971]: distance greater than 2[0m
+[31m[ERROR] [1521401818.772339390]: distance greater than 2[0m
+[31m[ERROR] [1521401818.772749884]: distance greater than 2[0m
+[31m[ERROR] [1521401818.818023304]: Pointcloud insertion in OctomapServer done (0+82432 pts (ground/nonground), 0.323010 sec)[0m
+[31m[ERROR] [1521401818.872933301]: distance greater than 2[0m
+[31m[ERROR] [1521401818.973224988]: distance greater than 2[0m
+[31m[ERROR] [1521401819.073415634]: distance greater than 2[0m
+[31m[ERROR] [1521401819.173606643]: distance greater than 2[0m
+[31m[ERROR] [1521401819.273748696]: distance greater than 2[0m
+[31m[ERROR] [1521401819.274349251]: distance greater than 2[0m
+[31m[ERROR] [1521401819.374590958]: distance greater than 2[0m
+[31m[ERROR] [1521401819.474836967]: distance greater than 2[0m
+[31m[ERROR] [1521401819.575157799]: distance greater than 2[0m
+[31m[ERROR] [1521401819.675338186]: distance greater than 2[0m
+[31m[ERROR] [1521401819.775476686]: distance greater than 2[0m
+[31m[ERROR] [1521401819.792846044]: distance greater than 2[0m
+[31m[ERROR] [1521401819.804085812]: Pointcloud insertion in OctomapServer done (0+88279 pts (ground/nonground), 0.334404 sec)[0m
+[31m[ERROR] [1521401819.893021630]: distance greater than 2[0m
+[31m[ERROR] [1521401819.993254740]: distance greater than 2[0m
+[31m[ERROR] [1521401820.093576497]: distance greater than 2[0m
+[31m[ERROR] [1521401820.193806556]: distance greater than 2[0m
+[31m[ERROR] [1521401820.294035960]: distance greater than 2[0m
+[31m[ERROR] [1521401820.294613914]: distance greater than 2[0m
+[31m[ERROR] [1521401820.394874508]: distance greater than 2[0m
+[31m[ERROR] [1521401820.495062478]: distance greater than 2[0m
+[31m[ERROR] [1521401820.595236881]: distance greater than 2[0m
+[31m[ERROR] [1521401820.695459060]: distance greater than 2[0m
+[31m[ERROR] [1521401820.795613065]: distance greater than 2[0m
+[31m[ERROR] [1521401820.796246804]: distance greater than 2[0m
+[31m[ERROR] [1521401820.804112752]: Pointcloud insertion in OctomapServer done (0+94093 pts (ground/nonground), 0.349265 sec)[0m
+[31m[ERROR] [1521401820.896440665]: distance greater than 2[0m
+[31m[ERROR] [1521401820.996709436]: distance greater than 2[0m
+[31m[ERROR] [1521401821.096880137]: distance greater than 2[0m
+[31m[ERROR] [1521401821.197063295]: distance greater than 2[0m
+[31m[ERROR] [1521401821.297211401]: distance greater than 2[0m
+[31m[ERROR] [1521401821.297770362]: distance greater than 2[0m
+[31m[ERROR] [1521401821.397951851]: distance greater than 2[0m
+[31m[ERROR] [1521401821.498159472]: distance greater than 2[0m
+[31m[ERROR] [1521401821.598404198]: distance greater than 2[0m
+[31m[ERROR] [1521401821.698579626]: distance greater than 2[0m
+[31m[ERROR] [1521401821.798724795]: distance greater than 2[0m
+[31m[ERROR] [1521401821.799203934]: distance greater than 2[0m
+[31m[ERROR] [1521401821.820518699]: Pointcloud insertion in OctomapServer done (0+97670 pts (ground/nonground), 0.360592 sec)[0m
+[31m[ERROR] [1521401821.899442077]: distance greater than 2[0m
+[31m[ERROR] [1521401821.999634510]: distance greater than 2[0m
+[31m[ERROR] [1521401822.099863718]: distance greater than 2[0m
+[31m[ERROR] [1521401822.200104737]: distance greater than 2[0m
+[31m[ERROR] [1521401822.300339274]: distance greater than 2[0m
+[31m[ERROR] [1521401822.300805207]: distance greater than 2[0m
+[31m[ERROR] [1521401822.400988487]: distance greater than 2[0m
+[31m[ERROR] [1521401822.501240377]: distance greater than 2[0m
+[31m[ERROR] [1521401822.601414592]: distance greater than 2[0m
+[31m[ERROR] [1521401822.701580616]: distance greater than 2[0m
+[31m[ERROR] [1521401822.801713108]: distance greater than 2[0m
+[31m[ERROR] [1521401822.802262559]: distance greater than 2[0m
+[31m[ERROR] [1521401822.862853783]: Pointcloud insertion in OctomapServer done (0+109530 pts (ground/nonground), 0.382177 sec)[0m
+[31m[ERROR] [1521401822.902403242]: distance greater than 2[0m
+[31m[ERROR] [1521401823.002583201]: distance greater than 2[0m
+[31m[ERROR] [1521401823.102828478]: distance greater than 2[0m
+[31m[ERROR] [1521401823.203005859]: distance greater than 2[0m
+[31m[ERROR] [1521401823.859544845]: Pointcloud insertion in OctomapServer done (0+94678 pts (ground/nonground), 0.335225 sec)[0m
+[31m[ERROR] [1521401824.034372868]: inside the call back[0m
+[31m[ERROR] [1521401824.534379082]: inside the call back[0m
+[31m[ERROR] [1521401824.848390399]: Pointcloud insertion in OctomapServer done (0+90105 pts (ground/nonground), 0.331910 sec)[0m
+[31m[ERROR] [1521401825.034366599]: inside the call back[0m
+[31m[ERROR] [1521401825.534433549]: inside the call back[0m
+[31m[ERROR] [1521401825.879151811]: Pointcloud insertion in OctomapServer done (0+90203 pts (ground/nonground), 0.340297 sec)[0m
+[31m[ERROR] [1521401826.034387759]: inside the call back[0m
+[0m[ INFO] [1521401823.553402302]:  in completed[0m
+[0m[ INFO] [1521401823.553804165]: Delivered the package and returned![0m
+[31m[ERROR] [1521401826.910964329]: Pointcloud insertion in OctomapServer done (0+90287 pts (ground/nonground), 0.335997 sec)[0m
+[31m[ERROR] [1521401827.918007127]: Pointcloud insertion in OctomapServer done (0+90330 pts (ground/nonground), 0.329976 sec)[0m
+[31m[ERROR] [1521401828.904010066]: Pointcloud insertion in OctomapServer done (0+90333 pts (ground/nonground), 0.312481 sec)[0m
+[31m[ERROR] [1521401829.872144518]: Pointcloud insertion in OctomapServer done (0+90334 pts (ground/nonground), 0.295457 sec)[0m
+[31m[ERROR] [1521401830.840311017]: Pointcloud insertion in OctomapServer done (0+90340 pts (ground/nonground), 0.293657 sec)[0m
+[31m[ERROR] [1521401831.831428043]: Pointcloud insertion in OctomapServer done (0+90340 pts (ground/nonground), 0.298756 sec)[0m
+[33m[ WARN] [1521401694.148737116]: Hey![0m
+[0m[ INFO] [1521401694.262731569]: Image publisher started! Connecting to:[0m
+[0m[ INFO] [1521401694.262784091]: IP: 10.157.90.51[0m
+[0m[ INFO] [1521401694.262798854]: Port: 41451[0m
+killing the main thread
+killing the poll thread
+[31m[ERROR] [1521401832.144649731]: could not probe data using stats manager[0m
+[31m[ERROR] [1521401832.144687148]: could not probe data using stats manager[0m
+[31m[ERROR] [1521401832.144691656]: could not probe data using stats manager[0m
+[31m[ERROR] [1521401832.150349207]: could not probe data using stats manager[0m
+[0m[ INFO] [1521401812.485732193]: Checking for collisions...[0m
+[0m[ INFO] [1521401812.488843153]: Smoothened path![0m
+[0m[ INFO] [1521401812.489124196]: planning 0.0527338[0m
+[0m[ INFO] [1521401694.101031707]: fly_traj0.1[0m
+[0m
+[1mprocess[cloudify_2-8]: started with pid [29646][0m
+[1mprocess[panic_pcl-9]: started with pid [29647][0m
+[1mprocess[future_collision-10]: started with pid [29653][0m
+[1mprocess[follow_trajectory-11]: started with pid [29675][0m
+[1mprocess[motion_planner-12]: started with pid [29693][0m
+[1mprocess[package_delivery-13]: started with pid [29715][0m
+[1mprocess[rviz-14]: started with pid [29747][0m
+[1mprocess[publish_imu-15]: started with pid [29774][0m
+[1m[rviz-14] process has finished cleanly
+log file: /home/wcui/.ros/log/6e86d6c8-2ae3-11e8-99e4-9c5c8e90c845/rviz-14*.log[0m
+[1m[package_delivery-13] process has finished cleanly
+log file: /home/wcui/.ros/log/6e86d6c8-2ae3-11e8-99e4-9c5c8e90c845/package_delivery-13*.log[0m
+[publish_imu-15] killing on exit
+[motion_planner-12] killing on exit
+[follow_trajectory-11] killing on exit
+[future_collision-10] killing on exit
+[panic_pcl-9] killing on exit
+[cloudify_2-8] killing on exit
+[cloudify-7] killing on exit
+[depth_transforms_manager_2-6] killing on exit
+[depth_transforms_manager-5] killing on exit
+[airsim_imgPublisher-4] killing on exit
+[octomap_server-3] killing on exit
+[profile_manager-2] killing on exit
+[rosout-1] killing on exit
+[master] killing on exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+[1mdone[0m

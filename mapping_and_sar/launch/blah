@@ -1,0 +1,681 @@
+... logging to /home/nvidia/.ros/log/5d9e80fe-3065-11e8-a3c0-00044b8d107b/roslaunch-tegra-ubuntu-19429.log
+Checking log directory for disk usage. This may take awhile.
+Press Ctrl-C to interrupt
+Done checking log file disk usage. Usage is <1GB.
+]2;/home/nvidia/catkin_ws/src/mav-bench/mapping_and_sar/launch/mapping.launch
+[1mstarted roslaunch server http://tegra-ubuntu:46868/[0m
+
+SUMMARY
+========
+
+PARAMETERS
+ * /airsim_imgPublisher/Airsim_ip: 10.157.90.51
+ * /airsim_imgPublisher/Airsim_port: 41451
+ * /airsim_imgPublisher/Fx: 256
+ * /airsim_imgPublisher/Fy: 256
+ * /airsim_imgPublisher/Tx: 0.14
+ * /airsim_imgPublisher/all_front: True
+ * /airsim_imgPublisher/cx: 256
+ * /airsim_imgPublisher/cy: 144
+ * /airsim_imgPublisher/height: 288
+ * /airsim_imgPublisher/localization_method: ground_truth
+ * /airsim_imgPublisher/loop_rate: 20
+ * /airsim_imgPublisher/maxDist: 50.0
+ * /airsim_imgPublisher/odomTopic: /mavros/local_pos...
+ * /airsim_imgPublisher/scale: 0.38
+ * /airsim_imgPublisher/scale_x: 512
+ * /airsim_imgPublisher/scale_y: 288
+ * /airsim_imgPublisher/width: 512
+ * /airsim_qc/mapping/bbx/maxX: 30.0
+ * /airsim_qc/mapping/bbx/maxY: 28.0
+ * /airsim_qc/mapping/bbx/maxZ: 5.0
+ * /airsim_qc/mapping/bbx/minX: -30.0
+ * /airsim_qc/mapping/bbx/minY: -28.0
+ * /airsim_qc/mapping/bbx/minZ: 3.0
+ * /airsim_qc/mapping/bbx/softBounds: False
+ * /airsim_qc/mapping/follow_trajectory/yaw_t: 1.0
+ * /airsim_qc/mapping/inspection_throttle: 0.5
+ * /airsim_qc/mapping/nbvp/dt: 0.3
+ * /airsim_qc/mapping/nbvp/gain/area: 1.0
+ * /airsim_qc/mapping/nbvp/gain/degressive_coeff: 0.01
+ * /airsim_qc/mapping/nbvp/gain/free: 0.05
+ * /airsim_qc/mapping/nbvp/gain/occupied: 0.0
+ * /airsim_qc/mapping/nbvp/gain/probabilistic: 0.0
+ * /airsim_qc/mapping/nbvp/gain/unmapped: 1.0
+ * /airsim_qc/mapping/nbvp/gain/zero: 0.0
+ * /airsim_qc/mapping/nbvp/log/on: True
+ * /airsim_qc/mapping/nbvp/log/throttle: 0.25
+ * /airsim_qc/mapping/nbvp/status_monitor_rate: 100
+ * /airsim_qc/mapping/nbvp/t_offset: 0.0
+ * /airsim_qc/mapping/nbvp/tree/cuttoff_iterations: 80
+ * /airsim_qc/mapping/nbvp/tree/exact_root: True
+ * /airsim_qc/mapping/nbvp/tree/initial_iterations: 15
+ * /airsim_qc/mapping/pcl_throttle: 0
+ * /airsim_qc/mapping/system/bbx/overshoot: 0.5
+ * /airsim_qc/mapping/system/bbx/x: 3
+ * /airsim_qc/mapping/system/bbx/y: 3
+ * /airsim_qc/mapping/system/bbx/z: 1
+ * /airsim_qc/mapping/system/camera/horizontal: [90.0]
+ * /airsim_qc/mapping/system/camera/pitch: [0.0]
+ * /airsim_qc/mapping/system/camera/vertical: [90.0]
+ * /airsim_qc/nbvPlanner/DEBUG: True
+ * /airsim_qc/nbvPlanner/bbx/maxX: 30.0
+ * /airsim_qc/nbvPlanner/bbx/maxY: 28.0
+ * /airsim_qc/nbvPlanner/bbx/maxZ: 5.0
+ * /airsim_qc/nbvPlanner/bbx/minX: -30.0
+ * /airsim_qc/nbvPlanner/bbx/minY: -28.0
+ * /airsim_qc/nbvPlanner/bbx/minZ: 3.0
+ * /airsim_qc/nbvPlanner/bbx/softBounds: False
+ * /airsim_qc/nbvPlanner/follow_trajectory/yaw_t: 1.0
+ * /airsim_qc/nbvPlanner/inspection_throttle: 0.5
+ * /airsim_qc/nbvPlanner/map_publish_frequency: 20.0
+ * /airsim_qc/nbvPlanner/mesh_resolution: 0.4
+ * /airsim_qc/nbvPlanner/nbvp/dt: 0.3
+ * /airsim_qc/nbvPlanner/nbvp/gain/area: 1.0
+ * /airsim_qc/nbvPlanner/nbvp/gain/degressive_coeff: 0.01
+ * /airsim_qc/nbvPlanner/nbvp/gain/free: 0.05
+ * /airsim_qc/nbvPlanner/nbvp/gain/occupied: 0.0
+ * /airsim_qc/nbvPlanner/nbvp/gain/probabilistic: 0.0
+ * /airsim_qc/nbvPlanner/nbvp/gain/range: 4
+ * /airsim_qc/nbvPlanner/nbvp/gain/unmapped: 1.0
+ * /airsim_qc/nbvPlanner/nbvp/gain/zero: 0.0
+ * /airsim_qc/nbvPlanner/nbvp/log/on: True
+ * /airsim_qc/nbvPlanner/nbvp/log/throttle: 0.25
+ * /airsim_qc/nbvPlanner/nbvp/status_monitor_rate: 100
+ * /airsim_qc/nbvPlanner/nbvp/t_offset: 0.0
+ * /airsim_qc/nbvPlanner/nbvp/tree/cuttoff_iterations: 80
+ * /airsim_qc/nbvPlanner/nbvp/tree/exact_root: True
+ * /airsim_qc/nbvPlanner/nbvp/tree/extension_range: 4.5
+ * /airsim_qc/nbvPlanner/nbvp/tree/initial_iterations: 15
+ * /airsim_qc/nbvPlanner/pcl_throttle: 0
+ * /airsim_qc/nbvPlanner/resolution: 0.3
+ * /airsim_qc/nbvPlanner/robot_frame: ground_truth
+ * /airsim_qc/nbvPlanner/sensor_max_range: 6.0
+ * /airsim_qc/nbvPlanner/stl_file_path: 
+ * /airsi[31mWARNING: unrecognized tag comment[0m
+[31mWARNING: unrecognized tag comment[0m
+[31mWARNING: WARN: unrecognized 'comment' child tag in the parent tag element: <node name="airsim_imgPublisher" output="screen" pkg="airsim_img_publisher" type="airsim_imgPublisher">
+		<!-- IP of the Airsim computer -->
+	    <param name="all_front" value="$(arg all_front)"/>	
+        <param name="localization_method" value="$(arg localization_method)"/>
+        <param name="Airsim_ip" value="$(arg host_ip)"/>
+
+        <param name="loop_rate" value="20"/>
+
+		<!-- Port of the Airsim computer (this is default, do not change!) -->
+		<param name="Airsim_port" value="41451"/>
+
+        <!-- RGB camera parameters (parameters when calibrated) -->
+        <param name="Fx" value="256"/>
+        <param name="Fy" value="256"/>
+        <param name="cx" value="256"/>
+        <param name="cy" value="144"/>
+        <param name="scale_x" value="512"/>  <!-- Width when calibrated!-->
+        <param name="scale_y" value="288"/> <!-- Height when calibrated!-->
+        <param name="width" value="512"/>  <!-- Width when calibrated!-->
+        <param name="height" value="288"/> <!-- Height when calibrated!-->
+
+        <comment> 
+        <param name="Fx" value="200"/>
+        <param name="Fy" value="200"/>
+        <param name="cx" value="200"/>
+        <param name="cy" value="150"/>
+        <param name="scale_x" value="400"/>  <!-- Width when calibrated!-->
+        <param name="scale_y" value="300"/> <!-- Height when calibrated!-->
+        <param name="width" value="400"/>  <!-- Width when calibrated!-->
+        <param name="height" value="300"/> <!-- Height when calibrated!-->
+		</comment>
+        
+        
+        <param name="maxDist" value="50.0"/> 
+        <!-- Depth baseline -->
+        <param name="Tx" value="0.14"/>
+        <param name="scale" value="0.38"/> 
+    
+		<!-- Topic with odometry information for the vehicle (used to create tf tree) -->
+	    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
+        <param name="odomTopic" value="/mavros/local_position/odom"/>
+	</node>[0m
+[31mWARNING: unrecognized tag comment[0m
+m_qc/nbvPlanner/system/bbx/overshoot: 0.5
+ * /airsim_qc/nbvPlanner/system/bbx/x: 3
+ * /airsim_qc/nbvPlanner/system/bbx/y: 3
+ * /airsim_qc/nbvPlanner/system/bbx/z: 1
+ * /airsim_qc/nbvPlanner/system/camera/horizontal: [90.0]
+ * /airsim_qc/nbvPlanner/system/camera/pitch: [0.0]
+ * /airsim_qc/nbvPlanner/system/camera/vertical: [90.0]
+ * /airsim_qc/nbvPlanner/system/dyaw_max: 1.5707963268
+ * /airsim_qc/nbvPlanner/system/v_max: 1
+ * /airsim_qc/nbvPlanner/tf_frame: world
+ * /airsim_qc/nbvPlanner/update_coverage_freq: 3
+ * /airsim_qc/nbvPlanner/visualize_max_z: 10.0
+ * /airsim_qc/wp_x: 0.0
+ * /airsim_qc/wp_y: 0.0
+ * /airsim_qc/wp_z: 1.0
+ * /coverage_threshold: 80
+ * /data_collection_iteration_freq_ptCld: 1500
+ * /distance_from_goal_threshold: 0.4
+ * /enable_statistics: True
+ * /fly_trajectory_time_out: 0.3
+ * /follow_trajectory/bbx/maxX: 30.0
+ * /follow_trajectory/bbx/maxY: 28.0
+ * /follow_trajectory/bbx/maxZ: 5.0
+ * /follow_trajectory/bbx/minX: -30.0
+ * /follow_trajectory/bbx/minY: -28.0
+ * /follow_trajectory/bbx/minZ: 3.0
+ * /follow_trajectory/bbx/softBounds: False
+ * /follow_trajectory/follow_trajectory/yaw_t: 1.0
+ * /follow_trajectory/inspection_throttle: 0.5
+ * /follow_trajectory/ip_addr: 10.157.90.51
+ * /follow_trajectory/localization_method: ground_truth
+ * /follow_trajectory/mav_name: airsim_qc
+ * /follow_trajectory/nbvp/dt: 0.3
+ * /follow_trajectory/nbvp/gain/area: 1.0
+ * /follow_trajectory/nbvp/gain/degressive_coeff: 0.01
+ * /follow_trajectory/nbvp/gain/free: 0.05
+ * /follow_trajectory/nbvp/gain/occupied: 0.0
+ * /follow_trajectory/nbvp/gain/probabilistic: 0.0
+ * /follow_trajectory/nbvp/gain/unmapped: 1.0
+ * /follow_trajectory/nbvp/gain/zero: 0.0
+ * /follow_trajectory/nbvp/log/on: True
+ * /follow_trajectory/nbvp/log/throttle: 0.25
+ * /follow_trajectory/nbvp/status_monitor_rate: 100
+ * /follow_trajectory/nbvp/t_offset: 0.0
+ * /follow_trajectory/nbvp/tree/cuttoff_iterations: 80
+ * /follow_trajectory/nbvp/tree/exact_root: True
+ * /follow_trajectory/nbvp/tree/initial_iterations: 15
+ * /follow_trajectory/pcl_throttle: 0
+ * /follow_trajectory/segment_dedicated_time: 1.0
+ * /follow_trajectory/system/bbx/overshoot: 0.5
+ * /follow_trajectory/system/bbx/x: 3
+ * /follow_trajectory/system/bbx/y: 3
+ * /follow_trajectory/system/bbx/z: 1
+ * /follow_trajectory/system/camera/horizontal: [90.0]
+ * /follow_trajectory/system/camera/pitch: [0.0]
+ * /follow_trajectory/system/camera/vertical: [90.0]
+ * /ip_addr: 10.157.90.51
+ * /localization_method: ground_truth
+ * /max_yaw_rate: 90
+ * /max_yaw_rate_during_flight: 90
+ * /octomap_server/base_frame_id: world
+ * /octomap_server/data_collection_iteration_freq_OM: 300
+ * /octomap_server/frame_id: world
+ * /octomap_server/occupancy_max_z: 10.0
+ * /octomap_server/occupancy_min_z: -2.0
+ * /octomap_server/pointcloud_max_z: 10.0
+ * /octomap_server/pointcloud_min_z: -2.0
+ * /octomap_server/resolution: 0.3
+ * /octomap_server/sensor_model/max_range: 6
+ * /panic_pcl/panic_distance: 3
+ * /profile_manager/ip_addr: 10.157.90.51
+ * /publish_imu/loop_rate: 150
+ * /publish_pose/ip_addr: 10.157.90.51
+ * /publish_pose/localization_method: ground_truth
+ * /ros_DEBUG: True
+ * /rosdistro: kinetic
+ * /rosversion: 1.12.12
+ * /sensor_max_range: 6
+ * /stats_file_addr: /home/nvidia/catk...
+ * /status_monitor_rate: 100
+ * /supervisor_mailbox: /home/nvidia/catk...
+ * /v_max: 1
+
+NODES
+  /airsim_qc/
+    mapping (mapping_and_sar/mapping)
+    nbvPlanner (nbvplanner/nbvPlanner)
+  /
+    airsim_imgPublisher (airsim_img_publisher/airsim_imgPublisher)
+    cloudify (nodelet/nodelet)
+    cloudify_2 (nodelet/nodelet)
+    depth_transforms_manager (nodelet/nodelet)
+    follow_trajectory (mapping_and_sar/follow_trajectory)
+    octomap_server (octomap_server/octomap_server_node)
+    panic_pcl (package_delivery/panic_pcl)
+    profile_manager (profile_manager/profile_manager)
+    publish_imu (publish_imu/publish_imu)
+    publish_pose (mapping_and_sar/publish_pose)
+    rviz (rviz/rviz)
+
+auto-starting new master
+[1mprocess[master]: started with pid [19439][0m
+[1mROS_MASTER_URI=http://localhost:11311[0m
+]2;/home/nvidia/catkin_ws/src/mav-ben[31m[ERROR] [1522007259.474545351]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.480097841]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.501658329]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.551628430]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.601667363]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.651610424]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[FATAL] [1522007259.672788226]: Could not start img_proc. Parameter missing! Looking for DEBUG[0m
+[31m[ERROR] [1522007259.701628781]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.745681786]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.748669774]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.751612482]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.751838849]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.755024340]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.757010764]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.759420962]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.764135023]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.768155967]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.770235094]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.773775048]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.776195582]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.778569172]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.782359077]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.784687035]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.786704083]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.791495680]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.794105941]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.797198089]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.800988089]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.801597015]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.803496431]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.805924421]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.809583670]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.815402079]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.819730317]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.822198371]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.824314906]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.827804652]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.830737312]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.833547253]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.835523405]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.838214626]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.840397177]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.843094638]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.845859907]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.847934554]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.850347249]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.851606059]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.855063005]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.857638643]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.860361768]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.864136441]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.866669006]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.869109284]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.873349651]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.876176840]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.878762653]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.882282991]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.884671557]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.886809404]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.891403306]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.893535905]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.895891992]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.900523429]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.901593376]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.903008795]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.905070386]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.909550016]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.911821399]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.913882478]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.918793211]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.921155921]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.924806786]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.928758162]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.930842506]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.932842529]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.936871505]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.939074792]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.941398527]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0325 14:47:39.943051 19506 octomap_world.cc:87] Octomap resolution has changed! Resetting tree!0.3
+[31m[ERROR] [1522007259.945962732]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.948140899]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.950491290]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.951592021]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.954989319]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.957365246]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.959698452]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.964181474]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.966734040]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.968888111]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.969181198]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.972137346]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.973155390]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.975194677]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.977818059]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.982306264]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.984825454]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.987361156]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.991341652]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.993620011]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007259.995901889]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.000627662]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.001596586]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.003138692]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.005531450]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.009539018]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.011817345]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.014836980]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.019390274]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.021819032]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.022216278]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.024078863]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.027771648]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.029897847]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.032301582]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.036802427]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.038973554]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.041213001]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.045908214]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.048210029]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.050735459]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.051635135]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.054975890]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.057067497]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.059555455]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.064298092]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.067561182]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.070483699]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.072245355]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.075256831]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.077709013]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.079850573]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.082281155]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.084872888]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.087204719]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.091397438]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.093541109]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.095598093]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.100447769]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.101588756]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.102688240]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.104885895]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.109691220]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.112139978]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.114731103]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.118874894]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.120989926]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.122245313]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.123316284]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.127764810]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.130255904]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.132254552]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.136889349]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.138995101]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.141360531]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.145896193]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.149301651]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.151601770]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.153822273]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.158609613]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.161018531]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.163449593]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.166103695]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.168412581]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.170864699]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.172228854]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.173372945]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.175582280]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.178065630]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.182243085]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.185311425]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.187423736]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.191342088]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.193553727]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.196678963]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.200553155]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.201685054]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.203391927]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.205577679]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.209703966]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.212090324]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.215178024]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.218734105]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.221969196]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.222323627]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.224497186]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.229285934]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.232100963]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.234866296]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.238421705]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.241408541]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.244444785]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.249330685]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.251605012]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.252890479]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.255604356]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.258938966]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.262531431]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.265427004]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.270252040]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.272238336]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.273239516]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.276269296]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.279458403]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.281536730]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.284007312]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.287673345]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.289973592]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.292027568]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.294785125]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.296867196]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.298815220]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.301271146]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.301726120]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.303477313]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.305361626]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.309784616]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.312480413]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.315014963]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.318554724]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.322232149]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.323813039]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.326261029]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.328778939]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.331088145]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.333255465]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.336760954]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.340502443]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.343102881]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.346255540]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.348563466]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.350979297]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.351591326]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.355008336]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.357411047]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.359878589]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.364105131]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.366333186]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.368852472]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.372234314]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.373238630]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.375368542]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.378030387]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.382259522]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.384762872]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.386774927]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.391472220]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.393896691]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.396099434]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.400598391]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.401595635]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.403106477]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.405350852]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.409566323]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.411968585]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.414094369]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.419729770]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.421917537]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.422227936]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.424695606]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.427706089]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.432010712]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.432774933]: Client [/airsim_qc/nbvPlanner] wants topic /pose_topic to have datatype/md5sum [geometry_msgs/PoseWithCovarianceStamped/953b798c0f514ff060a53a3498ce6246], but our version has [geometry_msgs/Pose/e45d45a5a1ce597b249e23fb30fc871f]. Dropping connection.[0m
+[31m[ERROR] [1522007260.434723885]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.437916000]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.440201175]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.442169327]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.446345854]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.448648532]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.451386121]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.451599816]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.455068954]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.457380721]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.459653512]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.464160950]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.466704011]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.468651619]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.472213141]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.473096561]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.475645895]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.480529715]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.501638045]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.505048464]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.511368342]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.515949155]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.520577169]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.522222538]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.523821059]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.526852759]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.530279177]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.535286901]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.537828971]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.551234260]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.551583571]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.555898113]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.559882065]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.565320155]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.570810725]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.572214719]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.573266779]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.576523182]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.579070115]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.581441562]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.584480685]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.587721024]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.590879987]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.601623336]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.614774834]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.616691979]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.618823938]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.622238740]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.623821422]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.627535199]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.629780886]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.632887625]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.634926561]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.637157720]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.642067908]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.644290811]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.646266163]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.651077951]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.651579133]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.653491189]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.655486701]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.660077339]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.661931187]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.663805036]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.669192630]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.671116718]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.672216137]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.673245861]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.679049102]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.681217125]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.683543739]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.687443884]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.689305220]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.691205724]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.696635334]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.699028893]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.701633746]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.702031504]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.722236127]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.725247698]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.727363370]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.729656608]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.734853547]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.736830915]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.738813563]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.743657928]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.746789979]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.749553296]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.751606887]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.753003650]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.755207161]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.757990445]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.761502495]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.764238420]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.766724106]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.770762138]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.772255060]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.773154896]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.775275143]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.780108244]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.785456862]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.790497098]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.793352894]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.795300918]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.797484077]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.801427357]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.801586525]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.803870963]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.805967691]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.808677760]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.822352872]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.830844966]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.833468827]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.836007281]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.837784426]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+[31m[ERROR] [1522007260.839807490]: "world" passed to lookupTransform argument target_frame does not exist. [0m
+Initialize drone:
+	a: arm
+	d: disarm
+	t h: takeoff to h m
+	l: land
+	f x y z d: fly at (x,y,z) m/s for d s
+	y x: set yaw to x
+	p: print pitch, roll, yaw, height
+	c: complete drone setup and continue
+	s: sleep for 5 seconds
+	r: rotate slowly
+	Ctrl-c/q: quit
+[31m[ERROR] [1522007263.913895819]: inside the call back[0m
+[31m[ERROR] [1522007263.914325546]: inside the call back[0m
+[31m[ERROR] [1522007263.915319846]: inside the call back[0m
+[31m[ERROR] [1522007263.915603589]: inside the call back[0m
+[0m[ INFO] [1522007260.417735346]: Image publisher started! Connecting to:[0m
+[0m[ INFO] [1522007260.417893329]: IP: 10.157.90.51[0m
+[0m[ INFO] [1522007260.417928721]: Port: 41451[0m
+killing the main thread
+killing the poll thread
+[31m[ERROR] [1522007264.313126656]: could not probe data using stats manager using octomap[0m
+[31m[ERROR] [1522007264.313166304]: could not probe data using stats manager[0m
+[31m[ERROR] [1522007264.313419391]: could not probe data using stats manager[0m
+[31m[airsim_qc/nbvPlanner-3] escalating to SIGTERM[0m
+ch/mapping_and_sar/launch/mapping.launch http://localhost:11311
+[1msetting /run_id to 5d9e80fe-3065-11e8-a3c0-00044b8d107b[0m
+[1mprocess[rosout-1]: started with pid [19452][0m
+started core service [/rosout]
+[1mprocess[profile_manager-2]: started with pid [19469][0m
+[1mprocess[airsim_qc/nbvPlanner-3]: started with pid [19506][0m
+[1mprocess[airsim_qc/mapping-4]: started with pid [19507][0m
+[1mprocess[airsim_imgPublisher-5]: started with pid [19508][0m
+[1mprocess[publish_pose-6]: started with pid [19531][0m
+[1mprocess[depth_transforms_manager-7]: started with pid [19551][0m
+[1mprocess[cloudify-8]: started with pid [19591][0m
+[1mprocess[cloudify_2-9]: started with pid [19604][0m
+[1mprocess[octomap_server-10]: started with pid [19612][0m
+[1mprocess[follow_trajectory-11]: started with pid [19622][0m
+[1mprocess[publish_imu-12]: started with pid [19633][0m
+[1mprocess[panic_pcl-13]: started with pid [19641][0m
+[1mprocess[rviz-14]: started with pid [19667][0m
+[rviz-14] killing on exit
+[panic_pcl-13] killing on exit
+[publish_imu-12] killing on exit
+[follow_trajectory-11] killing on exit
+[octomap_server-10] killing on exit
+[cloudify_2-9] killing on exit
+[cloudify-8] killing on exit
+[depth_transforms_manager-7] killing on exit
+[publish_pose-6] killing on exit
+[airsim_imgPublisher-5] killing on exit
+[airsim_qc/mapping-4] killing on exit
+[airsim_qc/nbvPlanner-3] killing on exit
+[profile_manager-2] killing on exit
+[rosout-1] killing on exit
+[master] killing on exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+[1mdone[0m

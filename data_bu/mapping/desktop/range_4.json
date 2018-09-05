@@ -1,0 +1,294 @@
+{"experiments":[
+
+{
+	"distance_travelled": 287.3,
+	"flight_time": 298.368,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 56.3603,
+	"rotor energy consumed ": 277067,
+	"/airsim_qc/mapping_mean_loop_time": 2,
+	"mission_status": 1,
+	"coverage": 50.7485,
+	"g_path_computation_time_avg": 1.51671,
+	"g_path_computation_time_acc": 141.054,
+	"/airsim_qc/nbvPlanner_mean_loop_time": 0,
+	"gpu_compute_energy": 4913.13,
+	"cpu_compute_energy": 16092.8,
+	"total_energy_consumed":298073,
+	"topic_statistics":{
+		"/Airsim/camera_info":{
+			"mean":20.2624,
+			"std":0.706057,
+			"droppage_rate":0
+		},
+		"/Airsim/depth":{
+			"mean":20.266,
+			"std":0.69714,
+			"droppage_rate":0
+		},
+		"/Airsim/disparity":{
+			"mean":20.2553,
+			"std":0.708652,
+			"droppage_rate":17.8865
+		},
+		"/Airsim/left/camera_info":{
+			"mean":20.2589,
+			"std":0.704854,
+			"droppage_rate":19.9539
+		},
+		"/Airsim/right/camera_info":{
+			"mean":20.253,
+			"std":0.646462,
+			"droppage_rate":19.9699
+		},
+		"/airsim_qc/command/trajectory":{
+			"mean":-2.94753e+08,
+			"std":-nan,
+			"droppage_rate":0
+		},
+		"/octomap_binary":{
+			"mean":31.6725,
+			"std":4.35589,
+			"droppage_rate":31.5141
+		},
+		"/points":{
+			"mean":40.1436,
+			"std":1.37568,
+			"droppage_rate":24.3475
+		},
+		"/pose_topic":{
+			"mean":19.4007,
+			"std":0.490042,
+			"droppage_rate":19.1809
+		},
+		"/tf":{
+			"mean":40.0541,
+			"std":1.34029,
+			"droppage_rate":0
+		}
+},
+
+"app":"mapping",
+"experiment_number":0},
+
+{
+	"distance_travelled": 360.996,
+	"flight_time": 367.329,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 3.52242,
+	"rotor energy consumed ": 347020,
+	"/airsim_qc/mapping_mean_loop_time": 2,
+	"mission_status": 1,
+	"coverage": 50.5848,
+	"g_path_computation_time_avg": 1.48051,
+	"g_path_computation_time_acc": 176.18,
+	"/airsim_qc/nbvPlanner_mean_loop_time": 0,
+	"gpu_compute_energy": 5935.86,
+	"cpu_compute_energy": 19788.1,
+	"total_energy_consumed":372743,
+	"topic_statistics":{
+		"/Airsim/camera_info":{
+			"mean":20.3,
+			"std":0.657919,
+			"droppage_rate":0
+		},
+		"/Airsim/depth":{
+			"mean":20.2971,
+			"std":0.657043,
+			"droppage_rate":0
+		},
+		"/Airsim/disparity":{
+			"mean":20.3029,
+			"std":0.658781,
+			"droppage_rate":17.9686
+		},
+		"/Airsim/left/camera_info":{
+			"mean":20.2773,
+			"std":0.627445,
+			"droppage_rate":20.0546
+		},
+		"/Airsim/right/camera_info":{
+			"mean":20.2943,
+			"std":0.660495,
+			"droppage_rate":20.0171
+		},
+		"/airsim_qc/command/trajectory":{
+			"mean":-2.01327e+08,
+			"std":-nan,
+			"droppage_rate":0
+		},
+		"/octomap_binary":{
+			"mean":33.3125,
+			"std":5.11116,
+			"droppage_rate":33.3409
+		},
+		"/points":{
+			"mean":40.2536,
+			"std":1.28705,
+			"droppage_rate":23.6068
+		},
+		"/pose_topic":{
+			"mean":19.4327,
+			"std":0.495445,
+			"droppage_rate":19.2235
+		},
+		"/tf":{
+			"mean":40.1113,
+			"std":1.25947,
+			"droppage_rate":0
+		}
+},
+
+"app":"mapping",
+"experiment_number":1},
+{
+	"distance_travelled": 264.043,
+	"flight_time": 277.386,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 17.9234,
+	"rotor energy consumed ": 258853,
+	"/airsim_qc/mapping_mean_loop_time": 2,
+	"mission_status": 1,
+	"coverage": 50.6199,
+	"g_path_computation_time_avg": 1.52402,
+	"g_path_computation_time_acc": 134.114,
+	"/airsim_qc/nbvPlanner_mean_loop_time": 0,
+	"gpu_compute_energy": 4570.79,
+	"cpu_compute_energy": 15183.6,
+	"total_energy_consumed":278608,
+	"topic_statistics":{
+		"/Airsim/camera_info":{
+			"mean":20.9885,
+			"std":1.00757,
+			"droppage_rate":0
+		},
+		"/Airsim/depth":{
+			"mean":20.9962,
+			"std":1.00382,
+			"droppage_rate":0
+		},
+		"/Airsim/disparity":{
+			"mean":20.9885,
+			"std":1.00757,
+			"droppage_rate":18.5517
+		},
+		"/Airsim/left/camera_info":{
+			"mean":21.0599,
+			"std":1.03448,
+			"droppage_rate":20.6452
+		},
+		"/Airsim/right/camera_info":{
+			"mean":21,
+			"std":1.02264,
+			"droppage_rate":20.6336
+		},
+		"/airsim_qc/command/trajectory":{
+			"mean":-2.87807e+08,
+			"std":-nan,
+			"droppage_rate":0
+		},
+		"/octomap_binary":{
+			"mean":31.1705,
+			"std":4.52574,
+			"droppage_rate":30.947
+		},
+		"/points":{
+			"mean":41.5916,
+			"std":1.97436,
+			"droppage_rate":26.0115
+		},
+		"/pose_topic":{
+			"mean":19.41,
+			"std":0.491826,
+			"droppage_rate":19.2069
+		},
+		"/tf":{
+			"mean":41.4428,
+			"std":1.96764,
+			"droppage_rate":0
+		}
+},
+
+"app":"mapping",
+"experiment_number":2},
+{
+	"distance_travelled": 306.315,
+	"flight_time": 317.391,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 98.5108,
+	"rotor energy consumed ": 289189,
+	"/airsim_qc/mapping_mean_loop_time": 2,
+	"mission_status": 1,
+	"coverage": 51.731,
+	"g_path_computation_time_avg": 1.50842,
+	"g_path_computation_time_acc": 149.333,
+	"/airsim_qc/nbvPlanner_mean_loop_time": 0,
+	"gpu_compute_energy": 5179.23,
+	"cpu_compute_energy": 17463.8,
+	"total_energy_consumed":311832,
+	"topic_statistics":{
+		"/Airsim/camera_info":{
+			"mean":21.7848,
+			"std":0.964622,
+			"droppage_rate":0
+		},
+		"/Airsim/depth":{
+			"mean":21.7881,
+			"std":0.960196,
+			"droppage_rate":0
+		},
+		"/Airsim/disparity":{
+			"mean":21.7473,
+			"std":1.01736,
+			"droppage_rate":19.3571
+		},
+		"/Airsim/left/camera_info":{
+			"mean":21.7881,
+			"std":0.967069,
+			"droppage_rate":21.543
+		},
+		"/Airsim/right/camera_info":{
+			"mean":21.7881,
+			"std":0.967069,
+			"droppage_rate":21.543
+		},
+		"/airsim_qc/command/trajectory":{
+			"mean":-3.18146e+08,
+			"std":-nan,
+			"droppage_rate":0
+		},
+		"/octomap_binary":{
+			"mean":31.8977,
+			"std":5.03054,
+			"droppage_rate":31.8548
+		},
+		"/points":{
+			"mean":43.2517,
+			"std":1.78744,
+			"droppage_rate":27.4503
+		},
+		"/pose_topic":{
+			"mean":19.4,
+			"std":0.489898,
+			"droppage_rate":19.2333
+		},
+		"/tf":{
+			"mean":43.1718,
+			"std":1.82798,
+			"droppage_rate":0
+		}
+},
+
+"app":"mapping",
+"experiment_number":3}
+]}
+
+

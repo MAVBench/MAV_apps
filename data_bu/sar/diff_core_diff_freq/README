@@ -1,0 +1,11 @@
+diff_velocities done with resolution of .15
+    time_out_ctr was 5
+    the map is smaller now to accomodate the long time execution of lower operating points
+    velocities are appropriate to the pixel_to_response time
+
+diff_velocities_completed 
+    accumulating diff_velocities but with more data
+
+diff_velocities_completed_even_more
+    accumulating diff_velocities_completed with more data
+

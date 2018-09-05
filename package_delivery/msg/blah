@@ -1,0 +1,139 @@
+[31mWARNING: unrecognized tag comment[0m
+[31mWARNING: unrecognized tag comment[0m
+... logging to /home/nvidia/.ros/log/2a577686-235b-11e8-8997-00044b8d107b/roslaunch-tegra-ubuntu-6606.log
+Checking log directory for disk usage. This may take awhile.
+Press Ctrl-C to interrupt
+Done checking log file disk usage. Usage is <1GB.
+]2;/home/nvidia/catkin_ws/src/mav-bench/package_delivery/launch/package_delivery.launch
+[1mstarted roslaunch server http://tegra-ubuntu:39596/[0m
+
+SUMMARY
+========
+
+PARAMETERS
+ * /airsim_imgPublisher/Airsim_ip: 10.157.90.51
+ * /airsim_imgPublisher/Airsim_port: 41451
+ * /airsim_imgPublisher/Fx: 256
+ * /airsim_imgPublisher/Fy: 256
+ * /airsim_imgPublisher/Tx: 0.14
+ * /airsim_imgPublisher/all_front: True
+ * /airsim_imgPublisher/cx: 256
+ * /airsim_imgPublisher/cy: 144
+ * /airsim_imgPublisher/localization_method: ground_truth
+ * /airsim_imgPublisher/scale: 0.38
+ * /airsim_imgPublisher/scale_x: 512
+ * /airsim_imgPublisher/scale_y: 288
+ * /enable_statistics: True
+ * /follow_trajectory/ip_addr: 10.157.90.51
+ * /follow_trajectory/localization_method: ground_truth
+ * /ip_addr: 10.157.90.51
+ * /motion_planner/a_max: 4.5
+ * /motion_planner/drone_height: 0.6
+ * /motion_planner/drone_radius: 2.0
+ * /motion_planner/max_dist_to_connect_at: 10
+ * /motion_planner/max_roadmap_size: 1600
+ * /motion_planner/motion_planning_core: OMPL-RRTConnect
+ * /motion_planner/nodes_to_add_to_roadmap: 300
+ * /motion_planner/rrt_bias: 10
+ * /motion_planner/rrt_step_size: 1.0
+ * /motion_planner/sampling_interval: 0.5
+ * /motion_planner/v_max: 5
+ * /motion_planner/x_dist_to_sample_from__high_bound: 50
+ * /motion_planner/x_dist_to_sample_from__low_bound: -50
+ * /motion_planner/y_dist_to_sample_from__high_bound: 200
+ * /motion_planner/y_dist_to_sample_from__low_bound: -5
+ * /motion_planner/z_dist_to_sample_from__high_bound: 8
+ * /motion_planner/z_dist_to_sample_from__low_bound: 2
+ * /octomap_server/base_frame_id: world
+ * /octomap_server/frame_id: world
+ * /octomap_server/occupancy_max_z: 10.0
+ * /octomap_server/occupancy_min_z: -2.0
+ * /octomap_server/pointcloud_max_z: 10.0
+ * /octomap_server/pointcloud_min_z: -2.0
+ * /octomap_server/resolution: 0.45
+ * /octomap_server/sensor_model/max_range: 5
+ * /package_delivery/fly_trajectory_time_out: 0.1
+ * /package_delivery/ip_addr: 10.157.90.51
+ * /package_delivery/localization_method: ground_truth
+ * /package_delivery/v_max: 5
+ * /panic_pcl/panic_distance: 1
+ * /profile_manager/ip_addr: 10.157.90.51
+ * /profile_manager/stats_file_addr: /home/nvidia/catk...
+ * /ros_DEBUG: True
+ * /rosdistro: kinetic
+ * /rosversion: 1.12.12
+ * /stats_file_addr: /home/nvidia/catk...
+ * /supervisor_mailbox: /home/nvidia/catk...
+
+NODES
+  /
+    airsim_imgPublisher (airsim_img_publisher/airsim_imgPublisher)
+    cloudify (nodelet/nodelet)
+    cloudify_2 (nodelet/nodelet)
+    depth_transforms_manager (nodelet/nodelet)
+    depth_transforms_manager_2 (nodelet/nodelet)
+    follow_trajectory (package_delivery/follow_trajectory)
+    future_collision (package_delivery/future_collision)
+    motion_planner (package_delivery/motion_planner)
+    octomap_server (octomap_server/octomap_server_node)
+    package_delivery (package_delivery/package_delivery)
+    panic_pcl (package_delivery/panic_pcl)
+    profile_manager (profile_manager/profile_manager)
+    publish_imu (publish_imu/publish_imu)
+    rviz (rviz/rviz)
+
+[1mROS_MASTER_URI=http://localhost:11311[0m
+]2;/home/nvidia/catkin_ws/src/mav-bench/package_delivery/launch/package_delivery.launch http://localhost:11311
+[1mprocess[profile_manager-1]: started with pid [6623][0m
+[1mprocess[octomap_server-2]: started with pid [6624][0m
+[1mprocess[airsim_imgPublisher-3]: started with pid [6633][0m
+[1mprocess[depth_transforms_manager-4]: started with pid [6643][0m
+[1mprocess[depth_transforms_manager_2-5]: started with pid [6653][0m
+[1mprocess[cloudify-6]: started with pid [6660][0m
+[1mprocess[cloudify_2-7]: started with pid [6664][0m
+[1mprocess[panic_pcl-8]: started with pid [6672][0m
+[1mprocess[future_collision-9]: started with pid [6678][0m
+[1mprocess[follow_trajectory-10]: started with pid [6704][0m
+[1mprocess[motion_planner-11]: started with pid[31m[ERROR] [1521340424.198050138]: inside the call back[0m
+[31m[ERROR] [1521340424.198333148]: inside the call back[0m
+[31m[ERROR] [1521340424.198468316]: inside the call back[0m
+[31m[ERROR] [1521340424.198580157]: inside the call back[0m
+[31m[ERROR] [1521340424.198686589]: inside the call back[0m
+[33m[ WARN] [1521340423.055333204]: Hey![0m
+[0m[ INFO] [1521340422.932653461]: fly_traj0.3[0m
+[31m[ERROR] [1521340424.671762947]: could not probe data using stats manager[0m
+[31m[ERROR] [1521340424.671762883]: could not probe data using stats manager[0m
+[31m[ERROR] [1521340424.672124100]: could not probe data using stats manager[0m
+[31m[ERROR] [1521340424.672466758]: could not probe data using stats manager[0m
+[0m[ INFO] [1521340423.716084170]: Image publisher started! Connecting to:[0m
+[0m[ INFO] [1521340423.716225963]: IP: 10.157.90.51[0m
+[0m[ INFO] [1521340423.716258187]: Port: 41451[0m
+killing the main thread
+killing the poll thread
+[0m[ INFO] [1521340424.681611665]: waitForService: Service [/record_profiling_data] has not been advertised, waiting...[0m
+[0m[ INFO] [1521340424.719757859]: waitForService: Service [/record_profiling_data] has not been advertised, waiting...[0m
+[0m[ INFO] [1521340424.726621507]: waitForService: Service [/record_profiling_data] has not been advertised, waiting...[0m
+ [6707][0m
+[1mprocess[package_delivery-12]: started with pid [6723][0m
+[1mprocess[rviz-13]: started with pid [6746][0m
+[1mprocess[publish_imu-14]: started with pid [6755][0m
+[publish_imu-14] killing on exit
+[motion_planner-11] killing on exit
+[rviz-13] killing on exit
+[package_delivery-12] killing on exit
+[future_collision-9] killing on exit
+[panic_pcl-8] killing on exit
+[follow_trajectory-10] killing on exit
+[cloudify_2-7] killing on exit
+[cloudify-6] killing on exit
+[depth_transforms_manager_2-5] killing on exit
+[depth_transforms_manager-4] killing on exit
+[octomap_server-2] killing on exit
+[airsim_imgPublisher-3] killing on exit
+[profile_manager-1] killing on exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+[1mdone[0m
+Unhandled exception in thread started by 
+sys.excepthook is missing
+lost sys.stderr

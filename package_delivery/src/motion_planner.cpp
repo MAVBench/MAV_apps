@@ -6,7 +6,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //----------------------------------------------------------------- 
 	// *** F:DN variables	
 	//----------------------------------------------------------------- 
-	this->num_of_plans++;
 	piecewise_trajectory piecewise_path;
 	smooth_trajectory smooth_path;
 
@@ -197,14 +196,14 @@ void MotionPlanner::motion_planning_initialize_params()
         exit(0);
     }
 }
-/*
+
 void MotionPlanner::log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
-    //profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_srv profiling_data_srv_inst;
 
-    //profiling_data_srv_inst.request.key = "number_of_plannings";
-    //profiling_data_srv_inst.request.value = g_number_of_planning;
+    profiling_data_srv_inst.request.key = "number_of_plannings";
+    profiling_data_srv_inst.request.value = g_number_of_planning;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
             ROS_ERROR_STREAM("could not probe data using stats manager");
@@ -230,7 +229,7 @@ void MotionPlanner::log_data_before_shutting_down()
         }
     }
 }
-*/
+
 static double dist(const graph::node& n1, const graph::node& n2)
 {
 	return std::sqrt((n1.x-n2.x)*(n1.x-n2.x) + (n1.y-n2.y)*(n1.y-n2.y) + (n1.z-n2.z)*(n1.z-n2.z));

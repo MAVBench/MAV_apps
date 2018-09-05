@@ -1,0 +1,28 @@
+set_1 
+    done with resolution of .3 
+    time_out_ctr was 20
+    velocities the same (3.84)
+
+
+set_2 done with resolution of .15
+    time_out_ctr was 5
+    velocities the same (3.84)
+
+set_3 done with resolution of .15
+    time_out_ctr was 5
+    the map is smaller now to accomodate the long time execution of lower operating points
+    velocities the same (3.84)
+
+set_4 done with resolution of .15
+    time_out_ctr was 5
+    the map is smaller now to accomodate the long time execution of lower operating points
+    velocities are tunned according to the image to follow time
+	NOTe: the issue was threshold, so dismiss the data
+
+diff_velocity done with resolution of .15
+    time_out_ctr was 5
+    the map is smaller now to accomodate the long time execution of lower operating points
+    velocities are tunned according to the image to follow time
+    fixed the issue in diff_velocity
+
+

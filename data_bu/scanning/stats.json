@@ -1,0 +1,49 @@
+{
+	"distance_travelled": 138.179,
+	"flight_time": 75.1876,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 83.4778,
+	"rotor energy consumed ": 36311,
+	"absolute_slam_error": 1.80338e-15,
+	"slam_lost:": false,
+	"mission_status": 1,
+	"scanning_main_loop": 0.10092,
+	"planning_time": 0.0342089,
+	"poll_decode": nan,
+	"number_of_plannings": 1,
+	"motion_planning_acc": 0.0113594,
+	"motion_planning_kernel": 0.0113594,
+	"gpu_compute_energy": 11.4151,
+	"cpu_compute_energy": 154.587,
+	"total_energy_consumed":36477,
+	"topic_statistics":{
+		"/rosout":{
+			"mean":1,
+			"std":0,
+			"std":0,
+			"msg_avg_age":0.000172096,
+			"msg_max_age":0.000188896,
+			"droppage_rate":0
+		},
+		"/tf":{
+			"mean":15.4621,
+			"std":0.498563,
+			"std":0.498563,
+			"msg_avg_age":0,
+			"msg_max_age":0,
+			"droppage_rate":0
+		}
+},
+
+"app":"scanning",
+"processor_freq":"2035200",
+"planning_resolution":"0.15",
+"nbvp/tree/extension_range":"6",
+"coverage_threshold":"30",
+"mapping_resolution":"0.1",
+"sensor_max_range":"7",
+"nbvp/gain/range":"6.5",
+"experiment_number":1
+}],

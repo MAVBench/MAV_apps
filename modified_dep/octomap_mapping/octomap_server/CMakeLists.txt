@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(octomap_server)
 
+find_package(PCL 1.8 HINTS /usr/local)
+message(STATUS "here is pcl" ${PCL_INCLUDE_DIRS})
 set(PACKAGE_DEPENDENCIES
   roscpp
   visualization_msgs
@@ -17,8 +19,7 @@ set(PACKAGE_DEPENDENCIES
 )
 
 find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES})
-
-find_package(PCL REQUIRED QUIET COMPONENTS common sample_consensus io segmentation filters)
+find_package(REQUIRED QUIET COMPONENTS common sample_consensus io segmentation filters)
 
 find_package(octomap REQUIRED)
 add_definitions(-DOCTOMAP_NODEBUGOUT)

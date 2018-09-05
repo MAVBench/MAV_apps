@@ -1,0 +1,871 @@
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 468232,
+  DistanceTravelled: 5.20678,
+  FlightTime: 418.218
+  collision count: 2
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 569329,
+  DistanceTravelled: 14.5075,
+  FlightTime: 644.448
+  collision count: 2
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 995033,
+  DistanceTravelled: 22.091,
+  FlightTime: 1168.97
+  collision count: 4
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.1103e+06,
+  DistanceTravelled: 31.901,
+  FlightTime: 1423.15
+  collision count: 4
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.13723e+06,
+  DistanceTravelled: 39.1504,
+  FlightTime: 1466.14
+  collision count: 6
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.19858e+06,
+  DistanceTravelled: 46.0429,
+  FlightTime: 1599.26
+  collision count: 6
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.44666e+06,
+  DistanceTravelled: 53.1719,
+  FlightTime: 2078.36
+  collision count: 8
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.52799e+06,
+  DistanceTravelled: 59.9594,
+  FlightTime: 2255.04
+  collision count: 8
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.9845e+06,
+  DistanceTravelled: 67.0093,
+  FlightTime: 3059.34
+  collision count: 10
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 2.22964e+06,
+  DistanceTravelled: 87.91,
+  FlightTime: 3621.42
+  collision count: 10
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 2.37789e+06,
+  DistanceTravelled: 95.47,
+  FlightTime: 3959.86
+  collision count: 12
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 2.59497e+06,
+  DistanceTravelled: 110.71,
+  FlightTime: 4478.22
+  collision count: 12
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 2.61749e+06,
+  DistanceTravelled: 117.735,
+  FlightTime: 4518.18
+  collision count: 14
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 2.68698e+06,
+  DistanceTravelled: 124.322,
+  FlightTime: 4683.61
+  collision count: 14
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: 80.0761,
+  Voltage: 11.1,
+  EnergyConsumed: 43789.6,
+  DistanceTravelled: 7.27424,
+  FlightTime: 41.994
+  collision count: 6
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 249274,
+  DistanceTravelled: 21.9211,
+  FlightTime: 499.251
+  collision count: 6
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 330769,
+  DistanceTravelled: 29.3754,
+  FlightTime: 668.694
+  collision count: 8
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 354672,
+  DistanceTravelled: 32.6527,
+  FlightTime: 721.326
+  collision count: 8
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 395179,
+  DistanceTravelled: 39.6882,
+  FlightTime: 798.987
+  collision count: 10
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 643024,
+  DistanceTravelled: 57.3444,
+  FlightTime: 1355.14
+  collision count: 10
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 799411,
+  DistanceTravelled: 60.6626,
+  FlightTime: 1706.64
+  collision count: 12
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 893801,
+  DistanceTravelled: 65.0527,
+  FlightTime: 1790.71
+  collision count: 12
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 957598,
+  DistanceTravelled: 72.6409,
+  FlightTime: 1933.1
+  collision count: 12
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.01092e+06,
+  DistanceTravelled: 79.9953,
+  FlightTime: 2041.31
+  collision count: 14
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.13093e+06,
+  DistanceTravelled: 88.2065,
+  FlightTime: 2304.35
+  collision count: 14
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.26341e+06,
+  DistanceTravelled: 95.3399,
+  FlightTime: 2574.22
+  collision count: 16
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.65015e+06,
+  DistanceTravelled: 120.04,
+  FlightTime: 3416.37
+  collision count: 16
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: 77.412,
+  Voltage: 11.1,
+  EnergyConsumed: 49645,
+  DistanceTravelled: 2.89108,
+  FlightTime: 43.404
+  collision count: 6
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 340386,
+  DistanceTravelled: 8.30201,
+  FlightTime: 300.648
+  collision count: 7
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 760416,
+  DistanceTravelled: 11.1632,
+  FlightTime: 1250.25
+  collision count: 7
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 875013,
+  DistanceTravelled: 14.0287,
+  FlightTime: 1364
+  collision count: 9
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 910955,
+  DistanceTravelled: 14.0287,
+  FlightTime: 1395.5
+  collision count: 9
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.1666e+06,
+  DistanceTravelled: 18.4168,
+  FlightTime: 1623.17
+  collision count: 9
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.21572e+06,
+  DistanceTravelled: 21.4798,
+  FlightTime: 1729.74
+  collision count: 9
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.48594e+06,
+  DistanceTravelled: 30.2234,
+  FlightTime: 2304.98
+  collision count: 11
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.93901e+06,
+  DistanceTravelled: 33.2848,
+  FlightTime: 3292.89
+  collision count: 11
+}
+
+
+FlightSummaryEnd: 
+
+FlightSummaryStart: 
+{  StateOfCharge: 87.7691,
+  Voltage: 11.1,
+  EnergyConsumed: 26878.3,
+  DistanceTravelled: 7.48362,
+  FlightTime: 40.005
+  collision count: 6
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: 69.9801,
+  Voltage: 11.1,
+  EnergyConsumed: 65964.3,
+  DistanceTravelled: 10.5434,
+  FlightTime: 126.576
+  collision count: 6
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 597495,
+  DistanceTravelled: 17.6827,
+  FlightTime: 1287.75
+  collision count: 8
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 636579,
+  DistanceTravelled: 20.7503,
+  FlightTime: 1375.9
+  collision count: 8
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: 91.3649,
+  Voltage: 11.1,
+  EnergyConsumed: 18978.3,
+  DistanceTravelled: 30.1982,
+  FlightTime: 16.965
+  collision count: 31
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: 81.6957,
+  Voltage: 11.1,
+  EnergyConsumed: 40224.1,
+  DistanceTravelled: 33.0569,
+  FlightTime: 63.699
+  collision count: 31
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: 66.9881,
+  Voltage: 11.1,
+  EnergyConsumed: 72540.2,
+  DistanceTravelled: 40.3018,
+  FlightTime: 123.837
+  collision count: 33
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: 8.09242,
+  Voltage: 11.1,
+  EnergyConsumed: 201944,
+  DistanceTravelled: 43.3711,
+  FlightTime: 412.044
+  collision count: 33
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 220051,
+  DistanceTravelled: 62.9024,
+  FlightTime: 442.995
+  collision count: 43
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 270525,
+  DistanceTravelled: 65.9749,
+  FlightTime: 554.991
+  collision count: 43
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 288178,
+  DistanceTravelled: 68.5257,
+  FlightTime: 584.97
+  collision count: 45
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 388789,
+  DistanceTravelled: 72.8981,
+  FlightTime: 675.039
+  collision count: 45
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.56275e+07,
+  DistanceTravelled: 75.7622,
+  FlightTime: 39601.4
+  collision count: 45
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 4.04088e+06,
+  DistanceTravelled: 3289.75,
+  FlightTime: 3355.57
+  collision count: 5336
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: 38.5043,
+  Voltage: 11.1,
+  EnergyConsumed: 135124,
+  DistanceTravelled: 5.21593,
+  FlightTime: 268.83
+  collision count: 2
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: 4.83082,
+  Voltage: 11.1,
+  EnergyConsumed: 209113,
+  DistanceTravelled: 24.659,
+  FlightTime: 423.96
+  collision count: 13
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.00175e+06,
+  DistanceTravelled: 27.6227,
+  FlightTime: 2218.26
+  collision count: 13
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: 94.1348,
+  Voltage: 11.1,
+  EnergyConsumed: 12890.5,
+  DistanceTravelled: 5.21219,
+  FlightTime: 12.48
+  collision count: 2
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 242528,
+  DistanceTravelled: 8.2769,
+  FlightTime: 524.451
+  collision count: 2
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 379028,
+  DistanceTravelled: 30.3965,
+  FlightTime: 816.663
+  collision count: 16
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 540656,
+  DistanceTravelled: 33.4587,
+  FlightTime: 1177.69
+  collision count: 16
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 560284,
+  DistanceTravelled: 39.9469,
+  FlightTime: 1209.44
+  collision count: 18
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 695686,
+  DistanceTravelled: 43.0201,
+  FlightTime: 1517.73
+  collision count: 18
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 875836,
+  DistanceTravelled: 50.06,
+  FlightTime: 1918.15
+  collision count: 20
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.22304e+06,
+  DistanceTravelled: 53.0249,
+  FlightTime: 2692.44
+  collision count: 20
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.30203e+06,
+  DistanceTravelled: 161.956,
+  FlightTime: 2767.07
+  collision count: 183
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.60118e+06,
+  DistanceTravelled: 593.496,
+  FlightTime: 3007.14
+  collision count: 877
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.68168e+06,
+  DistanceTravelled: 596.563,
+  FlightTime: 3182.18
+  collision count: 877
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: 38.2935,
+  Voltage: 11.1,
+  EnergyConsumed: 135590,
+  DistanceTravelled: 25.0585,
+  FlightTime: 117.942
+  collision count: 41
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 763213,
+  DistanceTravelled: 25.0585,
+  FlightTime: 670.41
+  collision count: 41
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.4615e+06,
+  DistanceTravelled: 29.4387,
+  FlightTime: 1285.67
+  collision count: 41
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.51119e+06,
+  DistanceTravelled: 43.092,
+  FlightTime: 1393.05
+  collision count: 41
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.59857e+06,
+  DistanceTravelled: 50.6666,
+  FlightTime: 1576.22
+  collision count: 43
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.63307e+06,
+  DistanceTravelled: 59.3685,
+  FlightTime: 1650.65
+  collision count: 43
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.66619e+06,
+  DistanceTravelled: 67.2539,
+  FlightTime: 1705.11
+  collision count: 45
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.70299e+06,
+  DistanceTravelled: 77.7817,
+  FlightTime: 1784.48
+  collision count: 45
+}
+
+
+FlightSummaryStart: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 1.79578e+06,
+  DistanceTravelled: 85.3566,
+  FlightTime: 1975.04
+  collision count: 47
+}
+
+
+FlightSummaryEnd: 
+{  StateOfCharge: -1,
+  Voltage: 11.1,
+  EnergyConsumed: 2.02216e+06,
+  DistanceTravelled: 152.991,
+  FlightTime: 2466.63
+  collision count: 47
+}
+
+{
+	"distance_travelled": 0.100007,
+	"flight_time": 1.99805,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 100,
+	"rotor energy consumed ": 915.75,
+	"gpu_compute_energy": 1.10204,
+	"cpu_compute_energy": 9.2572,
+	"total_energy_consumed":926.109,
+	"topic_statistics":{
+		"/Airsim/right/image_raw":{
+			"mean":16.3333,
+			"std":0.471405,
+			"droppage_rate":2.5e+09
+		},
+			"msg_avg_age":2.26602e+17,
+			"msg_max_age":2.32349e+08,
+		"/tf":{
+			"mean":32,
+			"std":0,
+			"std":0,
+			"msg_avg_age":0,
+			"msg_max_age":0,
+			"droppage_rate":0
+		}
+	},
+
+{
+	"distance_travelled": 3.80899,
+	"flight_time": 57.8622,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 83.8891,
+	"rotor energy consumed ": 35425.2,
+	"object_detection_time": 0,
+	"tracking_buffered_time": 0,
+	"error": 0,
+	"gpu_compute_energy": 171.628,
+	"cpu_compute_energy": 321.428,
+	"total_energy_consumed":35918.3,
+	"topic_statistics":{
+		"/Airsim/right/image_raw":{
+			"mean":16.0278,
+			"std":0.202225,
+			"droppage_rate":3.29167e+09
+		},
+			"msg_avg_age":-2.78851e+16,
+			"msg_max_age":3.72562e+07,
+		"/bb_topic":{
+			"mean":25.2609,
+			"std":7.84201,
+			"droppage_rate":0
+		},
+			"msg_avg_age":0,
+			"msg_max_age":0,
+		"/buf_img_bb_topic":{
+			"mean":5.80401e+07,
+			"std":3.48241e+08,
+			"droppage_rate":0
+		},
+			"msg_avg_age":0,
+			"msg_max_age":0,
+		"/tf":{
+			"mean":31.5764,
+			"std":0.607589,
+			"std":0.607589,
+			"msg_avg_age":0,
+			"msg_max_age":0,
+			"droppage_rate":0
+		}
+	},
+
+{
+	"distance_travelled": 2.10235,
+	"flight_time": 31.9267,
+	"collision_count": 0,
+	"initial_voltage": 11.1,
+	"end_voltage": 11.1,
+	"StateOfCharge": 100,
+	"rotor energy consumed ": 14540.4,
+	"object_detection_time": 0,
+	"tracking_buffered_time": 0,
+	"error": 0,
+	"object_detection_time": 0,
+	"gpu_compute_energy": 85.8748,
+	"cpu_compute_energy": 157.464,
+	"total_energy_consumed":14783.8,
+	"topic_statistics":{
+		"/Airsim/right/image_raw":{
+			"mean":16.087,
+			"std":0.329212,
+			"droppage_rate":3.55072e+09
+		},
+			"msg_avg_age":5.972e+17,
+			"msg_max_age":6.41141e+08,
+		"/bb_topic":{
+			"mean":25.85,
+			"std":6.56715,
+			"droppage_rate":0
+		},
+			"msg_avg_age":0,
+			"msg_max_age":0,
+		"/buf_img_bb_topic":{
+			"mean":1.5625,
+			"std":0.496078,
+			"droppage_rate":6.25e+07
+		},
+			"msg_avg_age":0,
+			"msg_max_age":0,
+		"/rosout":{
+			"mean":0,
+			"std":0,
+			"droppage_rate":0
+		},
+			"msg_avg_age":7.62365e+14,
+			"msg_max_age":956445,
+		"/tf":{
+			"mean":31.7391,
+			"std":0.673562,
+			"std":0.673562,
+			"msg_avg_age":0,
+			"msg_max_age":0,
+			"droppage_rate":0
+		}
+	},
+

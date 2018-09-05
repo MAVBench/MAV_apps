@@ -1,0 +1,71 @@
+<launch>
+    <!-- args --> 
+    <!-- Behzad's workstation ip --> 
+    <!--arg name="host_ip" value="10.157.90.51" /--> 
+    <arg name="host_ip" value="169.254.153.158" /> 
+    <!-- Hasans's workstation ip --> 
+    <!-- arg name="host_ip" value="10.157.34.208" /--> 
+    <arg name="img_width" value="512"/>
+    <arg name="img_height" value="288"/>
+    
+
+    <!-- orb slam location--> 
+    <arg name="orb_slam2_dir" value="$(find ORB_SLAM2)/../../.."/> 
+
+    <!-- Set the localization method -->
+    <!-- arg name="localization_method" value="orb_slam2_rgbd" /-->
+    <!-- arg name="localization_method" value="ground_truth" /-->
+    <arg name="localization_method" value="gps" />
+    <param name="localization_method" value="$(arg localization_method)" />
+
+    <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
+    <!-- also planning to prevent stdio stuff(if they really matter)--> 
+    <arg name="DEBUG" value="true" /> 
+    <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
+
+    
+    <!--img publisher node--> 
+    <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen" >
+    <!-- IP of the Airsim computer -->
+    <param name="Airsim_ip" value="$(arg host_ip)" />
+
+    
+    <!-- Port of the Airsim computer (this is default, do not change!) -->
+    <param name="Airsim_port" value="41451"/>
+
+    <!-- RGB camera parameters (parameters when calibrated) -->
+    <comment> 
+    <param name="Fx" value="128"/>
+    <param name="Fy" value="128"/>
+    <param name="cx" value="128"/>
+    <param name="cy" value="72"/>
+    <param name="scale_x" value="256"/>  <!-- Width when calibrated!-->
+    <param name="scale_y" value="144"/> <!-- Height when calibrated!-->
+    <param name="width" value="256"/>  <!-- Width when calibrated!-->
+    <param name="height" value="144"/> <!-- Height when calibrated!-->
+    </comment> 
+    <param name="Fx" value="$(eval arg('img_width')/2)"/>
+    <param name="Fy" value="$(eval arg('img_width')/2)"/>
+    <param name="cx" value="$(eval arg('img_width')/2)"/>
+    <param name="cy" value="$(eval arg('img_height')/2)"/>
+    <param name="scale_x" value="$(arg img_width)"/>  <!-- Width when calibrated!-->
+    <param name="scale_y" value="$(arg img_height)"/> <!-- Height when calibrated!-->
+    <param name="width" value="$(arg img_width)"/>  <!-- Width when calibrated!-->
+    <param name="height" value="$(arg img_height)"/> <!-- Height when calibrated!-->
+    <!--/comment-->
+
+    <param name="maxDist" value="50.0"/> 
+    <!-- Depth baseline -->
+    <param name="Tx" value="0.14"/>
+    <param name="scale" value="0.38"/> 
+
+    <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
+    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
+    <param name="odomTopic" value="/mavros/local_position/odom"/>
+    
+    <!-- Localization of the depth images -->
+    <param name="localization_method" value="$(arg localization_method)" />
+
+    </node>
+    
+</launch>

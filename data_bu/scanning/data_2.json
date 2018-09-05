@@ -1,0 +1,197 @@
+{
+    "experiment_set_0":
+    [
+        {
+            "distance_travelled": 132.38,
+            "flight_time": 95.945,
+            "collision_count": 0,
+            "initial_voltage": 11.1,
+            "end_voltage": 11.1,
+            "StateOfCharge": 79.9056,
+            "rotor energy consumed ": 44161.9,
+            "mission_status": 1,
+            "scanning_main_loop": 0.100995,
+            "planning_time": 0.108873,
+            "number_of_plannings": 1,
+            "planning_without_OM_PULL_time_acc": 0.0134528,
+            "g_planning_time_avg": 0.0134528,
+            "gpu_compute_energy": 14.515,
+            "cpu_compute_energy": 191.715,
+            "total_energy_consumed":44368.1,
+            "topic_statistics":{
+                "/Airsim/camera_info":{
+                    "mean":29.6897,
+                    "std":0.926126,
+                    "std":0.926126,
+                    "msg_avg_age":-0.153567,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                },
+                "/Airsim/depth":{
+                    "mean":29.7126,
+                    "std":0.869774,
+                    "std":0.869774,
+                    "msg_avg_age":-0.153483,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                },
+                "/octomap_binary":{
+                    "mean":5.5122,
+                    "std":0.629438,
+                    "std":0.629438,
+                    "msg_avg_age":0.16499,
+                    "msg_max_age":0.24018,
+                    "droppage_rate":0
+                },
+                "/points":{
+                    "mean":29.6552,
+                    "std":0.913847,
+                    "std":0.913847,
+                    "msg_avg_age":-0.0714713,
+                    "msg_max_age":0,
+                    "droppage_rate":12.0945
+                },
+                "/tf":{
+                    "mean":59.0579,
+                    "std":1.85802,
+                    "std":1.85802,
+                    "msg_avg_age":0,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                }
+            },
+
+            "app":"scanning",
+            "processor_freq":"2035200",
+            "experiment_number":1
+        },
+        {
+            "distance_travelled": 133.235,
+            "flight_time": 96.4371,
+            "collision_count": 0,
+            "initial_voltage": 11.1,
+            "end_voltage": 11.1,
+            "StateOfCharge": 79.4564,
+            "rotor energy consumed ": 45144.2,
+            "mission_status": 1,
+            "scanning_main_loop": 0.10098,
+            "planning_time": 0.0977709,
+            "number_of_plannings": 1,
+            "planning_without_OM_PULL_time_acc": 0.0127737,
+            "g_planning_time_avg": 0.0127737,
+            "gpu_compute_energy": 14.5919,
+            "cpu_compute_energy": 191.849,
+            "total_energy_consumed":45350.6,
+            "topic_statistics":{
+                "/Airsim/camera_info":{
+                    "mean":29.931,
+                    "std":0.657286,
+                    "std":0.657286,
+                    "msg_avg_age":-0.152818,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                },
+                "/Airsim/depth":{
+                    "mean":29.931,
+                    "std":0.657286,
+                    "std":0.657286,
+                    "msg_avg_age":-0.152506,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                },
+                "/octomap_binary":{
+                    "mean":4.5875,
+                    "std":0.917793,
+                    "std":0.917793,
+                    "msg_avg_age":0.196818,
+                    "msg_max_age":0.292348,
+                    "droppage_rate":0
+                },
+                "/points":{
+                    "mean":29.8439,
+                    "std":0.666221,
+                    "std":0.666221,
+                    "msg_avg_age":-0.0709461,
+                    "msg_max_age":0,
+                    "droppage_rate":12.545
+                },
+                "/tf":{
+                    "mean":59.2868,
+                    "std":1.20203,
+                    "std":1.20203,
+                    "msg_avg_age":0,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                }
+            },
+
+            "app":"scanning",
+            "processor_freq":"2035200",
+            "experiment_number":2
+        },
+        {
+            "distance_travelled": 133.594,
+            "flight_time": 96.4251,
+            "collision_count": 0,
+            "initial_voltage": 11.1,
+            "end_voltage": 11.1,
+            "StateOfCharge": 79.4549,
+            "rotor energy consumed ": 45147.6,
+            "mission_status": 1,
+            "scanning_main_loop": 0.101142,
+            "planning_time": 0.0842795,
+            "number_of_plannings": 1,
+            "planning_without_OM_PULL_time_acc": 0.0116974,
+            "g_planning_time_avg": 0.0116974,
+            "gpu_compute_energy": 15.9272,
+            "cpu_compute_energy": 186.136,
+            "total_energy_consumed":45349.7,
+            "topic_statistics":{
+                "/Airsim/camera_info":{
+                    "mean":30.2414,
+                    "std":0.772599,
+                    "std":0.772599,
+                    "msg_avg_age":-0.143405,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                },
+                "/Airsim/depth":{
+                    "mean":30.1839,
+                    "std":0.766073,
+                    "std":0.766073,
+                    "msg_avg_age":-0.143539,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                },
+                "/octomap_binary":{
+                    "mean":3.7625,
+                    "std":0.85504,
+                    "std":0.85504,
+                    "msg_avg_age":0.240609,
+                    "msg_max_age":0.362257,
+                    "droppage_rate":0
+                },
+                "/points":{
+                    "mean":30.2299,
+                    "std":0.768655,
+                    "std":0.768655,
+                    "msg_avg_age":-0.0669367,
+                    "msg_max_age":0,
+                    "droppage_rate":13.2079
+                },
+                "/tf":{
+                    "mean":59.9922,
+                    "std":1.49156,
+                    "std":1.49156,
+                    "msg_avg_age":0,
+                    "msg_max_age":0,
+                    "droppage_rate":0
+                }
+            },
+
+            "app":"scanning",
+            "processor_freq":"2035200",
+            "experiment_number":3
+        }]
+}
+
