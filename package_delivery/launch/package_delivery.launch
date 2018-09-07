@@ -1,7 +1,7 @@
 <launch>
   <!-- args and params --> 
   <!-- Behzad's workstation ip --> 
-  <arg name="host_ip" default="10.157.90.51" />
+  <arg name="host_ip" default="10.16.0.172" />
   <!--arg name="host_ip" default="169.254.153.158" /-->
   <!-- Hasans's workstation ip --> 
   <!-- arg name="host_ip" default="10.157.90.49" /-->
@@ -24,7 +24,7 @@
   <arg name="planning_resolution" default=".15"/>
   <arg name="sensor_max_range" default="7" />
   <arg name="fly_trajectory_time_out" default=".01"/> 
-  <arg name="planning_budget" default=".3"/>
+  <arg name="planning_budget" default=".5"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>
 
   <!-- orb slam location--> 
@@ -164,7 +164,7 @@
 
 	<!-- Convert to point cloud -->
 	<node pkg="nodelet" type="nodelet" name="cloudify"
-	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond" output="screen">
+	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond">
 
 		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
 		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
@@ -179,7 +179,7 @@
     </node>
     </comment>
     
-    <node pkg="package_delivery" type="future_collision" name="future_collision" output="screen">
+    <node pkg="package_delivery" type="future_collision" name="future_collision">
 	<!-- node pkg="octomap_server" type="octomap_server_node" name="octomap_server" output="screen"-->
         <param name="resolution" value="$(arg planning_resolution)" />
 		
