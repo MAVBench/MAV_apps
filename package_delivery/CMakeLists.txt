@@ -190,9 +190,11 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
+set(ompl_lib /opt/ros/lunar/lib/aarch64-linux-gnu/libompl.so)
+
 add_executable(motion_planner src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(motion_planner package_delivery_generate_messages_cpp)
-target_link_libraries(motion_planner ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread  cuda cudart cublas curand )
+target_link_libraries(motion_planner ${catkin_LIBRARIES} ${ompl_lib}  AirLib MavLinkCom rpc pthread  cuda cudart cublas curand )
 
 add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
     ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp)

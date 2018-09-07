@@ -9,7 +9,6 @@ find_package(Eigen3 REQUIRED)
 find_package(CUDA REQUIRED)
 message(darknet_include  ${CUDA_LIBRARIES})
 find_package(catkin REQUIRED COMPONENTS
-  multiagent_collision_check
   trajectory_msgs
   mav_msgs
   tf

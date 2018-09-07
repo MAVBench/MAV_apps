@@ -40,7 +40,7 @@
 // Trajectory smoothening headers
 #include <mav_trajectory_generation/polynomial_optimization_linear.h>
 #include <mav_trajectory_generation/trajectory.h>
-#include <mav_trajectory_generation_ros/trajectory_sampling.h>
+#include <mav_trajectory_generation/trajectory_sampling.h>
 #include <mav_trajectory_generation_ros/ros_visualization.h>
 
 // OMPL specific headers
