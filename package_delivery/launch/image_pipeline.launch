@@ -21,8 +21,8 @@
   <arg name="planner_drone_radius" default="2"/>
   <arg name="planner_drone_height" default="0.6"/>
   
-  <arg name="planning_resolution" default=".85"/>
-  <arg name="sensor_max_range" default="30" />
+  <arg name="planning_resolution" default="1"/>
+  <arg name="sensor_max_range" default="10" />
   <arg name="fly_trajectory_time_out" default=".01"/> 
   <arg name="planning_budget" default="9"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>

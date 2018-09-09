@@ -319,7 +319,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
 
         if (trajectory.size() > 0) {
-            app_started = true;
+		app_started = true;
         }
 
         if (app_started) {
@@ -357,15 +357,27 @@ int main(int argc, char **argv)
        }
 
         if (!fly_backward) {
-            forward_traj = &trajectory;
+//            ROS_INFO_STREAM("fly forward"); 
+    		forward_traj = &trajectory;
             rev_traj = &reverse_trajectory;
-        } else {
+       /* 
+	    while (time > 0 && forward_traj->size() > 0) {
+		    multiDOFpoint p = forward_traj->front();
+		    // Calculate the velocities we should be flying at
+		    ROS_INFO_STREAM("---vs "<< p.vx << " " << p.vy << " " << p.vz);
+    		} 
+		*/
+	
+	} else {
             forward_traj = &reverse_trajectory;
             rev_traj = &trajectory;
 
             yaw_strategy = face_backward;
             max_velocity = 1;
         }
+
+
+
 
         double max_velocity_reached = follow_trajectory(drone, forward_traj,
                 rev_traj, yaw_strategy, true, max_velocity,
