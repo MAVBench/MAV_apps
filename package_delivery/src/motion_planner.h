@@ -66,9 +66,13 @@ public:
         next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 
         smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
+         smooth_failed_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory_failed", 1);
+        
         piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
         traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
+        start_point_pub = nh.advertise<visualization_msgs::Marker>("start_points", 1);
     }
+
 
     void spinOnce()
     {
@@ -142,6 +146,8 @@ private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
     ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub;
+    ros::Publisher smooth_failed_traj_vis_pub;
+    ros::Publisher start_point_pub;
     ros::Subscriber future_col_sub, next_steps_sub;
     ros::ServiceServer get_trajectory_srv_server;
     ros::Publisher traj_pub;

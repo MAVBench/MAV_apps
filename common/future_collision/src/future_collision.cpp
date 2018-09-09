@@ -8,7 +8,7 @@
 //#include <profile_manager/start_profiling_srv.h>
 
 
-bool FutureCollisionChecker::collision(const octomap::OcTree * octree, const multiDOFpoint& n1, const multiDOFpoint& n2) const
+bool FutureCollisionChecker::collision(const octomap::OcTree * octree, const multiDOFpoint& n1, const multiDOFpoint& n2, bool &ray_cast_error) const
 {
     const double height = drone_height__global; 
     const double radius = drone_radius__global; 
@@ -24,15 +24,26 @@ bool FutureCollisionChecker::collision(const octomap::OcTree * octree, const mul
     double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
     octomap::point3d direction(dx, dy, dz);
 
+    ray_cast_error= false;
     for (auto it = octree->begin_leafs_bbx(min, max),
             end = octree->end_leafs_bbx(); it != end; ++it)
     {
         octomap::point3d start_point (it.getCoordinate());
         octomap::point3d end_point;
+
+        if (DEBUG) {  //catching errors where the distance between the two
+                      //nodes are two small, which results in CastRay errors
+            octomap::point3d direction_norm = direction.normalized();
+            if (direction_norm(0) == 0 &&
+                    direction_norm(1) == 0 &&
+                    direction_norm(2) == 0){
+                ray_cast_error= true; 
+                break;
+            }
+        } 
         if (octree->castRay(start_point, direction, end_point, true, distance))
             return true;
     }
-
     return false;
 }
 
@@ -56,6 +67,29 @@ void FutureCollisionChecker::pull_traj(const mavbench_msgs::multiDOFtrajectory::
     } else {
         traj = trajectory_t();
     }
+
+     
+    int temp = traj.size() - 1; 
+    for (int i = 0; i < temp; ++i) {
+        const auto& pos1 = traj[i];
+        const auto& pos2 = traj[i+1];
+        octomap::point3d direction(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+
+        if (DEBUG){  //catching erros associated with castRay
+            octomap::point3d direction_norm = direction.normalized();
+            if (direction_norm(0) == 0 &&
+                    direction_norm(1) == 0 &&
+                    direction_norm(2) == 0){
+                ROS_INFO_STREAM("Normalized direction too small. In pull_traj func"<<traj.size());
+                for (int i = 0; i < traj.size() - 1; ++i) {
+                    const auto& pos_ = traj[i];
+                    ROS_INFO_STREAM(pos_.x<< " "<< pos_.y <<" " <<pos_.z); 
+                }
+                fflush(stdout);
+                exit(0); 
+            }
+        }
+    }
 }
 
 
@@ -73,7 +107,8 @@ std::tuple <bool, double> FutureCollisionChecker::check_for_collisions(Drone& dr
         const auto& pos1 = traj[i];
         const auto& pos2 = traj[i+1];
 
-        if (collision(octree, pos1, pos2)) {
+        bool ray_cast_error = false; 
+        if (collision(octree, pos1, pos2, ray_cast_error)) {
             col = true;
 
             if(CLCT_DATA) {
@@ -83,7 +118,18 @@ std::tuple <bool, double> FutureCollisionChecker::check_for_collisions(Drone& dr
 
             break;
         }
-
+        if (DEBUG) { 
+            if(ray_cast_error) {
+                ROS_INFO_STREAM("normalized directio too small.traj size"<<traj.size());
+                fflush(stdout); 
+                for (int i = 0; i < traj.size() - 1; ++i) {
+                    const auto& pos_ = traj[i];
+                    ROS_INFO_STREAM(pos_.x<< " "<< pos_.y <<" " <<pos_.z); 
+                }
+                exit(0); 
+            }
+        }
+        
         time_to_collision += pos1.duration;
     }
 

@@ -275,9 +275,10 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Push completed command onto reverse-command stack
         multiDOFpoint rev_point = reverse_point(p);
+        
         rev_point.duration = flight_time;
+        
         reversed_commands.push_front(rev_point);
-
         // Update trajectory
         traj->front().duration -= flight_time;
         if (traj->front().duration <= 0){
@@ -306,7 +307,20 @@ static multiDOFpoint reverse_point(multiDOFpoint mdp) {
 
 
 trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second) {
+
     first.insert(first.end(), second.begin(), second.end());
+    
+    auto it=first.begin();
+    while((it!=first.end() - 1) && it !=(first.end())) {
+        if (it->x == (it+1)->x &&
+                it->y == (it+1)->y &&
+                it->z == (it+1)->z){
+            it->duration += (it+1)->duration; 
+            it = first.erase(it+1); 
+        }else{
+            it++;
+        }
+    }
     return first;
 }
 

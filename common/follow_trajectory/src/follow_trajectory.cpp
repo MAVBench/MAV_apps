@@ -44,6 +44,7 @@ ros::Time g_msg_time_stamp;
 long long g_pt_cld_to_futurCol_commun_acc = 0;
 int g_traj_ctr = 0; 
 ros::Time g_recieved_traj_t;
+ros::Time last_to_fly_backward;
 double g_max_velocity_reached = 0;
 
 
@@ -188,6 +189,8 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
     if (msg->reverse) {
         fly_backward = true;
+        last_to_fly_backward = ros::Time::now(); 
+        ROS_INFO_STREAM("make a request to fly backward");
     } else if (trajectory.empty() && !new_trajectory.empty()) {
         // Add drift correction if the drone is currently idling (because it will float around while idling)
         const double max_idling_drift_distance = 0.5;
@@ -343,6 +346,15 @@ int main(int argc, char **argv)
 
         yaw_strategy_t yaw_strategy = follow_yaw;
         float max_velocity = g_v_max;
+
+        
+       if (fly_backward && ((ros::Time::now() - last_to_fly_backward).toSec() > 5)) { //prevent continous backward movement
+           ROS_INFO_STREAM("setting flying back_ward to false"); 
+           drone.fly_velocity(0, 0, 0);
+           drone.fly_velocity(0, 0, 0);
+           drone.fly_velocity(0, 0, 0);
+           fly_backward = false;
+       }
 
         if (!fly_backward) {
             forward_traj = &trajectory;

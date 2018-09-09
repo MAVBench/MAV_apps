@@ -53,7 +53,7 @@ public:
 
 private:
     std::tuple <bool, double> check_for_collisions(Drone& drone);
-    bool collision(const octomap::OcTree * octree, const multiDOFpoint& n1, const multiDOFpoint& n2) const;
+    bool collision(const octomap::OcTree * octree, const multiDOFpoint& n1, const multiDOFpoint& n2, bool &debug_val) const;
     void pull_traj(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg);
     void future_collision_initialize_params();
     void stop_drone();

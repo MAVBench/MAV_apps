@@ -21,21 +21,20 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_start_pos = req.start;
     g_goal_pos = req.goal;
     
-    if (DEBUG__global){
-        visualization_msgs::Marker marker;
-        marker.header.frame_id = "world"; 
-        marker.header.stamp = ros::Time::now();
-        marker.id = cnt++;
-        marker.pose.position.x = req.start.x;
-        marker.pose.position.y = req.start.y;
-        marker.pose.position.z = req.start.z;
-        marker.scale.x = 1.0;
-        marker.scale.y = 1.0;
-        marker.scale.z = 1.0;
-        marker.color.a = 1.0;
-        marker.color.b = 1.0;
-        start_point_pub.publish(marker);
-    }
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "world"; 
+    marker.header.stamp = ros::Time::now();
+    marker.id = cnt++;
+    marker.pose.position.x = req.start.x;
+    marker.pose.position.y = req.start.y;
+    marker.pose.position.z = req.start.z;
+    marker.scale.x = 1.0;
+    marker.scale.y = 1.0;
+    marker.scale.z = 1.0;
+    marker.color.a = 1.0;
+    marker.color.b = 1.0;
+    start_point_pub.publish(marker);
+
 
 
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree);
@@ -71,13 +70,13 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
                                                     req.acceleration.linear.z));
 
 
-    if (DEBUG__global){ 
-        piecewise_traj_vis_pub.publish(piecewise_traj_markers);
-        for (int i =0; i<piecewise_traj_markers.markers.size(); i++){
-            piecewise_traj_markers.markers[i].action = visualization_msgs::Marker::DELETE;
-        }
+
+    piecewise_traj_vis_pub.publish(piecewise_traj_markers);
+    for (int i =0; i<piecewise_traj_markers.markers.size(); i++){
+        piecewise_traj_markers.markers[i].action = visualization_msgs::Marker::DELETE;
     }
-    
+
+
     if (smooth_path.empty()) {
         ROS_ERROR("Path could not be smoothened successfully");
         fflush(stdout); 
@@ -97,11 +96,15 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     create_response(res, smooth_path);
 
     // Publish the trajectory (for debugging purposes)
-    if (DEBUG__global){ 
-        traj_pub.publish(res.multiDOFtrajectory);
-        smooth_traj_vis_pub.publish(smooth_traj_markers);
+    traj_pub.publish(res.multiDOFtrajectory);
+    smooth_traj_vis_pub.publish(smooth_traj_markers);
+    /* 
+    piecewise_traj_vis_pub.publish(piecewise_traj_markers);
+    for (int i =0; i<piecewise_traj_markers.markers.size(); i++){
+        piecewise_traj_markers.markers[i].action = visualization_msgs::Marker::DELETE;
     }
-    
+    */
+
     auto hook_end_t = ros::Time::now(); 
     g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
     g_number_of_planning++; 
@@ -533,8 +536,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 	// Optimize until no collisions are present
 	bool col;
-    int smoothener_ctr = 0;	
-    do {
+	do {
 		col = false;
 
 		// Estimate the time the drone should take flying between each node
@@ -551,7 +553,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		// (Each segment goes from one of the original nodes to the next one in the path)
 		mav_trajectory_generation::Segment::Vector segments;
 		opt.getSegments(&segments);
-        //ROS_INFO_STREAM("got all the segments");
+        ROS_INFO_STREAM("got all the segments");
 
 		// Loop through the vector of segments looking for collisions
 		for (int i = 0; !col && i < segments.size(); ++i) {
@@ -589,35 +591,41 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
                         piecewise_path.insert(piecewise_path.begin()+i+1, middle_node);
 
                         col = true;
+
+                        if (out_of_bounds_lax(n1)){
+                            ROS_INFO_STREAM("n1 out");
+                        }
+                        if (out_of_bounds_lax(n2)) {
+                            ROS_INFO_STREAM("n2 out");
+                        }
+                        if(collision(octree, n1, n2)) {
+                            ROS_INFO_STREAM("there was a collision");
+
+                        }
+                        fflush(stdout);
                         break;
                     }
             }
         }
-        /* 
         if(ros::Time::now() > g_start_time+ros::Duration(g_planning_budget)){
              ROS_INFO_STREAM("exceeded the timing budget for planning");
              fflush(stdout);
          }
-         */
-       smoothener_ctr++; 
-    } while (col && smoothener_ctr > 400);
-   // &&
-    //        ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
+    } while (col &&
+            ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
 
     if (col){
-        if (DEBUG__global){ 
-            ROS_INFO_STREAM("col was true when terminated");
-            fflush(stdout);
-            mav_trajectory_generation::Trajectory traj;
-            opt.getTrajectory(&traj);
-            mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
-            mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
-            for (int i =0; i<piecewise_traj_markers.markers.size(); i++){
-                piecewise_traj_markers.markers[i].lifetime= ros::Duration(4);
-            }
-            smooth_failed_traj_vis_pub.publish(smooth_traj_markers);
+        ROS_INFO_STREAM("col was true when terminated");
+        fflush(stdout);
+	    mav_trajectory_generation::Trajectory traj;
+        opt.getTrajectory(&traj);
+         
+        mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
+	    mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
+        for (int i =0; i<piecewise_traj_markers.markers.size(); i++){
+            piecewise_traj_markers.markers[i].lifetime= ros::Duration(4);
         }
-
+        smooth_failed_traj_vis_pub.publish(smooth_traj_markers);
         return smooth_trajectory();
     }
 
@@ -635,136 +643,6 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     }
 	return traj;
 }
-
-/*
-MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
-{
-    // Variables for visualization for debugging purposes
-	double distance = 0.5; 
-	std::string frame_id = "world";
-
-	// Setup optimizer
-	mav_trajectory_generation::Vertex::Vector vertices;
-	const int dimension = 3;
-	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP;
-	
-	// Convert roadmap path to optimizer's path format
-	mav_trajectory_generation::Vertex start_v(dimension), end_v(dimension);
-	//start_v.makeStartOrEnd(Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z), derivative_to_optimize);
-   	start_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, initial_velocity);
-   	//start_v.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, Eigen::Vector3d(3, 0, 0));
-    start_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z));
-    
-
-
-    end_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z));
-   	end_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
-    ///Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z));
-    //end_v.makeStartOrEnd(Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z), derivative_to_optimize);
-
-	vertices.push_back(start_v);
-	for (auto it = piecewise_path.begin()+1; it+1 != piecewise_path.end(); ++it) {
-		mav_trajectory_generation::Vertex v(dimension);
-		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
-		vertices.push_back(v);
-	}
-	vertices.push_back(end_v);
-
-	// Parameters used to calculate how quickly the drone can move between vertices
-	const double magic_fabian_constant = 6.5; // A tuning parameter.
-
-	//double v_max__global, a_max__global;
-	//ros::param::get("/motion_planner/v_max__global", v_max__global);
-	//ros::param::get("/motion_planner/a_max__global", a_max__global);
-
-	const int N = 10;
-	mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
-
-	// Optimize until no collisions are present
-	bool col;
-	do {
-		//ROS_INFO("Checking for collisions...");
-		col = false;
-
-		// Estimate the time the drone should take flying between each node
-		auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
-	
-        std::vector<double>  times;
-        for (auto el :segment_times) {
-            times.push_back(.8*el); 
-        }
-
-
-		// Optimize and create a smooth path from the vertices
-		opt.setupFromVertices(vertices, times, derivative_to_optimize);
-		opt.solveLinear();
-
-		// Return all the smooth segments in the path
-		// (Each segment goes from one of the original nodes to the next one in the path)
-		mav_trajectory_generation::Segment::Vector segments;
-		opt.getSegments(&segments);
-
-		// Loop through the vector of segments looking for collisions
-		for (int i = 0; !col && i < segments.size(); ++i) {
-			const double time_step = 0.1;
-			double segment_len = segments[i].getTime();
-
-			auto segment_start = *(piecewise_path.begin() + i);
-			auto segment_end = *(piecewise_path.begin() + i + 1);
-
-			// Step through each individual segment, at increments of "time_step" seconds, looking for a collision
-			for (double t = 0; t < segment_len - time_step; t += time_step) {
-				auto pos1 = segments[i].evaluate(t);
-				auto pos2 = segments[i].evaluate(t + time_step);
-
-				graph::node n1 = {pos1.x(), pos1.y(), pos1.z()};
-				graph::node n2 = {pos2.x(), pos2.y(), pos2.z()};
-
-				// Check for a collision between two near points on the segment
-				
-                
-            //if (motion_planning_core_str != "lawn_mower") {
-                if (out_of_bounds(n1) || out_of_bounds(n2) || collision(octree, n1, n2)) {
-					
-                    
-                    // Add a new vertex in the middle of the segment we are currently on
-					mav_trajectory_generation::Vertex middle(dimension);
-
-					double middle_x = (segment_start.x + segment_end.x) / 2;
-					double middle_y = (segment_start.y + segment_end.y) / 2;
-					double middle_z = (segment_start.z + segment_end.z) / 2;
-
-					middle.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(middle_x, middle_y, middle_z));
-
-					vertices.insert(vertices.begin()+i+1, middle);
-
-                    // Add a new node to the piecewise path where the vertex is
-                    graph::node middle_node = {middle_x, middle_y, middle_z};
-					piecewise_path.insert(piecewise_path.begin()+i+1, middle_node);
-
-					col = true;
-
-					break;
-				}
-            //}
-			}
-		}
-	} while (col);
-
-	// Return the collision-free smooth trajectory
-	mav_trajectory_generation::Trajectory traj;
-	opt.getTrajectory(&traj);
-
-	//ROS_INFO("Smoothened path!");
-	// Visualize path for debugging purposes
-	mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
-	mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
-
-	return traj;
-}
-*/
-
-
 
 
 void MotionPlanner::postprocess(piecewise_trajectory& path)
