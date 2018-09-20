@@ -23,7 +23,7 @@
   <arg name="planner_drone_height" default="0.6"/>
   
   <arg name="planning_resolution" default="1"/>
-  <arg name="sensor_max_range" default="10" />
+  <arg name="sensor_max_range" default="15" />
   <arg name="fly_trajectory_time_out" default=".01"/> 
   <arg name="planning_budget" default="2"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>
@@ -57,7 +57,7 @@
 
   <!-- setting DEBUG to false prevents publishing and subscribing to rviz /--> 
   <!-- also planning to prevent stdio stuff(if they really matter)-->
-  <arg name="DEBUG" default="false" />
+  <arg name="DEBUG" default="true" />
   <arg name="CLCT_DATA" value="true" />
   <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
   <param name="DEBUG"  value="$(arg DEBUG)" />
@@ -108,10 +108,10 @@
 		<!-- <param name="filter_ground" value="true" />
 		<param name="ground_filter_plane_distance" value="1.00" />
 		<param name="ground_filter/distance" value="0.50" /> -->
-	    <param name="pointcloud_min_z" type="double" value="-40.0" />
-	    <param name="pointcloud_max_z" type="double" value="40.0" />
+	    <param name="pointcloud_min_z" type="double" value="-2.0" />
+	    <param name="pointcloud_max_z" type="double" value="100.0" />
 	    <param name="occupancy_min_z" type="double" value="-2.00" />
-	    <param name="occupancy_max_z" type="double" value="200.0" />
+	    <param name="occupancy_max_z" type="double" value="100.0" />
 		<!-- <param name="ground_filter_plane_distance" value="0.07" />
 		<param name="ground_filter/distance" value="0.04" />
 		<param name="ground_filter/angle" value="0.4" /> -->
@@ -223,15 +223,6 @@
     </node>
     ?>
 
-    <node pkg="follow_trajectory" type="follow_trajectory" name="follow_trajectory" output="screen">
-        <!-- param name="yaw_t" value=".75"/ -->
-        <param name="ip_addr" value="$(arg host_ip)"/>
-        <param name="localization_method" type="string" value="$(arg localization_method)"/>
-        <param name="grace_period" type="double" value="0.0" />
-        <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/>
-    </node>
-1
-
 
 	<!-- Path-Planner -->
 	<!-- node pkg="package_delivery" type="motion_planner" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)" -->
@@ -249,8 +240,8 @@
         <param name="rrt_step_size" value="1.0"/>
         <param name="rrt_bias" value="10"/>
 		
-        <param name="x_dist_to_sample_from__low_bound" value="-50"/>
-		<param name="x_dist_to_sample_from__high_bound" value="50"/>
+        <param name="x_dist_to_sample_from__low_bound" value="-40"/>
+		<param name="x_dist_to_sample_from__high_bound" value="40"/>
         <param name="y_dist_to_sample_from__low_bound" value="-5"/>
         <param name="y_dist_to_sample_from__high_bound" value="200"/>
         <param name="z_dist_to_sample_from__low_bound" value="3"/>
@@ -262,8 +253,8 @@
         <!-- param name="motion_planning_core" value="PRM"/-->
         <!-- param name="motion_planning_core" value="RRT"/-->
         <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
-        <!--param name="motion_planning_core" value="OMPL-RRTConnect"/-->
-        <param name="motion_planning_core" value="OMPL-RRT"/>
+        <param name="motion_planning_core" value="OMPL-RRTConnect"/>
+        <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
 	<!-- /node -->
     </group>
 
