@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(profile_manager)
 
-set (Airlib_addr  /home/nvidia/AirSim/AirLib)
-set (common_utility_src /home/nvidia/catkin_ws/src/mav-bench/common)
-set (common_utility_include /home/nvidia/catkin_ws/src/mav-bench/common)
+set (Airlib_addr  /home/sifive/other_libs/AirSim/AirLib)
+set (common_utility_src /home/sifive/ros_catkin_ws/src/mav-bench/common)
+set (common_utility_include /home/sifive/ros_catkin_ws/src/mav-bench/common)
 
 find_package(Eigen3 REQUIRED)
 #find_package(CUDA REQUIRED)
@@ -48,15 +48,15 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    /home/nvidia/AirSim/AirLib/include
+    /home/sifive/other_libs/AirSim/AirLib/include
     ${common_utility_include} 
     ${darknet_include_dir}
 )
 
 link_directories(
-  /home/nvidia/AirSim/AirLib/lib
-  /home/nvidia/AirSim/AirLib/deps/rpclib/lib
-  /home/nvidia/AirSim/AirLib/deps/rpclib/lib
+  /home/sifive/other_libs/AirSim/AirLib/lib
+  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
+  /home/sifive/other_libs/AirSim/AirLib/deps/rpclib/lib
   #  /usr/local/cuda/lib64  #added by Behzad (for Behzad)
   ${Airlib_addr}/deps/MavLinkCom/lib
 )

@@ -97,7 +97,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     create_response(res, smooth_path);
 
     // Publish the trajectory (for debugging purposes)
-    traj_pub.publish(res.multiDOFtrajectory);
+     traj_pub.publish(res.multiDOFtrajectory);
     if (DEBUG__global){ 
         smooth_traj_vis_pub.publish(smooth_traj_markers);
     }

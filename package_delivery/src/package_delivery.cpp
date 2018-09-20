@@ -531,7 +531,7 @@ int main(int argc, char **argv)
                 //update_stats_file(stats_file_addr,"mission_status completed");
                 next_state = setup;
                 log_data_before_shutting_down();
-                signal_supervisor(g_supervisor_mailbox, "kill"); 
+                //signal_supervisor(g_supervisor_mailbox, "kill"); 
                 ros::shutdown();
             } else {
                 // If we're too far off from the destination
@@ -544,7 +544,7 @@ int main(int argc, char **argv)
             //mission_status = "time_out"; 
             g_mission_status = mission_status;            
             log_data_before_shutting_down();
-            signal_supervisor(g_supervisor_mailbox, "kill"); 
+            //signal_supervisor(g_supervisor_mailbox, "kill"); 
             ros::shutdown();
             //update_stats_file(stats_file_addr,"mission_status failed");
             next_state = setup;
