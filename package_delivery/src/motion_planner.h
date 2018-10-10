@@ -12,7 +12,6 @@
 // MAVBench headers
 #include "common.h"
 #include "graph.h"
-#include "global_planner.h"
 #include "package_delivery/get_trajectory.h"
 #include "timer.h"
 #include <profile_manager/profiling_data_srv.h>
@@ -47,7 +46,7 @@ friend class OMPLMotionValidator;
 
 public:
     // Type-defs
-    using piecewise_trajectory = std::vector<graph::node>;
+    using piecewise_trajectory = std::vector<coord>;
     using smooth_trajectory = mav_trajectory_generation::Trajectory;
 
     MotionPlanner(octomap::OcTree * octree_, Drone * drone_) :
@@ -108,16 +107,16 @@ private:
     bool known(octomap::OcTree * octree, double x, double y, double z);
 
     // *** F:DN Checks whether there is a collision between two nodes in the occupancy grid.
-    bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr = nullptr);
+    bool collision(octomap::OcTree * octree, const coord& n1, const coord& n2, coord * end_ptr = nullptr);
 
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
-    bool out_of_bounds(const graph::node& pos);
+    bool out_of_bounds(const coord& pos);
 
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
-    bool out_of_bounds_strict(const graph::node& pos);
+    bool out_of_bounds_strict(const coord& pos);
 
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
-    bool out_of_bounds_lax(const graph::node& pos);
+    bool out_of_bounds_lax(const coord& pos);
 
     // *** F:DN Optimize and smoothen a piecewise path without causing any new collisions.
     smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration);
@@ -220,7 +219,7 @@ public:
         double y1 = pos1->values[1], y2 = pos2->values[1];
         double z1 = pos1->values[2], z2 = pos2->values[2];
 
-        graph::node end;
+        coord end;
         bool valid = !mp->collision(mp->octree, {x1,y1,z1}, {x2,y2,z2}, &end);
 
         if (!valid) {

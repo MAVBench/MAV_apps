@@ -12,7 +12,6 @@
 #include "common/VectorMath.hpp"
 #include <tf/transform_listener.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include "coord.h"
 
 //#include "configs.h"
 // Control functions

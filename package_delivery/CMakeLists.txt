@@ -188,8 +188,7 @@ link_directories(
 
 ### Package-Delivery executables
 
-
-add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(occupancy_map_node future_collision package_delivery_generate_messages_cpp)
 target_link_libraries(occupancy_map_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand)
 
@@ -205,7 +204,7 @@ add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/co
 add_dependencies(scanning package_delivery_generate_messages_cpp)
 target_link_libraries(scanning ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
-add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 add_dependencies(motion_planner_node package_delivery_generate_messages_cpp)
 target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand )
 
