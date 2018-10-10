@@ -366,8 +366,8 @@ int main(int argc, char **argv)
     ns = ros::this_node::getName();
 
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     package_delivery_initialize_params();
     geometry_msgs::Point start, goal;
 
@@ -397,9 +397,9 @@ int main(int argc, char **argv)
     ros::Subscriber next_steps_sub = nh.subscribe("next_steps", 1, next_steps_callback);
     ros::Subscriber slam_lost_sub = nh.subscribe("/slam_lost", 1, slam_loss_callback);
 
-	ros::ServiceClient get_trajectory_client = 
+    ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("/get_trajectory_srv");
-	ros::ServiceClient record_profiling_data_client = 
+    ros::ServiceClient record_profiling_data_client = 
         nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
     ros::ServiceClient start_profiling_client = 
       nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
@@ -408,8 +408,8 @@ int main(int argc, char **argv)
     start_profiling_srv_inst.request.key = "";
 
     //----------------------------------------------------------------- 
-	// *** F:DN knobs(params)
-	//----------------------------------------------------------------- 
+    // *** F:DN knobs(params)
+    //----------------------------------------------------------------- 
     const float goal_s_error_margin = 3.0; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
@@ -422,8 +422,8 @@ int main(int argc, char **argv)
     msr::airlib::FlightStats init_stats, end_stats;
     std::string mission_status = "time_out";
     //----------------------------------------------------------------- 
-	// *** F:DN Body
-	//----------------------------------------------------------------- 
+    // *** F:DN Body
+    //----------------------------------------------------------------- 
     
     // Wait for the localization method to come online
     waitForLocalization("ground_truth");
@@ -436,9 +436,9 @@ int main(int argc, char **argv)
     ros::Time loop_start_t(0,0); 
     ros::Time loop_end_t(0,0); //if zero, it's not valid
 
-	ros::Rate pub_rate(80);
+    ros::Rate pub_rate(80);
     for (State state = setup; ros::ok(); ) {
-		pub_rate.sleep();
+        pub_rate.sleep();
         ros::spinOnce();
         
         State next_state = invalid;

@@ -19,7 +19,7 @@
   <arg name="fly_trajectory_time_out" default=".01"/> 
 
   <!-- sensors /-->
-  <arg name="all_front" default="true"/>	
+  <arg name="all_front" default="true"/>    
   
   <!-- localization method -->
   <!--arg name="localization_method" value="orb_slam2_rgbd" /-->
@@ -123,7 +123,7 @@
   <!--comment -->
   <!-- point cloud and pose -->
   <include file="$(find mapping_and_sar)/launch/point_cloud_and_pose.launch">
-  <arg name="all_front" default="$(arg all_front)"/>	
+  <arg name="all_front" default="$(arg all_front)"/>    
   <arg name="localization_method" value="$(arg localization_method)"/>
   <arg name="host_ip" value="$(arg host_ip)"/>
   </include>
@@ -135,7 +135,7 @@
   <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
 
   <!-- IP of the Airsim computer -->
-  <param name="all_front" value="$(arg all_front)"/>	
+  <param name="all_front" value="$(arg all_front)"/>    
   <param name="localization_method" value="$(arg localization_method)" />
   <param name="Airsim_ip" value="$(arg host_ip)" />
 
@@ -171,7 +171,7 @@
   <param name="scale" value="0.38"/> 
 
   <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
-  <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
+  <!-- we are not using the odomTopic since arisim is not providing it at themoment -->    
   <param name="odomTopic" value="/mavros/local_position/odom"/>
   </node>
 
@@ -256,8 +256,8 @@
   <param name="pointcloud_max_z" type="double" value="10.0" />
   <param name="occupancy_min_z" type="double" value="-2.00" />
   <param name="occupancy_max_z" type="double" value="10.0" />
-  <remap from="octomap_binary" to="/octomap_binary2_2"/>	
-  <remap from="occupied_cells_vis_array" to="/occupied_cells_vis_array_2"/>	
+  <remap from="octomap_binary" to="/octomap_binary2_2"/>    
+  <remap from="occupied_cells_vis_array" to="/occupied_cells_vis_array_2"/>    
   <!-- <param name="ground_filter_plane_distance" value="0.07" />
   <param name="ground_filter/distance" value="0.04" />
   <param name="ground_filter/angle" value="0.4" /> -->

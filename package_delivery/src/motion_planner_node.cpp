@@ -29,8 +29,8 @@ int main(int argc, char** argv)
     ROS_WARN("This node has no OctoMap instantiated! It's only useful for the scanning application");
 
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     
     // Create a Drone object
     std::string ip_addr, localization_method;

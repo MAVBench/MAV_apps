@@ -50,57 +50,57 @@
     <node pkg="profile_manager" type="profile_manager" name="profile_manager" output="screen">
     <param name="/ip_addr" value="$(arg host_ip)" />
     </node>
-    <arg name="all_front" default="true"/>	
+    <arg name="all_front" default="true"/>    
 
-	<!-- Point-cloud publisher -->
- 	<node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher">
-		<param name="loop_rate" value="25"/>
-	    <param name="all_front" value="$(arg all_front)"/>	
+    <!-- Point-cloud publisher -->
+     <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher">
+        <param name="loop_rate" value="25"/>
+        <param name="all_front" value="$(arg all_front)"/>    
         <!-- IP of the Airsim computer -->
-		<param name="Airsim_ip" value="$(arg host_ip)" />
+        <param name="Airsim_ip" value="$(arg host_ip)" />
 
-		<!-- Port of the Airsim computer (this is default, do not change!) -->
-		<param name="Airsim_port" value="41451"/>
+        <!-- Port of the Airsim computer (this is default, do not change!) -->
+        <param name="Airsim_port" value="41451"/>
 
-		<!-- RGB camera parameters (parameters when calibrated) -->
-		<param name="Fx" value="256"/>
-		<param name="Fy" value="256"/>
-		<param name="cx" value="256"/>
-		<param name="cy" value="144"/>
-		<param name="scale_x" value="512"/>  <!-- Width when calibrated!-->
-		<param name="scale_y" value="288"/> <!-- Height when calibrated!-->
+        <!-- RGB camera parameters (parameters when calibrated) -->
+        <param name="Fx" value="256"/>
+        <param name="Fy" value="256"/>
+        <param name="cx" value="256"/>
+        <param name="cy" value="144"/>
+        <param name="scale_x" value="512"/>  <!-- Width when calibrated!-->
+        <param name="scale_y" value="288"/> <!-- Height when calibrated!-->
 
-		<!-- Depth baseline -->
-		<param name="Tx" value="0.14"/> 
-		<param name="scale" value="0.38"/> 
+        <!-- Depth baseline -->
+        <param name="Tx" value="0.14"/> 
+        <param name="scale" value="0.38"/> 
 
-		<!-- Topic with odometry information for the vehicle (used to create tf tree) -->
-		<param name="odomTopic" value="/mavros/local_position/odom"/>
-	
+        <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
+        <param name="odomTopic" value="/mavros/local_position/odom"/>
+    
         <!-- Localization of the depth images -->
         <param name="localization_method" value="$(arg localization_method)" />
 
     </node>
 
     
-	<!-- Path-Planner -->
-	<node pkg="package_delivery" type="motion_planner_node" name="motion_planner_node" output="screen" launch-prefix="$(arg my_launch_prefix)" />
+    <!-- Path-Planner -->
+    <node pkg="package_delivery" type="motion_planner_node" name="motion_planner_node" output="screen" launch-prefix="$(arg my_launch_prefix)" />
     <group ns="motion_planner">
-		<param name="nodes_to_add_to_roadmap" value="300"/>
-		<param name="max_dist_to_connect_at" value="10"/>
+        <param name="nodes_to_add_to_roadmap" value="300"/>
+        <param name="max_dist_to_connect_at" value="10"/>
         <param name="v_max" value="$(arg v_max)"/>
-		<param name="a_max" value="$(arg a_max)"/>
+        <param name="a_max" value="$(arg a_max)"/>
 
         <param name="drone_radius" value="2.0"/>
         <param name="drone_height" value="0.6"/>
 
-		<param name="max_roadmap_size" value="1600"/>
+        <param name="max_roadmap_size" value="1600"/>
 
         <param name="rrt_step_size" value="1.0"/>
         <param name="rrt_bias" value="10"/>
-		
+        
         <param name="x_dist_to_sample_from__low_bound" value="-100"/>
-		<param name="x_dist_to_sample_from__high_bound" value="100"/>
+        <param name="x_dist_to_sample_from__high_bound" value="100"/>
         <param name="y_dist_to_sample_from__low_bound" value="-100"/>
         <param name="y_dist_to_sample_from__high_bound" value="100"/>
         <param name="z_dist_to_sample_from__low_bound" value="1"/>
@@ -110,29 +110,29 @@
 
         <!-- options for motion_planning core --> 
         <param name="motion_planning_core" value="lawn_mower"/>
-	</group>
+    </group>
 
-	<!-- Demo program that controls drone -->
-	<!-- <node pkg="package_delivery" type="scanning" name="scanning" output="screen" launch-prefix="/home/nvidia/install/perf/perf record -g fp"> -->
-	<node pkg="package_delivery" type="scanning" name="scanning" output="screen">
+    <!-- Demo program that controls drone -->
+    <!-- <node pkg="package_delivery" type="scanning" name="scanning" output="screen" launch-prefix="/home/nvidia/install/perf/perf record -g fp"> -->
+    <node pkg="package_delivery" type="scanning" name="scanning" output="screen">
         <param name="ip_addr" value="$(arg host_ip)"/>
         <!-- param name="issue_cmd__time_step" value=".05"/-->
-		<!-- param name="points_to_replan_after" value="1000000000"/-->
+        <!-- param name="points_to_replan_after" value="1000000000"/-->
         <param name="v_max" value="$(arg v_max)"/>
         <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/>
         <!-- Localization-->
         <param name="localization_method" value="$(arg localization_method)" />
     </node>
 
-	<group if="$(eval localization_method == 'orb_slam2_rgbd')">
+    <group if="$(eval localization_method == 'orb_slam2_rgbd')">
     <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw
     /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth"/>
-	</group>
+    </group>
 
     <!-- rviz -->
-	<group if="$(arg DEBUG)">
-	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
-	</group> 
+    <group if="$(arg DEBUG)">
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
+    </group> 
 0
 
 </launch>

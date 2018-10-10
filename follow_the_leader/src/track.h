@@ -9,25 +9,25 @@
 
 class KCFtracker {
 public:
-	KCFtracker(const bounding_box& bb, cv::Mat frame);
-	bounding_box track(cv::Mat frame);
+    KCFtracker(const bounding_box& bb, cv::Mat frame);
+    bounding_box track(cv::Mat frame);
 private:
-	KCFTracker tracker;
+    KCFTracker tracker;
 
-	const bool HOG = true;
-	const bool FIXEDWINDOW = false;
-	const bool MULTISCALE = true;
-	const bool LAB = false;
+    const bool HOG = true;
+    const bool FIXEDWINDOW = false;
+    const bool MULTISCALE = true;
+    const bool LAB = false;
 
-	double peak;
+    double peak;
 };
 /*
 class TLDtracker {
 public:
-	TLDtracker(const bounding_box& bb, cv::Mat frame);
-	bounding_box track(cv::Mat frame);
+    TLDtracker(const bounding_box& bb, cv::Mat frame);
+    bounding_box track(cv::Mat frame);
 private:
-	tld::TLD tracker;
+    tld::TLD tracker;
 };
 */
 #endif

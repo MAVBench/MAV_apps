@@ -246,8 +246,8 @@ int main(int argc, char **argv)
     //ROS_INFO("HEy!!");
     
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     obstacle_avoidance_test_initialize_params();
     geometry_msgs::Point start, goal;
 
@@ -267,20 +267,20 @@ int main(int argc, char **argv)
     
     ros::Time start_hook_t, end_hook_t;                                          
     // *** F:DN subscribers,publishers,servers,clients
-	ros::ServiceClient get_trajectory_client = 
+    ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("get_trajectory_srv", true);
-	ros::ServiceClient record_profiling_data_client = 
+    ros::ServiceClient record_profiling_data_client = 
         nh.serviceClient<profile_manager::profiling_data_srv>("record_profiling_data");
     ros::Subscriber panic_sub = 
-		nh.subscribe<std_msgs::Bool>("panic_topic", 1, panic_callback);
+        nh.subscribe<std_msgs::Bool>("panic_topic", 1, panic_callback);
     ros::Subscriber panic_velocity_sub = 
-		nh.subscribe<geometry_msgs::Vector3>("panic_velocity", 1, panic_velocity_callback);
+        nh.subscribe<geometry_msgs::Vector3>("panic_velocity", 1, panic_velocity_callback);
     ros::Subscriber col_imminent_sub = 
-		nh.subscribe<std_msgs::Bool>("col_imminent", 1, col_imminent_callback);
+        nh.subscribe<std_msgs::Bool>("col_imminent", 1, col_imminent_callback);
     ros::Subscriber col_coming_sub = 
-		nh.subscribe<std_msgs::Bool>("col_coming", 1, col_coming_callback);
-	ros::Subscriber slam_lost_sub = 
-		nh.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
+        nh.subscribe<std_msgs::Bool>("col_coming", 1, col_coming_callback);
+    ros::Subscriber slam_lost_sub = 
+        nh.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
 
     ros::ServiceClient start_profiling_client = 
       nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
@@ -289,8 +289,8 @@ int main(int argc, char **argv)
     start_profiling_srv_inst.request.key = "";
 
     //----------------------------------------------------------------- 
-	// *** F:DN knobs(params)
-	//----------------------------------------------------------------- 
+    // *** F:DN knobs(params)
+    //----------------------------------------------------------------- 
     const float goal_s_error_margin = 3.0; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
@@ -301,8 +301,8 @@ int main(int argc, char **argv)
     msr::airlib::FlightStats init_stats, end_stats;
     std::string mission_status;
     //----------------------------------------------------------------- 
-	// *** F:DN Body
-	//----------------------------------------------------------------- 
+    // *** F:DN Body
+    //----------------------------------------------------------------- 
     
     // Wait for the localization method to come online
     waitForLocalization(localization_method);

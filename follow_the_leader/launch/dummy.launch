@@ -46,7 +46,7 @@
     <param name="scale" value="0.38"/> 
 
     <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
-    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
+    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->    
     <param name="odomTopic" value="/mavros/local_position/odom"/>
     </node>
     </comment>
@@ -86,7 +86,7 @@
     <param name="scale" value="0.38"/> 
 
     <!-- Topic with odometry information for the vehicle (used to create tf tree) -->
-    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->	
+    <!-- we are not using the odomTopic since arisim is not providing it at themoment -->    
     <param name="odomTopic" value="/mavros/local_position/odom"/>
     </node>
     

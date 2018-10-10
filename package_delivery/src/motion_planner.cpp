@@ -4,10 +4,10 @@
 bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res)
 {
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
-	piecewise_trajectory piecewise_path;
-	smooth_trajectory smooth_path;
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
+    piecewise_trajectory piecewise_path;
+    smooth_trajectory smooth_path;
 
     //----------------------------------------------------------------- 
     // *** F:DN Body 
@@ -66,7 +66,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         traj_pub.publish(res.multiDOFtrajectory);
         return true;
     }
-	
+    
     create_response(res, smooth_path);
 
     // Publish the trajectory (for debugging purposes)
@@ -232,23 +232,23 @@ void MotionPlanner::log_data_before_shutting_down()
 
 static double dist(const graph::node& n1, const graph::node& n2)
 {
-	return std::sqrt((n1.x-n2.x)*(n1.x-n2.x) + (n1.y-n2.y)*(n1.y-n2.y) + (n1.z-n2.z)*(n1.z-n2.z));
+    return std::sqrt((n1.x-n2.x)*(n1.x-n2.x) + (n1.y-n2.y)*(n1.y-n2.y) + (n1.z-n2.z)*(n1.z-n2.z));
 }
 
 
 bool MotionPlanner::occupied(octomap::OcTree * octree, double x, double y, double z)
 {
-	const double OCC_THRESH = 0.5;
+    const double OCC_THRESH = 0.5;
 
-	octomap::OcTreeNode * otn = octree->search(x, y, z);
+    octomap::OcTreeNode * otn = octree->search(x, y, z);
 
-	return otn != nullptr && otn->getOccupancy() >= OCC_THRESH;
+    return otn != nullptr && otn->getOccupancy() >= OCC_THRESH;
 }
 
 
 bool MotionPlanner::known(octomap::OcTree * octree, double x, double y, double z)
 {
-	return octree->search(x, y, z) != nullptr;
+    return octree->search(x, y, z) != nullptr;
 }
 
 bool is_between(double x, double min, double max)
@@ -346,9 +346,9 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     octomap::point3d max(n1.x+radius, n1.y+radius, n1.z+height/2);
 
     // Create a direction vector over which to check for collisions
-	double dx = n2.x - n1.x;
-	double dy = n2.y - n1.y;
-	double dz = n2.z - n1.z;
+    double dx = n2.x - n1.x;
+    double dy = n2.y - n1.y;
+    double dz = n2.z - n1.z;
     double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
     octomap::point3d direction(dx, dy, dz);
 
@@ -386,8 +386,8 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
         }
     }
 
-	//LOG_ELAPSED(motion_planner);
-	return false;
+    //LOG_ELAPSED(motion_planner);
+    return false;
 }
 
 
@@ -395,43 +395,43 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
 {
     const double safe_radius = 1.0;
 
-	// Sample trajectory
-	mav_msgs::EigenTrajectoryPoint::Vector states;
-	// double sampling_interval__global;
-	// ros::param::get("/motion_planner/sampling_interval__global", sampling_interval__global);
-	mav_trajectory_generation::sampleWholeTrajectory(smooth_path, sampling_interval__global, &states);
+    // Sample trajectory
+    mav_msgs::EigenTrajectoryPoint::Vector states;
+    // double sampling_interval__global;
+    // ros::param::get("/motion_planner/sampling_interval__global", sampling_interval__global);
+    mav_trajectory_generation::sampleWholeTrajectory(smooth_path, sampling_interval__global, &states);
 
     // Get starting position
     graph::node start = {states[0].position_W.x(), states[0].position_W.y(), states[0].position_W.z()};
 
-	// Convert sampled trajectory points to MultiDOFJointTrajectory response
+    // Convert sampled trajectory points to MultiDOFJointTrajectory response
     res.unknown = -1;
 
     int state_index = 0;
-	// for (const auto& s : states) {
+    // for (const auto& s : states) {
     for (int i = 0; i < states.size() - 1; i++) {
         const auto& s = states[i];
         const auto& s_next = states[i+1];
 
-		mavbench_msgs::multiDOFpoint point;
+        mavbench_msgs::multiDOFpoint point;
 
         graph::node current;
-		point.x = current.x = s_next.position_W.x();
-		point.y = current.y = s_next.position_W.y();
-		point.z = current.z = s_next.position_W.z();
+        point.x = current.x = s_next.position_W.x();
+        point.y = current.y = s_next.position_W.y();
+        point.z = current.z = s_next.position_W.z();
 
-		point.vx = s.velocity_W.x();
-		point.vy = s.velocity_W.y();
-		point.vz = s.velocity_W.z();
+        point.vx = s.velocity_W.x();
+        point.vy = s.velocity_W.y();
+        point.vz = s.velocity_W.z();
 
-		point.ax = s.acceleration_W.x();
-		point.ay = s.acceleration_W.y();
-		point.az = s.acceleration_W.z();
+        point.ax = s.acceleration_W.x();
+        point.ay = s.acceleration_W.y();
+        point.az = s.acceleration_W.z();
 
         point.yaw = yawFromVelocity(point.vx, point.vy);
         point.blocking_yaw = false;
 
-	    point.duration = double(s_next.time_from_start_ns - s.time_from_start_ns) / 1e9;
+        point.duration = double(s_next.time_from_start_ns - s.time_from_start_ns) / 1e9;
 
         if (res.unknown != -1 &&
                 !known(octree, current.x, current.y, current.z)
@@ -440,9 +440,9 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
             res.unknown = state_index;
         }
 
-		res.multiDOFtrajectory.points.push_back(point);
+        res.multiDOFtrajectory.points.push_back(point);
         state_index++;
-	}
+    }
 
     res.multiDOFtrajectory.append = false;
     res.multiDOFtrajectory.reverse = false;
@@ -458,121 +458,121 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
 {
     // Variables for visualization for debugging purposes
-	double distance = 0.5; 
-	std::string frame_id = "world";
+    double distance = 0.5; 
+    std::string frame_id = "world";
 
-	// Setup optimizer
-	mav_trajectory_generation::Vertex::Vector vertices;
-	const int dimension = 3;
-	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP;
-	
-	// Convert roadmap path to optimizer's path format
-	mav_trajectory_generation::Vertex start_v(dimension), end_v(dimension);
-	//start_v.makeStartOrEnd(Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z), derivative_to_optimize);
-   	start_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, initial_velocity);
-   	//start_v.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, Eigen::Vector3d(3, 0, 0));
+    // Setup optimizer
+    mav_trajectory_generation::Vertex::Vector vertices;
+    const int dimension = 3;
+    const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP;
+    
+    // Convert roadmap path to optimizer's path format
+    mav_trajectory_generation::Vertex start_v(dimension), end_v(dimension);
+    //start_v.makeStartOrEnd(Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z), derivative_to_optimize);
+       start_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, initial_velocity);
+       //start_v.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, Eigen::Vector3d(3, 0, 0));
     start_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z));
     
     end_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z));
-   	end_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
+       end_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
     ///Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z));
     //end_v.makeStartOrEnd(Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z), derivative_to_optimize);
 
-	vertices.push_back(start_v);
-	for (auto it = piecewise_path.begin()+1; it+1 != piecewise_path.end(); ++it) {
-		mav_trajectory_generation::Vertex v(dimension);
-		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
-		vertices.push_back(v);
-	}
-	vertices.push_back(end_v);
+    vertices.push_back(start_v);
+    for (auto it = piecewise_path.begin()+1; it+1 != piecewise_path.end(); ++it) {
+        mav_trajectory_generation::Vertex v(dimension);
+        v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
+        vertices.push_back(v);
+    }
+    vertices.push_back(end_v);
 
-	// Parameters used to calculate how quickly the drone can move between vertices
-	const double magic_fabian_constant = 6.5; // A tuning parameter.
+    // Parameters used to calculate how quickly the drone can move between vertices
+    const double magic_fabian_constant = 6.5; // A tuning parameter.
 
-	const int N = 10;
-	mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
+    const int N = 10;
+    mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
 
-	// Optimize until no collisions are present
-	bool col;
-	do {
-		col = false;
+    // Optimize until no collisions are present
+    bool col;
+    do {
+        col = false;
 
-		// Estimate the time the drone should take flying between each node
-		auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
+        // Estimate the time the drone should take flying between each node
+        auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
 
         // for (auto& el : segment_times)
         //     el *= 0.5;
 
-		// Optimize and create a smooth path from the vertices
-		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
-		opt.solveLinear();
+        // Optimize and create a smooth path from the vertices
+        opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
+        opt.solveLinear();
 
-		// Return all the smooth segments in the path
-		// (Each segment goes from one of the original nodes to the next one in the path)
-		mav_trajectory_generation::Segment::Vector segments;
-		opt.getSegments(&segments);
+        // Return all the smooth segments in the path
+        // (Each segment goes from one of the original nodes to the next one in the path)
+        mav_trajectory_generation::Segment::Vector segments;
+        opt.getSegments(&segments);
 
-		// Loop through the vector of segments looking for collisions
-		for (int i = 0; !col && i < segments.size(); ++i) {
+        // Loop through the vector of segments looking for collisions
+        for (int i = 0; !col && i < segments.size(); ++i) {
             // ROS_INFO("Looping through segments...");
-			const double time_step = 0.1;
-			double segment_len = segments[i].getTime();
+            const double time_step = 0.1;
+            double segment_len = segments[i].getTime();
 
-			auto segment_start = *(piecewise_path.begin() + i);
-			auto segment_end = *(piecewise_path.begin() + i + 1);
+            auto segment_start = *(piecewise_path.begin() + i);
+            auto segment_end = *(piecewise_path.begin() + i + 1);
 
-			// Step through each individual segment, at increments of "time_step" seconds, looking for a collision
-			for (double t = 0; t < segment_len - time_step; t += time_step) {
+            // Step through each individual segment, at increments of "time_step" seconds, looking for a collision
+            for (double t = 0; t < segment_len - time_step; t += time_step) {
                 // ROS_INFO("Stepping through individual...");
-				auto pos1 = segments[i].evaluate(t);
-				auto pos2 = segments[i].evaluate(t + time_step);
+                auto pos1 = segments[i].evaluate(t);
+                auto pos2 = segments[i].evaluate(t + time_step);
 
-				graph::node n1 = {pos1.x(), pos1.y(), pos1.z()};
-				graph::node n2 = {pos2.x(), pos2.y(), pos2.z()};
+                graph::node n1 = {pos1.x(), pos1.y(), pos1.z()};
+                graph::node n2 = {pos2.x(), pos2.y(), pos2.z()};
 
-				// Check for a collision between two near points on the segment
+                // Check for a collision between two near points on the segment
 
                 //if (motion_planning_core_str != "lawn_mower") {
                 if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2)) {
 
                     // Add a new vertex in the middle of the segment we are currently on
-					mav_trajectory_generation::Vertex middle(dimension);
+                    mav_trajectory_generation::Vertex middle(dimension);
 
-					double middle_x = (segment_start.x + segment_end.x) / 2;
-					double middle_y = (segment_start.y + segment_end.y) / 2;
-					double middle_z = (segment_start.z + segment_end.z) / 2;
+                    double middle_x = (segment_start.x + segment_end.x) / 2;
+                    double middle_y = (segment_start.y + segment_end.y) / 2;
+                    double middle_z = (segment_start.z + segment_end.z) / 2;
 
-					middle.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(middle_x, middle_y, middle_z));
+                    middle.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(middle_x, middle_y, middle_z));
 
-					vertices.insert(vertices.begin()+i+1, middle);
+                    vertices.insert(vertices.begin()+i+1, middle);
 
                     // Add a new node to the piecewise path where the vertex is
                     graph::node middle_node = {middle_x, middle_y, middle_z};
-					piecewise_path.insert(piecewise_path.begin()+i+1, middle_node);
+                    piecewise_path.insert(piecewise_path.begin()+i+1, middle_node);
 
-					col = true;
+                    col = true;
 
-					break;
-				}
+                    break;
+                }
                 //}
-			}
-		}
-	} while (col &&
+            }
+        }
+    } while (col &&
             ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
 
     if (col)
         return smooth_trajectory();
 
-	// Return the collision-free smooth trajectory
-	mav_trajectory_generation::Trajectory traj;
-	opt.getTrajectory(&traj);
+    // Return the collision-free smooth trajectory
+    mav_trajectory_generation::Trajectory traj;
+    opt.getTrajectory(&traj);
 
-	//ROS_INFO("Smoothened path!");
-	// Visualize path for debugging purposes
-	mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
-	mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
+    //ROS_INFO("Smoothened path!");
+    // Visualize path for debugging purposes
+    mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
+    mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
 
-	return traj;
+    return traj;
 }
 
 
@@ -605,10 +605,10 @@ void MotionPlanner::postprocess(piecewise_trajectory& path)
 static graph create_lawnMower_path(geometry_msgs::Point start, int width, int length, int n_pts_per_dir, octomap::OcTree *octree, graph::node_id &start_id, graph::node_id &goal_id)
 
 {
-	
+    
     // *** F:DN variables 
     graph roadmap;
-	bool success = true;
+    bool success = true;
     double x_step = double(length)/double(n_pts_per_dir);
     double y_step = double(width)/double(n_pts_per_dir);
     graph::node_id cur_node_id, prev_node_id;
@@ -616,10 +616,10 @@ static graph create_lawnMower_path(geometry_msgs::Point start, int width, int le
     double y = start.y;
 
 
-	//ROS_INFO("starting piecewise_path");
-	ROS_INFO("starting x,y is %f %f", x, y);
-	//start_id = -1, goal_id = -2;
-	
+    //ROS_INFO("starting piecewise_path");
+    ROS_INFO("starting x,y is %f %f", x, y);
+    //start_id = -1, goal_id = -2;
+    
     //*** F:DN generate all the nodes
         for (int i = 0 ; i < n_pts_per_dir; i++) {
             for (int j = 0 ; j < n_pts_per_dir; j++) {
@@ -639,29 +639,29 @@ static graph create_lawnMower_path(geometry_msgs::Point start, int width, int le
                 y +=y_step;
                 prev_node_id = cur_node_id; 
             }
-	   
+       
             /*
             if ((i+1)  < n_pts_per_dir) { 
                     
                     ROS_INFO("%f %f", x, y);
-		    x += (x_step/3); 
-	            cur_node_id = roadmap.add_node(x, y, start.z);
-		    roadmap.connect(cur_node_id, prev_node_id, 
-				    dist(roadmap.get_node(cur_node_id), 
-					    roadmap.get_node(prev_node_id)));
-		    prev_node_id = cur_node_id; 
+            x += (x_step/3); 
+                cur_node_id = roadmap.add_node(x, y, start.z);
+            roadmap.connect(cur_node_id, prev_node_id, 
+                    dist(roadmap.get_node(cur_node_id), 
+                        roadmap.get_node(prev_node_id)));
+            prev_node_id = cur_node_id; 
                     ROS_INFO("%f %f", x, y);
-		    x += (x_step/3); 
-		    cur_node_id = roadmap.add_node(x, y, start.z);
-		    roadmap.connect(cur_node_id, prev_node_id, 
-				    dist(roadmap.get_node(cur_node_id), 
-					    roadmap.get_node(prev_node_id)));
-		    prev_node_id = cur_node_id; 
-		    x += (x_step/3);
-	    } 
+            x += (x_step/3); 
+            cur_node_id = roadmap.add_node(x, y, start.z);
+            roadmap.connect(cur_node_id, prev_node_id, 
+                    dist(roadmap.get_node(cur_node_id), 
+                        roadmap.get_node(prev_node_id)));
+            prev_node_id = cur_node_id; 
+            x += (x_step/3);
+        } 
              */          
-	    x += x_step;
-	    y_step *= -1;
+        x += x_step;
+        y_step *= -1;
     }
    
     // ***F:DN returning back the the origin
@@ -670,10 +670,10 @@ static graph create_lawnMower_path(geometry_msgs::Point start, int width, int le
             dist(roadmap.get_node(cur_node_id), 
                 roadmap.get_node(prev_node_id)));
     /*   
-	if (occupied(octree, start.x, start.y, start.z)) {
-		ROS_ERROR("Start is already occupied!");
-		success = false;
-	}
+    if (occupied(octree, start.x, start.y, start.z)) {
+        ROS_ERROR("Start is already occupied!");
+        success = false;
+    }
     */ 
     return roadmap;
 }
@@ -681,12 +681,12 @@ static graph create_lawnMower_path(geometry_msgs::Point start, int width, int le
 
 MotionPlanner::piecewise_trajectory MotionPlanner::lawn_mower(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
 {
-	//----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    //----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     piecewise_trajectory result;
-	graph::node_id start_id, goal_id;
-	auto generate_shortest_path = keep_roadmap_intact_plan; // TODO: parameter
+    graph::node_id start_id, goal_id;
+    auto generate_shortest_path = keep_roadmap_intact_plan; // TODO: parameter
 
     //----------------------------------------------------------------- 
     // *** F:DN Body 
@@ -694,8 +694,8 @@ MotionPlanner::piecewise_trajectory MotionPlanner::lawn_mower(geometry_msgs::Poi
     graph roadmap = create_lawnMower_path(start, width, length, n_pts_per_dir, octree, start_id, goal_id);
 
     if (roadmap.size() == 0) {
-    	ROS_ERROR("PRM could not be initialized.");
-    	return result;
+        ROS_ERROR("PRM could not be initialized.");
+        return result;
     }
 
     // publish_graph(roadmap); // A debugging function used to publish the roadmap generated, so it can be viewed in rviz

@@ -169,12 +169,12 @@ int main(int argc, char **argv)
     int width, length, lanes; // size of area to scan
     ros::Time start_hook_t, end_hook_t;  
     geometry_msgs::Point start, goal, original_start;
-	package_delivery::get_trajectory get_trajectory_srv;
+    package_delivery::get_trajectory get_trajectory_srv;
     trajectory_t trajectory;
     uint16_t port = 41451;
     Drone drone(ip_addr__global.c_str(), port, localization_method);
     signal(SIGINT, sigIntHandlerPrivate);
-	ros::ServiceClient get_trajectory_client = 
+    ros::ServiceClient get_trajectory_client = 
         n.serviceClient<package_delivery::get_trajectory>("get_trajectory_srv");
     ros::ServiceClient record_profiling_data_client = 
       n.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
@@ -185,8 +185,8 @@ int main(int argc, char **argv)
     profile_manager::start_profiling_srv start_profiling_srv_inst;
     start_profiling_srv_inst.request.key = "";
     //----------------------------------------------------------------- 
-	// *** F:DN knobs(params)
-	//----------------------------------------------------------------- 
+    // *** F:DN knobs(params)
+    //----------------------------------------------------------------- 
     //const int step__total_number = 1;
     int scanning_loop_rate = 100;
     float goal_s_error_margin = 5.0; //ok distance to be away from the goal.

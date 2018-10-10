@@ -37,8 +37,8 @@ typedef struct stats {
          this->ctr = 0;
     }
 
-	// accumulate values  
-	void acc(long long pub_rate, long long droppage_rate, 
+    // accumulate values  
+    void acc(long long pub_rate, long long droppage_rate, 
             long long stamp_age_mean, double stamp_age_max){
         this->pub_rate_accumulate += pub_rate;
         this->pub_rate_accumulate_sqr += pub_rate*pub_rate;
@@ -49,7 +49,7 @@ typedef struct stats {
     }
 
 
-	void calc_stats() {
+    void calc_stats() {
         this->mean_pub_rate = (double)this->pub_rate_accumulate/this->ctr;
         double var = -1*pow((double)this->pub_rate_accumulate/this->ctr, 2);
         var +=  (double)this->pub_rate_accumulate_sqr/this->ctr;

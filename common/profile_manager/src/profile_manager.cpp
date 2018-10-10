@@ -138,19 +138,19 @@ static int detect_packages(void) {
 }
 
 struct rapl_sysfs_stats {
-	char basename[MAX_PACKAGES][256];
+    char basename[MAX_PACKAGES][256];
     char event_names[MAX_PACKAGES][NUM_RAPL_DOMAINS][256];
-	char filenames[MAX_PACKAGES][NUM_RAPL_DOMAINS][256];
-	long long before[MAX_PACKAGES][NUM_RAPL_DOMAINS];
-	long long after[MAX_PACKAGES][NUM_RAPL_DOMAINS];
+    char filenames[MAX_PACKAGES][NUM_RAPL_DOMAINS][256];
+    long long before[MAX_PACKAGES][NUM_RAPL_DOMAINS];
+    long long after[MAX_PACKAGES][NUM_RAPL_DOMAINS];
     double energy[MAX_PACKAGES][NUM_RAPL_DOMAINS];
-	int valid[MAX_PACKAGES][NUM_RAPL_DOMAINS];
+    int valid[MAX_PACKAGES][NUM_RAPL_DOMAINS];
 };
 
 static int setup_rapl_sysfs(rapl_sysfs_stats *s) {
-	char tempfile[256];
-	int i,j;
-	FILE *fff;
+    char tempfile[256];
+    int i,j;
+    FILE *fff;
 
     int cpu_model;
 
@@ -163,62 +163,62 @@ static int setup_rapl_sysfs(rapl_sysfs_stats *s) {
     }
 
     detect_packages();
-	// printf("\nTrying sysfs powercap interface to gather g_highlevel_application_stats\n\n");
+    // printf("\nTrying sysfs powercap interface to gather g_highlevel_application_stats\n\n");
 
-	/* /sys/class/powercap/intel-rapl/intel-rapl:0/ */
-	/* name has name */
-	/* energy_uj has energy */
-	/* subdirectories intel-rapl:0:0 intel-rapl:0:1 intel-rapl:0:2 */
+    /* /sys/class/powercap/intel-rapl/intel-rapl:0/ */
+    /* name has name */
+    /* energy_uj has energy */
+    /* subdirectories intel-rapl:0:0 intel-rapl:0:1 intel-rapl:0:2 */
 
-	for(j=0;j<total_packages;j++) {
-		i=0;
-		sprintf(s->basename[j],"/sys/class/powercap/intel-rapl/intel-rapl:%d",
-			j);
-		sprintf(tempfile,"%s/name",s->basename[j]);
-		fff=fopen(tempfile,"r");
-		if (fff==NULL) {
-			fprintf(stderr,"\tCould not open %s\n",tempfile);
-			return -1;
-		}
-		fscanf(fff,"%s",s->event_names[j][i]);
-		s->valid[j][i]=1;
-		fclose(fff);
-		sprintf(s->filenames[j][i],"%s/energy_uj",s->basename[j]);
+    for(j=0;j<total_packages;j++) {
+        i=0;
+        sprintf(s->basename[j],"/sys/class/powercap/intel-rapl/intel-rapl:%d",
+            j);
+        sprintf(tempfile,"%s/name",s->basename[j]);
+        fff=fopen(tempfile,"r");
+        if (fff==NULL) {
+            fprintf(stderr,"\tCould not open %s\n",tempfile);
+            return -1;
+        }
+        fscanf(fff,"%s",s->event_names[j][i]);
+        s->valid[j][i]=1;
+        fclose(fff);
+        sprintf(s->filenames[j][i],"%s/energy_uj",s->basename[j]);
 
-		/* Handle subdomains */
-		for(i=1;i<NUM_RAPL_DOMAINS;i++) {
-			sprintf(tempfile,"%s/intel-rapl:%d:%d/name",
-				s->basename[j],j,i-1);
-			fff=fopen(tempfile,"r");
-			if (fff==NULL) {
-				//fprintf(stderr,"\tCould not open %s\n",tempfile);
-				s->valid[j][i]=0;
-				continue;
-			}
-			s->valid[j][i]=1;
-			fscanf(fff,"%s",s->event_names[j][i]);
-			fclose(fff);
-			sprintf(s->filenames[j][i],"%s/intel-rapl:%d:%d/energy_uj",
-				s->basename[j],j,i-1);
+        /* Handle subdomains */
+        for(i=1;i<NUM_RAPL_DOMAINS;i++) {
+            sprintf(tempfile,"%s/intel-rapl:%d:%d/name",
+                s->basename[j],j,i-1);
+            fff=fopen(tempfile,"r");
+            if (fff==NULL) {
+                //fprintf(stderr,"\tCould not open %s\n",tempfile);
+                s->valid[j][i]=0;
+                continue;
+            }
+            s->valid[j][i]=1;
+            fscanf(fff,"%s",s->event_names[j][i]);
+            fclose(fff);
+            sprintf(s->filenames[j][i],"%s/intel-rapl:%d:%d/energy_uj",
+                s->basename[j],j,i-1);
 
-		}
-	}
+        }
+    }
 
-	/* Gather before values */
-	for(j=0;j<total_packages;j++) {
-		for(i=0;i<NUM_RAPL_DOMAINS;i++) {
-			if (s->valid[j][i]) {
-				fff=fopen(s->filenames[j][i],"r");
-				if (fff==NULL) {
-					fprintf(stderr,"\tError opening %s!\n",s->filenames[j][i]);
-				}
-				else {
-					fscanf(fff,"%lld",&s->before[j][i]);
-					fclose(fff);
-				}
-			}
-		}
-	}
+    /* Gather before values */
+    for(j=0;j<total_packages;j++) {
+        for(i=0;i<NUM_RAPL_DOMAINS;i++) {
+            if (s->valid[j][i]) {
+                fff=fopen(s->filenames[j][i],"r");
+                if (fff==NULL) {
+                    fprintf(stderr,"\tError opening %s!\n",s->filenames[j][i]);
+                }
+                else {
+                    fscanf(fff,"%lld",&s->before[j][i]);
+                    fclose(fff);
+                }
+            }
+        }
+    }
 
     return 0;
 }
@@ -226,37 +226,37 @@ static int setup_rapl_sysfs(rapl_sysfs_stats *s) {
 static double run_rapl_sysfs(rapl_sysfs_stats *s) {
     long long value = 0;
     int i,j;
-	FILE *fff;
+    FILE *fff;
 
     /* Gather after values */
-	for(j=0;j<total_packages;j++) {
-		for(i=0;i<NUM_RAPL_DOMAINS;i++) {
-			if (s->valid[j][i]) {
-				fff=fopen(s->filenames[j][i],"r");
-				if (fff==NULL) {
-					fprintf(stderr,"\tError opening %s!\n",s->filenames[j][i]);
-				}
-				else {
-					fscanf(fff,"%lld",&s->after[j][i]);
-					fclose(fff);
-				}
-			}
-		}
-	}
+    for(j=0;j<total_packages;j++) {
+        for(i=0;i<NUM_RAPL_DOMAINS;i++) {
+            if (s->valid[j][i]) {
+                fff=fopen(s->filenames[j][i],"r");
+                if (fff==NULL) {
+                    fprintf(stderr,"\tError opening %s!\n",s->filenames[j][i]);
+                }
+                else {
+                    fscanf(fff,"%lld",&s->after[j][i]);
+                    fclose(fff);
+                }
+            }
+        }
+    }
 
     std::string core("core");
     double e = 0;
-	for(j=0;j<total_packages;j++) {
-		// printf("\tPackage %d\n",j);
-		for(i=0;i<NUM_RAPL_DOMAINS;i++) {
-			if (s->valid[j][i]) {
+    for(j=0;j<total_packages;j++) {
+        // printf("\tPackage %d\n",j);
+        for(i=0;i<NUM_RAPL_DOMAINS;i++) {
+            if (s->valid[j][i]) {
                 s->energy[j][i] = ((double)s->after[j][i]-(double)s->before[j][i])/1000000.0;
                 if (core == s->event_names[j][i]) {
-				    e += s->energy[j][i];;
+                    e += s->energy[j][i];;
                 }
-			}
-		}
-	}
+            }
+        }
+    }
 
     return e;
 }
@@ -523,7 +523,7 @@ int main(int argc, char **argv)
 
     ros::CallbackQueue statistics_queue;
     ros::Subscriber topic_statistics_sub =  
-		nh_statistics_topic.subscribe<rosgraph_msgs::TopicStatistics>("/statistics", 20, topic_statistics_cb);
+        nh_statistics_topic.subscribe<rosgraph_msgs::TopicStatistics>("/statistics", 20, topic_statistics_cb);
     nh_statistics_topic.setCallbackQueue(&statistics_queue);
 
     g_drone = new Drone(g_ip_addr.c_str(), g_port, g_localization_method);

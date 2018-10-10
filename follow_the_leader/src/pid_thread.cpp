@@ -105,14 +105,14 @@ void fly_towards_target(Drone& drone, const bounding_box& bb,
         int img_height, int img_width, PID& pid_vx, PID& pid_vy, PID& pid_vz,
         double dt)
 {
-	static float hover_height = drone.pose().position.z;
+    static float hover_height = drone.pose().position.z;
 
-	auto yaw = drone.get_yaw();
-	if (yaw > 15 || yaw < -15) {
-		cout << "Correcting yaw\n";
-		drone.set_yaw(0);
-	}
-	
+    auto yaw = drone.get_yaw();
+    if (yaw > 15 || yaw < -15) {
+        cout << "Correcting yaw\n";
+        drone.set_yaw(0);
+    }
+    
     double img__cntr =  img_width / 2;
     double vy = pid_vy.calculate(height_ratio, bb.h/img_height,  dt); 
     double vx = pid_vx.calculate(bb.x + bb.w/2, img_width/2, dt); 
@@ -169,15 +169,15 @@ int main(int argc, char **argv)
     }
     
     int loop_rate = 30; 
-	ros::Rate pub_rate(loop_rate);
+    ros::Rate pub_rate(loop_rate);
     float dt = ((float)1)/(float)loop_rate;
     Drone drone(ip_addr__global.c_str(), port, localization_method);
     PID pid_vx(vx__P__global, vx__I__global, vx__D__global, 3.5, -3.5);
     PID pid_vy(vy__P__global, vy__I__global, vy__D__global, 3.5, -3.5);
-	PID pid_vz(vz__P__global, vz__I__global, vz__D__global, 3.5, -3.5); //at the moment only for keeping drone stable
+    PID pid_vz(vz__P__global, vz__I__global, vz__D__global, 3.5, -3.5); //at the moment only for keeping drone stable
 
     while (ros::ok())
-	{
+    {
         while(!bb_queue.empty()) {
             auto bb = bb_queue.front(); 
             bb_queue.pop(); 

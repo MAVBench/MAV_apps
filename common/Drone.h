@@ -37,7 +37,7 @@ public:
     void connect(const std::string& ip_addr, uint16_t port);
     void set_localization_method(std::string localization_method);
 
-	// *** F:DN Control functions
+    // *** F:DN Control functions
     void arm();
     void disarm();
     bool takeoff(double h);

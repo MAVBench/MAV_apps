@@ -274,8 +274,8 @@ public:
 int main(int argc, char** argv)
 {
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     ros::init(argc, argv, "panic_pcl");
     ros::NodeHandle nh;
     signal(SIGINT, sigIntHandlerPrivate);

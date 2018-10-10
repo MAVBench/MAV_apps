@@ -15,7 +15,7 @@ geometry_msgs::Quaternion rot2quat(Eigen::Matrix3d R);
 
 //Function to calculate the quaternion multiplication
 geometry_msgs::Quaternion quatProd(geometry_msgs::Quaternion q1,
-	                               geometry_msgs::Quaternion q2);
+                                   geometry_msgs::Quaternion q2);
 
 //Function to calculate the conjugate (inverse) of a quaternion
 geometry_msgs::Quaternion quatInv(geometry_msgs::Quaternion quat);

@@ -49,7 +49,7 @@ double g_distance_to_collision_first_realized = 0;
 bool CLCT_DATA = false;
 bool DEBUG = false;
 ros::Time g_pt_cloud_header; //this is used to figure out the octomap msg that 
-						  //collision was detected in
+                          //collision was detected in
 
 long long g_pt_cloud_future_collision_acc = 0;
 int g_octomap_rcv_ctr = 0;
@@ -79,42 +79,42 @@ int octomap_ctr = 0;
 template <class T>
 bool collision(octomap::OcTree * octree, const T& n1, const T& n2)
 {
-	const double pi = 3.14159265359;
+    const double pi = 3.14159265359;
 
     const double height = drone_height__global; 
     const double radius = drone_radius__global; 
 
-	const double angle_step = pi/4;
-	const double radius_step = radius/3;
-	const double height_step = height/2;
+    const double angle_step = pi/4;
+    const double radius_step = radius/3;
+    const double height_step = height/2;
 
-	double dx = n2.x - n1.x;
-	double dy = n2.y - n1.y;
-	double dz = n2.z - n1.z;
+    double dx = n2.x - n1.x;
+    double dy = n2.y - n1.y;
+    double dz = n2.z - n1.z;
 
-	double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+    double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
 
-	octomap::point3d direction(dx, dy, dz);
-	octomap::point3d end;
+    octomap::point3d direction(dx, dy, dz);
+    octomap::point3d end;
     if (n1.x == n2.x && n1.y == n2.y && n1.z == n2.z) { 
         //this situation should never occur but in mapping for error correction it
         //might
         return false;
     }
 
-	for (double h = -height/2; h <= height/2; h += height_step) {
-		for (double r = 0; r <= radius; r += radius_step) {
-			for (double a = 0; a <= pi*2; a += angle_step) {
-				octomap::point3d start(n1.x + r*std::cos(a), n1.y + r*std::sin(a), n1.z + h);
+    for (double h = -height/2; h <= height/2; h += height_step) {
+        for (double r = 0; r <= radius; r += radius_step) {
+            for (double a = 0; a <= pi*2; a += angle_step) {
+                octomap::point3d start(n1.x + r*std::cos(a), n1.y + r*std::sin(a), n1.z + h);
 
-				if (octree->castRay(start, direction, end, true, distance)) {
+                if (octree->castRay(start, direction, end, true, distance)) {
                     //ROS_INFO_STREAM("true done");
                     return true;
-				}
-			}
-		}
+                }
+            }
+        }
     }
-	return false;
+    return false;
 }
 
 
@@ -122,11 +122,11 @@ template <class T>
 double dist_to_collision(Drone& drone, const T& col_pos) {
     auto drone_pos = drone.position();
 
-	double dx = drone_pos.x - col_pos.x;
-	double dy = drone_pos.y - col_pos.y;
-	double dz = drone_pos.z - col_pos.z;
+    double dx = drone_pos.x - col_pos.x;
+    double dy = drone_pos.y - col_pos.y;
+    double dz = drone_pos.z - col_pos.z;
 
-	return std::sqrt(dx*dx + dy*dy + dz*dz);
+    return std::sqrt(dx*dx + dy*dy + dz*dz);
 }
 
 template <class T>
@@ -134,9 +134,9 @@ bool in_safe_zone(const T& start, const T& pos) {
     const double radius = drone_radius__global;
     const double height = drone_height__global;
 
-	double dx = start.x - pos.x;
-	double dy = start.y - pos.y;
-	double dz = start.z - pos.z;
+    double dx = start.x - pos.x;
+    double dy = start.y - pos.y;
+    double dz = start.z - pos.z;
 
     return (std::sqrt(dx*dx + dy*dy) < radius && std::abs(dz) < height);
 }
@@ -149,14 +149,14 @@ void pull_octomap(const octomap_msgs::Octomap& msg)
         delete octree;
     }
 
-	octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
-	octree = dynamic_cast<octomap::OcTree*> (tree);
+    octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
+    octree = dynamic_cast<octomap::OcTree*> (tree);
 
     if (octree == nullptr) {
         ROS_ERROR("Octree could not be pulled.");
     }
     g_pt_cloud_header = msg.header.stamp; 
-	//LOG_ELAPSED(future_collision_pull);
+    //LOG_ELAPSED(future_collision_pull);
     //g_ctr++;
 }
 
@@ -249,7 +249,7 @@ void future_collision_initialize_params()
         ROS_FATAL("Could not start future_collision. Localization parameter missing!");
         return; 
     }
-	if(!ros::param::get("/CLCT_DATA",CLCT_DATA)){
+    if(!ros::param::get("/CLCT_DATA",CLCT_DATA)){
         ROS_FATAL("Could not start future_collision. CLCT_DATA parameter missing!");
         return; 
     }
@@ -331,8 +331,8 @@ int main(int argc, char** argv)
     std::string mapFilename(""), mapFilenameParam("");
     signal(SIGINT, sigIntHandlerPrivate);
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     
     enum State {checking_for_collision, waiting_for_response};
     future_collision_initialize_params(); 
@@ -431,7 +431,7 @@ int main(int argc, char** argv)
         
         state = next_state;
         //profiling 
-		
+        
         // Publish whether or not a collision is close enough that we should
         // respond to it
         /* 
@@ -439,7 +439,7 @@ int main(int argc, char** argv)
             auto now = sys_clock::now();
             if (now >= time_to_warn) {
                 col_imminent_msg.data = true;
-				col_imminent_pub.publish(col_imminent_msg);
+                col_imminent_pub.publish(col_imminent_msg);
             }
         } else {
             col_imminent_msg.data = false;

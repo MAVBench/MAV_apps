@@ -37,8 +37,8 @@ int main(int argc, char** argv)
     signal(SIGINT, sigIntHandlerPrivate);
 
     //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
+    // *** F:DN variables    
+    //----------------------------------------------------------------- 
     
     // Create a Drone object
     std::string ip_addr, localization_method;

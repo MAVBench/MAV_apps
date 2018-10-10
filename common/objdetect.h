@@ -76,44 +76,44 @@ void cuda_set_device(int n);
 
 class HOGDetector{
 public:
-	HOGDetector();
+    HOGDetector();
 
-	bounding_box detect_person(cv::Mat frame);
-	bounding_box detect_person_cpu(cv::Mat frame);
+    bounding_box detect_person(cv::Mat frame);
+    bounding_box detect_person_cpu(cv::Mat frame);
 #if GPU==1
-	bounding_box detect_person_gpu(cv::Mat frame);
+    bounding_box detect_person_gpu(cv::Mat frame);
 #endif //GPU==1
 
 private:
-	cv::HOGDescriptor hog_cpu;
+    cv::HOGDescriptor hog_cpu;
 
 #if GPU==1
 #if CV_MAJOR_VERSION==3
-	cv::Ptr<cv::cuda::HOG> hog_gpu;
+    cv::Ptr<cv::cuda::HOG> hog_gpu;
 #else
-	cv::gpu::HOGDescriptor hog_gpu;
+    cv::gpu::HOGDescriptor hog_gpu;
 #endif //CV_MAJOR_VERSION==3
 #endif //GPU==1
 };
 
 class HaarDetector{
 public:
-	HaarDetector();
+    HaarDetector();
 
-	bounding_box detect_person(cv::Mat frame);
-	bounding_box detect_person_cpu(cv::Mat frame);
+    bounding_box detect_person(cv::Mat frame);
+    bounding_box detect_person_cpu(cv::Mat frame);
 #if GPU==1
-	bounding_box detect_person_gpu(cv::Mat frame);
+    bounding_box detect_person_gpu(cv::Mat frame);
 #endif //GPU==1
 
 private:
-	cv::CascadeClassifier haar_cpu;
+    cv::CascadeClassifier haar_cpu;
 
 #if GPU==1
 #if CV_MAJOR_VERSION==3
-	cv::Ptr<cv::cuda::CascadeClassifier> haar_gpu;
+    cv::Ptr<cv::cuda::CascadeClassifier> haar_gpu;
 #else
-	cv::gpu::CascadeClassifier_GPU haar_gpu;
+    cv::gpu::CascadeClassifier_GPU haar_gpu;
 #endif // CV_MAJOR_VERSION==3
 #endif // GPU==1
 };
@@ -121,21 +121,21 @@ private:
 
 class YOLODetector{
 public:
-	YOLODetector();
-	bounding_box detect_person(cv::Mat frame);
+    YOLODetector();
+    bounding_box detect_person(cv::Mat frame);
 
 private:
-	bounding_box best_detection(const darknet::image& im, int num, float thresh, darknet::box *boxes, float **probs, char **names, int classes);
+    bounding_box best_detection(const darknet::image& im, int num, float thresh, darknet::box *boxes, float **probs, char **names, int classes);
 
-	darknet::list *options;
-	char **names;
-	darknet::network net;
+    darknet::list *options;
+    char **names;
+    darknet::network net;
 };
 
 class FRCNNDetector{
 public:
-	FRCNNDetector();
-	bounding_box detect_person(cv::Mat frame);
+    FRCNNDetector();
+    bounding_box detect_person(cv::Mat frame);
 };
 
 

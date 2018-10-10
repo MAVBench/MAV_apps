@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     const int max_list_size = 1;
 
     while (ros::ok())
-	{
+    {
         //publish(drone);
         IMU_stats = drone.getIMUStats();  
 
@@ -122,24 +122,24 @@ int main(int argc, char **argv)
 
         /*
         std::cout << "Body:"<< 
-			      accelerationBody[0] << " * " << accelerationBody[0]  << " + " <<
-			      accelerationBody[1] << " * " << accelerationBody[1]  << " + "  <<
-			      accelerationBody[2] << " * " << accelerationBody[2]  << " = "  <<
-			      accelerationBody[0]*accelerationBody[0] + 
-			      accelerationBody[1]*accelerationBody[1] + 
-			      accelerationBody[2]*accelerationBody[2] <<std::endl;
+                  accelerationBody[0] << " * " << accelerationBody[0]  << " + " <<
+                  accelerationBody[1] << " * " << accelerationBody[1]  << " + "  <<
+                  accelerationBody[2] << " * " << accelerationBody[2]  << " = "  <<
+                  accelerationBody[0]*accelerationBody[0] + 
+                  accelerationBody[1]*accelerationBody[1] + 
+                  accelerationBody[2]*accelerationBody[2] <<std::endl;
 
         std::cout << "World:"<< 
-				accelerationWorld[0] << " * " << accelerationWorld[0]  << " + " <<
-				accelerationWorld[1] << " * " << accelerationWorld[1]  << " + " <<
-				accelerationWorld[2] << " * " << accelerationWorld[2]  << " = " <<
-				accelerationWorld[0]*accelerationWorld[0] + 
-				accelerationWorld[1]*accelerationWorld[1] + 
-				accelerationWorld[2]*accelerationWorld[2] <<std::endl;
+                accelerationWorld[0] << " * " << accelerationWorld[0]  << " + " <<
+                accelerationWorld[1] << " * " << accelerationWorld[1]  << " + " <<
+                accelerationWorld[2] << " * " << accelerationWorld[2]  << " = " <<
+                accelerationWorld[0]*accelerationWorld[0] + 
+                accelerationWorld[1]*accelerationWorld[1] + 
+                accelerationWorld[2]*accelerationWorld[2] <<std::endl;
         */
 
         // if (IMU_stats.linear_acceleration[0] >= 2) {
-        // 	return 0;
+        //     return 0;
         // }
 
         IMU_msg.orientation.x = IMU_stats.orientation.x();

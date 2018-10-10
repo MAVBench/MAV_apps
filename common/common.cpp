@@ -135,7 +135,7 @@ trajectory_t create_slam_loss_trajectory(Drone& drone, trajectory_t& normal_traj
 
 bool reset_slam(Drone& drone, const std::string& topic) {
     ros::NodeHandle nh;
-	ros::ServiceClient reset_client = nh.serviceClient<std_srvs::Trigger>("/slam_reset");
+    ros::ServiceClient reset_client = nh.serviceClient<std_srvs::Trigger>("/slam_reset");
     std_srvs::Trigger srv;
 
     // Reset the SLAM map
@@ -169,9 +169,9 @@ void scan_around(Drone &drone, int angle) {
     ROS_INFO("Scanning around from %f degrees...", init_yaw);
 
     if (angle > 90) {
-		ROS_INFO("we don't have support for angles greater than 90");
+        ROS_INFO("we don't have support for angles greater than 90");
         exit(0);
-	}
+    }
 
     drone.set_yaw(init_yaw+angle <= 180 ? init_yaw + angle : init_yaw + angle - 360);
     drone.set_yaw(init_yaw);
@@ -312,12 +312,12 @@ trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second) 
 
 float yawFromQuat(geometry_msgs::Quaternion q)
 {
-	float roll, pitch, yaw;
+    float roll, pitch, yaw;
 
-	// Formulas for roll, pitch, yaw
-	// roll = atan2(2*(q.w*q.x + q.y*q.z), 1 - 2*(q.x*q.x + q.y*q.y) );
-	// pitch = asin(2*(q.w*q.y - q.z*q.x));
-	yaw = atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z));
+    // Formulas for roll, pitch, yaw
+    // roll = atan2(2*(q.w*q.x + q.y*q.z), 1 - 2*(q.x*q.x + q.y*q.y) );
+    // pitch = asin(2*(q.w*q.y - q.z*q.x));
+    yaw = atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z));
     yaw = (yaw*180)/3.14159265359;
 
     return (yaw <= 180 ? yaw : yaw - 360);

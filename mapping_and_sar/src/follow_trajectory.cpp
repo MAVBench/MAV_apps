@@ -301,8 +301,8 @@ int main(int argc, char **argv){
     
     Drone drone(ip_addr.c_str(), port, localization_method,
                 g_max_yaw_rate, g_max_yaw_rate_during_flight);
-	ros::Subscriber slam_lost_sub = 
-		n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
+    ros::Subscriber slam_lost_sub = 
+        n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
     ros::Subscriber trajectory_follower_sub = n.subscribe<trajectory_msgs::MultiDOFJointTrajectory>(topic_name, 100, boost::bind(callback_trajectory, _1, &drone, &normal_traj));
 
     int v_x, v_y, v_z;

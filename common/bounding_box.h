@@ -2,8 +2,8 @@
 #define BOUNDING_BOX_H
 
 struct bounding_box {
-	double x, y, w, h;
-	double conf;
+    double x, y, w, h;
+    double conf;
 };
 
 #endif

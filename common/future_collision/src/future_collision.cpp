@@ -109,7 +109,7 @@ void FutureCollisionChecker::future_collision_initialize_params()
         ROS_FATAL("Could not start future_collision. Localization parameter missing!");
         return;
     }
-	if(!ros::param::get("/CLCT_DATA",CLCT_DATA)) {
+    if(!ros::param::get("/CLCT_DATA",CLCT_DATA)) {
         ROS_FATAL("Could not start future_collision. CLCT_DATA parameter missing!");
         return;
     }

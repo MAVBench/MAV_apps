@@ -11,9 +11,9 @@
 //#include "common/VectorMath.hpp"
 Drone::Drone() : client(0)
 {
-	connect();
+    connect();
 
-	auto pos = client->getPosition();
+    auto pos = client->getPosition();
     initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
 
     this->localization_method = "ground_truth";
@@ -22,17 +22,17 @@ Drone::Drone() : client(0)
 Drone::Drone(const std::string& ip_addr, uint16_t port) : client(0), collision_count(0), 
     localization_method("ground_truth")
 {
-	connect(ip_addr, port);
+    connect(ip_addr, port);
 
-	auto pos = client->getPosition();
+    auto pos = client->getPosition();
     initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
 }
 
 Drone::Drone(const std::string& ip_addr, uint16_t port, std::string localization_method) : client(0), collision_count(0)
 {
-	connect(ip_addr, port);
+    connect(ip_addr, port);
 
-	auto pos = client->getPosition();
+    auto pos = client->getPosition();
     initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
 
     this->localization_method = localization_method;
@@ -42,9 +42,9 @@ Drone::Drone(const std::string& ip_addr, uint16_t port,
              std::string localization_method, float max_yaw_rate, 
              float max_yaw_rate_during_flight) : client(0), collision_count(0)
 {
-	connect(ip_addr, port);
+    connect(ip_addr, port);
 
-	auto pos = client->getPosition();
+    auto pos = client->getPosition();
     initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
     this->localization_method = localization_method;
     this->max_yaw_rate_during_flight = max_yaw_rate_during_flight;
@@ -54,15 +54,15 @@ Drone::Drone(const std::string& ip_addr, uint16_t port,
 
 Drone::~Drone()
 {
-	if (client != 0)
-		delete client;
+    if (client != 0)
+        delete client;
 }
 
 void Drone::connect()
 {
-	if (client != 0)
-		delete client;
-	client = new msr::airlib::MultirotorRpcLibClient();
+    if (client != 0)
+        delete client;
+    client = new msr::airlib::MultirotorRpcLibClient();
     client->enableApiControl(true);
 }
 
@@ -71,20 +71,20 @@ void Drone::set_localization_method(std::string localization_method) {
 }
 void Drone::connect(const std::string& ip_addr, uint16_t port)
 {
-	if (client != 0)
-		delete client;
-	client = new msr::airlib::MultirotorRpcLibClient(ip_addr, port);
+    if (client != 0)
+        delete client;
+    client = new msr::airlib::MultirotorRpcLibClient(ip_addr, port);
     client->enableApiControl(true);
 }
 
 void Drone::arm()
 {
-	client->armDisarm(true);
+    client->armDisarm(true);
 }
 
 void Drone::disarm()
 {
-	client->armDisarm(false);
+    client->armDisarm(false);
 }
 
 bool Drone::takeoff(double h)
@@ -164,7 +164,7 @@ bool Drone::set_yaw_at_z (int y, double z)
     if (yaw_diff < 0)
         yaw_rate = -yaw_rate;
 
-	try {
+    try {
         auto drivetrain = msr::airlib::DrivetrainType::MaxDegreeOfFreedom;
         msr::airlib::YawMode yawmode(true, yaw_rate);
 
@@ -190,10 +190,10 @@ bool Drone::set_yaw_at_z (int y, double z)
         }
         
         client->moveByVelocity(0, 0, 0, 1);
-	} catch(...) {
-		std::cerr << "set_yaw failed" << std::endl;
-		return false;
-	}
+    } catch(...) {
+        std::cerr << "set_yaw failed" << std::endl;
+        return false;
+    }
 }
 
 
@@ -210,7 +210,7 @@ bool Drone::set_yaw(int y)
     if (yaw_diff < 0)
         yaw_rate = -yaw_rate;
 
-	try {
+    try {
         auto drivetrain = msr::airlib::DrivetrainType::MaxDegreeOfFreedom;
         auto yawmode = msr::airlib::YawMode(true, yaw_rate);
 
@@ -218,10 +218,10 @@ bool Drone::set_yaw(int y)
 
         int duration_ms = duration*1000;
         std::this_thread::sleep_for(std::chrono::milliseconds(duration_ms));
-	}catch(...){
-		std::cerr << "set_yaw failed" << std::endl;
-		return false;
-	}
+    }catch(...){
+        std::cerr << "set_yaw failed" << std::endl;
+        return false;
+    }
 }
 
 /*
@@ -229,7 +229,7 @@ bool Drone::set_yaw(float y, bool slow)
 {
     float angular_vel = 15;
 
-	try {
+    try {
         if (slow) {
             float init_yaw = get_yaw();
             int direction;
@@ -257,32 +257,32 @@ bool Drone::set_yaw(float y, bool slow)
         } else {
             client->rotateToYaw(y, 60, 5);
         }
-	}catch(...){
-		std::cerr << "set_yaw failed" << std::endl;
-		return false;
-	}
+    }catch(...){
+        std::cerr << "set_yaw failed" << std::endl;
+        return false;
+    }
 
-	return true;
+    return true;
 }
 */
 
 bool Drone::set_yaw_based_on_quaternion(geometry_msgs::Quaternion q)
 {
-	float pitch, roll, yaw;
+    float pitch, roll, yaw;
     Eigen::Quaternion<float,Eigen::DontAlign> q_airsim_style;
     q_airsim_style.x() = q.x;
     q_airsim_style.y() = q.y;
     q_airsim_style.z() = q.z;
     q_airsim_style.w() = q.w;
     msr::airlib::VectorMath::toEulerianAngle(q_airsim_style, pitch, roll, yaw);
-	
+    
     try {
         this->set_yaw(yaw*180 / M_PI);
     } catch(...) {
-		std::cerr << "set_yaw_based_on_quaternion failed" << std::endl;
-		return false;
-	}
-	return true;
+        std::cerr << "set_yaw_based_on_quaternion failed" << std::endl;
+        return false;
+    }
+    return true;
 }
 
 static float xy_yaw(double x, double y) {
@@ -295,7 +295,7 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
 {
     //getCollisionInfo();
 
-	try {
+    try {
         if (yaw != YAW_UNCHANGED) {
             float target_yaw = yaw;
             if (yaw == FACE_FORWARD)
@@ -331,11 +331,11 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
             client->moveByVelocity(vy, vx, -vz, duration);
         }
     } catch(...) {
-		std::cerr << "fly_velocity failed" << std::endl;
-		return false;
-	}
+        std::cerr << "fly_velocity failed" << std::endl;
+        return false;
+    }
 
-	return true;
+    return true;
 }
 
 bool Drone::fly_velocity_at_z(double vx, double vy, double z, float yaw, double duration)
@@ -380,9 +380,9 @@ coord Drone::gps(uint64_t& timestamp)
     // https://stackoverflow.com/questions/3024404/transform-longitude-latitude-into-meters
     coord result;
 
-	// getCollisionInfo();
-	auto currentGPS = client->getGPSStats();
-	auto homeGPS = client->getHomeGeoPoint();
+    // getCollisionInfo();
+    auto currentGPS = client->getGPSStats();
+    auto homeGPS = client->getHomeGeoPoint();
 
     double deltaLat = currentGPS.latitude - homeGPS.latitude;
     double deltaLong = currentGPS.longitude - homeGPS.longitude;
@@ -405,7 +405,7 @@ geometry_msgs::Pose Drone::pose()
     /*
     if (this->localization_method == "gps") {
         auto p = client->getPosition();
-	    auto q = client->getOrientation();
+        auto q = client->getOrientation();
         result.position.x = client->getPosition().y() - initial_gps.x;
         result.position.y = client->getPosition().x() - initial_gps.y;
         result.position.z = -1*client->getPosition().z() - initial_gps.z;
@@ -478,33 +478,33 @@ geometry_msgs::PoseWithCovariance Drone::pose_with_covariance()
 
 float Drone::get_yaw()
 {
-	//auto q = client->getOrientation();
-	auto pose = this->pose();
+    //auto q = client->getOrientation();
+    auto pose = this->pose();
     msr::airlib::Quaternionr q(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
     float p, r, y;
     msr::airlib::VectorMath::toEulerianAngle(q, p, y, r);
 
-	return -y*180 / M_PI;
+    return -y*180 / M_PI;
 }
 
 float Drone::get_roll()
 {
-	//auto q = client->getOrientation();
-	auto pose = this->pose();
+    //auto q = client->getOrientation();
+    auto pose = this->pose();
    msr::airlib::Quaternionr q(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
 
     
     float p, r, y;
     msr::airlib::VectorMath::toEulerianAngle(q, p, y, r);
 
-	return r*180 / M_PI;
+    return r*180 / M_PI;
 }
 
 /*
 geometry_msgs::Pose Drone::get_geometry_pose(){
     geometry_msgs::Pose pose;
-	auto q = client->getOrientation();
-	//auto p = client->getPosition();
+    auto q = client->getOrientation();
+    //auto p = client->getPosition();
     pose.position.x = client->getPosition().y();
     pose.position.y = client->getPosition().x();
     pose.position.z = -1*client->getPosition().z();
@@ -519,7 +519,7 @@ geometry_msgs::Pose Drone::get_geometry_pose(){
 geometry_msgs::PoseWithCovariance Drone::get_geometry_pose_with_coveraiance(){
     geometry_msgs::PoseWithCovariance pose_with_covariance;
     geometry_msgs::Pose pose;
-	
+    
     auto q = client->getOrientation();
     pose.position.x = client->getPosition().y();
     pose.position.y = client->getPosition().x();
@@ -539,16 +539,16 @@ geometry_msgs::PoseWithCovariance Drone::get_geometry_pose_with_coveraiance(){
 
 float Drone::get_pitch()
 {
-	
+    
     auto pose = this->pose();
     msr::airlib::Quaternionr q(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
      //auto q = client->getOrientation();
-	
+    
     
     float p, r, y;
     msr::airlib::VectorMath::toEulerianAngle(q, p, y, r);
 
-	return p*180 / M_PI;
+    return p*180 / M_PI;
 }
 
 /*
