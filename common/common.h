@@ -35,13 +35,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         yaw_strategy_t yaw_strategy = ignore_yaw,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),
-        //float max_speed = 3,
         float time = 2); 
-
-
-// Recovery methods
-trajectory_t create_slam_loss_trajectory(Drone& drone, trajectory_t& normal_traj, const trajectory_t& rev_normal_traj);
-bool reset_slam(Drone& drone, const std::string& topic);
 
 
 // Spinning commands

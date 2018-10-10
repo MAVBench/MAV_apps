@@ -55,7 +55,6 @@ float g_v_max, g_a_max;
 float g_max_yaw_rate, g_max_yaw_rate_during_flight;
 float g_sensor_max_range;
 double g_dt;
-// bool g_slam_lost = false;
 
 // Profiling variables
 std::string g_supervisor_mailbox; //file to write to when completed
@@ -138,13 +137,6 @@ void sigIntHandlerPrivate(int signo) {
     }
     exit(0);
 }
-
-
-/*
-void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
-    g_slam_lost = msg->data;
-}
-*/
 
 
 void future_col_callback (const mavbench_msgs::future_collision::ConstPtr& msg) {
@@ -423,8 +415,6 @@ int main(int argc, char** argv)
         nh.subscribe("/col_coming", 1, future_col_callback);
     ros::Subscriber next_steps_sub =
         nh.subscribe("next_steps", 1, next_steps_callback);
-    // ros::Subscriber slam_lost_sub =
-    //    nh.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
 
     // Initialize Drone object
     uint16_t port = 41451;

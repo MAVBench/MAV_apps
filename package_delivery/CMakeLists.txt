@@ -209,11 +209,6 @@ add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planne
 add_dependencies(motion_planner_node package_delivery_generate_messages_cpp)
 target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand )
 
-# add_executable(obstacle_avoidance_test ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
-#      ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/obstacle_avoidance_test.cpp ${common_utility_src}/timer.cpp)
-# add_dependencies(obstacle_avoidance_test obstacle_avoidance_test_generate_messages_cpp)
-# target_link_libraries(obstacle_avoidance_test ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
-
 
 #############
 ## Install ##

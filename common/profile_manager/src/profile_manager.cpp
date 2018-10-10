@@ -36,7 +36,6 @@ msr::airlib::FlightStats g_init_stats, g_end_stats;
 string g_ns;
 uint16_t g_port; 
 string g_localization_method;
-bool g_slam_lost = false;
 
 //profiling variable
 vector<KeyValuePairStruct> g_highlevel_application_stats;
@@ -384,7 +383,6 @@ void output_flight_summary(void){
     stats_ss << "\t\"rotor energy consumed \": " << g_end_stats.energy_consumed - g_init_stats.energy_consumed << ","<<endl; 
 
     stats_ss << "\t\"absolute_slam_error\": " << absoluteTrajectoryError(P, Q) << "," << endl;
-    stats_ss << "\t\"slam_lost:\": " << (g_slam_lost ? "true" : "false") << "," << endl;
 
     // the rest of metrics 
      
@@ -501,11 +499,6 @@ void topic_statistics_cb(const rosgraph_msgs::TopicStatistics::ConstPtr& msg) {
     }
 }
 
-void slam_lost_cb(const std_msgs::Bool::ConstPtr& msg) {
-    if (msg->data == true)
-        g_slam_lost = true;
-}
-
 void statistics_queue_timer_callback (const ros::TimerEvent& te, ros::CallbackQueue * cbq) {
      cbq->callAvailable(ros::WallDuration());
 }
@@ -517,7 +510,6 @@ int main(int argc, char **argv)
     ros::NodeHandle nh, nh_statistics_topic;
     ros::ServiceServer record_profiling_data_service = nh.advertiseService("record_profiling_data", record_profiling_data_cb);
     ros::ServiceServer start_profiling = nh.advertiseService("start_profiling", start_profiling_cb);
-    ros::Subscriber slam_lost_sub = nh.subscribe<std_msgs::Bool>("/slam_lost", 10, slam_lost_cb);
     
     initialize_params();
 

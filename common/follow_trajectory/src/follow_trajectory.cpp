@@ -19,7 +19,6 @@ trajectory_t reverse_trajectory;
 bool fly_backward = false;
 
 // Messages from other nodes
-bool slam_lost = false;
 ros::Time future_collision_time{0}; // The moment in time when the drone should stop because of an upcoming collision
 int future_collision_seq = 0;
 int trajectory_seq = 0;
@@ -120,11 +119,6 @@ void future_collision_callback(const mavbench_msgs::future_collision::ConstPtr& 
             future_collision_time = ros::Time::now();
     }
 }
-
-void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
-    slam_lost = msg->data;
-}
-
 
 template<class P1, class P2>
 trajectory_t straight_line_trajectory(const P1& start, const P2& end, double v)
@@ -306,9 +300,7 @@ int main(int argc, char **argv)
     // Initialize publishers and subscribers
     ros::Publisher next_steps_pub = n.advertise<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1);
 
-    ros::Subscriber slam_lost_sub = n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
     ros::Subscriber col_coming_sub = n.subscribe<mavbench_msgs::future_collision>("/col_coming", 1, future_collision_callback);
-    // ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("normal_traj", 1, callback_trajectory);
     ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1, boost::bind(callback_trajectory, _1, &drone));
 
     // Begin execution loop
@@ -375,14 +367,8 @@ int main(int argc, char **argv)
 
         next_steps_pub.publish(trajectory_msg);
 
-        if (slam_lost){
-            ROS_INFO_STREAM("slam loss");
-            log_data_before_shutting_down();
-            g_localization_status = 0;
-            signal_supervisor(g_supervisor_mailbox, "kill");
-            ros::shutdown();
-        } else if (future_collision_time != ros::Time(0) && ros::Time::now() >= future_collision_time) {
-            // Stop the drone if we haven't been able to come up with a new plan in our budgetted time
+        if (future_collision_time != ros::Time(0) && ros::Time::now() >= future_collision_time) {
+            // Stop the drone if we haven't been able to come up with a new plan in our budgeted time
             ROS_WARN("Motion planner took too long to propose a new path, so the drone is being stopped!");
             drone.fly_velocity(0, 0, 0);
             trajectory.clear();

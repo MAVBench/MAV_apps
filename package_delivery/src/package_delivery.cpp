@@ -32,7 +32,6 @@ ros::Time col_coming_time_stamp;
 long long g_pt_cld_to_pkg_delivery_commun_acc = 0;
 int g_col_com_ctr = 0;
 
-bool slam_lost = false;
 bool col_coming = false;
 bool clcted_col_coming_data = true;
 mavbench_msgs::multiDOFtrajectory normal_traj_msg;
@@ -178,11 +177,6 @@ double dist(coord t, geometry_msgs::Point m)
 {
     // We must convert between the two coordinate systems
     return std::sqrt((t.x-m.x)*(t.x-m.x) + (t.y-m.y)*(t.y-m.y) + (t.z-m.z)*(t.z-m.z));
-}
-
-
-void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
-    slam_lost = msg->data;
 }
 
 
@@ -375,10 +369,6 @@ int main(int argc, char **argv)
     twist.linear.x = twist.linear.y = twist.linear.z = 0;
     acceleration.linear.x = acceleration.linear.y = acceleration.linear.z = 0; 
 
-    // Flight queues
-    trajectory_t slam_loss_traj;
-    bool created_slam_loss_traj = false;
-
     uint16_t port = 41451;
     Drone drone(ip_addr__global.c_str(), port, localization_method,
                 g_max_yaw_rate, g_max_yaw_rate_during_flight);
@@ -389,13 +379,11 @@ int main(int argc, char **argv)
     int fail_threshold = 50;
 
     ros::Time start_hook_t, end_hook_t;                                          
-    // *** F:DN subscribers,publishers,servers,clients
-    // ros::Publisher trajectory_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("normal_traj", 1);
 
+    // *** F:DN subscribers,publishers,servers,clients
     ros::Subscriber col_coming_sub = nh.subscribe("col_coming", 1, col_coming_callback);
     ros::Subscriber trajectory_sub = nh.subscribe("multidoftraj", 1, trajectory_callback);
     ros::Subscriber next_steps_sub = nh.subscribe("next_steps", 1, next_steps_callback);
-    ros::Subscriber slam_lost_sub = nh.subscribe("/slam_lost", 1, slam_loss_callback);
 
     ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("/get_trajectory_srv");
