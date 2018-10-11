@@ -1,5 +1,4 @@
 <launch>
-<!-- args --> 
     <!-- Behzad's workstation ip --> 
     <!-- arg name="host_ip" value="10.157.34.101" /--> 
     <!--arg name="host_ip" value="10.157.90.51" /-->
@@ -21,13 +20,12 @@
     <!-- set this to "" if you don't want perf -->
     <arg name="my_launch_prefix" value="" /> 
     <!-- arg name="my_launch_prefix" value="/home/nvidia/install/perf/perf record -g fp"/ -->
-    
 
     <arg name="param_file" value="$(find mapping_and_sar)/resource/mapping.yaml" />
 
     <!-- starting nodes --> 
     <!-- Point-cloud publisher -->
-     <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
+    <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
         <!-- IP of the Airsim computer -->
         <param name="all_front" value="$(arg all_front)"/>    
         <param name="localization_method" value="$(arg localization_method)" />
@@ -48,18 +46,6 @@
         <param name="width" value="512"/>  <!-- Width when calibrated!-->
         <param name="height" value="288"/> <!-- Height when calibrated!-->
 
-        <comment> 
-        <param name="Fx" value="200"/>
-        <param name="Fy" value="200"/>
-        <param name="cx" value="200"/>
-        <param name="cy" value="150"/>
-        <param name="scale_x" value="400"/>  <!-- Width when calibrated!-->
-        <param name="scale_y" value="300"/> <!-- Height when calibrated!-->
-        <param name="width" value="400"/>  <!-- Width when calibrated!-->
-        <param name="height" value="300"/> <!-- Height when calibrated!-->
-        </comment>
-        
-        
         <param name="maxDist" value="50.0"/> 
         <!-- Depth baseline -->
         <param name="Tx" value="0.14"/>
@@ -76,8 +62,6 @@
         <param name="localization_method" value="$(arg localization_method)"/>
         <param name="ip_addr" value="$(arg host_ip)"/>
     </node>
-    
-    <!-- /group --> 
     
     <!-- Nodelet manager for this pipeline -->
     <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager"/>

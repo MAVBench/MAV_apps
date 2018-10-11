@@ -12,7 +12,6 @@
 
     <!-- orb slam location--> 
     <arg name="orb_slam2_dir" value="$(find ORB_SLAM2)/../../.."/> 
-1;2P
 
     <!-- Set the localization method -->
     <!-- arg name="localization_method" value="orb_slam2_rgbd" /-->
@@ -25,7 +24,6 @@
     <arg name="DEBUG" value="true" /> 
     <param name="ros_DEBUG" type="bool" value="$(arg DEBUG)" />
 
-    
     <!--img publisher node--> 
     <node pkg="common_pkg" type="control_thread" name="control_thread" output="screen"/>
 

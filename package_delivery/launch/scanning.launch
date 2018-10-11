@@ -45,11 +45,11 @@
     <param name="planning_budget" value="$(arg planning_budget)"/>
 
 
-
-    <!-- starting nodes --> 
+    <!-- Starting nodes --> 
     <node pkg="profile_manager" type="profile_manager" name="profile_manager" output="screen">
-    <param name="/ip_addr" value="$(arg host_ip)" />
+        <param name="/ip_addr" value="$(arg host_ip)" />
     </node>
+
     <arg name="all_front" default="true"/>    
 
     <!-- Point-cloud publisher -->
@@ -125,15 +125,14 @@
     </node>
 
     <group if="$(eval localization_method == 'orb_slam2_rgbd')">
-    <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw
-    /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth"/>
+        <node pkg="ORB_SLAM2" type="RGBD" name="RGBD" args="$(arg orb_slam2_dir)/Vocabulary/ORBvoc.txt $(arg orb_slam2_dir)/cameras/airsim-rgbd.yaml /camera/rgb/image_raw:=/Airsim/right/image_raw
+        /camera/depth_registered/sw_registered/image_rect:=/Airsim/depth"/>
     </group>
 
     <!-- rviz -->
     <group if="$(arg DEBUG)">
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
+        <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
     </group> 
-0
 
 </launch>
 

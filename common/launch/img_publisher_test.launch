@@ -60,7 +60,7 @@
     </node>
 
     <!-- Point-cloud publisher -->
-     <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher">
+    <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher">
         <!-- IP of the Airsim computer -->
         <param name="Airsim_ip" value="$(arg host_ip)" />
 
@@ -99,7 +99,7 @@
     
     <!-- rviz -->
     <group if="$(arg DEBUG)">
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
+        <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
     </group>
 
 </launch>
