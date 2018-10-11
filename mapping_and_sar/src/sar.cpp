@@ -20,6 +20,7 @@
  */
 
 #include <ros/ros.h>
+#include <signal.h>
 #include <visualization_msgs/Marker.h>
 #include <thread>
 #include <chrono>
