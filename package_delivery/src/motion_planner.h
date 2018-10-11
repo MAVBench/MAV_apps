@@ -11,7 +11,6 @@
 
 // MAVBench headers
 #include "common.h"
-#include "graph.h"
 #include "package_delivery/get_trajectory.h"
 #include "timer.h"
 #include <profile_manager/profiling_data_srv.h>
