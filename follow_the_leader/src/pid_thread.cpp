@@ -1,53 +1,37 @@
 #include "ros/ros.h"
-#include <std_msgs/String.h>
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
-//#include "template_library.hpp"
-#include <sstream>
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+
 #include <iostream>
 #include <chrono>
 #include <math.h>
 #include <iterator>
-#include <chrono>
 #include <thread>
-//#include "follow_the_leader/shut_down.h"
-//#include "controllers/DroneControllerBase.hpp"
-//#include "common/Common.hpp"
-#include "common.h"
 #include <fstream>
-#include "Drone.h"
 #include <cstdlib>
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include "pid.h"
-#include "control_drone.h"
-#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
-#include <trajectory_msgs/MultiDOFJointTrajectory.h>
-#include <stdio.h>
 #include <time.h>
-#include "std_msgs/Bool.h"
 #include <signal.h>
-#include "common.h"
-#include <cstring>
 #include <string>
-#include "follow_the_leader/bounding_box_msg.h"
+
+#include "pid.h"
+#include "Drone.h"
+#include "common.h"
 #include "bounding_box.h"
+#include "follow_the_leader/bounding_box_msg.h"
 #include "follow_the_leader/cmd_srv.h"
-#include "error.h"
 #include <profile_manager/profiling_data_srv.h>
+#include "error.h"
 
 using namespace std;
 std::string ip_addr__global;
 std::string localization_method;
-std::queue<bounding_box> bb_queue; //uesd to buffer imags while detection is running
+std::queue<bounding_box> bb_queue; // Used to buffer imags while detection is running
 float height_ratio;
-//const int image_w = 256, image_h = 144; //this must be equal to the img being pulled in from airsim
+
 //long long g_error_accumulate = 0;
 //int g_error_ctr = 0;
+
 int image_w__global;// = 400;
 int  image_h__global; //= 400; //this must be equal to the img being pulled in from airsim
+
 float vx__P__global; //= (float)2.0/(image_h/2); 
 float vy__P__global; //= (float)3.0/(image_w/2); 
 float vz__P__global; //= (float)1.0;
@@ -63,25 +47,7 @@ float vz__D__global; //= .1;
 void log_data_before_shutting_down(){
     std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
-
-    /* 
-    profiling_data_srv_inst.request.key = "error";
-    profiling_data_srv_inst.request.value = ((double)g_error_accumulate/g_error_ctr)/1000;
-    if (ros::service::waitForService("/record_profiling_data", 10)){ 
-        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
-            ros::shutdown();
-        }
-    }
-    */
 }
-
-/*
-bool shutdown_cb(follow_the_leader::shut_down::Request &req, 
-    follow_the_leader::shut_down::Response &res){
-    ros::shutdown();
-}
-*/
 
 void sigIntHandlerPrivate(int signo){
     if (signo == SIGINT) {
@@ -117,18 +83,6 @@ void fly_towards_target(Drone& drone, const bounding_box& bb,
     double vy = pid_vy.calculate(height_ratio, bb.h/img_height,  dt); 
     double vx = pid_vx.calculate(bb.x + bb.w/2, img_width/2, dt); 
     double vz = pid_vz.calculate(1*(double)img_height/2, bb.y + bb.h/2, dt); 
-    //double vz = pid_vz.calculate(drone.pose().position.z, hover_height, dt); //for hovering at the same point
-    
-    //error error_inst(bb, img_height, img_width, height_ratio);
-    //ROS_ERROR_STREAM("erros_inst.x"<< error_inst.x<<"  v.x"<<vx); 
-    //ROS_ERROR_STREAM("erros_inst.y"<< error_inst.y<<"  v.y"<<vy); 
-    //ROS_ERROR_STREAM("erros_inst.z"<< error_inst.z<<"  v.z"<<vz);
-    //ROS_ERROR_STREAM("-------------------------------");
-    //<<"bb.y"<<bb.y<<"bb.height"<<bb.h<<"imgheight"<<img_height); 
-    //ROS_ERROR_STREAM("bb.x"<<bb.x<<"bb.height"<<bb.h<<"imgheight"<<img_height); 
-    //ROS_ERROR_STREAM("error.full"<<error_inst.full);
-    //g_error_accumulate +=  (error_inst.full)*1000;
-    //g_error_ctr +=1;
     
     if (vy >=3 || vy<=-3) {
         ROS_INFO_STREAM("vy:"<<vy);

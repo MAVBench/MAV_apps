@@ -28,13 +28,6 @@ static T magnitude(T a, T b, T c) {
 }
 
 
-template <class T>
-static T last_msg (std::string topic) {
-    // Return the last message of a latched topic
-    return *(ros::topic::waitForMessage<T>(topic));
-}
-
-
 void sigIntHandler(int sig)
 {
     //ros::shutdown();

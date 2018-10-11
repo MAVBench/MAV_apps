@@ -8,7 +8,7 @@
 #include <geometry_msgs/Point.h>
 #include "timer.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-//#include "common/VectorMath.hpp"
+
 Drone::Drone() : client(0)
 {
     connect();
@@ -123,34 +123,6 @@ bool Drone::takeoff(double h)
     return true;
 }
 
-/*
-static double cap_vz (double vz)
-{
-    if (vz < -10)
-        vz = -10;
-    else if (vz > 10)
-        vz = 10;
-    // else if (vz < -5)
-    //     vz = -5;
-    // else if (vz > 5)
-    //     vz = 5;
-    // else if (vz < -2)
-    //     vz = -2;
-    // else if (vz > 2)
-    //     vz = 2;
-    // else if (vz < -1)
-    //     vz = -1;
-    // else if (vz > 1)
-    //     vz = 1;
-    // else if (vz < -0.1)
-    //     vz = -0.1;
-    // else if (vz > 0.1)
-    //     vz = 0.1;
-
-    return vz;
-}
-*/
-
 bool Drone::set_yaw_at_z (int y, double z)
 {
     int pos_dist = (y - int(get_yaw()) + 360) % 360;
@@ -224,47 +196,6 @@ bool Drone::set_yaw(int y)
     }
 }
 
-/*
-bool Drone::set_yaw(float y, bool slow)
-{
-    float angular_vel = 15;
-
-    try {
-        if (slow) {
-            float init_yaw = get_yaw();
-            int direction;
-            if (y >= init_yaw)
-                direction = 1;
-            else
-                direction = -1;
-
-            angular_vel *= direction;
-
-            for (float yaw = get_yaw(); (direction == 1 && yaw <= y) || (direction == -1 && yaw >= y);) {
-                // ROS_ERROR("yaw: %f, y: %f", yaw, y);
-
-                client->rotateToYaw(yaw, 60, 5);
-
-                yaw += angular_vel;
-
-                if (direction == 1 && yaw > y)
-                    yaw = y+1;
-                else if (direction == -1 && yaw < y)
-                    yaw = y-1;
-
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-        } else {
-            client->rotateToYaw(y, 60, 5);
-        }
-    }catch(...){
-        std::cerr << "set_yaw failed" << std::endl;
-        return false;
-    }
-
-    return true;
-}
-*/
 
 bool Drone::set_yaw_based_on_quaternion(geometry_msgs::Quaternion q)
 {
@@ -293,8 +224,6 @@ static float xy_yaw(double x, double y) {
 
 bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double duration)
 {
-    //getCollisionInfo();
-
     try {
         if (yaw != YAW_UNCHANGED) {
             float target_yaw = yaw;
@@ -380,7 +309,6 @@ coord Drone::gps(uint64_t& timestamp)
     // https://stackoverflow.com/questions/3024404/transform-longitude-latitude-into-meters
     coord result;
 
-    // getCollisionInfo();
     auto currentGPS = client->getGPSStats();
     auto homeGPS = client->getHomeGeoPoint();
 
@@ -402,53 +330,39 @@ geometry_msgs::Pose Drone::pose()
 {
     geometry_msgs::Pose result;
 
-    /*
-    if (this->localization_method == "gps") {
+    tf::StampedTransform transform;
+
+    try{
+        tfListen.lookupTransform("/world", "/"+(this->localization_method),
+                ros::Time(0), transform);
+    }
+    catch (tf::TransformException ex){
+        ROS_ERROR("%s",ex.what());
+
         auto p = client->getPosition();
         auto q = client->getOrientation();
-        result.position.x = client->getPosition().y() - initial_gps.x;
-        result.position.y = client->getPosition().x() - initial_gps.y;
-        result.position.z = -1*client->getPosition().z() - initial_gps.z;
+        result.position.x = client->getPosition().y() - initial_fc_pos.x;
+        result.position.y = client->getPosition().x() - initial_fc_pos.y;
+        result.position.z = -1*client->getPosition().z() - initial_fc_pos.z;
         result.orientation.x = q.x();
         result.orientation.y = q.y();
         result.orientation.z = q.z();
         result.orientation.w = q.w();
-    }else{
-    */
-    //std::cout<<"localization method is"<<this->localization_method<<std::endl;
-    
-    tf::StampedTransform transform;
-        try{
-            tfListen.lookupTransform("/world", "/"+(this->localization_method),
-                    ros::Time(0), transform);
-        }
-        catch (tf::TransformException ex){
-            ROS_ERROR("%s",ex.what());
 
-            auto p = client->getPosition();
-            auto q = client->getOrientation();
-            result.position.x = client->getPosition().y() - initial_fc_pos.x;
-            result.position.y = client->getPosition().x() - initial_fc_pos.y;
-            result.position.z = -1*client->getPosition().z() - initial_fc_pos.z;
-            result.orientation.x = q.x();
-            result.orientation.y = q.y();
-            result.orientation.z = q.z();
-            result.orientation.w = q.w();
+        return result;
+    }
 
-            return result;
-        }
+    tf::Vector3 tf_translation = transform.getOrigin();
+    result.position.x = tf_translation.x();
+    result.position.y = tf_translation.y();
+    result.position.z = tf_translation.z();
 
-        tf::Vector3 tf_translation = transform.getOrigin();
-        result.position.x = tf_translation.x();
-        result.position.y = tf_translation.y();
-        result.position.z = tf_translation.z();
+    tf::Quaternion tf_rotation = transform.getRotation();
+    result.orientation.x = tf_rotation.x();
+    result.orientation.y = tf_rotation.y();
+    result.orientation.z = tf_rotation.z();
+    result.orientation.w = tf_rotation.w();
 
-        tf::Quaternion tf_rotation = transform.getRotation();
-        result.orientation.x = tf_rotation.x();
-        result.orientation.y = tf_rotation.y();
-        result.orientation.z = tf_rotation.z();
-        result.orientation.w = tf_rotation.w();
-    //}
     return result;
 }
 
@@ -500,42 +414,6 @@ float Drone::get_roll()
     return r*180 / M_PI;
 }
 
-/*
-geometry_msgs::Pose Drone::get_geometry_pose(){
-    geometry_msgs::Pose pose;
-    auto q = client->getOrientation();
-    //auto p = client->getPosition();
-    pose.position.x = client->getPosition().y();
-    pose.position.y = client->getPosition().x();
-    pose.position.z = -1*client->getPosition().z();
-    pose.orientation.x = q.x();
-    pose.orientation.y = q.y();
-    pose.orientation.z = q.z();
-    pose.orientation.w = q.w();
-    return pose;
-}
-*/
-/*
-geometry_msgs::PoseWithCovariance Drone::get_geometry_pose_with_coveraiance(){
-    geometry_msgs::PoseWithCovariance pose_with_covariance;
-    geometry_msgs::Pose pose;
-    
-    auto q = client->getOrientation();
-    pose.position.x = client->getPosition().y();
-    pose.position.y = client->getPosition().x();
-    pose.position.z = -1*client->getPosition().z();
-    pose.orientation.x = q.x();
-    pose.orientation.y = q.y();
-    pose.orientation.z = q.z();
-    pose.orientation.w = q.w();
-    pose_with_covariance.pose = pose;
-    for (int i = 0; i <36; i++) { 
-        //https://answers.ros.org/question/181689/computing-posewithcovariances-6x6-matrix/ 
-        pose_with_covariance.covariance[i] = 0;
-    } 
-    return pose_with_covariance;
-}
-*/
 
 float Drone::get_pitch()
 {
@@ -551,32 +429,6 @@ float Drone::get_pitch()
     return p*180 / M_PI;
 }
 
-/*
-msr::airlib::CollisionInfo Drone::getCollisionInfo()
-{
-  auto col_info = client->getCollisionInfo();
-  if (col_info.has_collided) {
-     collision_count ++;
-  }
-  if (collision_count > 10) {
-    land();
-    sleep(5);
-    disarm();
-    fprintf(stderr, "Drone Crashed!\n");
-    LOG_TIME(crashed);
-    ros::shutdown();
-    exit(0);
-  }
-
-  if (col_info.has_collided) {
-  printf("CollisionInfo %s, count %ld, collison %d, penetrate %f\n",
-          col_info.has_collided ? "has collided" : "none", collision_count, col_info.collison_count,
-          col_info.penetration_depth);
-  }
-
-  return col_info;
-}
-*/
 
 msr::airlib::FlightStats Drone::getFlightStats()
 {

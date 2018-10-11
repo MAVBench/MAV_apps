@@ -24,12 +24,11 @@ using namespace std;
 #include <chrono>
 #include <ctime>
 
-//global variables
+// Global variables
 string g_ip_addr;
 string g_stats_fname;
-Drone *g_drone;//ip_addr.c_str(), port);
-string g_mission_status = "failed";//ip_addr.c_str(), port);
-string g_localization_status = "healthy";//ip_addr.c_str(), port);
+Drone *g_drone;
+string g_mission_status = "failed";
 float g_coverage = 0;
 bool g_end_requested = false;
 msr::airlib::FlightStats g_init_stats, g_end_stats;
@@ -343,31 +342,22 @@ double read_cpu_power_sample(xpu_sample_stat *s = nullptr) {
 
 void initialize_params() {
     if(!ros::param::get("/profile_manager/ip_addr",g_ip_addr)){
-        ROS_FATAL_STREAM("Could not start exploration. Parameter missing! Looking for profile_manager/ip_addr");
+        ROS_FATAL_STREAM("Could not start profiler. Parameter missing! Looking for profile_manager/ip_addr");
       return; 
     }
     
     if(!ros::param::get("/stats_file_addr", g_stats_fname)){
-        ROS_FATAL("Could not start exploration. Parameter missing! Lookining for profile_manager/stats_file_addr");
+        ROS_FATAL("Could not start profiler. Parameter missing! Lookining for profile_manager/stats_file_addr");
       return; 
     }
     g_port = 41451;
     if(!ros::param::get("/localization_method", g_localization_method)){
-        ROS_FATAL("Could not start exploration. Parameter missing! Looking for /localization_method");
+        ROS_FATAL("Could not start profiler. Parameter missing! Looking for /localization_method");
        return; 
     }
-    /* 
-    if(!ros::param::get("/stats_file_addr",stats_file_addr)){
-        ROS_FATAL("Could not start exploration. Parameter missing! Looking for %s", 
-                (ns + "/stats_file_addr").c_str());
-     return; 
-    }
-    */
 }
 
 void output_flight_summary(void){
-    //msr::airlib::FlightStats init, msr::airlib::FlightStats end, 
-    //   vector<KeyValuePairStruct>g_highlevel_application_stats,const std::string& fname){
     stringstream stats_ss;
     float total_energy_consumed = 0;
     
@@ -384,10 +374,10 @@ void output_flight_summary(void){
 
     stats_ss << "\t\"absolute_slam_error\": " << absoluteTrajectoryError(P, Q) << "," << endl;
 
-    // the rest of metrics 
+    // The rest of metrics 
      
-    //the follow is only for the compute subsystem, so it doesn not include memory
-    //also, I think for dekstop it doesn't include the platform only gather processor data
+    // The follow is only for the compute subsystem, so it does not include memory
+    // Also, I think for dekstop it doesn't include the platform. It only gathers processor data
     for (auto result_el: g_highlevel_application_stats) {
         // only processor/device energy (not the whole platform)
         if(result_el.key == "gpu_compute_energy" || result_el.key == "cpu_compute_energy"){
@@ -398,16 +388,14 @@ void output_flight_summary(void){
     }
      
     
-    //total_energy_consumed += ((g_end_stats.flight_time - g_init_stats.flight_time)*g_worst_case_power)
     total_energy_consumed +=  (g_end_stats.energy_consumed - g_init_stats.energy_consumed);
-    stats_ss << "\t\"" <<"total_energy_consumed"<<'"'<<":" << total_energy_consumed << "," << endl;
-    // topic rates
-    stats_ss << "\t\""  <<"topic_statistics"<<'"'<<":{" << endl;
+    stats_ss << "\t\"" << "total_energy_consumed"<<'"'<<":" << total_energy_consumed << "," << endl;
+    // Topic rates
+    stats_ss << "\t\""  << "topic_statistics"<<'"'<<":{" << endl;
     
     
-    //filter out all the empty ones
-    for (auto it = std::begin(g_topics_stats); it !=std::end(g_topics_stats); ++it) {
-
+    // Filter out all the empty ones
+    for (auto it = std::begin(g_topics_stats); it != std::end(g_topics_stats); ++it) {
         if (it->second.ctr != 0){
             g_topics_stats_filterd[it->first] = it->second;
         }
@@ -437,7 +425,7 @@ void output_flight_summary(void){
 bool start_profiling_cb(profile_manager::start_profiling_srv::Request &req, profile_manager::start_profiling_srv::Response &res){
  if (g_start_profiling_data) {
      res.start = true;
- }else{
+ } else {
      res.start = false;
  }
  return true;
@@ -446,7 +434,6 @@ bool start_profiling_cb(profile_manager::start_profiling_srv::Request &req, prof
 
 bool record_profiling_data_cb(profile_manager::profiling_data_srv::Request &req, profile_manager::profiling_data_srv::Response &res)
 {
-    // ROS_ERROR_STREAM("inside the call back"); 
     if (g_drone == NULL) {
         ROS_ERROR_STREAM("drone object is not initialized");
         return false; 
@@ -460,13 +447,12 @@ bool record_profiling_data_cb(profile_manager::profiling_data_srv::Request &req,
         setup_rapl_sysfs(&rs);
         #endif // USE_INTEL
     
-        //get list of topics 
+        // Get list of topics 
         ros::master::V_TopicInfo master_topics;
         ros::master::getTopics(master_topics);
         for (ros::master::V_TopicInfo::iterator it = master_topics.begin() ; it != master_topics.end(); it++) {
               const ros::master::TopicInfo& info = *it;
               g_topics_stats[info.name] = statsStruct();
-              //std::cout << "topic_" << it - master_topics.begin() << ": " << info.name << std::endl;
         }
         g_start_profiling_data = true;
     }else{ 
@@ -476,7 +462,7 @@ bool record_profiling_data_cb(profile_manager::profiling_data_srv::Request &req,
 }
 
 void topic_statistics_cb(const rosgraph_msgs::TopicStatistics::ConstPtr& msg) {
-    if (g_topics_stats.size() == 0) {//while not populated with the topic, return
+    if (g_topics_stats.size() == 0) { // While not populated with the topic, return
         return;
     }
     long long window_start_sec =  msg->window_start.sec;
@@ -543,9 +529,11 @@ int main(int argc, char **argv)
         
         collectSLAMData(g_localization_method);
 
+        /*
         if (g_drone->getFlightStats().collision_count > 1) {
-            //ROS_INFO_STREAM("collision count too high");
+            ROS_INFO_STREAM("collision count too high");
         }
+        */
 
         loop_rate.sleep();
         ros::spinOnce();

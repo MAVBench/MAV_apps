@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 
               br.sendTransform(tf::StampedTransform(transform, ros::Time::now(),
                           "world", "gps"));
-          } catch (...) {
+          } catch (...) { // TODO: replace this with a more specific exception
           }
       }
       loop_rate.sleep();

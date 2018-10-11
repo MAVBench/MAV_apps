@@ -1,5 +1,4 @@
 #include "pid.h"
-#include <iostream>
 #include "ros/ros.h"
 
 PID::PID(double Kp, double Ki, double Kd, double max, double min) :
@@ -21,15 +20,11 @@ double PID::calculate(double target, double sensor, double dt)
     _prev_error = error;
 
     result = prop + integ + deriv;
-    
-    //std::cout<<"error"<<error<<"result is"<<result <<std::endl;
-    
+        
     if (result >= _max){
-        //ROS_INFO_STREAM("max speed");
         return _max;
     }
     else if (result <= _min){
-        //ROS_INFO_STREAM("min speed");
         return _min;
     }
     else

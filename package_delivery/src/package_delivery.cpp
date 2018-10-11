@@ -416,9 +416,6 @@ int main(int argc, char **argv)
     // Wait for the localization method to come online
     waitForLocalization("ground_truth");
 
-    //update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
-    //log_time(stats_file_addr);
-    //update_stats_file(stats_file_addr,"###\n");
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     
     ros::Time loop_start_t(0,0); 
@@ -552,12 +549,10 @@ int main(int argc, char **argv)
                         ROS_ERROR_STREAM("could not probe data using stats manager");
                         ros::shutdown();
                     }
-                    //ROS_INFO_STREAM("now it is true");
                     g_start_profiling = start_profiling_srv_inst.response.start; 
                 }
             }
             else{
-                //ROS_INFO_STREAM("blah");
                 loop_end_t = ros::Time::now(); 
                 g_accumulate_loop_time += (((loop_end_t - loop_start_t).toSec())*1e9);
                 g_main_loop_ctr++;
@@ -565,9 +560,7 @@ int main(int argc, char **argv)
         }
     
     }
-    //collect data before shutting down
-    //end_stats = drone.getFlightStats();
-    //output_flight_summary(init_stats, end_stats, mission_status, stats_file_addr);
+
     return 0;
 }
 

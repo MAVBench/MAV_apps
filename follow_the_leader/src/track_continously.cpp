@@ -1,38 +1,29 @@
-#include "track.h"
 #include "ros/ros.h"
-#include <std_msgs/String.h>
+
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-//#include "template_library.hpp"
-#include <sstream>
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-#include <iostream>
+
 #include <chrono>
 #include <math.h>
 #include <iterator>
-#include <chrono>
 #include <thread>
-//#include "controllers/DroneControllerBase.hpp"
-//#include "common/Common.hpp"
-#include "common.h"
-#include <fstream>
-#include "Drone.h"
 #include <cstdlib>
-
-#include <stdio.h>
 #include <time.h>
-#include "std_msgs/Bool.h"
 #include <signal.h>
-#include "common.h"
 #include <cstring>
 #include <string>
-#include "follow_the_leader/bounding_box_msg.h"
+#include <bits/stdc++.h>
+
+#include "common.h"
+#include "track.h"
 #include "bounding_box.h"
 #include "follow_the_leader/cmd_srv.h"
+#include "follow_the_leader/bounding_box_msg.h"
 #include <profile_manager/profiling_data_srv.h>
-#include <bits/stdc++.h>
+
 using namespace std::chrono;
+
 bool draw_now;
 int strike;
 int max_strike; //= 1;
@@ -41,9 +32,9 @@ float tracking_threshold;// = .9;
 typedef KCFtracker tracker_t;
 tracker_t * tracker = nullptr;
 bool tracker_defined = false;
-int max_n_track_before_det_count; //= 30; //number of times tracking is allowed to run before running detection again
+int max_n_track_before_det_count; //= 30; // Number of times tracking is allowed to run before running detection again
 int img_id;
-std::queue<cv_bridge::CvImage> img_queue; //uesd to buffer imags while detection is running
+std::queue<cv_bridge::CvImage> img_queue; // Used to buffer imags while detection is running
 bool first_ever_bb_received = false;
 bounding_box buf_img_bb;
 long long g_tracking_time_acc = 0;
@@ -51,8 +42,8 @@ int g_tracking_ctr;
 static const std::string OPENCV_WINDOW = "Image window";
 bounding_box bb;
 
-std::queue<bounding_box> bb_queue; //uesd to buffer imags while detection is running
-//std::ofstream file_to_output;
+std::queue<bounding_box> bb_queue; // Used to buffer imags while detection is running
+
 int flush_count;
 int flush_count_MAX = 50;
 
@@ -101,15 +92,8 @@ void tracking(ros::Publisher &bb_publisher){
     auto start_hook_t = ros::Time::now();
     bb = tracker->track(img_cpy); 
     auto end_hook_t = ros::Time::now(); 
-    //ROS_INFO_STREAM("end_hook_t"<<end_hook_t.toSec()); 
-    //ROS_INFO_STREAM("start_hook_t"<<start_hook_t.toSec()); 
     g_tracking_time_acc += (((end_hook_t - start_hook_t).toSec())*1e9);
     g_tracking_ctr++; 
-
-    //cv::Mat img_cpy_2 = img_cpy; 
-    //cv::rectangle(img_cpy_2, cv::Point(bb.x, bb.y), cv::Point(bb.x+bb.w, bb.y+bb.h), cv::Scalar(255,255,0)); //yellow
-    //cv::imshow(OPENCV_WINDOW, img_cpy_2);
-    //cv::waitKey(2);
     
     follow_the_leader::bounding_box_msg bb_msg;
     bb_msg.x =  bb.x;
@@ -118,11 +102,6 @@ void tracking(ros::Publisher &bb_publisher){
     bb_msg.h =  bb.h;
     bb_msg.conf =  bb.conf;
     bb_publisher.publish(bb_msg);
-    /* 
-    if (bb.conf < tracking_threshold) {
-        strike++;
-    }
-    */
 }
 
 

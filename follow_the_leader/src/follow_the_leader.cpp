@@ -9,24 +9,23 @@
 #include <stdint.h>
 #include <math.h>
 #include <signal.h> // To catch sigint
-#include "follow_the_leader/bounding_box_msg.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "control_drone.h"
-#include "Drone.h"
-#include "objdetect.h"
-#include "track.h"
-#include "pid.h"
-#include "string"
-//#include "configs.h"
-//#include "misc.h"
-//#include "log__class.h"
+#include <string>
+
 #include "follow_the_leader/cmd_srv.h"
 #include "common.h"
 #include "follow_the_leader/shut_down.h"
 #include <profile_manager/profiling_data_srv.h>
 #include "error.h"
 #include "bounding_box.h"
+#include "follow_the_leader/bounding_box_msg.h"
+#include "pid.h"
+#include "control_drone.h"
+#include "Drone.h"
+#include "objdetect.h"
+#include "track.h"
+
 using namespace std;
 
 std::string state;
@@ -44,7 +43,7 @@ ros::Time following_start_t;
 ros::Time following_end_t; 
 
 int image_w__global;// = 400;
-int  image_h__global; //= 400; //this must be equal to the img being pulled in from airsim
+int  image_h__global; //= 400; //this must be equal to the img being pulled in from AirSim
 float height_ratio;
 std::string g_localization_method; 
 int g_detec_fail_ctr_threshold; 
@@ -179,13 +178,13 @@ int main(int argc, char** argv)
             continue;
         }
         
-        //call buff_track to buffer data 
+        // Call buff_track to buffer data 
         cmd_srv_inst.request.cmd = "start_buffering";
         if(!track_client.call(cmd_srv_inst)){
             ROS_ERROR("failed to call serivce for tracking"); 
         }
 
-        //call detection to detect
+        // Call detection to detect
         cmd_srv_inst.request.cmd = "start_detecting";
         start_hook_t = ros::Time::now();
         do {
@@ -193,21 +192,22 @@ int main(int argc, char** argv)
             if (!call_service_succesfull) {
                 ROS_INFO_STREAM("detection service not connected");
             }
-        }while(!call_service_succesfull);
+        } while(!call_service_succesfull);
         end_hook_t = ros::Time::now(); 
         g_obj_detection_time_including_ros_over_head_acc += ((end_hook_t - start_hook_t).toSec()*1e9);
-        g_obj_detection_ctr++; 
+        g_obj_detection_ctr++;
+
         if(!call_service_succesfull) {
             ROS_ERROR("failed to call serivce for detection"); 
         }
         state = cmd_srv_inst.response.status ; 
 
-        //if detected, call buff_track to track  
+        // If detected, call buff_track to track  
         if (state == "obj_detected"){
             if (first_object) {
                 profiling_data_srv_inst.request.key = "start_profiling";
                 if (ros::service::waitForService("/record_profiling_data", 10)){ 
-                    if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+                    if (!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
                         ROS_ERROR_STREAM("could not probe data using stats manager");
                         ros::shutdown();
                     }
@@ -232,11 +232,12 @@ int main(int argc, char** argv)
             cmd_srv_inst.request.img_id = cmd_srv_inst.response.img_id;
             cmd_srv_inst.request.bb = cmd_srv_inst.response.bb;
             call_service_succesfull = track_client.call(cmd_srv_inst);
-            if(!call_service_succesfull) {
+
+            if (!call_service_succesfull) {
                 ROS_ERROR("failed to call serivce for tracking"); 
             }
             detec_fail_ctr = 0; 
-        }else{
+        } else {
             detec_fail_ctr++;
         }
         ros::spinOnce();

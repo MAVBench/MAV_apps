@@ -1,48 +1,44 @@
 #include "ros/ros.h"
+
+#include "std_msgs/Bool.h"
 #include <std_msgs/String.h>
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include "follow_the_leader/bounding_box_msg.h"
-//#include "template_library.hpp"
-#include <sstream>
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-#include <iostream>
+#include <image_transport/image_transport.h>
+
+#include <fstream>
+#include <string>
 #include <chrono>
 #include <math.h>
 #include <iterator>
-#include <chrono>
 #include <thread>
-#include "common.h"
-//#include "controllers/DroneControllerBase.hpp"
-//#include "common/Common.hpp"
-#include "Drone.h"
 #include <cstdlib>
-#include <geometry_msgs/Point.h>
-
 #include <stdio.h>
 #include <time.h>
-#include "std_msgs/Bool.h"
 #include <signal.h>
+#include <opencv2/highgui/highgui.hpp>
+
+#include "Drone.h"
 #include "common.h"
-#include <cstring>
-#include <string>
+
 #include "bounding_box.h"
 #include "follow_the_leader/cmd_srv.h"
+#include "follow_the_leader/bounding_box_msg.h"
 #include "objdetect.h"
 #include <profile_manager/profiling_data_srv.h>
-#include <fstream>
+
 using namespace std;
 using namespace chrono;
+
 ofstream file_to_output;
 //std::string stats_file_addr;
+
 typedef YOLODetector detector_t;
+
 static const std::string OPENCV_WINDOW = "Image window";
 double detect_thresh;// = 0.8;
 cv_bridge::CvImage cv_img;
 int img_id;
 detector_t detector;
-
 
 //--- profiling related variables
 ros::Time start_hook_t; 

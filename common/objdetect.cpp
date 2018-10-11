@@ -40,8 +40,6 @@ HOGDetector::HOGDetector()
         //detect_person_gpu(blank_frame);
     }
 #endif //GPU==1
-
- ROS_INFO_STREAM("after what");    
 }
 
 bounding_box HOGDetector::detect_person(cv::Mat frame)
@@ -94,7 +92,6 @@ bounding_box HOGDetector::detect_person_cpu(cv::Mat frame)
 #if GPU==1
 bounding_box HOGDetector::detect_person_gpu(cv::Mat frame)
 {
- //ROS_INFO_STREAM("coming to gpu HOG detector");    
     bounding_box result = {-1.0, -1.0, -1.0, -1.0, -1.0};
     std::vector<cv::Rect> targets;
 
@@ -108,18 +105,12 @@ bounding_box HOGDetector::detect_person_gpu(cv::Mat frame)
 
 #if CV_MAJOR_VERSION==3
     
-    //ROS_INFO_STREAM("MAJFOR 3");    
     std::vector<double> confidences;
     cv::cuda::GpuMat image_gpu(gray);
-    //cv::Mat my_pic_temp(image_gpu);
-    //cv::imshow(OPENCV_WINDOW, gray);
-    //cv::waitKey(3);
     
     hog_gpu->detectMultiScale(image_gpu, targets, &confidences);
     
-    //ROS_INFO_STREAM("image size"<<gray.rows<<" " << gray.cols);
     if (targets.size() > 0) {
-        //ROS_INFO_STREAM("target size greator than zero");    
         int max_conf = 0;
         int max_conf_id = 0;
 
@@ -243,7 +234,6 @@ bounding_box HaarDetector::detect_person_gpu(cv::Mat frame)
         result.h = targets[0].height;
         result.conf = 1.0;
     }
-//error: (-215) img.type() == CV_8UC1 || img.type() == CV_8UC4 in function detectMultiScale
 #else
     int detections_num;
     cv::Mat faces_downloaded, frameDisp;
@@ -275,11 +265,6 @@ bounding_box HaarDetector::detect_person_gpu(cv::Mat frame)
 
 // YOLODetector
 
-
-//char datacfg[] = "/home/nvidia/darknet/cfg/coco.data";
-//char cfgfile[] = "/home/nvidia/darknet/cfg/yolo.cfg";
-//char weightfile[] = "/media/ubuntu/0403-0201/yolo.weights";
-//char weightfile[] = "/home/nvidia/Downloads/yolo.weights";
 float thresh = 0.8;
 float hier_thresh = 0.8;
 
@@ -309,8 +294,7 @@ YOLODetector::YOLODetector()
 #endif
 
     options = darknet::read_data_cfg(datacfg);
-//   names = darknet::get_labels("/home/nvidia/darknet/data/coco.names");
-     names = darknet::get_labels(coco_names);
+    names = darknet::get_labels(coco_names);
     net = darknet::parse_network_cfg(cfgfile);
     darknet::load_weights(&net, weightfile);
     darknet::set_batch_network(&net, 1);
@@ -331,13 +315,9 @@ bounding_box YOLODetector::detect_person(cv::Mat frame)
     
     const float nms=.4;
 
-    //image im = load_image_color(input,0,0);
     IplImage ipl = frame;
     darknet::image im = darknet::ipl_to_image(&ipl);
     darknet::rgbgr_image(im);
-    // darknet::image resized = resize_image(im, w, h);
-    // darknet::free_image(im);
-     // im = resized;
 
     darknet::image sized = letterbox_image(im, net.w, net.h);
     darknet::layer l = net.layers[net.n-1];
@@ -354,7 +334,6 @@ bounding_box YOLODetector::detect_person(cv::Mat frame)
     if (nms)
         darknet::do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
 
-    //draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, names, alphabet, l.classes);
     result = best_detection(im, l.w*l.h*l.n, thresh, boxes, probs, names, l.classes);
 
     darknet::free_image(im);

@@ -267,12 +267,10 @@ void convert_pose_vector_to_trajectory_msg(const std::vector<geometry_msgs::Pose
         point.z = pose.position.z;
 
         // Set velocity
-        // if (i != 0) {
         const auto& prev_pose  = poses[i-1];
         point.vx = (pose.position.x - prev_pose.position.x) / g_dt;
         point.vy = (pose.position.y - prev_pose.position.y) / g_dt;
         point.vz = (pose.position.z - prev_pose.position.z) / g_dt;
-        // }
 
         // Set yaw
         tf::Pose tf_pose;
@@ -512,7 +510,6 @@ int main(int argc, char** argv)
                         ROS_ERROR_STREAM("could not probe data using stats manager");
                         ros::shutdown();
                     }
-                    //ROS_INFO_STREAM("now it is true");
                     g_start_profiling = start_profiling_srv_inst.response.start; 
                 }
             } else {

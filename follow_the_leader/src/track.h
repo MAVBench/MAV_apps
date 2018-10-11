@@ -5,7 +5,6 @@
 #include "bounding_box.h"
 
 #include "kcf/kcftracker.hpp"
-//#include "TLD.h"
 
 class KCFtracker {
 public:
@@ -21,13 +20,5 @@ private:
 
     double peak;
 };
-/*
-class TLDtracker {
-public:
-    TLDtracker(const bounding_box& bb, cv::Mat frame);
-    bounding_box track(cv::Mat frame);
-private:
-    tld::TLD tracker;
-};
-*/
+
 #endif

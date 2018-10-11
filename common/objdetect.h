@@ -1,7 +1,9 @@
 #ifndef OBJDETECT_H
 #define OBJDETECT_H
+
 #include <opencv2/opencv.hpp>
 #include "bounding_box.h"
+
 #define GPU 1
 #define CPU 0
 #if GPU==1

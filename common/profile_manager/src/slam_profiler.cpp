@@ -12,9 +12,6 @@ void collectSLAMData(const std::string& localization_method) {
     try {
         tf::StampedTransform ground_truth_tf, estimated_tf;
 
-        // ros::Time now = ros::Time::now();
-        // tfListen.waitForTransform("/world", "/ground_truth", now, ros::Duration(1.0));
-        // tfListen.waitForTransform("/world", "/"+localization_method, now, ros::Duration(1.0));
         ros::Time now(0);
 
         tfListen.lookupTransform("/world", "/ground_truth", now, ground_truth_tf);

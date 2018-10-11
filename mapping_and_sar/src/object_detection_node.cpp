@@ -1,3 +1,6 @@
+#include <ros/ros.h>
+#include <ros/package.h>
+
 #include <iostream>
 #include <algorithm>
 #include <vector>
@@ -6,40 +9,26 @@
 #include <stdint.h>
 #include <math.h>
 #include <fstream>
+#include <thread>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "Drone.h"
-#include "objdetect.h"
-#include "string"
-#include "common.h"
-#include "signal.h"
-
-#include <visualization_msgs/Marker.h>
-#include <sensor_msgs/Image.h>
-#include <thread>
-#include <chrono>
-#include "coord.h"
-#include <ros/ros.h>
-#include <ros/package.h>
-//#include <tf/tf.h>
-#include <std_srvs/Empty.h>
-#include <trajectory_msgs/MultiDOFJointTrajectory.h>
-#include <multiagent_collision_check/Segment.h>
-
 #include <mav_msgs/conversions.h>
 #include <mav_msgs/default_topics.h>
 #include <nbvplanner/nbvp_srv.h>
-#include <mapping_and_sar/OD.h>
-#include "common/Common.hpp"
-#include <fstream>
-#include "Drone.h"
-
+#include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include "Drone.h"
+#include "objdetect.h"
+#include "string"
+#include "common.h"
+#include "signal.h"
+#include "coord.h"
+#include <mapping_and_sar/OD.h>
 #include <profile_manager/profiling_data_srv.h>
 
 static const std::string OPENCV_WINDOW = "Image window";
@@ -109,13 +98,6 @@ void obj_detect_call_back(const sensor_msgs::ImageConstPtr& msg)
 
     if(bb.conf >= detect_thresh) {
         ROS_INFO_STREAM("found the object"<< bb.conf);
-        /* 
-           cv::Mat img_cpy = cv_ptr->image; 
-           cv::rectangle(img_cpy, cv::Point(bb.x, bb.y), cv::Point(bb.x+bb.w, bb.y+bb.h), cv::Scalar(0,255,255)); //yellow
-           cv::Size size(512, 512);
-           cv::imshow(OPENCV_WINDOW, img_cpy);
-           cv::waitKey(3);
-           */
        
         result.found = true;
         result.point.x = bb.x;

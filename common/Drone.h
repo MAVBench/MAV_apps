@@ -12,9 +12,7 @@
 #include "common/VectorMath.hpp"
 #include <tf/transform_listener.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-
-//#include "configs.h"
-// Control functions
+// #include "configs.h"
 
 const float FACE_FORWARD = std::numeric_limits<float>::infinity();
 const float FACE_BACKWARD = -std::numeric_limits<float>::infinity();
@@ -27,7 +25,6 @@ public:
     Drone(const std::string& ip_addr, uint16_t port, std::string localization_method);
     Drone(const std::string& ip_addr, uint16_t port, std::string localization_method, 
          float max_yaw_rate, float max_yaw_rate_during_flight);
-
 
     ~Drone();
 

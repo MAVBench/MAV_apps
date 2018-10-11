@@ -7,6 +7,5 @@ class error {
         double x, y, z, full;
         error();
         error(bounding_box, int, int , double);
-
 };
 #endif
