@@ -88,6 +88,7 @@ private:
     void get_start_in_future(Drone& drone, geometry_msgs::Point& start, geometry_msgs::Twist& twist, geometry_msgs::Twist& acceleration);
 
     // ***F:DN Create a grid-based lawn-mower-like path
+    piecewise_trajectory create_lawnMower_path(geometry_msgs::Point start, int width, int length, int n_pts_per_dir);
     piecewise_trajectory lawn_mower(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
 
     // ***F:DN Use the RRT sampling method from OMPL to find a piecewise path

@@ -595,7 +595,7 @@ void MotionPlanner::postprocess(piecewise_trajectory& path)
 }
 
 
-static MotionPlanner::piecewise_trajectory create_lawnMower_path(geometry_msgs::Point start, int width, int length, int n_pts_per_dir, octomap::OcTree *octree)
+MotionPlanner::piecewise_trajectory MotionPlanner::create_lawnMower_path(geometry_msgs::Point start, int width, int length, int n_pts_per_dir)
 {
     // *** F:DN variables 
     piecewise_trajectory result;
@@ -611,7 +611,7 @@ static MotionPlanner::piecewise_trajectory create_lawnMower_path(geometry_msgs::
     for (int i = 0 ; i < n_pts_per_dir; i++) {
         for (int j = 0 ; j < n_pts_per_dir; j++) {
             ROS_INFO("(%f, %f)", x, y);
-            result.push_back(x, y, start.z);
+            result.push_back({x, y, start.z});
             y += y_step;
         }
 
@@ -620,7 +620,7 @@ static MotionPlanner::piecewise_trajectory create_lawnMower_path(geometry_msgs::
     }
 
     // ***F:DN returning back the the origin
-    result.push_back(start.x, start.y, start.z);
+    result.push_back({start.x, start.y, start.z});
 
     return result;
 }
@@ -628,14 +628,6 @@ static MotionPlanner::piecewise_trajectory create_lawnMower_path(geometry_msgs::
 
 MotionPlanner::piecewise_trajectory MotionPlanner::lawn_mower(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
 {
-    //----------------------------------------------------------------- 
-    // *** F:DN variables    
-    //----------------------------------------------------------------- 
-    piecewise_trajectory result;
-
-    //----------------------------------------------------------------- 
-    // *** F:DN Body 
-    //----------------------------------------------------------------- 
     piecewise_trajectory result = create_lawnMower_path(start, width, length, n_pts_per_dir);
 
     if (result.size() == 0) {
