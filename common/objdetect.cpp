@@ -270,11 +270,11 @@ float hier_thresh = 0.8;
 
 YOLODetector::YOLODetector()
 {
-    char *home_path = getenv("mavbench_base_dir");
-    std::string datacfg_str = std::string(home_path) + "/darknet/cfg/coco.data";
-    std::string cfgfile_str = std::string(home_path) + "/darknet/cfg/yolo.cfg";
-    std::string weightfile_str = std::string(home_path) + "/darknet/yolov2.weights";
-    std::string coco_names_str = std::string(home_path) + "/darknet/data/coco.names";
+    char *home_path = getenv("darknet_base_dir");
+    std::string datacfg_str = std::string(home_path) + "/cfg/coco.data";
+    std::string cfgfile_str = std::string(home_path) + "/cfg/yolo.cfg";
+    std::string weightfile_str = std::string(home_path) + "/yolov2.weights";
+    std::string coco_names_str = std::string(home_path) + "/data/coco.names";
 
     char *datacfg=new char[datacfg_str.size()+1];
     memcpy(datacfg,datacfg_str.c_str(),datacfg_str.size()+1);
@@ -285,9 +285,6 @@ YOLODetector::YOLODetector()
     memcpy(weightfile,weightfile_str.c_str(),weightfile_str.size()+1);
     char *coco_names = new char[coco_names_str.size()+1];
     memcpy(coco_names,coco_names_str.c_str(),coco_names_str.size()+1);
-
-
-
 
 #if GPU==1
     darknet::cuda_set_device(0);
