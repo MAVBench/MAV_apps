@@ -349,7 +349,7 @@ int main(int argc, char **argv)
             rev_traj = &trajectory;
 
             yaw_strategy = face_backward;
-            max_velocity = 1;
+            max_velocity = 0.25;
         }
 
         double max_velocity_reached = follow_trajectory(drone, forward_traj,

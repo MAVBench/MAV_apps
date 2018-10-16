@@ -39,6 +39,7 @@ bool FutureCollisionChecker::collision(const octomap::OcTree * octree, const mul
 void FutureCollisionChecker::pull_traj(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 {
     traj_future_collision_seq_id = msg->future_collision_seq;
+    traj_reversing = msg->reverse;
 
     if (msg->points.size() > 0) {
         auto pos = drone->position();
@@ -173,11 +174,12 @@ void FutureCollisionChecker::stop_drone()
     while (ros::ok() &&
             (traj_future_collision_seq_id < future_collision_seq_id
              || (traj_future_collision_seq_id == future_collision_seq_id
-                 && !traj.empty())))
+                 && !traj.empty() && !traj_reversing)))
     {
         callback_queue.callAvailable(ros::WallDuration());
         drone->fly_velocity(0,0,0);
     }
+    ROS_INFO("future collision: releasing drone");
 }
 
 
@@ -197,7 +199,8 @@ void FutureCollisionChecker::spinOnce()
         g_pt_cld_to_octomap_commun_olverhead_acc = server->pt_cld_octomap_commun_overhead_acc;
     }
 
-    if (traj_future_collision_seq_id >= future_collision_seq_id) {
+    if (traj_future_collision_seq_id >= future_collision_seq_id &&
+            !traj_reversing) {
         bool collision_coming;
         double time_to_collision;
 

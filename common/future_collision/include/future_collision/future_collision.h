@@ -70,6 +70,7 @@ private:
     const octomap::OcTree * octree = nullptr;
     trajectory_t traj;
     int traj_future_collision_seq_id = 0;
+    bool traj_reversing = false;
 
     // Parameters
     std::string ip_addr__global;

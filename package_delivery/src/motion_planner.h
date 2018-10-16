@@ -303,7 +303,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
     if (solved)
     {
-        ROS_INFO("Solution found!");
+        ROS_INFO("Piece-wise solution found!");
         ss.simplifySolution();
 
         for (auto state : ss.getSolutionPath().getStates()) {

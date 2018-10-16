@@ -136,6 +136,12 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
             speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         }
 
+        // After scaling down speed, re-apply correction to v_z. This is a
+        // workaround for a simulator bug where the drone sinks to the ground
+        // when it recieves commands at too high a frequency
+        if (check_position)
+            v_z += 0.5*(p.z-drone.position().z);
+
         if (speed > max_speed_so_far)
             max_speed_so_far = speed;
 
@@ -183,6 +189,22 @@ static multiDOFpoint reverse_point(multiDOFpoint mdp) {
 
 trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second) {
     first.insert(first.end(), second.begin(), second.end());
+
+    // Collapse repeated points
+    for (auto it = first.begin();
+            (it+1) != first.end() && it != first.end();)
+    {
+        if (it->x == (it+1)->x &&
+            it->y == (it+1)->y &&
+            it->z == (it+1)->z)
+        {
+            it->duration += (it+1)->duration;
+            it = first.erase(it+1);
+        } else {
+            it++;
+        }
+    }
+
     return first;
 }
 

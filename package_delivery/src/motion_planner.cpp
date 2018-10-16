@@ -24,7 +24,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree);
 
     if (piecewise_path.empty()) {
-        ROS_ERROR("Empty path returned");
+        ROS_ERROR("Empty path returned (with future_collision id %d)", future_col_seq_id);
         res.path_found = false;
 
         res.multiDOFtrajectory.future_collision_seq = future_col_seq_id;
@@ -43,7 +43,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
 
     // Smoothen the path and build the multiDOFtrajectory response
-    ROS_INFO("Smoothenning...");
+    ROS_INFO("Smoothening...");
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
                                         req.twist.linear.y,
@@ -78,6 +78,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
     g_number_of_planning++; 
     ROS_INFO("motion_planner: Planning took %f s", (hook_end_t - hook_start_t).toSec());
+
+    ROS_INFO("motion_planner: Path returned with id %d and future_col_id %d", res.multiDOFtrajectory.trajectory_seq, res.multiDOFtrajectory.future_collision_seq);
 
     res.path_found = true;
     return true;
@@ -129,7 +131,7 @@ void MotionPlanner::future_col_callback(const mavbench_msgs::future_collision::C
         return;
 
     // If neccessary, plan a new path for the drone
-    if (g_next_steps_msg.future_collision_seq <= future_col_seq_id) {
+    if (g_next_steps_msg.future_collision_seq < future_col_seq_id) {
         // "Call the get_trajectory_fun function right here, without waiting
         // for the package_delivery node to make a request
         package_delivery::get_trajectory::Request req;
@@ -491,6 +493,12 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
     // Optimize until no collisions are present
     bool col;
+    int smoothener_ctr = 0;
+    bool is_moving = initial_velocity.x() != 0 ||
+        initial_velocity.y() != 0 || initial_velocity.z() != 0 ||
+        initial_acceleration.x() != 0 || initial_acceleration.y() != 0 ||
+        initial_acceleration.z() != 0;
+
     do {
         col = false;
 
@@ -551,11 +559,16 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
                 }
             }
         }
-    } while (col &&
-            ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
+        smoothener_ctr++;
+    } while (col && smoothener_ctr < 50 && !(is_moving &&
+             ros::Time::now() > g_start_time+ros::Duration(g_planning_budget)));
 
-    if (col)
+    if (col) {
+        ROS_INFO("Failed to smoothen path after %d iterations", smoothener_ctr);
         return smooth_trajectory();
+    } else {
+        ROS_INFO("Smoothened path after %d iterations", smoothener_ctr);
+    }
 
     // Return the collision-free smooth trajectory
     mav_trajectory_generation::Trajectory traj;

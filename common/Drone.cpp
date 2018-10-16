@@ -238,10 +238,10 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
             float yaw_diff = (int(target_yaw - get_yaw()) + 360) % 360;
             yaw_diff = yaw_diff <= 180 ? yaw_diff : yaw_diff - 360;
             
-            if (yaw_diff >= 5)
-                yaw_diff -= 5;
-            else if (yaw_diff <= -5)
-                yaw_diff += 5;
+            if (yaw_diff >= 10)
+                yaw_diff -= 10;
+            else if (yaw_diff <= -10)
+                yaw_diff += 10;
             else
                 yaw_diff = 0;
 
