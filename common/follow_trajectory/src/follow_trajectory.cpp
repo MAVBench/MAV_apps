@@ -142,7 +142,7 @@ trajectory_t straight_line_trajectory(const P1& start, const P2& end, double v)
 
     double yaw = yawFromVelocity(vx, vy);
 
-    for (double it = 0; it <= 1.0; it += disc) {
+    for (double it = 0; it < 1.0; it += disc) {
         multiDOFpoint p;
 
         p.x = start.x + it*correction_in_x;
@@ -193,7 +193,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
         trajectory_t idling_correction_traj;
 
         if (distance(drone->position(), new_trajectory.front()) > max_idling_drift_distance)
-             idling_correction_traj = straight_line_trajectory(drone->position(), new_trajectory.front(), 1.0);
+             idling_correction_traj = straight_line_trajectory(drone->position(), new_trajectory.front(), 0.5);
 
         trajectory = append_trajectory(idling_correction_traj, new_trajectory);
         fly_backward = false;

@@ -363,6 +363,8 @@ mavbench_msgs::multiDOFtrajectory nbvp_trajectory(Drone& drone, ros::ServiceClie
             g_mission_status = "failed_to_start";
             shutdown_app();
         }
+    } else {
+        failed_to_plan_even_once = false;
     }
 
     // Record the coverage of the map so far
@@ -372,11 +374,12 @@ mavbench_msgs::multiDOFtrajectory nbvp_trajectory(Drone& drone, ros::ServiceClie
     mavbench_msgs::multiDOFtrajectory result;
     convert_pose_vector_to_trajectory_msg(planSrv.response.path, result);
 
+    g_trajectory_seq++;
+
     result.append = true;
     result.reverse = 0;
     result.future_collision_seq = g_trajectory_future_col_seq = g_future_col_seq;
     result.trajectory_seq = g_trajectory_seq;
-    g_trajectory_seq++;
 
     // Make the trajectory decelerate trapezoidally at the end, to prevent sudden, unstable stops
     decelerate_end_of_trajectory(result);
@@ -424,7 +427,7 @@ int main(int argc, char** argv)
     ros::Subscriber future_col_sub =
         nh.subscribe("/col_coming", 1, future_col_callback);
     ros::Subscriber next_steps_sub =
-        nh.subscribe("next_steps", 1, next_steps_callback);
+        nh.subscribe("/next_steps", 1, next_steps_callback);
 
     // Initialize Drone object
     uint16_t port = 41451;
