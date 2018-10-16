@@ -505,8 +505,9 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
         // Estimate the time the drone should take flying between each node
         auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
 
-        // for (auto& el : segment_times)
-        //     el *= 0.5;
+        // Increase the acceleration
+        for (auto& el : segment_times)
+             el *= 0.6;
 
         // Optimize and create a smooth path from the vertices
         opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);

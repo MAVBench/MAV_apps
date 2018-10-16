@@ -506,10 +506,11 @@ int main(int argc, char **argv)
             if (normal_traj_msg.points.empty()){
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            if (fail_ctr >fail_threshold) {
+
+            /* if (fail_ctr > fail_threshold) {
                 next_state = failed;
                 mission_status = "planning_failed_too_many_times";
-            } else if (dist(drone.position(), goal) < goal_s_error_margin) {
+            } else*/ if (dist(drone.position(), goal) < goal_s_error_margin) {
                 ROS_INFO("Delivered the package and returned!");
                 mission_status = "completed";
                 g_mission_status = mission_status;
