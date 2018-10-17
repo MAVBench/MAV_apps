@@ -1,11 +1,6 @@
 <launch>
     <!-- args --> 
-    <!-- Behzad's workstation ip --> 
-    <!-- arg name="host_ip" value="10.157.34.101" /--> 
-    <arg name="host_ip" default="10.16.0.172" />
-    <!--arg name="host_ip" value="169.254.153.158" /--> 
-    <!-- Hasans's workstation ip --> 
-    <!-- arg name="host_ip" value="10.157.34.208" /--> 
+    <arg name="host_ip" default="$(env host_ip)" />
     <arg name="img_width" value="512"/>
     <arg name="img_height" value="288"/>
     <arg name="CLCT_DATA" value="true" />
