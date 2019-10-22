@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project(octomap_server)
-set(CMAKE_PREFIX_PATH /usr/local${CMAKE_PREFIX_PATH})
+#set(CMAKE_PREFIX_PATH /usr/local${CMAKE_PREFIX_PATH})
 set(PACKAGE_DEPENDENCIES
   roscpp
   visualization_msgs
@@ -14,9 +14,11 @@ set(PACKAGE_DEPENDENCIES
   octomap_msgs
   dynamic_reconfigure
   nodelet  
-)
+  )
 
-find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES})
+
+
+find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES} data_collection)
 
 find_package(PCL REQUIRED QUIET COMPONENTS common sample_consensus io segmentation filters)
 

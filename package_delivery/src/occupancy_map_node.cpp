@@ -18,7 +18,7 @@ MotionPlanner * mp_ptr = nullptr;
 void sigIntHandlerPrivate(int signo) {
     if (signo == SIGINT) {
         fcc_ptr->log_data_before_shutting_down();
-        mp_ptr->log_data_before_shutting_down();
+        //mp_ptr->log_data_before_shutting_down();
         ros::shutdown();
     }
     exit(0);
@@ -72,7 +72,6 @@ int main(int argc, char** argv)
     // Create MotionPlanner
     //MotionPlanner mp (octree, &drone);
     //mp_ptr = &mp;
-
     while (ros::ok()) {
         // ROS_INFO("Start octo");
         // ros::Time start_octo = ros::Time::now();
@@ -82,6 +81,7 @@ int main(int argc, char** argv)
         // std::cout << "octomap takes " << (end_octo - start_octo).toSec() << "\n";
 
         // ros::Time start_fcc = ros::Time::now();
+        //fcc.spinOnceDummy();
         fcc.spinOnce();
 
      //   ros::Time now_secs =ros::Time::now();

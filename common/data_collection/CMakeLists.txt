@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(future_collision)
+project(data_collection)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
-set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
-set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
+#set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
+#set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
@@ -16,10 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   tf
-  octomap_ros
-  octomap_msgs
-  octomap_server
-  data_collection
 )
 
 ## System dependencies are found with CMake's conventions
@@ -118,7 +114,7 @@ find_package(Eigen3 REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES future_collision
+  LIBRARIES data_collection
   CATKIN_DEPENDS roscpp std_msgs
   DEPENDS system_lib
 )
@@ -137,8 +133,6 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
-  ${common_utility_include} 
-  $ENV{AirSim_base_dir}/AirLib/include
 )
 
 link_directories(
@@ -178,8 +172,8 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-add_library(future_collision src/future_collision ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
-target_link_libraries(future_collision ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+add_library(data_collection src/datacontainer.cpp src/datat.cpp) 
+target_link_libraries(data_collection ${catkin_LIBRARIES}) 
 
 #############
 ## Install ##
@@ -196,7 +190,7 @@ target_link_libraries(future_collision ${catkin_LIBRARIES} AirLib MavLinkCom rpc
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS future_collision
+install(TARGETS data_collection
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

@@ -67,6 +67,8 @@
 #include <octomap/octomap.h>
 #include <octomap/OcTreeKey.h>
 
+#include <datacontainer.h>
+
 //#define COLOR_OCTOMAP_SERVER // turned off here, turned on identical ColorOctomapServer.h - easier maintenance, only maintain OctomapServer and then copy and paste to ColorOctomapServer and change define. There are prettier ways to do this, but this works for now
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -76,6 +78,7 @@ namespace octomap_server {
 class OctomapServer {
 
 public:
+ DataContainer<ros::Time, ros::Duration> profiling_container;
  long long octomap_integration_acc;
  long long pt_cld_octomap_commun_overhead_acc; 
  int octomap_ctr;
@@ -278,6 +281,7 @@ protected:
  bool CLCT_DATA;
  int data_collection_iteration_freq; 
  ros::ServiceClient profile_manager_client;
+
 };
 }
 

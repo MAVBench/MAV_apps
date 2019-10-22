@@ -29,6 +29,7 @@ find_package(catkin REQUIRED COMPONENTS
   minkindr_conversions
   mavbench_msgs
   future_collision
+  data_collection
 )
 
 ## System dependencies are found with CMake's conventions

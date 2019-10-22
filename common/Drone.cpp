@@ -306,7 +306,6 @@ void Drone::record_all_steps_taken(double vx, double vy, double vz, float yaw, d
 }
 
 bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double duration) {
-	ROS_INFO_STREAM("vx"<<vx<<"vy"<<vy<<"vy"<<vz);
 	record_all_steps_taken(vx, vy, vz, yaw, duration);
 
 	try {

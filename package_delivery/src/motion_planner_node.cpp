@@ -1,15 +1,15 @@
-#include "ros/ros.h"
-
-// Standard headers
-#include <string>
+#include <Drone.h>
+#include <ros/duration.h>
+#include <ros/init.h>
+#include <ros/node_handle.h>
+#include <ros/param.h>
+#include <rosconsole/macros_generated.h>
 #include <signal.h>
+#include <cstdint>
+#include <cstdlib>
+#include <string>
 
-// MAVBench headers
-#include "Drone.h"
-#include "timer.h"
 #include "motion_planner.h"
-#include <profile_manager/profiling_data_srv.h>
-#include <profile_manager/start_profiling_srv.h>
 
 MotionPlanner * mp_ptr = nullptr;
 void sigIntHandlerPrivate(int signo) {
@@ -41,8 +41,8 @@ int main(int argc, char** argv)
         ROS_FATAL("Could not start occupancy map node. Localization parameter missing!");
         exit(-1);
     }
+    ros::Duration(1).sleep(); //for img publisher to catch up and publish tf transforms
     Drone drone(ip_addr.c_str(), port, localization_method);
-    
     // Create MotionPlanner
     MotionPlanner mp (nullptr, &drone);
     mp_ptr = &mp;

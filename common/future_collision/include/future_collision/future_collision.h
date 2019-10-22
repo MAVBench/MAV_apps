@@ -43,6 +43,7 @@ public:
     }
 
     void spinOnce();
+    void spinOnceDummy();
     void log_data_before_shutting_down();
 
     // TODO: Get rid of this function
@@ -79,7 +80,7 @@ private:
     double grace_period__global;
 
     // Profiling variables
-    const octomap_server::OctomapServer * server = nullptr; // TODO: get rid of this dependency
+    octomap_server::OctomapServer * server = nullptr; // TODO: get rid of this dependency
     ros::Time start_hook_chk_col_t, end_hook_chk_col_t;                                          
     long long g_checking_collision_kernel_acc = 0;
     ros::Time g_checking_collision_t;
@@ -87,6 +88,7 @@ private:
     int g_check_collision_ctr = 0;
     double g_distance_to_collision_first_realized = 0;
     bool CLCT_DATA = false;
+    bool g_micro_benchmark = false;
     bool DEBUG = false;
     ros::Time g_pt_cloud_header; //this is used to figure out the octomap msg that 
                               //collision was detected in

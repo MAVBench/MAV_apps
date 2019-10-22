@@ -283,51 +283,46 @@ bool OctomapServer::openFile(const std::string& filename){
 }
 using namespace std; //
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
-
 	if(CLCT_DATA) {
-       ros::Time start_time = ros::Time::now();
-       pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
-       octomap_ctr++;
-       //ROS_INFO_STREAM("------------------------RIGHT HERE");
-   }
-   rcvd_point_cld_time_stamp = cloud->header.stamp;
-   ros::Time startTime = ros::Time::now();
+		ros::Time start_time = ros::Time::now();
+		pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
+		octomap_ctr++;
+	}
 
-   //
-  // ground filtering in base frame
-  //
-  PCLPointCloud pc; // input cloud for filtering and ground-detection
+	rcvd_point_cld_time_stamp = cloud->header.stamp;
+	profiling_container.capture("octomap_insertCloud", "start", ros::Time::now());
 
-  ros::Time point_cloud_deserialization_start = ros::Time::now();
-  pcl::fromROSMsg(*cloud, pc);
-  double point_cloud_deserialization_duration = (ros::Time::now() - point_cloud_deserialization_start).toSec();
-  ROS_INFO_STREAM("octomap's point cloud deserialization time"<<point_cloud_deserialization_duration);
+	// ground filtering in base frame
+	PCLPointCloud pc; // input cloud for filtering and ground-detection
 
-  ros::Time filter_start = ros::Time::now();
+	profiling_container.capture("point_cloud_deserialization", "start", ros::Time::now());
+	pcl::fromROSMsg(*cloud, pc);
+	profiling_container.capture("point_cloud_deserialization", "end", ros::Time::now());
+	ROS_INFO_STREAM("octomap deserialization time"<<this->profiling_container.findDataByName("point_cloud_deserialization")->values.back());
 
+	profiling_container.capture("octomap_filter", "start", ros::Time::now()); //collect data
+	tf::StampedTransform sensorToWorldTf;
+	try {
+		m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
+	} catch(tf::TransformException& ex){
+		ROS_ERROR_STREAM( "Transform error of sensor data: " << ex.what() << ", quitting callback");
+		return;
+	}
 
-  tf::StampedTransform sensorToWorldTf;
-  try {
-    m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
-  } catch(tf::TransformException& ex){
-    ROS_ERROR_STREAM( "Transform error of sensor data: " << ex.what() << ", quitting callback");
-    return;
-  }
-
-  Eigen::Matrix4f sensorToWorld;
-  pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
+	Eigen::Matrix4f sensorToWorld;
+	pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
 
 
 
-  // set up filter for height range, also removes NANs:
-  pcl::PassThrough<PCLPoint> pass_x;
-  pass_x.setFilterFieldName("x");
-  pass_x.setFilterLimits(m_pointcloudMinX, m_pointcloudMaxX);
-  pcl::PassThrough<PCLPoint> pass_y;
-  pass_y.setFilterFieldName("y");
-  pass_y.setFilterLimits(m_pointcloudMinY, m_pointcloudMaxY);
-  pcl::PassThrough<PCLPoint> pass_z;
-  pass_z.setFilterFieldName("z");
+	// set up filter for height range, also removes NANs:
+	pcl::PassThrough<PCLPoint> pass_x;
+	pass_x.setFilterFieldName("x");
+	pass_x.setFilterLimits(m_pointcloudMinX, m_pointcloudMaxX);
+	pcl::PassThrough<PCLPoint> pass_y;
+	pass_y.setFilterFieldName("y");
+	pass_y.setFilterLimits(m_pointcloudMinY, m_pointcloudMaxY);
+	pcl::PassThrough<PCLPoint> pass_z;
+	pass_z.setFilterFieldName("z");
   pass_z.setFilterLimits(m_pointcloudMinZ, m_pointcloudMaxZ);
 
   PCLPointCloud pc_ground; // segmented ground plane
@@ -381,16 +376,18 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     pc_ground.header = pc.header;
     pc_nonground.header = pc.header;
   }
-  double filter_duration = (ros::Time::now() - filter_start).toSec();
-  ROS_INFO_STREAM("octomap point cloud filtering time:"<<filter_duration);
+  profiling_container.capture("octomap_filter", "end", ros::Time::now());
+  ROS_INFO_STREAM("octomap integration time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
 
-
-   ros::Time integration_start = ros::Time::now();
+  profiling_container.capture("insertScan", "start", ros::Time::now());
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
-  double integration_duration = (ros::Time::now() - integration_start).toSec();
-  ROS_INFO_STREAM("octomap integration time"<<integration_duration);
+  profiling_container.capture("insertScan", "end", ros::Time::now());
+  ROS_INFO_STREAM("octomap integration time"<<this->profiling_container.findDataByName("insertScan")->values.back());
 
-  double total_elapsed = (ros::Time::now() - startTime).toSec();
+  //double total_elapsed = (ros::Time::now() - startTime).toSec();
+  profiling_container.capture("octomap_insertCloud", "end", ros::Time::now());
+
+  /*
   if(CLCT_DATA){
       octomap_integration_acc += total_elapsed*1e9;
       if ((octomap_ctr+1) % data_collection_iteration_freq == 0) {
@@ -412,9 +409,9 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
           }
       }
   }
+  */
+
   publishAll(cloud->header.stamp);
-  //publishAll(start_time);
-  //ROS_INFO_STREAM("octomap integration time"<< total_elapsed); // @suppress("Type cannot be resolved")
 }
 
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){

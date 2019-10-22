@@ -1,11 +1,28 @@
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <common.h>
+#include <coord.h>
+#include <ros/duration.h>
+#include <Drone.h>
 #include <future_collision/future_collision.h>
-
-// Standard headers
-#include <cmath>
-
-// MAVBench headers
+#include <ros/init.h>
+#include <mavbench_msgs/future_collision.h>
+#include <mavbench_msgs/multiDOFtrajectory.h>
+/*
+#include <octomap_server/OctomapServer.h>
+#include <octomap/octomap_types.h>
+#include <octomap/OccupancyOcTreeBase.hxx>
+#include <octomap/OcTree.h>
+#include <octomap/OcTreeBaseImpl.h>
+#include <octomap/OcTreeIterator.hxx>
+*/
+#include <ros/param.h>
 #include <profile_manager/profiling_data_srv.h>
-#include <profile_manager/start_profiling_srv.h>
+#include <ros/publisher.h>
+#include <rosconsole/macros_generated.h>
+#include <ros/service.h>
+#include <ros/this_node.h>
+#include <cmath>
+#include <deque>
 
 
 bool FutureCollisionChecker::collision(const octomap::OcTree * octree, const multiDOFpoint& n1, const multiDOFpoint& n2) const
@@ -58,10 +75,15 @@ void FutureCollisionChecker::pull_traj(const mavbench_msgs::multiDOFtrajectory::
     }
 }
 
-
+//
 std::tuple <bool, double> FutureCollisionChecker::check_for_collisions(Drone& drone)
 {
-    start_hook_chk_col_t = ros::Time::now();
+
+	if (g_micro_benchmark){ //short circuit the execution and always return 1
+		return std::make_tuple(true, 1.0);
+	}
+
+	start_hook_chk_col_t = ros::Time::now();
 
     if (octree == nullptr || traj.empty())
         return std::make_tuple(false, 0.0);
@@ -98,7 +120,7 @@ std::tuple <bool, double> FutureCollisionChecker::check_for_collisions(Drone& dr
 
 void FutureCollisionChecker::future_collision_initialize_params()
 {
-    ros::param::get("/future_col_drone_radius", drone_radius__global);
+	ros::param::get("/future_col_drone_radius", drone_radius__global);
     ros::param::get("/future_col_drone_height", drone_height__global);
 
     if(!ros::param::get("/ip_addr", ip_addr__global)) {
@@ -113,20 +135,40 @@ void FutureCollisionChecker::future_collision_initialize_params()
         ROS_FATAL("Could not start future_collision. CLCT_DATA parameter missing!");
         return;
     }
-    if(!ros::param::get("/DEBUG",DEBUG)) {
+
+	if(!ros::param::get("/micro_benchmark",g_micro_benchmark)) {
+        ROS_FATAL("Could not start future_collision. micro_benchmark parameter missing!");
+        return;
+    }
+
+	if(!ros::param::get("/DEBUG",DEBUG)) {
         ROS_FATAL("Could not start future_collision. DEBUG parameter missing!");
         return; 
     }
+
     if(!ros::param::get("/follow_trajectory/grace_period", grace_period__global)) {
         ROS_FATAL("Could not start future_collision. grace_period parameter missing!");
         return;
     }
+
 }
 
 void FutureCollisionChecker::log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
+
+    server->profiling_container.setStats();
+	for (auto el: server->profiling_container.container){
+		profiling_data_srv_inst.request.key = el.data_key_name;
+    	profiling_data_srv_inst.request.value = el.get_avg();
+    	if (ros::service::waitForService("/record_profiling_data", 10)){
+    		if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+    			ROS_ERROR_STREAM("could not probe data using stats manager");
+    			ros::shutdown();
+    		}
+    	}
+    }
 
     profiling_data_srv_inst.request.key = "future_collision_kernel";
     profiling_data_srv_inst.request.value = (((double)g_checking_collision_kernel_acc)/1e9)/g_check_collision_ctr;
@@ -164,7 +206,7 @@ void FutureCollisionChecker::log_data_before_shutting_down()
         }
     }
 
-    ROS_INFO_STREAM("done with the octomap profiles");
+    ROS_ERROR_STREAM("done with the octomap profiles");
 }
 
 
@@ -180,10 +222,25 @@ void FutureCollisionChecker::stop_drone()
     }
 }
 
+void FutureCollisionChecker::spinOnceDummy()
+{
+	mavbench_msgs::future_collision col_coming_msg;
+	col_coming_msg.header.stamp = g_pt_cloud_header;
+	col_coming_msg.future_collision_seq = future_collision_seq_id;
+    future_collision_seq_id++;
+	col_coming_msg.collision = true;
+	col_coming_msg.time_to_collision = 10;
+	col_coming_pub.publish(col_coming_msg);
+}
 
 void FutureCollisionChecker::spinOnce()
 {
-    static ros::Time main_loop_start_hook_t;
+	if (g_micro_benchmark){
+		spinOnceDummy();
+		return;
+	}
+
+	static ros::Time main_loop_start_hook_t;
     static ros::Time main_loop_end_hook_t;
 
     main_loop_start_hook_t = ros::Time::now();

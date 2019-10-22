@@ -4,7 +4,9 @@
 MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
         octree(octree_),
 		drone(drone_){
+
 	motion_planning_initialize_params();
+    g_goal_pos.x = g_goal_pos.y = g_goal_pos.z = nan("");
 
 	// Create a new callback queue
 	nh.setCallbackQueue(&callback_queue);
@@ -12,15 +14,116 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	// Topics and services
 	get_trajectory_srv_server = nh.advertiseService("/get_trajectory_srv", &MotionPlanner::get_trajectory_fun, this);
 
-	//future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
-	//next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
+	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
+	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
+	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 1);
+	m_markerPub = nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_dumy", 1);
 
 	smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
 	piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
 }
 
+
+
+void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
+   size_t octomapSize = m_octree->size();
+  // TODO: estimate num occ. voxels for size of arrays (reserve)
+  if (octomapSize <= 1){
+    ROS_WARN("Nothing to publish, octree is empty");
+    return;
+  }
+  double m_treeDepth = m_octree->getTreeDepth();
+  // init markers for free space:
+  visualization_msgs::MarkerArray freeNodesVis;
+  // each array stores all cubes of a different size, one for each depth level:
+  freeNodesVis.markers.resize(m_treeDepth+1);
+
+  geometry_msgs::Pose pose;
+  pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
+
+  // init markers:
+  visualization_msgs::MarkerArray occupiedNodesVis;
+  // each array stores all cubes of a different size, one for each depth level:
+  occupiedNodesVis.markers.resize(m_treeDepth+1);
+
+  typedef octomap::OcTree OcTreeT;
+
+  // now, traverse all leafs in the tree:
+  for (OcTreeT::iterator it = m_octree->begin(),
+      end = m_octree->end(); it != end; ++it)
+  {
+    bool inUpdateBBX = true;
+
+    if (m_octree->isNodeOccupied(*it)){
+      double z = it.getZ();
+        double size = it.getSize();
+        double x = it.getX();
+        double y = it.getY();
+        /*
+        int r = it->getColor().r;
+        int g = it->getColor().g;
+        int b = it->getColor().b;
+        */
+        int r = 0;
+        int g = 0;
+        int b = 0;
+
+        // Ignore speckles in the map:
+        //create marker:
+          unsigned idx = it.getDepth();
+          assert(idx < occupiedNodesVis.markers.size());
+
+          geometry_msgs::Point cubeCenter;
+          cubeCenter.x = x;
+          cubeCenter.y = y;
+          cubeCenter.z = z;
+
+          occupiedNodesVis.markers[idx].points.push_back(cubeCenter);
+            double minX, minY, minZ, maxX, maxY, maxZ;
+            m_octree->getMetricMin(minX, minY, minZ);
+            m_octree->getMetricMax(maxX, maxY, maxZ);
+
+            //double h = (1.0 - std::min(std::max((cubeCenter.z-minZ)/ (maxZ - minZ), 0.0), 1.0)) *m_colorFactor;
+            std_msgs::ColorRGBA color;
+            color.a = 1.0; color.r = 1; color.g = 1; color.b = 1;
+            occupiedNodesVis.markers[idx].colors.push_back(color);
+        }
+  }
+
+    for (unsigned i= 0; i < occupiedNodesVis.markers.size(); ++i){
+      double size = m_octree->getNodeSize(i);
+
+      occupiedNodesVis.markers[i].header.frame_id = "world";
+      occupiedNodesVis.markers[i].header.stamp = ros::Time::now();
+      occupiedNodesVis.markers[i].ns = "map";
+      occupiedNodesVis.markers[i].id = i;
+      occupiedNodesVis.markers[i].type = visualization_msgs::Marker::CUBE_LIST;
+      occupiedNodesVis.markers[i].scale.x = size;
+      occupiedNodesVis.markers[i].scale.y = size;
+      occupiedNodesVis.markers[i].scale.z = size;
+      //occupiedNodesVis.markers[i].color = m_color;
+
+
+      if (occupiedNodesVis.markers[i].points.size() > 0)
+        occupiedNodesVis.markers[i].action = visualization_msgs::Marker::ADD;
+      else
+        occupiedNodesVis.markers[i].action = visualization_msgs::Marker::DELETE;
+    }
+
+    m_markerPub.publish(occupiedNodesVis);
+}
+
+
+void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
+	octomap_msgs::Octomap_<std::allocator<void> > map;
+
+	if (octomap_msgs::binaryMapToMsg(*m_octree, map)){
+		octomap_dummy_pub.publish(map);
+	}
+	//publish_dummy_octomap_vis(m_octree);
+}
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
@@ -34,6 +137,8 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
     octree = dynamic_cast<octomap::OcTree*> (tree);
 
+
+    publish_dummy_octomap(octree);
     if (octree == nullptr) {
         ROS_ERROR("Octree could not be pulled.");
     }
@@ -41,7 +146,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
 //*** F:DN getting the smoothened trajectory
 bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res){
-    //----------------------------------------------------------------- 
+	//-----------------------------------------------------------------
 	// *** F:DN variables	
 	//----------------------------------------------------------------- 
     piecewise_trajectory piecewise_path;
@@ -58,13 +163,39 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
     
     auto hook_end_t_2 = ros::Time::now(); 
-    auto hook_start_t = ros::Time::now();
+    data_container.capture("motion_planning_time_total", "start", ros::Time::now());
+    //auto hook_start_t = ros::Time::now();
+    //g_start_time = ros::Time::now();
 
-    g_start_time = ros::Time::now();
     g_start_pos = req.start;
     g_goal_pos = req.goal;
-    
+
+
+    //hard code values for now
+    if (g_always_randomize_end_point){
+    	g_goal_pos.x = rand() % int(x__high_bound__global);
+    	g_goal_pos.y = rand() % int(y__high_bound__global);
+    	g_goal_pos.z = rand() % int(z__high_bound__global);
+    	req.goal.x = g_goal_pos.x;
+    	req.goal.y = g_goal_pos.y;
+    	req.goal.z = g_goal_pos.z;
+    }
+    /*
+    //g_goal_pos.x = 60;
+    //g_goal_pos.y = 60;
+    //g_goal_pos.z = 5;
+    req.goal.x = g_goal_pos.x;
+    req.goal.y = g_goal_pos.y;
+    req.goal.z = g_goal_pos.z;
+	*/
+
+
+    data_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now());
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree);
+    data_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now());
+
+    //publish_dummy_octomap_vis(octree);
+
 
     if (piecewise_path.empty()) {
         ROS_ERROR("Empty path returned");
@@ -88,6 +219,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     // Smoothen the path and build the multiDOFtrajectory response
     ROS_INFO("Smoothenning...");
+    data_container.capture("smoothening_time", "start", ros::Time::now());
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
                                         req.twist.linear.y,
@@ -95,6 +227,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
                                     Eigen::Vector3d(req.acceleration.linear.x,
                                                     req.acceleration.linear.y,
                                                     req.acceleration.linear.z));
+    data_container.capture("smoothening_time", "end", ros::Time::now());
 
     if (smooth_path.empty()) {
         ROS_ERROR("Path could not be smoothened successfully");
@@ -120,10 +253,13 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
 
     auto hook_end_t = ros::Time::now(); 
-    g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
+    //g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
+    data_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
     g_number_of_planning++; 
-    ROS_INFO("motion_planner: Planning took %f s", (hook_end_t - hook_start_t).toSec());
-
+    Data<ros::Time, ros::Duration> *total_time;
+    data_container.findDataByName("motion_planning_time_total", &total_time);
+    double blah = total_time->values[-1].toSec(); // @suppress("Method cannot be resolved")
+    ROS_INFO_STREAM("motion_planner: Planning took"<<total_time->values.back().toSec()<<"s");
     res.path_found = true;
     return true;
 }
@@ -133,7 +269,8 @@ void MotionPlanner::get_start_in_future(Drone& drone,
         geometry_msgs::Point& start, geometry_msgs::Twist& twist,
         geometry_msgs::Twist& acceleration)
 {
-    if (g_next_steps_msg.points.empty() || g_next_steps_msg.reverse) {
+ //
+	if (g_next_steps_msg.points.empty() || g_next_steps_msg.reverse) {
         auto pos = drone.position();
         start.x = pos.x; start.y = pos.y; start.z = pos.z; 
         twist.linear.x = twist.linear.y = twist.linear.z = 0;
@@ -177,7 +314,9 @@ void MotionPlanner::future_col_callback(const mavbench_msgs::future_collision::C
     if (g_next_steps_msg.future_collision_seq <= future_col_seq_id) {
         // "Call the get_trajectory_fun function right here, without waiting
         // for the package_delivery node to make a request
-        package_delivery::get_trajectory::Request req;
+    	motion_plan_end_to_end(msg->header.stamp);
+    	/*
+    	package_delivery::get_trajectory::Request req;
         package_delivery::get_trajectory::Response res;
 
         get_start_in_future(*drone, req.start, req.twist, req.acceleration);
@@ -185,8 +324,24 @@ void MotionPlanner::future_col_callback(const mavbench_msgs::future_collision::C
         req.header.stamp = msg->header.stamp;
         req.call_func = 1;  //used for debugging purposes
         get_trajectory_fun(req, res);
+        */
     }
 }
+
+
+void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time){
+	package_delivery::get_trajectory::Request req;
+	package_delivery::get_trajectory::Response res;
+
+	get_start_in_future(*drone, req.start, req.twist, req.acceleration);
+	req.goal = g_goal_pos;
+	req.header.stamp = invocation_time;
+	req.call_func = 1;  //used for debugging purposes
+	get_trajectory_fun(req, res);
+}
+
+
+
 
 void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 {
@@ -199,13 +354,14 @@ void MotionPlanner::motion_planning_initialize_params()
       ROS_FATAL_STREAM("Could not start pkg delivery planning_budget not provided");
       return ;
     }
-    
-    ros::param::get("motion_planner/max_roadmap_size", max_roadmap_size__global);
+
+    ros::param::get("/motion_planner/max_roadmap_size", max_roadmap_size__global);
     ros::param::get("/motion_planner/sampling_interval", sampling_interval__global);
     ros::param::get("/motion_planner/rrt_step_size", rrt_step_size__global);
     ros::param::get("/motion_planner/rrt_bias", rrt_bias__global);
     ros::param::get("/motion_planner/x_dist_to_sample_from__low_bound", x__low_bound__global);
     ros::param::get("/motion_planner/x_dist_to_sample_from__high_bound", x__high_bound__global);
+    ros::param::get("/motion_planner/always_randomize_end_point", g_always_randomize_end_point);
 
     ros::param::get("/motion_planner/y_dist_to_sample_from__low_bound", y__low_bound__global);
     ros::param::get("/motion_planner/y_dist_to_sample_from__high_bound", y__high_bound__global);
@@ -247,6 +403,17 @@ void MotionPlanner::log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
+    data_container.setStats();
+    for (auto el: data_container.container){
+    	profiling_data_srv_inst.request.key = el.data_key_name;
+    	profiling_data_srv_inst.request.value = el.get_avg();
+    	if (ros::service::waitForService("/record_profiling_data", 10)){
+    		if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
+    			ROS_ERROR_STREAM("could not probe data using stats manager");
+    			ros::shutdown();
+    		}
+    	}
+    }
 
     profiling_data_srv_inst.request.key = "number_of_plannings";
     profiling_data_srv_inst.request.value = g_number_of_planning;
@@ -621,7 +788,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	mav_trajectory_generation::Trajectory traj;
 	opt.getTrajectory(&traj);
 
-	//ROS_INFO("Smoothened path!");
+	ROS_INFO("Smoothened path!");
 	// Visualize path for debugging purposes
 	mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
 	mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
@@ -783,7 +950,8 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRT(geometry_msgs::Point
 
 MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
 {
-    return OMPL_plan<ompl::geometric::RRTConnect>(start, goal, octree);
+	//publish_dummy_octomap_vis(octree);
+	return OMPL_plan<ompl::geometric::RRTConnect>(start, goal, octree);
 }
 
 

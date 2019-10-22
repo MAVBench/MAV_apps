@@ -8,6 +8,7 @@
 #include <iostream>
 #include <functional>
 #include <limits>
+#include <visualization_msgs/Marker.h>
 
 // MAVBench headers
 #include "common.h"
@@ -25,6 +26,7 @@
 // Octomap specific headers
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
+#include <octomap/ColorOcTree.h>
 
 // Trajectory smoothening headers
 #include <mav_trajectory_generation/polynomial_optimization_linear.h>
@@ -42,6 +44,10 @@
 #include <ompl/config.h>
 #include <octomap_msgs/GetOctomap.h>
 #include <octomap_msgs/conversions.h>
+
+#include <datacontainer.h>
+#include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -62,6 +68,9 @@ public:
 
 
 private:
+    DataContainer<ros::Time, ros::Duration> data_container;
+    // planning end to end
+    void motion_plan_end_to_end(ros::Time invocation_time);
 
     // ***F:DN call back for octomap msgs
     void octomap_callback(const octomap_msgs::Octomap& msgs);
@@ -128,17 +137,21 @@ private:
     piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree);
 
 
+    // dummy publishers for debugging/microbenchmarking
+    void publish_dummy_octomap(octomap::OcTree *m_octree);
+    void publish_dummy_octomap_vis(octomap::OcTree *m_octree);
+
+
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
-    ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub;
+    ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub;
     ros::Subscriber future_col_sub, next_steps_sub, octomap_sub;
     ros::ServiceServer get_trajectory_srv_server;
     ros::Publisher traj_pub;
 
     Drone * drone = nullptr;
-    octomap::OcTree * octree = nullptr;
-    int future_col_seq_id = 0;
+    octomap::OcTree * octree = nullptr; int future_col_seq_id = 0;
     int trajectory_seq_id = 0;
     mavbench_msgs::multiDOFtrajectory g_next_steps_msg;
 
@@ -156,6 +169,7 @@ private:
     double x__low_bound__global, x__high_bound__global;
     double y__low_bound__global, y__high_bound__global;
     double z__low_bound__global, z__high_bound__global;
+    bool g_always_randomize_end_point; // for micro benchmarking
     int nodes_to_add_to_roadmap__global;
     double max_dist_to_connect_at__global;
     double sampling_interval__global;
@@ -243,7 +257,9 @@ private:
 template<class PlannerType>
 MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree)
 {
-    namespace ob = ompl::base;
+
+	//publish_dummy_octomap_vis(octree);
+	namespace ob = ompl::base;
     namespace og = ompl::geometric;
 
     piecewise_trajectory result;
