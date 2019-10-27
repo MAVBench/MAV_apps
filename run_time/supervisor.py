@@ -3,59 +3,57 @@ from time import *
 import sys
 import subprocess
 import signal
-def action_upon_termination():
-    ctr = 0
-    ros_node_pid_list = []
-    process_ignore_list = ["profile_manager", "rosmaster", "rosout"]
-    
-    while(True): #repeately ask for killing of the processes
-        ros_process_list = (subprocess.check_output("ps aux | grep ros |grep log", shell=True)).splitlines()
-        ros_process_list_filtered = ros_process_list[:]
-       
-	
- 
-        for process in ros_process_list:  #filter the list
-            for ignore_el in process_ignore_list:
-                if ignore_el in process:
-                    ros_process_list_filtered.remove(process)
-                    break
 
 
-        # block till all processes except the ones in the process ignore_list are killed
-        for process in ros_process_list_filtered:
-	    if "grep" in process.split():
-		continue	
-            pid = process.split()[1] 
-            print pid 
-	    #os.kill(int(pid), 9) 
-	    #subprocess.Popen("kill -INT $(ps aux | grep "+ pid + " | awk '{print $2}')", shell=True)
-	    subprocess.Popen("kill -INT  "+ pid, shell=True)
-            sleep(.3) 
+def get_ros_processes(ignore_list):
+    ros_process_list = (subprocess.check_output("ps aux | grep ros |grep log", shell=True)).splitlines()
+    ros_process_list_filtered = ros_process_list[:]
+   
+    #filter the list         
+    for process in ros_process_list:  
+        for ignore_el in ignore_list:
+            if ignore_el in process:
+                ros_process_list_filtered.remove(process)
+                break
+    return ros_process_list_filtered
+
+def kill_processes(process_list):
+    for process in process_list:
         print process 
-        sleep(3) 
-        
-        if(len(ros_process_list_filtered)<= len(process_ignore_list) -1):#rosmaster doesn't show up
+        pid = process.split()[1] 
+        print pid 
+        subprocess.Popen("kill -2 "+ pid, shell=True)
+        sleep(.1) 
+    sleep(3) 
+
+def action_upon_termination():
+    ros_node_pid_list = []
+    process_ignore_list = ["profile_manager", "rosmaster", "rosout", "grep"]
+    
+    
+    # block till all processes except the ones in the process ignore_list are killed
+    ros_process_list_filtered = get_ros_processes(process_ignore_list) 
+    kill_processes(ros_process_list_filtered)
+
+    ctr = 0
+    ctr_threshold = 100 
+    print "==============" 
+    while (ctr < ctr_threshold):     
+        ros_process_list_filtered = get_ros_processes(process_ignore_list) 
+        if(len(ros_process_list_filtered)== 0):#rosmaster doesn't show up
             break
         else:
-            if (ctr > 25): #a time out
-                break
+            print ros_process_list_filtered
         ctr+=1
-#    sys.exit(0)
-    #ros_process_list_filtered = (subprocess.check_output(['rosnode', 'list'])).splitlines()
-    #time.sleep(2) 
-    #if (ctr > 5): #a time out
-    #    break
+        sleep(1)
+
+    print("killed all other processes");
     
     # to kill all other processes (including the rosmaster and core and rosout), the
     # easiest way is to kill the roslaunch itself
     roslaunch_process = (subprocess.check_output("ps aux | grep roslaunch |grep opt", shell=True)).splitlines()
-    for el in roslaunch_process:
-    	if "grep" in el:
-		continue 
-	else:
-		pid = el.split()[1] 
-    		subprocess.Popen("kill -INT  "+ pid, shell=True)
-
+    kill_processes(roslaunch_process)
+    
     #--- using call cause it's blocking 
     #subprocess.call("kill -INT $(ps aux | grep "+ pid + " | awk '{print $2}')", shell=True
 #print roslaunch_process 
@@ -83,7 +81,7 @@ def should_terminate(stat_file):
 
 def main():
     
-    stat_file = "../data/"+"mapping"+"/supervisor_mailbox.txt"
+    stat_file = "../data/"+"package_delivery"+"/supervisor_mailbox.txt"
     max_run_time = 90000 
     
     polling_freq = 5  #polling 

@@ -9,6 +9,8 @@
 #include <iostream>
 #include "datat.h"
 #include "datacontainer.h"
+#include <algorithm>
+#include <vector>
 using namespace std;
 
 
@@ -17,7 +19,25 @@ data_test_bench::data_test_bench() {
 
 }
 
-void data_test_bench::data_test_1(int input_cnt, int vec_size){
+// populating the data with values from 1 to vec_size
+int data_test_bench::data_test_deterministic(int input_cnt, int vec_size){
+	string my_data_name = "my_data";
+	Data<float, float> my_data(my_data_name, 100, vec_size);
+
+	float rand_val;
+	for (int i = 0; i < input_cnt; i++){
+		my_data.capture(0, "start");
+		rand_val = i+1;
+		my_data.capture(rand_val, "end");
+	}
+	my_data.setStatsAndClear();
+	cout<<"data name" << my_data.data_key_name << my_data.getStatsInString(vector<string> {"avg", "std"}) << endl;
+	return (int) my_data.getStat("avg")->back();
+}
+
+
+// populating the data with random values
+void data_test_bench::data_test_random(int input_cnt, int vec_size){
 	string my_data_name = "my_data";
 	Data<float, float> my_data(my_data_name, 100, vec_size);
 
@@ -27,11 +47,11 @@ void data_test_bench::data_test_1(int input_cnt, int vec_size){
 		rand_val = rand() % 100;
 		my_data.capture(rand_val, "end");
 	}
-	my_data.setStats();
-	for (auto el: my_data.values){
-		cout<<el<< " ";
-	}
-	cout<<"my data's name"<< my_data.data_key_name << "avg:"<<my_data.get_avg() << "std:"<<my_data.get_std()<<endl;
+	my_data.setStatsAndClear();
+
+	cout<<"data name" << my_data.data_key_name << my_data.getStatsInString(vector<string> {"avg", "std"}) << endl;
+	my_data.setStatsAndClear();
+	cout<<"data name" << my_data.data_key_name << my_data.getStatsInString(vector<string> {"avg", "std"}) << endl;
 }
 
 
@@ -39,7 +59,7 @@ void data_test_bench::datacontainer_test_2() {
 	// test 3: capturing end before start
 	DataContainer<float, float> myContainer;
 	try {
-		myContainer.capture(10, "my_data_3", "end");
+		myContainer.capture("my_data_3", "end", 10);
 	}catch(...) {
 			//std::exception &e){
 
@@ -53,40 +73,60 @@ void data_test_bench::datacontainer_test_1(){
 	// test 1 : instantiaing a container and writing data into it
 	DataContainer<float, float> myContainer;
 	Data<float, float> *data;
-	myContainer.capture(10, "my_data", "start");
-	myContainer.capture(20, "my_data", "end");
+	myContainer.capture("my_data", "start", 10);
+	myContainer.capture("my_data", "end", 25);
 	myContainer.findDataByName("my_data", &data);
-	data->setStats();
-	cout<< data->get_avg() << endl;
+	data->setStatsAndClear();
+	cout<< data->getStatsInString(vector<string> {"avg"});
+	cout<< myContainer.getStatsInString(vector<string> {"std"})<< endl;
 
-	// test 2 :
+	// test 2 : writing two different data and checking their stats
 	DataContainer<float, float>  myContainer_2;
 	int input_cnt = 10;
 	float rand_val = 0;
 	for (int i = 0; i < input_cnt; i++){
 		rand_val = rand() % 100;
-		myContainer_2.capture(rand_val, "first_data", "start");
+		myContainer_2.capture("first_data", "start", rand_val);
 		rand_val = rand() % 100;
-		myContainer_2.capture(rand_val, "first_data", "end");
+		myContainer_2.capture("first_data", "end", rand_val);
 	}
 
 	for (int i = 0; i < input_cnt; i++){
 		rand_val = rand() % 100;
-		myContainer_2.capture(rand_val, "second_data", "start");
+		myContainer_2.capture("second_data", "start", rand_val);
 		rand_val = rand() % 100;
-		myContainer_2.capture(rand_val, "second_data", "end");
+		myContainer_2.capture("second_data", "end", rand_val);
 	}
-
-	myContainer_2.setStats();
-	for (auto el: myContainer_2.container) {
-		cout<<el.data_key_name<<" avg is: " << el.get_avg()<<endl;
-	}
+	//for (auto el: myContainer_2.container) { cout<< el<<endl;}
+	myContainer_2.setStatsAndClear();
+	Data<float, float> * my_data;
+	myContainer_2.findDataByName("first_data", &my_data);
+	cout<<myContainer_2.getStatsInString()<<endl;;
 
 	//test 3: finding a data
-	Data<float, float> * my_data;
-	myContainer_2.findDataByName("second_data", &my_data);
-	cout<<"second_data avg is :"<< my_data->get_avg();
+//	myContainer_2.findDataByName("second_data", &my_data);
+//	cout<<"second_data_avg"<< my_data->getStatsInString(vector<string>{"avg"});
 }
+
+// no end
+void data_test_bench::datacontainer_test_3(){
+
+	// test 1 : instantiaing a container and writing data into it
+	DataContainer<float, float> myContainer;
+	Data<float, float> *data;
+	myContainer.capture("my_data", "start", 10);
+	myContainer.capture("my_data", "start", 15);
+	myContainer.findDataByName("my_data", &data);
+	data->setStatsAndClear();
+	if (data->getStat("avg")) {
+		float blah = data->getStat("avg")->back();//vector<string> {"avg"});
+	}
+	cout<< data->getStatsInString();//vector<string> {"avg"});
+	//test 3: finding a data
+//	myContainer_2.findDataByName("second_data", &my_data);
+//	cout<<"second_data_avg"<< my_data->getStatsInString(vector<string>{"avg"});
+}
+
 
 data_test_bench::~data_test_bench() {
 	// TODO Auto-generated destructor stub

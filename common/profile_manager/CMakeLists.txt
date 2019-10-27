@@ -33,6 +33,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   profiling_data_srv.srv
+  profiling_data_verbose_srv.srv
   start_profiling_srv.srv
   )
 
@@ -44,6 +45,7 @@ generate_messages(
 
 #message(cuda_include_dirs )
 include_directories(
+    include 
     ${CATKIN_DEVEL_PREFIX}/include
     ${Eigen_INCLUDE_DIRS} 
     ${catkin_INCLUDE_DIRS}
@@ -64,21 +66,42 @@ link_directories(
 
 catkin_package(
   INCLUDE_DIRS ${Eigen_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS}
-  LIBRARIES ${catkin_LIBRARIES}
+  LIBRARIES ${catkin_LIBRARIES} profile_manager
   CATKIN_DEPENDS trajectory_msgs mav_msgs tf message_runtime
-)
-
+ )
 
 if(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
-include_directories(/usr/local/cuda/include)
-link_directories(/usr/lib/nvidia-384)
-add_definitions(-DUSE_INTEL -DUSE_NVML)
-add_executable(profile_manager src/profile_manager.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/timer.cpp)
-target_link_libraries(profile_manager  ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread nvidia-ml)
-else(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
-add_executable(profile_manager src/profile_manager.cpp src/slam_profiler.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)
-target_link_libraries(profile_manager  ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread)
+    include_directories(/usr/local/cuda/include)
+    link_directories(/usr/lib/nvidia-384)
+    add_definitions(-DUSE_INTEL -DUSE_NVML)
+    # for the node running profile manager 
+    add_executable(profile_manager_node src/profile_manager_node.cpp src/slam_profiler.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)
+    target_link_libraries(profile_manager_node  ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread nvidia-ml)
+    # for profile manager
+    add_library(profile_manager src/profile_manager.cpp)
+    target_link_libraries(profile_manager ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 endif(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
 
-add_dependencies(profile_manager ${catkin_EXPORTED_TARGETS} profile_manager_generate_messages_cpp)
+if(NOT ${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
+add_dependencies(profile_manager_node ${catkin_EXPORTED_TARGETS} profile_manager_generate_messages_cpp)
+ add_executable(profile_manager_node src/profile_manager.cpp src/slam_profiler.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(profile_manager_node  ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread nvidia-ml)
+add_library(profile_manager src/profile_manager.cpp)
+target_link_libraries(profile_manager ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
+endif(NOT ${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
+
+#
+install(TARGETS profile_manager profile_manager_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+## Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)
+
 

@@ -5,7 +5,13 @@
  *      Author: reddi-rtx
  */
 
+using namespace std;
+
+
 #include <datacontainer.h>
+#include <algorithm>
+
+//constructor
 template <class T, class S>
 DataContainer<T, S>::DataContainer() {
 	// TODO Auto-generated constructor stub
@@ -13,10 +19,11 @@ DataContainer<T, S>::DataContainer() {
 }
 
 
+// setters
 template <class T, class S>
-void DataContainer<T, S>::setStats(){
+void DataContainer<T, S>::setStatsAndClear(){
 	for (auto &el:container){
-		el.setStats();
+		el.setStatsAndClear();
 	}
 }
 
@@ -41,8 +48,17 @@ void DataContainer<T, S>::capture(string name, string mode, T data_value) {
 	it->capture(data_value, mode);
 }
 
-
-
+// getters
+template <class T, class S>
+string DataContainer<T, S>::getStatsInString(vector<string> stats_name, string leading_spaces){
+	string results = "";
+	for (auto &data: this->container){
+		results += leading_spaces + "\"" + data.data_key_name + " stats are\":" + "\n";
+		results += data.getStatsInString(stats_name, leading_spaces + "\t");
+		results += "\n";
+	}
+	return results;
+}
 
 template <class T, class S>
 void DataContainer<T, S>::findDataByName(string name, Data<T, S> **data){
@@ -63,6 +79,7 @@ Data<T, S>* DataContainer<T, S>::findDataByName(string name) {
 }
 
 
+
 /*
 // streams
 template <class T, class S>
@@ -77,4 +94,6 @@ DataContainer<T, S>::~DataContainer() {
 }
 
 template class DataContainer<float, float>;
+#ifdef ROS
 template class DataContainer<ros::Time, ros::Duration>;
+#endif

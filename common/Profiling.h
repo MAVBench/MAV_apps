@@ -13,6 +13,17 @@ typedef struct KeyValuePair {
 
 } KeyValuePairStruct;
 
+
+typedef struct KeyValueStringPair {
+    std::string key;
+    std::string value;
+    KeyValueStringPair(std::string key, std::string value): key(key), value(value){
+    }
+} KeyValueStringPairStruct;
+
+
+
+
 typedef struct stats {
     long long pub_rate_accumulate;
     long long pub_rate_accumulate_sqr;

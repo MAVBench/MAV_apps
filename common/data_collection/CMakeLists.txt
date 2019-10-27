@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
+set (CMAKE_CXX_STANDARD 11)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -171,7 +172,7 @@ link_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-
+add_definitions(-DROS)
 add_library(data_collection src/datacontainer.cpp src/datat.cpp) 
 target_link_libraries(data_collection ${catkin_LIBRARIES}) 
 

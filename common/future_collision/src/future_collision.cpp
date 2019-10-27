@@ -17,6 +17,7 @@
 */
 #include <ros/param.h>
 #include <profile_manager/profiling_data_srv.h>
+#include <profile_manager/profiling_data_verbose_srv.h>
 #include <ros/publisher.h>
 #include <rosconsole/macros_generated.h>
 #include <ros/service.h>
@@ -153,23 +154,34 @@ void FutureCollisionChecker::future_collision_initialize_params()
 
 }
 
+
+
 void FutureCollisionChecker::log_data_before_shutting_down()
 {
-    std::string ns = ros::this_node::getName();
+	std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+    server->profiling_container.setStatsAndClear();
 
-    server->profiling_container.setStats();
-	for (auto el: server->profiling_container.container){
-		profiling_data_srv_inst.request.key = el.data_key_name;
-    	profiling_data_srv_inst.request.value = el.get_avg();
-    	if (ros::service::waitForService("/record_profiling_data", 10)){
-    		if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-    			ROS_ERROR_STREAM("could not probe data using stats manager");
-    			ros::shutdown();
-    		}
-    	}
-    }
+	for (auto &data: server->profiling_container.container){
+    	profiling_data_srv_inst.request.key = data.data_key_name + " last window's avg: ";
+		vector<double>* avg_stat = data.getStat("avg");
+		if (avg_stat) {
+			profiling_data_srv_inst.request.value = avg_stat->back();
 
+		}
+		else{
+			profiling_data_srv_inst.request.value = nan("");
+		}
+		profile_manager.clientCall(profiling_data_srv_inst);
+	}
+
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+	profiling_data_verbose_srv_inst.request.value = "\n" + server->profiling_container.getStatsInString();
+    profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
+
+
+/*
     profiling_data_srv_inst.request.key = "future_collision_kernel";
     profiling_data_srv_inst.request.value = (((double)g_checking_collision_kernel_acc)/1e9)/g_check_collision_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
@@ -207,6 +219,7 @@ void FutureCollisionChecker::log_data_before_shutting_down()
     }
 
     ROS_ERROR_STREAM("done with the octomap profiles");
+	*/
 }
 
 
@@ -298,5 +311,6 @@ void FutureCollisionChecker::spinOnce()
 
     main_loop_end_hook_t = ros::Time::now();
     g_future_collision_main_loop += (main_loop_end_hook_t - main_loop_start_hook_t).toSec()*1e9; 
+
 }
 

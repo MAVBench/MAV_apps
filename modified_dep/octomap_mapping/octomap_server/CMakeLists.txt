@@ -16,7 +16,7 @@ set(PACKAGE_DEPENDENCIES
   nodelet  
   )
 
-
+set (CMAKE_CXX_STANDARD 11)
 
 find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES} data_collection)
 

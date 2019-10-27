@@ -73,33 +73,9 @@ int main(int argc, char** argv)
     //MotionPlanner mp (octree, &drone);
     //mp_ptr = &mp;
     while (ros::ok()) {
-        // ROS_INFO("Start octo");
-        // ros::Time start_octo = ros::Time::now();
         ros::spinOnce();
-        // ros::Time end_octo = ros::Time::now();
-        // ROS_INFO("End octo");
-        // std::cout << "octomap takes " << (end_octo - start_octo).toSec() << "\n";
-
-        // ros::Time start_fcc = ros::Time::now();
-        //fcc.spinOnceDummy();
         fcc.spinOnce();
-
-     //   ros::Time now_secs =ros::Time::now();
-//        ROS_ERROR_STREAM("now time is "<<now_secs.toSec());
- //       ros::Duration(5).sleep();
-  //      ros::Time after_now_secs =ros::Time::now();
-   //     ROS_ERROR_STREAM("after now time is "<<now_secs.toSec());
-    //    ROS_ERROR_STREAM("diff is "<<(after_now_secs - now_secs).toSec());
-
-        // ros::Time end_fcc = ros::Time::now();
-        // std::cout << "fcc takes " << (end_fcc - start_fcc).toSec() << "\n";
-
-        // ROS_INFO("Start mp");
-        // ros::Time start_mp = ros::Time::now();
         //mp.spinOnce();
-        // ROS_INFO("End mp");
-        // ros::Time end_mp = ros::Time::now();
-        // std::cout << "mp takes " << (end_mp - start_mp).toSec() << "\n";
     }
 }
 

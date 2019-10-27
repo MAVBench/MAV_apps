@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   octomap_msgs
   octomap_server
   data_collection
+  profile_manager
 )
 
 ## System dependencies are found with CMake's conventions
@@ -119,7 +120,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES future_collision
-  CATKIN_DEPENDS roscpp std_msgs
+  CATKIN_DEPENDS roscpp std_msgs ${PACKAGE_DEPENDENCIES}
   DEPENDS system_lib
 )
 
@@ -138,6 +139,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
   ${common_utility_include} 
+  ${common_utility_include}/profile_manager/include
   $ENV{AirSim_base_dir}/AirLib/include
 )
 
@@ -178,7 +180,7 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-add_library(future_collision src/future_collision ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_library(future_collision src/future_collision.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
 target_link_libraries(future_collision ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
 #############

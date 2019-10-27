@@ -17,6 +17,7 @@
 #include "timer.h"
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
+#include <profile_manager.h>
 
 // Octomap server headers. This is only needed for profiling services
 // TODO: Get rid of this dependency
@@ -27,7 +28,8 @@ public:
     FutureCollisionChecker(octomap::OcTree * octree_, Drone * drone_) :
         nh("~"),
         octree(octree_),
-        drone(drone_)
+        drone(drone_),
+		profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose")
     {
         future_collision_initialize_params();
 
@@ -46,6 +48,7 @@ public:
     void spinOnceDummy();
     void log_data_before_shutting_down();
 
+
     // TODO: Get rid of this function
     void setOctomapServer(octomap_server::OctomapServer * server_)
     {
@@ -58,6 +61,7 @@ private:
     void pull_traj(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg);
     void future_collision_initialize_params();
     void stop_drone();
+    ProfileManager profile_manager;
 
 private:
     ros::NodeHandle nh;

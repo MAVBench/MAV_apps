@@ -16,6 +16,8 @@
 #include "global_planner.h"
 #include "package_delivery/get_trajectory.h"
 #include "timer.h"
+
+#include <profile_manager.h>
 #include <profile_manager/profiling_data_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
@@ -68,7 +70,8 @@ public:
 
 
 private:
-    DataContainer<ros::Time, ros::Duration> data_container;
+    ProfileManager profile_manager;
+    DataContainer<ros::Time, ros::Duration> profiling_container;
     // planning end to end
     void motion_plan_end_to_end(ros::Time invocation_time);
 

@@ -17,38 +17,63 @@
 
 #include <iostream>
 #include <vector>
+#include <tuple>
+#include <algorithm>
+
+#ifdef ROS
 #include<ros/ros.h>
-using namespace std;
+#endif
+
 
 template <class T, class S>  //T is the input data that is captured, and S is the difference
 class Data {
 public:
 	//function members
-	Data(string my_name , float max_duration = 600, int max_samples_to_collect = 600);
+	Data(std::string my_name , float max_duration = 300, int sample_size_per_window = 300);
 	~Data();
 	// setters
-	void capture(T Time, string mode);
+	void capture(T Time, std::string mode);
 	void capture_end(T Time);
+	double calcAvg(std::vector<double>);
+	double calcStd(std::vector<double>);
+	double calcAvg(std::vector<float>);
+	double calcStd(std::vector<float>);
+#ifdef ROS
+	double calcAvg(std::vector<ros::Duration>);
+	double calcStd(std::vector<ros::Duration>);
+#endif
+	void setStatsAndClear();
 
-	void set_avg();
-	void set_std();
-	void setStats();
+	//getters
+	double calcStat(std::string stat_name);
+	std::string getStatsInString(std::vector<std::string> data_type = {"avg", "std", "sample_size"}, std::string leading_spaces="\t\t");
+	std::string getStatInString(std::string stat_name);
+	std::vector<double>* getStat(std::string statName);
 
     // getters
-	float get_avg();
-	float get_std();
 	int assign_next_index();
 
-	//vars
-	string data_key_name;
-	vector<S> values;
-	int max_samples_to_collect;
+	// streams
+	friend std::ostream& operator<< (std::ostream &out, const Data<float, float> &data);
+
+#ifdef ROS
+	friend std::ostream& operator<< (std::ostream &out, const Data<ros::Time, ros::Duration> &data);
+#endif
+
+    // variabels
+	std::string data_key_name;
+	std::vector<S> values;
+	std::vector< std::tuple<std::string, std::vector<double> > > value_statistics; //vector of statistics
+
+
+	int sample_size_per_window;
 	T current_start_time; //the time that the start time was captured
 	T current_end_time; //the time that the end time was captured
 	int current_index_to_use; //current index to push_back the new value in
 	float std, avg;
-	//vector<float> values(max_samples_to_collect);
+	//vector<float> values(sample_size_per_window);
 }
 ;
 
+//#include "datat.cpp"
 #endif /* DATACOLLECTION_H_ */

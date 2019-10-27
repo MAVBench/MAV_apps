@@ -30,7 +30,8 @@ find_package(catkin REQUIRED COMPONENTS
   mavbench_msgs
   future_collision
   data_collection
-)
+  profile_manager
+  )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -147,6 +148,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
   ${common_utility_include} 
+  ${common_utility_include}/profile_manager/include
   $ENV{AirSim_base_dir}/AirLib/include
 )
 

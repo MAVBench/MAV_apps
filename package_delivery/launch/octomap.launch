@@ -90,7 +90,7 @@
 
 
   <!-- starting nodes -->
-  <node pkg="profile_manager" type="profile_manager" name="profile_manager" output="screen">
+  <node pkg="profile_manager" type="profile_manager_node" name="profile_manager" output="screen">
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
   <param name="ip_addr" value="$(arg host_ip)"/>
   </node>
@@ -200,8 +200,8 @@
         <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/>
     </node>
     </comment>
-
-	<!-- Path-Planner -->
+	
+    <!-- Path-Planner -->
 	<!--group ns="motion_planner"-->
     <node pkg="package_delivery" type="motion_planner_node" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)">
 		<param name="drone_radius" value="1.5"/>

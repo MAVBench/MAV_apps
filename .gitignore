@@ -1,2 +1,3 @@
 data/*
 minkindr/*
+deps/glog_catkin

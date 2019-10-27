@@ -1,9 +1,54 @@
 #include "motion_planner.h"
 
+#include <coord.h>
+#include <datat.h>
+#include <Drone.h>
+#include <Eigen/src/Core/Matrix.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Vector3.h>
+#include <mavbench_msgs/multiDOFpoint.h>
+#include <octomap/AbstractOccupancyOcTree.h>
+#include <octomap/math/Vector3.h>
+#include <octomap/octomap_types.h>
+#include <octomap/OccupancyOcTreeBase.h>
+#include <octomap/OcTreeBaseImpl.h>
+#include <octomap/OcTreeBaseImpl.h>
+#include <octomap/OcTreeNode.h>
+#include <octomap_msgs/Octomap.h>
+#include <profile_manager/profiling_data_verbose_srv.h>
+#include <ros/advertise_options.h>
+#include <ros/advertise_service_options.h>
+#include <ros/duration.h>
+#include <ros/init.h>
+#include <ros/message_forward.h>
+#include <ros/node_handle.h>
+#include <ros/param.h>
+#include <ros/publisher.h>
+#include <ros/service.h>
+#include <ros/subscribe_options.h>
+#include <ros/this_node.h>
+#include <ros/time.h>
+#include <ros/transport_hints.h>
+#include <rosconsole/macros_generated.h>
+#include <std_msgs/ColorRGBA.h>
+#include <std_msgs/Header.h>
+#include <tf/transform_datatypes.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <XmlRpcValue.h>
+
+#include "../../deps/mav_comm/mav_msgs/include/mav_msgs/eigen_mav_msgs.h"
+#include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/impl/polynomial_optimization_linear_impl.h"
+#include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
+#include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/segment.h"
+#include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/vertex.h"
+
 
 MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
         octree(octree_),
-		drone(drone_){
+		drone(drone_),
+		profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose")
+		{
 
 	motion_planning_initialize_params();
     g_goal_pos.x = g_goal_pos.y = g_goal_pos.z = nan("");
@@ -133,6 +178,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
     auto hook_end_t = ros::Time::now();
     ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
+    ROS_ERROR_STREAM("now with the other header octomap communication time"<<(ros::Time::now() - msg.header.stamp2).toSec());
     //ROS_INFO("Requesting octomap...");
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
     octree = dynamic_cast<octomap::OcTree*> (tree);
@@ -163,7 +209,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
     
     auto hook_end_t_2 = ros::Time::now(); 
-    data_container.capture("motion_planning_time_total", "start", ros::Time::now());
+    profiling_container.capture("motion_planning_time_total", "start", ros::Time::now());
     //auto hook_start_t = ros::Time::now();
     //g_start_time = ros::Time::now();
 
@@ -190,9 +236,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 	*/
 
 
-    data_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now());
+    profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now());
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree);
-    data_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now());
+    profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now());
 
     //publish_dummy_octomap_vis(octree);
 
@@ -219,7 +265,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     // Smoothen the path and build the multiDOFtrajectory response
     ROS_INFO("Smoothenning...");
-    data_container.capture("smoothening_time", "start", ros::Time::now());
+    profiling_container.capture("smoothening_time", "start", ros::Time::now());
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
                                         req.twist.linear.y,
@@ -227,7 +273,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
                                     Eigen::Vector3d(req.acceleration.linear.x,
                                                     req.acceleration.linear.y,
                                                     req.acceleration.linear.z));
-    data_container.capture("smoothening_time", "end", ros::Time::now());
+    profiling_container.capture("smoothening_time", "end", ros::Time::now());
 
     if (smooth_path.empty()) {
         ROS_ERROR("Path could not be smoothened successfully");
@@ -254,13 +300,14 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     auto hook_end_t = ros::Time::now(); 
     //g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
-    data_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
+    profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
     g_number_of_planning++; 
     Data<ros::Time, ros::Duration> *total_time;
-    data_container.findDataByName("motion_planning_time_total", &total_time);
+    profiling_container.findDataByName("motion_planning_time_total", &total_time);
     double blah = total_time->values[-1].toSec(); // @suppress("Method cannot be resolved")
     ROS_INFO_STREAM("motion_planner: Planning took"<<total_time->values.back().toSec()<<"s");
     res.path_found = true;
+
     return true;
 }
 
@@ -402,18 +449,29 @@ void MotionPlanner::motion_planning_initialize_params()
 void MotionPlanner::log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
+    profiling_container.setStatsAndClear();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
-    data_container.setStats();
-    for (auto el: data_container.container){
-    	profiling_data_srv_inst.request.key = el.data_key_name;
-    	profiling_data_srv_inst.request.value = el.get_avg();
-    	if (ros::service::waitForService("/record_profiling_data", 10)){
-    		if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-    			ROS_ERROR_STREAM("could not probe data using stats manager");
-    			ros::shutdown();
-    		}
-    	}
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+
+    for (auto &data: profiling_container.container){
+		profiling_data_srv_inst.request.key = data.data_key_name + " last window's avg: ";
+		vector<double>* avg_stat = data.getStat("avg");
+		if (avg_stat) {
+			profiling_data_srv_inst.request.value = avg_stat->back();
+		}
+		else{
+			profiling_data_srv_inst.request.value = nan("");
+		}
+		profile_manager.clientCall(profiling_data_srv_inst);
     }
+
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container.getStatsInString();
+    profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
+
+    /*
+
+
 
     profiling_data_srv_inst.request.key = "number_of_plannings";
     profiling_data_srv_inst.request.value = g_number_of_planning;
@@ -441,6 +499,7 @@ void MotionPlanner::log_data_before_shutting_down()
             ros::shutdown();
         }
     }
+	*/
 }
 
 static double dist(const graph::node& n1, const graph::node& n2)

@@ -288,8 +288,11 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 		pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
 		octomap_ctr++;
 	}
-
 	rcvd_point_cld_time_stamp = cloud->header.stamp;
+
+	profiling_container.capture("point_cloud_to_octomap_communication_time", "start", cloud->header.stamp);
+	profiling_container.capture("point_cloud_to_octomap_communication_time", "end", ros::Time::now());
+
 	profiling_container.capture("octomap_insertCloud", "start", ros::Time::now());
 
 	// ground filtering in base frame
@@ -377,12 +380,12 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     pc_nonground.header = pc.header;
   }
   profiling_container.capture("octomap_filter", "end", ros::Time::now());
-  ROS_INFO_STREAM("octomap integration time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
+  ROS_INFO_STREAM("octomap filter time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
 
   profiling_container.capture("insertScan", "start", ros::Time::now());
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
   profiling_container.capture("insertScan", "end", ros::Time::now());
-  ROS_INFO_STREAM("octomap integration time"<<this->profiling_container.findDataByName("insertScan")->values.back());
+  ROS_INFO_STREAM("octomap insertScan time"<<this->profiling_container.findDataByName("insertScan")->values.back());
 
   //double total_elapsed = (ros::Time::now() - startTime).toSec();
   profiling_container.capture("octomap_insertCloud", "end", ros::Time::now());
@@ -749,6 +752,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
     pcl::toROSMsg (pclCloud, cloud);
     cloud.header.frame_id = m_worldFrameId;
     cloud.header.stamp = rostime;
+    cloud.header.stamp2 = rostime;
     m_pointCloudPub.publish(cloud);
   }
 
