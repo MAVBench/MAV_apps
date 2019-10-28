@@ -17,14 +17,14 @@
 
   <!-- Drone's physical characteristics /-->
   <arg name="a_max" default="5"/> 
-  <arg name="v_max" default="3.0"/> 
+  <arg name="v_max" default="2.0"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.6"/>
   <arg name="planner_drone_radius" default="2"/>
   <arg name="planner_drone_height" default="0.6"/>
   
-  <arg name="planning_resolution" default="0.5"/>
-  <arg name="sensor_max_range" default="7" />
+  <arg name="planning_resolution" default="0.3"/>
+  <arg name="sensor_max_range" default="10" />
   <arg name="fly_trajectory_time_out" default=".01"/> 
   <arg name="planning_budget" default=".25"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>
@@ -191,15 +191,13 @@
     ?>
 
     <param name="follow_trajectory/grace_period" type="double" value="0.0" />
-    value="$(arg host_ip)"/>
-    <comment> 
     <node pkg="follow_trajectory" type="follow_trajectory" name="follow_trajectory" output="screen">
+        <param name="ip_addr" value="$(arg host_ip)"/>
         <!-- param name="yaw_t" value=".75"/ -->
         <param name="localization_method" type="string" value="$(arg localization_method)"/>
         <param name="grace_period" type="double" value="0.0" />
         <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/>
     </node>
-    </comment>
 	
     <!-- Path-Planner -->
 	<!--group ns="motion_planner"-->
@@ -207,6 +205,7 @@
 		<param name="drone_radius" value="1.5"/>
         <param name="drone_height" value="0.6"/>
         <param name="always_randomize_end_point" type="bool" value="$(arg micro_benchmark)"/>
+        <!-- param name="always_randomize_end_point" type="bool" value="false"/-->
         <param name="nodes_to_add_to_roadmap" value="800"/>
 		<param name="max_dist_to_connect_at" value="10"/>
 
@@ -220,7 +219,7 @@
         <param name="rrt_bias" value="10"/>
 		
         <param name="x_dist_to_sample_from__low_bound" value="-100"/>
-		<param name="x_dist_to_sample_from__high_bound" value="100"/>
+		<param name="x_dist_to_sample_from__high_bound" value="200"/>
         <param name="y_dist_to_sample_from__low_bound" value="-100"/>
         <param name="y_dist_to_sample_from__high_bound" value="200"/>
         <param name="z_dist_to_sample_from__low_bound" value="-1"/>

@@ -62,12 +62,15 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
-	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 1);
-	m_markerPub = nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_dumy", 1);
+	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
 
+	// for stress testing
+	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 1);
+
+	// for visualizatrion (rviz)
+	m_markerPub = nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_dumy", 1);
 	smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
 	piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
-	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
 }
 
 
@@ -172,22 +175,28 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
-    if (octree != nullptr) {
+	if (octree != nullptr) {
         delete octree;
-    }
+	}
+    //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
+    profiling_container.capture("point_cloud_to_octomap_comunication_overhead", "start", msg.header.stamp);
+    profiling_container.capture("point_cloud_to_octomap_comunication_overhead", "end", ros::Time::now());
 
-    auto hook_end_t = ros::Time::now();
-    ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
-    ROS_ERROR_STREAM("now with the other header octomap communication time"<<(ros::Time::now() - msg.header.stamp2).toSec());
-    //ROS_INFO("Requesting octomap...");
+    profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now());
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
+    profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now());
+
+    profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now());
     octree = dynamic_cast<octomap::OcTree*> (tree);
+    profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now());
 
+    profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
+    this->motion_plan_end_to_end(ros::Time::now());
+    profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
+}
 
-    publish_dummy_octomap(octree);
-    if (octree == nullptr) {
-        ROS_ERROR("Octree could not be pulled.");
-    }
+octomap::OcTree* MotionPlanner::getOctree() {
+	return this->octree;
 }
 
 //*** F:DN getting the smoothened trajectory
@@ -209,7 +218,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
     
     auto hook_end_t_2 = ros::Time::now(); 
-    profiling_container.capture("motion_planning_time_total", "start", ros::Time::now());
     //auto hook_start_t = ros::Time::now();
     //g_start_time = ros::Time::now();
 
@@ -222,6 +230,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	g_goal_pos.x = rand() % int(x__high_bound__global);
     	g_goal_pos.y = rand() % int(y__high_bound__global);
     	g_goal_pos.z = rand() % int(z__high_bound__global);
+
+    	g_goal_pos.x = 10;
+    	g_goal_pos.y = 120;
+    	g_goal_pos.z = 6;
     	req.goal.x = g_goal_pos.x;
     	req.goal.y = g_goal_pos.y;
     	req.goal.z = g_goal_pos.z;
@@ -236,11 +248,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 	*/
 
 
+    //publish_dummy_octomap_vis(octree);
+
     profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now());
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree);
     profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now());
 
-    //publish_dummy_octomap_vis(octree);
 
 
     if (piecewise_path.empty()) {
@@ -300,12 +313,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     auto hook_end_t = ros::Time::now(); 
     //g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
-    profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
     g_number_of_planning++; 
+    /*
     Data<ros::Time, ros::Duration> *total_time;
     profiling_container.findDataByName("motion_planning_time_total", &total_time);
-    double blah = total_time->values[-1].toSec(); // @suppress("Method cannot be resolved")
     ROS_INFO_STREAM("motion_planner: Planning took"<<total_time->values.back().toSec()<<"s");
+    */
     res.path_found = true;
 
     return true;
@@ -325,7 +338,11 @@ void MotionPlanner::get_start_in_future(Drone& drone,
         return;
     }
 
-    multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, g_planning_budget);
+    Data<ros::Time, ros::Duration> *look_ahead_time;
+    profiling_container.findDataByName("motion_planning_time_total", &look_ahead_time);
+	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back().toSec());
+	multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, 1);
+
 
     // Shift the drone's planned position at time "g_planning_budget" seconds
     // by its current position

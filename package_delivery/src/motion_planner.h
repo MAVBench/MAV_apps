@@ -67,13 +67,13 @@ public:
 
     // does  what ROS::spinceOnce which is to "call all the callback functions if there is any packets in the queues"
     void spinOnce();
-
+    // planning end to end
+    void motion_plan_end_to_end(ros::Time invocation_time);
+    octomap::OcTree *getOctree();
 
 private:
     ProfileManager profile_manager;
     DataContainer<ros::Time, ros::Duration> profiling_container;
-    // planning end to end
-    void motion_plan_end_to_end(ros::Time invocation_time);
 
     // ***F:DN call back for octomap msgs
     void octomap_callback(const octomap_msgs::Octomap& msgs);
@@ -143,7 +143,6 @@ private:
     // dummy publishers for debugging/microbenchmarking
     void publish_dummy_octomap(octomap::OcTree *m_octree);
     void publish_dummy_octomap_vis(octomap::OcTree *m_octree);
-
 
 private:
     ros::NodeHandle nh;

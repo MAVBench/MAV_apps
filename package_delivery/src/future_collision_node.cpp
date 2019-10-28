@@ -13,36 +13,11 @@
 
 #include "motion_planner.h"
 
-/*
-void log_data_before_shutting_down()
-{
-	std::string ns = ros::this_node::getName();
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
-    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
-    server->profiling_container.setStatsAndClear();
-
-	for (auto &data: server->profiling_container.container){
-    	profiling_data_srv_inst.request.key = data.data_key_name + " last window's avg: ";
-		vector<double>* avg_stat = data.getStat("avg");
-		if (avg_stat) {
-			profiling_data_srv_inst.request.value = avg_stat->back();
-
-		}
-		else{
-			profiling_data_srv_inst.request.value = nan("");
-		}
-		profile_manager.clientCall(profiling_data_srv_inst);
-	}
-
-    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
-	profiling_data_verbose_srv_inst.request.value = "\n" + server->profiling_container.getStatsInString();
-    profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
-
-*/
-
+FutureCollisionChecker * fcc_ptr = nullptr;
+MotionPlanner * mp_ptr = nullptr;
 void sigIntHandlerPrivate(int signo) {
     if (signo == SIGINT) {
-        //fcc_ptr->log_data_before_shutting_down();
+        fcc_ptr->log_data_before_shutting_down();
         //mp_ptr->log_data_before_shutting_down();
         ros::shutdown();
     }
@@ -89,8 +64,18 @@ int main(int argc, char** argv)
         }
     }
 
+    // Create FutureCollisionChecker
+    FutureCollisionChecker fcc (octree, &drone);
+    fcc.setOctomapServer(&server); // This is only used for profiling purposes.
+    fcc_ptr = &fcc;
+
+    // Create MotionPlanner
+    //MotionPlanner mp (octree, &drone);
+    //mp_ptr = &mp;
     while (ros::ok()) {
         ros::spinOnce();
+        fcc.spinOnce();
+        //mp.spinOnce();
     }
 }
 

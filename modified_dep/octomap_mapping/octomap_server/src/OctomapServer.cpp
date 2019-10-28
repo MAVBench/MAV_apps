@@ -752,7 +752,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
     pcl::toROSMsg (pclCloud, cloud);
     cloud.header.frame_id = m_worldFrameId;
     cloud.header.stamp = rostime;
-    cloud.header.stamp2 = rostime;
+//    cloud.header.stamp2 = rostime;
     m_pointCloudPub.publish(cloud);
   }
 

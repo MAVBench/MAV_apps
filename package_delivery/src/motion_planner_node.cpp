@@ -47,8 +47,9 @@ int main(int argc, char** argv)
     MotionPlanner mp (nullptr, &drone);
     mp_ptr = &mp;
 
+    ros::Duration(5).sleep();
     while (ros::ok()) {
-        ros::spinOnce();
+//        ros::spinOnce();
         mp.spinOnce();
     }
 }

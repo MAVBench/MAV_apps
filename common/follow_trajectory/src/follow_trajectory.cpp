@@ -303,7 +303,9 @@ int main(int argc, char **argv)
     std::string ip_addr;
     const uint16_t port = 41451;
 
-    ros::param::get("/follow_trajectory/ip_addr", ip_addr);
+
+//    ros::Duration(20).sleep();
+    ros::param::get("/follow_trajectory/ip_addr", ip_addr); // @suppress("Invalid arguments")
     ros::param::get("/follow_trajectory/localization_method", localization_method);
     Drone drone(ip_addr.c_str(), port, localization_method,
                 g_max_yaw_rate, g_max_yaw_rate_during_flight);
@@ -380,7 +382,7 @@ int main(int argc, char **argv)
             max_velocity = 3;
         }
 
-        double max_velocity_reached = follow_trajectory(drone, forward_traj,
+        double max_velocity_reached = follow_trajectory(drone, forward_traj, // @suppress("Invalid arguments")
                 rev_traj, yaw_strategy, true, max_velocity,
                 g_fly_trajectory_time_out);
 
@@ -411,6 +413,7 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
 
+        //loop_rate.sleep();
         g_got_new_trajectory = false;
     }
 

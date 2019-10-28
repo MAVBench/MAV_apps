@@ -219,11 +219,14 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
     double max_speed_so_far = 0;
 
     ros::Time start_hook_t;
-    /*
+
+/*
     for (auto &traj_el: *traj){
-        ROS_INFO_STREAM("==========~~~~~~vx"<<traj_el.vx<<"vy"<<traj_el.vy<<"vz"<<traj_el.vz) ;
+        ROS_INFO_STREAM("==========~~~~~~vx"<<traj_el.vx<<"vy"<<traj_el.vy<<"vz"<<traj_el.vz<<"duration"<<traj_el.duration) ;
     }
-    */
+    ROS_INFO_STREAM("========================================================");
+*/
+
     while (time > 0 && traj->size() > 0) {
         start_hook_t = ros::Time::now();  
         multiDOFpoint p = traj->front();
@@ -235,13 +238,14 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         //ROS_INFO_STREAM("~~~~~~vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
 
 
+
         if (check_position) {
             auto pos = drone.position();
             v_x += 0.2*(p.x-pos.x);
             v_y += 0.2*(p.y-pos.y);
-            v_z += 0.5*(p.z-pos.z);
+            v_z += 0.2*(p.z-pos.z);
         }
-        
+
         // Calculate the yaw we should be flying with
         float yaw = p.yaw;
         if (yaw_strategy == ignore_yaw)
@@ -276,7 +280,9 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Fly for flight_time seconds
         auto segment_start_time = std::chrono::system_clock::now();
-        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time); 
+        ROS_INFO_STREAM("flying with vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z << "for " << scaled_flight_time);
+        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time);
+
         
         std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));
 
@@ -288,7 +294,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         // Update trajectory
         traj->front().duration -= flight_time;
         if (traj->front().duration <= 0){
-            traj->pop_front();
+            traj->pop_front(); // @suppress("Method cannot be resolved")
         }
 
         time -= flight_time;
