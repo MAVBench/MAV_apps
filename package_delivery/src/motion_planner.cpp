@@ -71,9 +71,22 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	m_markerPub = nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_dumy", 1);
 	smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
 	piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
+    goal_rcv_service = nh.advertiseService("goal_rcv", &MotionPlanner::goal_rcv_call_back, this);
+	//re = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
+
 }
 
 
+
+Drone* MotionPlanner::get_drone() {
+	return drone;
+}
+
+bool MotionPlanner::goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res){
+	g_goal_pos = req.goal;
+	goal_known = true;
+
+}
 
 void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
    size_t octomapSize = m_octree->size();
@@ -172,6 +185,20 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 	}
 	//publish_dummy_octomap_vis(m_octree);
 }
+
+bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
+    if (!this->haveExistingTraj(&g_next_steps_msg)){ return true;}
+    if ( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) { return true;}
+
+    profiling_container.capture("diff", "collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
+    bool collision_coming = this->traj_colliding(&g_next_steps_msg);
+    profiling_container.capture("diff", "collision_check_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
+    if (collision_coming){
+    	return true;
+    }
+    return false;
+}
+
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
@@ -190,8 +217,20 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now());
 
+    // check whether the goal has already been provided or not, if not, return
+    if (!this->goal_known) { //
+    	return;
+    }
+
+    if (!shouldReplan(msg)){
+    	return;
+    }
+
+    this->last_planning_time = ros::Time::now();
+
+    // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
-    this->motion_plan_end_to_end(ros::Time::now());
+    this->motion_plan_end_to_end(ros::Time::now(), g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
 }
 
@@ -220,9 +259,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     auto hook_end_t_2 = ros::Time::now(); 
     //auto hook_start_t = ros::Time::now();
     //g_start_time = ros::Time::now();
-
-    g_start_pos = req.start;
-    g_goal_pos = req.goal;
+    //g_start_pos = req.start;
+    //g_goal_pos = req.goal;
 
 
     //hard code values for now
@@ -231,9 +269,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	g_goal_pos.y = rand() % int(y__high_bound__global);
     	g_goal_pos.z = rand() % int(z__high_bound__global);
 
-    	g_goal_pos.x = 10;
-    	g_goal_pos.y = 120;
-    	g_goal_pos.z = 6;
     	req.goal.x = g_goal_pos.x;
     	req.goal.y = g_goal_pos.y;
     	req.goal.z = g_goal_pos.z;
@@ -340,8 +375,8 @@ void MotionPlanner::get_start_in_future(Drone& drone,
 
     Data<ros::Time, ros::Duration> *look_ahead_time;
     profiling_container.findDataByName("motion_planning_time_total", &look_ahead_time);
-	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back().toSec());
-	multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, 1);
+	multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back().toSec());
+	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, .2);
 
 
     // Shift the drone's planned position at time "g_planning_budget" seconds
@@ -378,7 +413,7 @@ void MotionPlanner::future_col_callback(const mavbench_msgs::future_collision::C
     if (g_next_steps_msg.future_collision_seq <= future_col_seq_id) {
         // "Call the get_trajectory_fun function right here, without waiting
         // for the package_delivery node to make a request
-    	motion_plan_end_to_end(msg->header.stamp);
+    	motion_plan_end_to_end(msg->header.stamp, g_goal_pos);
     	/*
     	package_delivery::get_trajectory::Request req;
         package_delivery::get_trajectory::Response res;
@@ -392,19 +427,26 @@ void MotionPlanner::future_col_callback(const mavbench_msgs::future_collision::C
     }
 }
 
+bool MotionPlanner::haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj){
+	if (traj == nullptr){
+		return false;
+	}else if (traj->points.size() == 0) {
+		return false;
+	}
+	return true;
+}
 
-void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time){
+void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point g_goal){
+
 	package_delivery::get_trajectory::Request req;
 	package_delivery::get_trajectory::Response res;
 
 	get_start_in_future(*drone, req.start, req.twist, req.acceleration);
-	req.goal = g_goal_pos;
+	req.goal = g_goal;
 	req.header.stamp = invocation_time;
 	req.call_func = 1;  //used for debugging purposes
 	get_trajectory_fun(req, res);
 }
-
-
 
 
 void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
@@ -440,6 +482,11 @@ void MotionPlanner::motion_planning_initialize_params()
     ros::param::get("/motion_planner/a_max", a_max__global);
     ros::param::get("ros_DEBUG", DEBUG__global);
     
+    if(!ros::param::get("/motion_planner/planner_min_freq", planner_min_freq)) {
+        ROS_FATAL("Could not start motion_planner node node. planner_min_freq is missing");
+        exit(-1);
+    }
+
     ros::param::get("/motion_planner/motion_planning_core", motion_planning_core_str);
     if (motion_planning_core_str == "lawn_mower")
         motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree) {
@@ -605,7 +652,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 {
     if (motion_planning_core_str == "lawn_mower")
         return false;
-    
+
     RESET_TIMER();
 
     // First, check if anything goes too close to the ground
@@ -749,6 +796,29 @@ void MotionPlanner::spinOnce() {
 }
 
 
+
+bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj)
+{
+	if (octree == nullptr || traj->points.size() < 1) {
+        return false;
+    }
+
+    bool col = false;
+    graph::node *end_ptr = new graph::node();
+    for (int i = 0; i < traj->points.size() - 1; ++i) {
+        auto& pos1 = traj->points[i];
+        auto& pos2 = traj->points[i+1];
+        graph::node n1 = {pos1.x, pos1.y, pos1.z};
+        graph::node n2 = {pos2.x, pos2.y, pos2.z};
+        if (collision(octree, n1, n2, end_ptr)) {
+            col = true;
+            break;
+        }
+    }
+    return col;
+}
+
+
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
 {
     // Variables for visualization for debugging purposes
@@ -854,7 +924,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		}
      smoothening_ctr++;	
     } while (col &&
-            smoothening_ctr < 40);
+            smoothening_ctr < 100);
             //ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
 
     if (col)
@@ -1027,7 +1097,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRT(geometry_msgs::Point
 MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
 {
 	//publish_dummy_octomap_vis(octree);
-	return OMPL_plan<ompl::geometric::RRTConnect>(start, goal, octree);
+	return OMPL_plan<ompl::geometric::RRTstar>(start, goal, octree);
 }
 
 

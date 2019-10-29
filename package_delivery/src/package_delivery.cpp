@@ -23,6 +23,12 @@
 #include "timer.h"
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
+#include <profile_manager.h>
+#include <profile_manager/profiling_data_srv.h>
+#include "package_delivery/point.h"
+
+
+
 
 using namespace std;
 
@@ -437,13 +443,23 @@ int main(int argc, char **argv)
     }else{
         ROS_ERROR("Could not find service");
     }
+
+
     ros::ServiceClient record_profiling_data_client = 
         nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
     ros::ServiceClient start_profiling_client = 
       nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
 
-    profile_manager::start_profiling_srv start_profiling_srv_inst;
-    start_profiling_srv_inst.request.key = "";
+    ros::ServiceClient goal_transmit_client =
+      nh.serviceClient<package_delivery::point> ("goal_rcv");
+
+
+    //profile_manager::start_profiling_srv start_profiling_srv_inst;
+    //start_profiling_srv_inst.request.key = "";
+
+
+	ProfileManager profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose");
+
 
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
@@ -475,27 +491,34 @@ int main(int argc, char **argv)
     ros::Time loop_end_t(0,0); //if zero, it's not valid
 
 	ros::Rate pub_rate(80);
+    State next_state = invalid;
+
     for (State state = setup; ros::ok(); ) {
 		pub_rate.sleep();
         ros::spinOnce();
         
-        State next_state = invalid;
         loop_start_t = ros::Time::now();
         if (state == setup)
         {
-            control_drone(drone); goal = get_goal(); start = get_start(drone);
+            control_drone(drone);
+            goal = get_goal();
+            start = get_start(drone);
             
+            // signal the profiler to start profiling
             profiling_data_srv_inst.request.key = "start_profiling";
-            if (ros::service::waitForService("/record_profiling_data", 10)){ 
-                if(!record_profiling_data_client.call(profiling_data_srv_inst)){
-                    ROS_ERROR_STREAM("could not probe data using stats manager");
-                    ros::shutdown();
-                }
-            }
-            
+            profiling_data_srv_inst.request.value = 0;
+            profile_manager.clientCall(profiling_data_srv_inst);
+
             spin_around(drone);
             next_state = waiting;
+            package_delivery::point goal_srv_inst;
+            goal_srv_inst.request.goal = goal;
+            goal_transmit_client.call(goal_srv_inst);
         }
+
+
+       /*
+        // commented this out to simplify things but probably need them as soon as I introdce the collisiong coming back
         else if (state == waiting)
         {
             if (CLCT_DATA)
@@ -530,6 +553,8 @@ int main(int argc, char **argv)
             else
                 next_state = trajectory_completed;
         }
+
+
         else if (state == flying)
         {
             if (drone_stopped_or_reversing()) {
@@ -610,11 +635,19 @@ int main(int argc, char **argv)
                 g_main_loop_ctr++;
             }
         }
-    
+    	*/
+        // get rid of this later, I just pulled it out for a hack
+        if (dist(drone.position(), goal) < goal_s_error_margin) {
+    	  signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
+    	  ros::shutdown();
+        }
+        state = next_state;
     }
     //collect data before shutting down
     //end_stats = drone.getFlightStats();
     //output_flight_summary(init_stats, end_stats, mission_status, stats_file_addr);
+
+
     return 0;
 }
 

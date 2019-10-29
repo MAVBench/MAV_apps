@@ -237,13 +237,11 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         double v_z = p.vz;
         //ROS_INFO_STREAM("~~~~~~vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
 
-
-
         if (check_position) {
             auto pos = drone.position();
             v_x += 0.2*(p.x-pos.x);
             v_y += 0.2*(p.y-pos.y);
-            v_z += 0.2*(p.z-pos.z);
+            v_z += 0.5*(p.z-pos.z);
         }
 
         // Calculate the yaw we should be flying with
@@ -280,7 +278,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Fly for flight_time seconds
         auto segment_start_time = std::chrono::system_clock::now();
-        ROS_INFO_STREAM("flying with vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z << "for " << scaled_flight_time);
+        //ROS_INFO_STREAM("flying with vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z << "for " << scaled_flight_time);
         drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time);
 
         

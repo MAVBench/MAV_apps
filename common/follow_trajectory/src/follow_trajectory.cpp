@@ -340,12 +340,12 @@ int main(int argc, char **argv)
                     if (g_msg_time_stamp.sec != 0) {
                         if ((ros::Time::now() - g_msg_time_stamp).toSec() < 5){
                             g_img_to_follow_acc += (ros::Time::now() - g_msg_time_stamp).toSec()*1e9;
-                            g_follow_ctr++; 
-                            ROS_WARN_STREAM("========================================="<<(g_img_to_follow_acc/1e9)/g_follow_ctr<<endl); 
+                            g_follow_ctr++;
+                            ROS_WARN_STREAM("========================================="<<(g_img_to_follow_acc/1e9)/g_follow_ctr<<endl);
                             ROS_WARN_STREAM("this instance"<<(ros::Time::now() - g_msg_time_stamp).toSec());
                         }
-                    
-                    
+
+
                     }
                     if (DEBUG) {
                         //ROS_INFO_STREAM("follow_traj_cb to  func" << g_rcv_traj_to_follow_traj_t);

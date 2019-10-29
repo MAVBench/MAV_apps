@@ -412,6 +412,15 @@ coord Drone::gps(uint64_t& timestamp)
     return result;
 }
 
+
+geometry_msgs::Twist Drone::velocity(){
+	geometry_msgs::Twist twist;
+	twist.linear.x = client->getVelocity().x();
+	twist.linear.y = client->getVelocity().y();
+	twist.linear.z = client->getVelocity().z();
+	return twist;
+}
+
 geometry_msgs::Pose Drone::pose()
 {
     geometry_msgs::Pose result;

@@ -53,6 +53,7 @@ public:
     // *** F:DN Localization functions
     coord position(); 
     geometry_msgs::Pose pose();
+    geometry_msgs::Twist velocity();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
     float get_pitch();
     float get_yaw();

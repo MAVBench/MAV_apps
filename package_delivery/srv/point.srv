@@ -1,0 +1,5 @@
+geometry_msgs/Point goal
+Header header
+---
+# trajectory_msgs/MultiDOFJointTrajectory multiDOFtrajectory
+bool NA

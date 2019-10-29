@@ -15,6 +15,7 @@
 #include "graph.h"
 #include "global_planner.h"
 #include "package_delivery/get_trajectory.h"
+#include "package_delivery/point.h"
 #include "timer.h"
 
 #include <profile_manager.h>
@@ -41,6 +42,7 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/prm/PRM.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/config.h>
@@ -68,8 +70,9 @@ public:
     // does  what ROS::spinceOnce which is to "call all the callback functions if there is any packets in the queues"
     void spinOnce();
     // planning end to end
-    void motion_plan_end_to_end(ros::Time invocation_time);
+    void motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point goal);
     octomap::OcTree *getOctree();
+    Drone *get_drone();
 
 private:
     ProfileManager profile_manager;
@@ -86,6 +89,11 @@ private:
 
     // ***F:DN Keep track of the drone's next moves
     void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg);
+
+    // is the trajecotry colliding
+    bool traj_colliding(mavbench_msgs::multiDOFtrajectory *traj);
+
+
 
     // ***F:DN Find where the drone will be in a few seconds
     void get_start_in_future(Drone& drone, geometry_msgs::Point& start, geometry_msgs::Twist& twist, geometry_msgs::Twist& acceleration);
@@ -110,6 +118,15 @@ private:
 
     // *** F:DN Checks whether there is a collision between two nodes in the occupancy grid.
     bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr = nullptr);
+
+    // whether the drone is already following a trajectory
+    bool haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj);
+
+
+    bool shouldReplan(const octomap_msgs::Octomap& msg);
+
+    // *** F:DN Checks whether there is a collision between two nodes in the occupancy grid.
+//    bool collision(octomap::OcTree * octree, const multiDOFpoint &n1, const multiDOFpoint &n2, graph::node * end_ptr);
 
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
     bool out_of_bounds(const graph::node& pos);
@@ -143,22 +160,27 @@ private:
     // dummy publishers for debugging/microbenchmarking
     void publish_dummy_octomap(octomap::OcTree *m_octree);
     void publish_dummy_octomap_vis(octomap::OcTree *m_octree);
+    bool goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res);
+    double planner_min_freq;
+    ros::Time last_planning_time;
+
+    Drone * drone = nullptr;
 
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
     ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub;
     ros::Subscriber future_col_sub, next_steps_sub, octomap_sub;
-    ros::ServiceServer get_trajectory_srv_server;
+    ros::ServiceServer get_trajectory_srv_server, goal_rcv_service;
     ros::Publisher traj_pub;
 
-    Drone * drone = nullptr;
     octomap::OcTree * octree = nullptr; int future_col_seq_id = 0;
     int trajectory_seq_id = 0;
     mavbench_msgs::multiDOFtrajectory g_next_steps_msg;
 
     geometry_msgs::Point g_start_pos;
     geometry_msgs::Point g_goal_pos;
+    bool goal_known = false;
     ros::Time g_start_time{0};
 
     // Parameters
@@ -254,6 +276,7 @@ public:
 private:
     MotionPlanner * mp = nullptr;
 };
+
 
 
 template<class PlannerType>
