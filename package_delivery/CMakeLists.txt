@@ -74,6 +74,9 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
+
+add_definitions(-DROS)
+
 add_service_files(
   FILES
   get_trajectory.srv

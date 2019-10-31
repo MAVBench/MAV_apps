@@ -237,6 +237,8 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         double v_z = p.vz;
         //ROS_INFO_STREAM("~~~~~~vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
 
+
+
         if (check_position) {
             auto pos = drone.position();
             v_x += 0.2*(p.x-pos.x);

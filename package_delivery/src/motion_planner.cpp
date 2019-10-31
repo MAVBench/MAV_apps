@@ -188,12 +188,15 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     if (!this->haveExistingTraj(&g_next_steps_msg)){ return true;}
+    if (failed_to_plan_last_time) {return true;}
     if ( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) { return true;}
 
-    profiling_container.capture("diff", "collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
+    profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
     bool collision_coming = this->traj_colliding(&g_next_steps_msg);
-    profiling_container.capture("diff", "collision_check_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
+    profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now()); // @suppress("Invalid arguments")
     if (collision_coming){
+    	ROS_INFO_STREAM("collision coming");
+    	profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0); // @suppress("Invalid arguments")
     	return true;
     }
     return false;
@@ -232,6 +235,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
     this->motion_plan_end_to_end(ros::Time::now(), g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
+
 }
 
 octomap::OcTree* MotionPlanner::getOctree() {
@@ -304,15 +308,19 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
         res.multiDOFtrajectory.header.stamp = req.header.stamp;
         traj_pub.publish(res.multiDOFtrajectory);
-        return true;
+        return false;
     }
 
+    profiling_container.capture("RRT_path_length", "single", calculate_path_length(piecewise_path));
+
     if (motion_planning_core_str != "lawn_mower") {
-        postprocess(piecewise_path);
+    	profiling_container.capture("piecewise_path_post_process", "start", ros::Time::now());
+    	postprocess(piecewise_path);
+    	profiling_container.capture("piecewise_path_post_process", "end", ros::Time::now());
     }
 
     // Smoothen the path and build the multiDOFtrajectory response
-    ROS_INFO("Smoothenning...");
+    //ROS_INFO("Smoothenning...");
     profiling_container.capture("smoothening_time", "start", ros::Time::now());
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
@@ -332,10 +340,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         trajectory_seq_id++;
 
         res.multiDOFtrajectory.append = false;
-        res.multiDOFtrajectory.reverse = false;
+        res.multiDOFtrajectory.reverse = true;
         res.multiDOFtrajectory.header.stamp = req.header.stamp;
         traj_pub.publish(res.multiDOFtrajectory);
-        return true;
+        return false;
     }
 	
     create_response(res, smooth_path);
@@ -346,17 +354,19 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     smooth_traj_vis_pub.publish(smooth_traj_markers);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
 
-    auto hook_end_t = ros::Time::now(); 
-    //g_planning_without_OM_PULL_time_acc += (((hook_end_t - hook_start_t).toSec())*1e9);
     g_number_of_planning++; 
-    /*
-    Data<ros::Time, ros::Duration> *total_time;
-    profiling_container.findDataByName("motion_planning_time_total", &total_time);
-    ROS_INFO_STREAM("motion_planner: Planning took"<<total_time->values.back().toSec()<<"s");
-    */
     res.path_found = true;
 
     return true;
+}
+
+
+double MotionPlanner::calculate_path_length(piecewise_trajectory piecewise_path){
+	double total_path_length = 0;
+	for (auto it = piecewise_path.begin(); it != piecewise_path.end() - 1 ; it++) {
+    	total_path_length += distance(it->x - (it+1)->x, it->y - (it+1)->y, it->z - (it+1)->z);
+	}
+	return total_path_length;
 }
 
 
@@ -373,9 +383,9 @@ void MotionPlanner::get_start_in_future(Drone& drone,
         return;
     }
 
-    Data<ros::Time, ros::Duration> *look_ahead_time;
+    Data *look_ahead_time;
     profiling_container.findDataByName("motion_planning_time_total", &look_ahead_time);
-	multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back().toSec());
+	multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back());
 	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, .2);
 
 
@@ -445,7 +455,7 @@ void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_m
 	req.goal = g_goal;
 	req.header.stamp = invocation_time;
 	req.call_func = 1;  //used for debugging purposes
-	get_trajectory_fun(req, res);
+	failed_to_plan_last_time = !get_trajectory_fun(req, res);
 }
 
 
@@ -517,6 +527,7 @@ void MotionPlanner::log_data_before_shutting_down()
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
 
+    /*
     for (auto &data: profiling_container.container){
 		profiling_data_srv_inst.request.key = data.data_key_name + " last window's avg: ";
 		vector<double>* avg_stat = data.getStat("avg");
@@ -528,6 +539,7 @@ void MotionPlanner::log_data_before_shutting_down()
 		}
 		profile_manager.clientCall(profiling_data_srv_inst);
     }
+	*/
 
     profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
     profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container.getStatsInString();
@@ -927,8 +939,9 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
             smoothening_ctr < 100);
             //ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
 
-    if (col)
+    if (col) {
         return smooth_trajectory();
+    }
 
 	// Return the collision-free smooth trajectory
 	mav_trajectory_generation::Trajectory traj;
@@ -947,13 +960,7 @@ void MotionPlanner::postprocess(piecewise_trajectory& path)
 {
     // We use a greedy approach to shorten the path here.
     // We connect non-adjacent nodes in the path that do not have collisions.
-    
     for (auto it = path.begin(); it != path.end()-1; ) {
-        // if (out_of_bounds_strict(*it)) {
-        //     ++it;
-        //     continue;
-        // }
-
         bool shortened = false;
         for (auto it2 = path.end()-1; it2 != it+1 && !shortened; --it2) {
             if (!collision(octree, *it, *it2)

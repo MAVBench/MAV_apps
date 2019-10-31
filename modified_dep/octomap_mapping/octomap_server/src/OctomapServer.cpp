@@ -74,7 +74,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_incrementalUpdate(false),
   CLCT_DATA(false),
   data_collection_iteration_freq(100),
-  m_initConfig(true)
+  m_initConfig(true),
+  my_profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose")
 {
     double probHit, probMiss, thresMin, thresMax;
 
@@ -293,15 +294,15 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	profiling_container.capture("point_cloud_to_octomap_communication_time", "start", cloud->header.stamp);
 	profiling_container.capture("point_cloud_to_octomap_communication_time", "end", ros::Time::now());
 
-	profiling_container.capture("octomap_insertCloud", "start", ros::Time::now());
+	profiling_container.capture(std::string("octomap_insertCloud"), "start", ros::Time::now()); // @suppress("Invalid arguments")
 
 	// ground filtering in base frame
 	PCLPointCloud pc; // input cloud for filtering and ground-detection
 
-	profiling_container.capture("point_cloud_deserialization", "start", ros::Time::now());
+	profiling_container.capture(std::string("point_cloud_deserialization"), "start", ros::Time::now());
 	pcl::fromROSMsg(*cloud, pc);
-	profiling_container.capture("point_cloud_deserialization", "end", ros::Time::now());
-	ROS_INFO_STREAM("octomap deserialization time"<<this->profiling_container.findDataByName("point_cloud_deserialization")->values.back());
+	profiling_container.capture(std::string("point_cloud_deserialization"), "end", ros::Time::now());
+	//ROS_INFO_STREAM(std::string("octomap deserialization time")<<this->profiling_container.findDataByName("point_cloud_deserialization")->values.back());
 
 	profiling_container.capture("octomap_filter", "start", ros::Time::now()); //collect data
 	tf::StampedTransform sensorToWorldTf;
@@ -341,7 +342,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 
     }catch(tf::TransformException& ex){
       ROS_ERROR_STREAM( "Transform error for ground plane filter: " << ex.what() << ", quitting callback.\n"
-                        "You need to set the base_frame_id or disable filter_ground.");
+    		  "You need to set the base_frame_id or disable filter_ground.");
     }
 
 
@@ -380,12 +381,12 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     pc_nonground.header = pc.header;
   }
   profiling_container.capture("octomap_filter", "end", ros::Time::now());
-  ROS_INFO_STREAM("octomap filter time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
+  //ROS_INFO_STREAM("octomap filter time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
 
   profiling_container.capture("insertScan", "start", ros::Time::now());
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
   profiling_container.capture("insertScan", "end", ros::Time::now());
-  ROS_INFO_STREAM("octomap insertScan time"<<this->profiling_container.findDataByName("insertScan")->values.back());
+  //ROS_INFO_STREAM("octomap insertScan time"<<this->profiling_container.findDataByName("insertScan")->values.back());
 
   //double total_elapsed = (ros::Time::now() - startTime).toSec();
   profiling_container.capture("octomap_insertCloud", "end", ros::Time::now());
@@ -883,7 +884,7 @@ bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Res
   return true;
 }
 
-void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) const{
+void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 
     Octomap map;
   map.header.frame_id = m_worldFrameId;
@@ -894,7 +895,8 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) const{
 
   if (octomap_msgs::binaryMapToMsg(*m_octree, map)){
 	  int serialization_length = ros::serialization::serializationLength(map);
-	  ROS_INFO_STREAM("serialization length is:"<< serialization_length);
+//	  ROS_INFO_STREAM("serialization length is:"<< serialization_length);
+	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length);
 	  m_binaryMapPub.publish(map);
   }
   else

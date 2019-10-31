@@ -40,11 +40,22 @@ void log_data_before_shutting_down()
 
 */
 
+
+octomap_server::OctomapServer* server_ptr;
+
+void log_data_before_shutting_down() {
+	profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+    server_ptr->profiling_container.setStatsAndClear();
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + server_ptr->profiling_container.getStatsInString();
+    server_ptr->my_profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
+}
+
 void sigIntHandlerPrivate(int signo) {
     if (signo == SIGINT) {
-        //fcc_ptr->log_data_before_shutting_down();
-        //mp_ptr->log_data_before_shutting_down();
-        ros::shutdown();
+    	log_data_before_shutting_down();
+    	ros::shutdown();
     }
     exit(0);
 }
@@ -88,7 +99,8 @@ int main(int argc, char** argv)
             exit(1);
         }
     }
-
+    server_ptr = &server;
+    ros::Duration(1).sleep();
     while (ros::ok()) {
         ros::spinOnce();
     }

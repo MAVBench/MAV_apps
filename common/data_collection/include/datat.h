@@ -25,22 +25,28 @@
 #endif
 
 
-template <class T, class S>  //T is the input data that is captured, and S is the difference
 class Data {
 public:
 	//function members
-	Data(std::string my_name , float max_duration = 300, int sample_size_per_window = 300);
+	Data(std::string my_name , double max_duration = 300, int sample_size_per_window = 300);
 	~Data();
 	// setters
-	void capture(T Time, std::string mode);
-	void capture_end(T Time);
+	void capture(double Time, std::string mode);
+#ifdef ROS
+	void capture(ros::Time Time, std::string mode);
+#endif
+#ifdef ROS
+	void capture_end(ros::Time Time);
+#endif
+	void capture_end(double Time);
+
 	double calcAvg(std::vector<double>);
 	double calcStd(std::vector<double>);
-	double calcAvg(std::vector<float>);
-	double calcStd(std::vector<float>);
+	void incr_counter();
+	void setSingle(double time);
+
 #ifdef ROS
-	double calcAvg(std::vector<ros::Duration>);
-	double calcStd(std::vector<ros::Duration>);
+	void setSingle(ros::Time time);
 #endif
 	void setStatsAndClear();
 
@@ -49,29 +55,26 @@ public:
 	std::string getStatsInString(std::vector<std::string> data_type = {"avg", "std", "sample_size"}, std::string leading_spaces="\t\t");
 	std::string getStatInString(std::string stat_name);
 	std::vector<double>* getStat(std::string statName);
-
-    // getters
 	int assign_next_index();
 
 	// streams
-	friend std::ostream& operator<< (std::ostream &out, const Data<float, float> &data);
-
-#ifdef ROS
-	friend std::ostream& operator<< (std::ostream &out, const Data<ros::Time, ros::Duration> &data);
-#endif
+	friend std::ostream& operator<< (std::ostream &out, const Data &data);
 
     // variabels
 	std::string data_key_name;
-	std::vector<S> values;
+	std::vector<double> values;
 	std::vector< std::tuple<std::string, std::vector<double> > > value_statistics; //vector of statistics
-
-
+	std::string mode;
 	int sample_size_per_window;
-	T current_start_time; //the time that the start time was captured
-	T current_end_time; //the time that the end time was captured
+	double current_start_time_double; //the time that the start time was captured
+	double current_end_time_double; //the time that the end time was captured
+
+	#ifdef ROS
+	ros::Time current_start_time_time; //the time that the start time was captured
+	ros::Time current_end_time_time; //the time that the end time was captured
+#endif
 	int current_index_to_use; //current index to push_back the new value in
-	float std, avg;
-	//vector<float> values(sample_size_per_window);
+	double std, avg;
 }
 ;
 

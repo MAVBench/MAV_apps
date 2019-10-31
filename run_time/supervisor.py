@@ -23,7 +23,7 @@ def kill_processes(process_list):
         pid = process.split()[1] 
         print pid 
         subprocess.Popen("kill -2 "+ pid, shell=True)
-        sleep(.1) 
+        sleep(.01) 
     sleep(3) 
 
 def action_upon_termination():
@@ -52,6 +52,7 @@ def action_upon_termination():
     # to kill all other processes (including the rosmaster and core and rosout), the
     # easiest way is to kill the roslaunch itself
     roslaunch_process = (subprocess.check_output("ps aux | grep roslaunch |grep opt", shell=True)).splitlines()
+    sleep(5) 
     kill_processes(roslaunch_process)
     
     #--- using call cause it's blocking 

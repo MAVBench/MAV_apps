@@ -17,6 +17,10 @@ public:
 	void datacontainer_test_1();
 	void datacontainer_test_2();
 	void datacontainer_test_3();
+	void datacontainer_test_4();
+	void datacontainer_test_5();
+
+
 };
 
 #endif /* DATATESTBENCH_H_ */

@@ -10,8 +10,7 @@
 #include <cmath>
 using namespace std;
 
-template <class T, class S>
-Data<T, S>::Data(string name, float max_duration , int sample_size_per_window){
+Data::Data(string name, double max_duration , int sample_size_per_window){
 	// TODO Auto-generated constructor stub
 	this->data_key_name = name;
 	this->sample_size_per_window = sample_size_per_window;
@@ -19,16 +18,33 @@ Data<T, S>::Data(string name, float max_duration , int sample_size_per_window){
 	//this->avg = nan("");
 	//this->std = nan("");
 
-	this->value_statistics.push_back(std::make_tuple("std", vector<double> {}));
-	this->value_statistics.push_back(std::make_tuple("avg", vector<double> {}));
-	this->value_statistics.push_back(std::make_tuple("sample_size", vector<double> {}));
+	this->value_statistics.push_back(std::make_tuple(std::string("std"), vector<double> {}));
+	this->value_statistics.push_back(std::make_tuple(std::string("avg"), vector<double> {}));
+	this->value_statistics.push_back(std::make_tuple(std::string("sample_size"), vector<double> {}));
 
 	//this->values.reserve(sample_size_per_window);
 }
 
 // setters
-// self explanatory
 
+double Data::calcAvg(vector<double> data){
+	double total = 0;
+	for (auto &it : data){
+			total += it;
+	}
+	double avg = double (total)/this->values.size();
+	return avg;
+}
+
+double Data::calcStd(vector<double> data){
+	double var_sqrd = 0;
+	for (auto &it: data){
+		var_sqrd += pow(it - this->calcAvg(data), 2);
+	}
+	return sqrt(var_sqrd/(this->values.size()-1));
+}
+
+/*
 template <class T, class S>
 double Data<T, S>::calcAvg(vector<double> data){
 	double total = 0;
@@ -38,18 +54,8 @@ double Data<T, S>::calcAvg(vector<double> data){
 	double avg = double (total)/this->values.size();
 	return avg;
 }
-
-template <class T, class S>
-double Data<T, S>::calcAvg(vector<float> data){
-	double total = 0;
-	for (auto &it : data){
-			total += it;
-	}
-	double avg = double (total)/this->values.size();
-	return avg;
-}
-
-
+*/
+/*
 #ifdef ROS
 //template specialization
 template <>
@@ -62,25 +68,24 @@ double Data<ros::Time, ros::Duration>::calcAvg(vector<ros::Duration>){
 	return avg;
 }
 #endif
+*/
 
-
-std::ostream& operator<< (std::ostream &out, const Data<float, float> &data){
+std::ostream& operator<< (std::ostream &out, const Data &data){
 		out<< data.data_key_name<<" values: ";
-		for_each(data.values.begin(), data.values.end(), [&](float data_value){out<<data_value<<",";});
+		for_each(data.values.begin(), data.values.end(), [&](double data_value){out<<data_value<<",";});
 		return out;
 }
-
+/*
 #ifdef ROS
-	std::ostream& operator<< (std::ostream &out, const Data<ros::Time, ros::Duration> &data){//, const Data<ros::Time, ros::Duration> &data) {
+	std::ostream& operator<< (std::ostream &out, const Data &data){//, const Data<ros::Time, ros::Duration> &data) {
 		out<< data.data_key_name<<" values: ";
-		for_each(data.values.begin(), data.values.end(), [&](ros::Duration data_value){out<<data_value.toSec()<<",";});
+		for_each(data.values.begin(), data.values.end(), [&](double data_value){out<<data_value <<",";});
 		return out;
 	}
 #endif
+*/
 
-
-
-//
+/*
 template <class T, class S>
 double Data<T, S>::calcStd(vector<double> data){
 	double var_sqrd = 0;
@@ -89,15 +94,8 @@ double Data<T, S>::calcStd(vector<double> data){
 	}
 	return sqrt(var_sqrd/(this->values.size()-1));
 }
-
-template <class T, class S>
-double Data<T, S>::calcStd(vector<float> data){
-	double var_sqrd = 0;
-	for (auto &it: data){
-		var_sqrd += pow(it - this->calcAvg(data), 2);
-	}
-	return sqrt(var_sqrd/(this->values.size()-1));
-}
+*/
+/*
 #ifdef ROS
 template <>
 double Data<ros::Time, ros::Duration>::calcStd(vector<ros::Duration> data){
@@ -109,14 +107,16 @@ double Data<ros::Time, ros::Duration>::calcStd(vector<ros::Duration> data){
 	return sqrt(var_sqrd/(this->values.size()-1));
 }
 #endif
+*/
 
-
-template <class T, class S>
-double Data<T, S>::calcStat(string stat_name){
+double Data::calcStat(string stat_name){
 	if (stat_name == "avg"){
 		return this->calcAvg(this->values);
 	}
 	if (stat_name == "std"){
+		if (this->mode == "counter"){
+			return 0;
+		}
 		return this->calcStd(this->values);
 	}
 	if (stat_name == "sample_size"){
@@ -125,8 +125,7 @@ double Data<T, S>::calcStat(string stat_name){
 }
 
 //to avoid double counting we clear the contents, once we set the stats (avg, std)
-template <class T, class S>
-void Data<T, S>::setStatsAndClear(){
+void Data::setStatsAndClear(){
 	if (this->values.size() < 1) { //making sure that we don't add stats if there is no data
 		return;
 	}
@@ -154,8 +153,7 @@ calcStat Data<T, S>::return_func(string name){
 }
 */
 
-template <class T, class S>
-string Data<T, S>::getStatInString(string stat_name){
+string Data::getStatInString(string stat_name){
 	string results = "\"" + stat_name+ + "\"" + ":";
 	vector<double>* stat_values = this->getStat(stat_name);
 	if (!stat_values) { return string("no_value_captured");}
@@ -166,8 +164,7 @@ string Data<T, S>::getStatInString(string stat_name){
 }
 
 //to avoid double counting we clear the contents, once we set the stats (avg, std)
-template <class T, class S>
-string Data<T, S>::getStatsInString(vector<string> stats_name, string leading_spaces){
+string Data::getStatsInString(vector<string> stats_name, string leading_spaces){
 	string results = "" + leading_spaces;
 	for (const auto &el: stats_name){
 		results +=  getStatInString(el) + "		";
@@ -192,20 +189,19 @@ void Data<T, S>::setStats(){
 // self explanatory
 /*
 template <class T, class S>
-float Data<T, S>::get_avg(){
+double Data<T, S>::get_avg(){
 	return this->avg;
 }
 
 // self explanatory
 template <class T, class S>
-float Data<T, S>::get_std(){
+double Data<T, S>::get_std(){
 	return this->std;
 }
 */
 
 
-template <class T, class S>
-vector<double>* Data<T, S>::getStat(string stat_name){
+vector<double>* Data::getStat(string stat_name){
 	for (auto &el: this->value_statistics){
 		if (std::get<0>(el) == stat_name){
 			auto *stat_values= &std::get<1>(el);
@@ -220,19 +216,68 @@ vector<double>* Data<T, S>::getStat(string stat_name){
 
 
 
-// capture time
-template <class T, class S>
-void Data<T, S>::capture(T time, string mode){
-	if (mode == "start") {
-		this->current_start_time = time;
-	}
-	else {
-		this->capture_end(time);
+void Data::incr_counter(){
+	if (this->values.size() == 0){
+		this->values.push_back((double)0);
+	}else {
+		this->values.at(0) = this->values.at(0) + 1;
 	}
 }
 
+void Data::setSingle(double time){
+	if (this->values.size() == this->sample_size_per_window){
+		this->setStatsAndClear(); //calculate stats;
+	}
+	this->values.push_back(time);
+}
+/*
+#ifdef ROS
 template <class T, class S>
-int Data<T, S>::assign_next_index(){
+void Data<T, S>::setSingle(ros::Time time){
+	if (this->values.size() == this->sample_size_per_window){
+		this->setStatsAndClear(); //calculate stats;
+	}
+	this->values.push_back(time);
+}
+#endif
+*/
+
+// capture time
+#ifdef ROS
+void Data::capture(ros::Time time, string mode){
+	this->mode = mode;
+	if (mode == "start") {
+		this->current_start_time_time = time;
+	}
+	else if (mode == "end"){
+		this->capture_end(time);
+	} else if (mode == "counter"){
+		cout<<"mode counter is not defined for ros::Time"<<endl;
+		throw;
+	} else if (mode == "single"){
+		cout<<"mode single is not defined for ros::Time"<<endl;
+		throw;
+	}
+}
+#endif
+
+
+// capture time
+void Data::capture(double time, string mode){
+	this->mode = mode;
+	if (mode == "start") {
+		this->current_start_time_double = time;
+	}
+	else if (mode == "end"){
+		this->capture_end(time);
+	} else if (mode == "counter"){
+		this->incr_counter();
+	} else if (mode == "single"){
+		setSingle(time);
+	}
+}
+
+int Data::assign_next_index(){
 	return this->values.size();
 	/*
 	if(this->values.size() >= this->sample_size_per_window){
@@ -243,30 +288,30 @@ int Data<T, S>::assign_next_index(){
 	*/
 }
 
-template <class T, class S>
-void Data<T, S>::capture_end(T time){
-	this->current_end_time = time;
-	S diff = (this->current_end_time) - (this->current_start_time);
-
-	if (this->values.size() == this->sample_size_per_window){
-		this->setStatsAndClear(); //calculate stats;
-	}
-
-	this->values.push_back(diff);
-	//this->current_index_to_use = this->assign_next_index();
+void Data::capture_end(double time){
+	this->current_end_time_double = time;
+	double diff = (this->current_end_time_double) - (this->current_start_time_double);
+	setSingle(diff);
 }
 
+#ifdef ROS
+void Data::capture_end(ros::Time time){
+	this->current_end_time_time = time;
+	double diff = ((this->current_end_time_time) - (this->current_start_time_time)).toSec();
+	setSingle(diff);
+}
+#endif
 
 
 
 
-template <class T, class S>
-Data<T, S>::~Data() {
+Data::~Data() {
 	// TODO Auto-generated destructor stub
 }
 
-template class Data<float, float>;
-#ifdef ROS
-template class Data<ros::Time, ros::Duration>;
-#endif
+//template class Data<double, double>;
+
+//#ifdef ROS
+//template class Data<ros::Time, ros::Duration>;
+//#endif
 

@@ -8,8 +8,6 @@
 #include <tuple>
 
 // MAVBench headers
-#include "Drone.h"
-#include "common.h"
 #include "timer.h"
 #include <iostream>
 #include <profile_manager/profiling_data_srv.h>

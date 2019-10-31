@@ -1,8 +1,6 @@
 #include <boost/smart_ptr/shared_ptr.hpp>
-#include <common.h>
 #include <coord.h>
 #include <ros/duration.h>
-#include <Drone.h>
 #include <ros/init.h>
 #include <ros/param.h>
 #include "profile_manager.h"
@@ -21,12 +19,14 @@ ProfileManager::ProfileManager(std::string mode, std::string channel_name, std::
     //nh.setCallbackQueue(&callback_queue);
     // Topics
     if (mode != "client") {
-        std::cout<<"mode: "<< mode << " is not supported yet"<<endl;
+        std::cout<<"mode: "<< mode << " is not supported yet"<<std::endl;
         throw;
     }
 }
 
 void ProfileManager::verboseClientCall (profile_manager::profiling_data_verbose_srv data){
+	ROS_ERROR_STREAM("got the verbose client call");
+	ROS_INFO_STREAM("got verbose with" <<data.request.key);
 	if (ros::service::waitForService(verbose_channel_name, 5)){ // @suppress("Invalid arguments")
 		if(!ros::service::call(verbose_channel_name, data)){
 			ROS_ERROR_STREAM("could not probe data using stats manager");

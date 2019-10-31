@@ -48,7 +48,8 @@ int g_traj_ctr = 0;
 ros::Time g_recieved_traj_t;
 ros::Time last_to_fly_backward;
 double g_max_velocity_reached = 0;
-
+bool new_trajectory_since_backed_up = false;
+bool backed_up = false;
 
 template <class P1, class P2>
 double distance(const P1& p1, const P2& p2) {
@@ -194,10 +195,12 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     trajectory_t new_trajectory = create_trajectory_from_msg(*msg);
 
     if (msg->reverse) {
-        fly_backward = true;
+    	ROS_INFO_STREAM("reversing now");
+    	fly_backward = true;
         last_to_fly_backward = ros::Time::now(); 
     } else if (trajectory.empty() && !new_trajectory.empty()) {
-        // Add drift correction if the drone is currently idling (because it will float around while idling)
+    	ROS_INFO_STREAM("trajectory empty but new trajectory not empty");
+    	// Add drift correction if the drone is currently idling (because it will float around while idling)
         const double max_idling_drift_distance = 0.5;
         trajectory_t idling_correction_traj;
 
@@ -215,6 +218,11 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     }
 
     g_got_new_trajectory = true;
+
+   new_trajectory_since_backed_up = !(new_trajectory.empty());
+   if (new_trajectory_since_backed_up) {
+	   ROS_ERROR_STREAM("got a new trajectory since backed up");
+   }
 
     // Profiling
     if (CLCT_DATA){
@@ -290,6 +298,7 @@ void initialize_global_params() {
 }
 
 
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "follow_trajectory", ros::init_options::NoSigintHandler);
@@ -363,23 +372,27 @@ int main(int argc, char **argv)
         float max_velocity = g_v_max;
 
         
-        if (fly_backward && ((ros::Time::now() - last_to_fly_backward).toSec() > 5)) { //prevent continous backward movement
-            ROS_INFO_STREAM("setting flying back_ward to false"); 
+        if (fly_backward && ((ros::Time::now() - last_to_fly_backward).toSec() > 2)) { //prevent continous backward movement
+            ROS_ERROR_STREAM("setting flying back_ward to false");
             drone.fly_velocity(0, 0, 0);
             drone.fly_velocity(0, 0, 0);
             drone.fly_velocity(0, 0, 0);
             fly_backward = false;
         }
 
-        if (!fly_backward) {
-            forward_traj = &trajectory;
-            rev_traj = &reverse_trajectory;
-        } else {
-            forward_traj = &reverse_trajectory;
-            rev_traj = &trajectory;
+        if (new_trajectory_since_backed_up || !backed_up){
+        	if (!fly_backward) {
+        		forward_traj = &trajectory;
+        		rev_traj = &reverse_trajectory;
+        		backed_up = false;
+        	} else {
+        		backed_up = true;
+        		forward_traj = &reverse_trajectory;
+        		rev_traj = &trajectory;
 
-            yaw_strategy = face_backward;
-            max_velocity = 3;
+        		yaw_strategy = face_backward;
+        		max_velocity = 3;
+        	}
         }
 
         double max_velocity_reached = follow_trajectory(drone, forward_traj, // @suppress("Invalid arguments")

@@ -17,8 +17,10 @@ set(PACKAGE_DEPENDENCIES
   )
 
 set (CMAKE_CXX_STANDARD 11)
+set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
-find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES} data_collection)
+
+find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES} data_collection profile_manager)
 
 find_package(PCL REQUIRED QUIET COMPONENTS common sample_consensus io segmentation filters)
 
@@ -31,7 +33,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${OCTOMAP_INCLUDE_DIRS}
-)
+  ${common_utility_include}/profile_manager/include
+  ${common_utility_include}
+  )
 
 
 generate_dynamic_reconfigure_options(cfg/OctomapServer.cfg)
@@ -40,6 +44,8 @@ add_service_files(
     maxRangeSrv.srv
 )
 
+
+add_definitions(-DROS)
 
 generate_messages(
     DEPENDENCIES)
@@ -50,13 +56,13 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS ${PACKAGE_DEPENDENCIES}
   DEPENDS octomap PCL
-)
+  )
 
 set(LINK_LIBS
   ${OCTOMAP_LIBRARIES}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-)
+  )
 #MESSAGE(${CMAKE_PREFIX_PATH})
 add_library(${PROJECT_NAME} src/OctomapServer.cpp src/OctomapServerMultilayer.cpp src/TrackingOctomapServer.cpp)
 target_link_libraries(${PROJECT_NAME} ${LINK_LIBS})

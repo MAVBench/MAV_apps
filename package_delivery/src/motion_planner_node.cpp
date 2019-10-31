@@ -87,11 +87,11 @@ int main(int argc, char** argv)
     double cnt = 1;
     //ros::Rate my_rate(cnt);
     //my_rate.sleep();
-    //ros::Duration(10).sleep();
+    ros::Duration(1).sleep();
     while (ros::ok()) {
     	mp.spinOnce();
-//        auto loop_rate = set_rate(&drone, trav_dis_before_replanning, planner_min_freq, planner_max_freq, v_max);
- //       loop_rate.sleep();
+    	//auto loop_rate = set_rate(&drone, trav_dis_before_replanning, planner_min_freq, planner_max_freq, v_max);
+    	//loop_rate.sleep();
     }
 }
 

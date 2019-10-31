@@ -22,7 +22,7 @@ data_test_bench::data_test_bench() {
 // populating the data with values from 1 to vec_size
 int data_test_bench::data_test_deterministic(int input_cnt, int vec_size){
 	string my_data_name = "my_data";
-	Data<double, double> my_data(my_data_name, 100, vec_size);
+	Data my_data(my_data_name, 100, vec_size);
 
 	double rand_val;
 	for (int i = 0; i < input_cnt; i++){
@@ -39,7 +39,7 @@ int data_test_bench::data_test_deterministic(int input_cnt, int vec_size){
 // populating the data with random values
 void data_test_bench::data_test_random(int input_cnt, int vec_size){
 	string my_data_name = "my_data";
-	Data<double, double> my_data(my_data_name, 100, vec_size);
+	Data my_data(my_data_name, 100, vec_size);
 
 	for (int i = 0; i < input_cnt; i++){
 		double rand_val = rand() % 100;
@@ -57,7 +57,7 @@ void data_test_bench::data_test_random(int input_cnt, int vec_size){
 
 void data_test_bench::datacontainer_test_2() {
 	// test 3: capturing end before start
-	DataContainer<double, double> myContainer;
+	DataContainer myContainer;
 	try {
 		myContainer.capture("my_data_3", "end", 10);
 	}catch(...) {
@@ -71,8 +71,8 @@ void data_test_bench::datacontainer_test_2() {
 void data_test_bench::datacontainer_test_1(){
 
 	// test 1 : instantiaing a container and writing data into it
-	DataContainer<double, double> myContainer;
-	Data<double, double> *data;
+	DataContainer myContainer;
+	Data *data;
 	myContainer.capture("my_data", "start", 10);
 	myContainer.capture("my_data", "end", 25);
 	myContainer.findDataByName("my_data", &data);
@@ -81,7 +81,7 @@ void data_test_bench::datacontainer_test_1(){
 	cout<< myContainer.getStatsInString(vector<string> {"std"})<< endl;
 
 	// test 2 : writing two different data and checking their stats
-	DataContainer<double, double>  myContainer_2;
+	DataContainer  myContainer_2;
 	int input_cnt = 10;
 	double rand_val = 0;
 	for (int i = 0; i < input_cnt; i++){
@@ -99,7 +99,7 @@ void data_test_bench::datacontainer_test_1(){
 	}
 	//for (auto el: myContainer_2.container) { cout<< el<<endl;}
 	myContainer_2.setStatsAndClear();
-	Data<double, double> * my_data;
+	Data * my_data;
 	myContainer_2.findDataByName("first_data", &my_data);
 	cout<<myContainer_2.getStatsInString()<<endl;;
 
@@ -112,8 +112,8 @@ void data_test_bench::datacontainer_test_1(){
 void data_test_bench::datacontainer_test_3(){
 
 	// test 1 : instantiaing a container and writing data into it
-	DataContainer<double, double> myContainer;
-	Data<double, double> *data;
+	DataContainer myContainer;
+	Data *data;
 	myContainer.capture("my_data", "start", 10);
 	myContainer.capture("my_data", "start", 15);
 	myContainer.findDataByName("my_data", &data);
@@ -131,7 +131,7 @@ void data_test_bench::datacontainer_test_3(){
 void data_test_bench::datacontainer_test_4(){
 
 	// test 1 : instantiaing a container and writing data into it
-	DataContainer<double, double> myContainer;
+	DataContainer myContainer;
 	for (int i=0; i < 10; i++){
 		myContainer.capture("my_data", "counter", 0);
 	}
@@ -142,8 +142,8 @@ void data_test_bench::datacontainer_test_4(){
 // testing single values
 void data_test_bench::datacontainer_test_5(){
 	// test 1 : instantiaing a container and writing data into it
-	DataContainer<double, double> myContainer;
-	Data<double, double> *data;
+	DataContainer myContainer;
+	Data *data;
 	for (int i=0; i < 10; i++){
 		myContainer.capture("my_data", "single", i*4);
 	}

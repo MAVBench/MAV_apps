@@ -54,6 +54,10 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include "profile_manager/start_profiling_srv.h"
+#include "profile_manager/profiling_data_srv.h"
+#include <profile_manager/profiling_data_verbose_srv.h>
+#include <profile_manager.h>
 
 #include <tf/transform_listener.h>
 #include <tf/message_filter.h>
@@ -78,7 +82,8 @@ namespace octomap_server {
 class OctomapServer {
 
 public:
- DataContainer<ros::Time, ros::Duration> profiling_container;
+ DataContainer profiling_container;
+ ProfileManager my_profile_manager;
  long long octomap_integration_acc;
  long long pt_cld_octomap_commun_overhead_acc; 
  int octomap_ctr;
@@ -138,7 +143,7 @@ protected:
   }
 
   void reconfigureCallback(octomap_server::OctomapServerConfig& config, uint32_t level);
-  void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) const;
+  void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFullOctoMap(const ros::Time& rostime = ros::Time::now()) const;
   virtual void publishAll(const ros::Time& rostime = ros::Time::now());
 
