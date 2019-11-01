@@ -2,6 +2,7 @@
 #define DRONE_H
 
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Accel.h>
 #include <ros/ros.h>
 #include <stdint.h>
 #include <string>
@@ -54,6 +55,7 @@ public:
     coord position(); 
     geometry_msgs::Pose pose();
     geometry_msgs::Twist velocity();
+    geometry_msgs::Accel acceleration();
     geometry_msgs::PoseWithCovariance pose_with_covariance();
     float get_pitch();
     float get_yaw();

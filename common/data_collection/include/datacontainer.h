@@ -20,7 +20,7 @@ public:
 
 
 	std::vector<Data>::iterator find_if_name_equal(std::string name);
-	void capture(std::string name, std::string mode, double data_value); //mode : {start, end}
+	void capture(std::string name, std::string mode, double data_value, int data_sample_size_per_window = 600); //mode : {start, end}
 
 	bool static data_name_equal(Data& data1);
 

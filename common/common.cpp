@@ -1,20 +1,22 @@
-#include "common.h"
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <deque>
-#include <algorithm>
-#include <cmath>
-#include <cstdarg>
-
-#include <ros/ros.h>
+#include <common.h>
+#include <coord.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Quaternion.h>
+#include <ros/node_handle.h>
+#include <ros/service_client.h>
+#include <ros/time.h>
 #include <ros/topic.h>
-#include <ros/duration.h>
+#include <rosconsole/macros_generated.h>
 #include <std_msgs/Bool.h>
 #include <std_srvs/Trigger.h>
-
-#include "Drone.h"
+#include <tf/exceptions.h>
+#include <tf/transform_datatypes.h>
+#include <tf/transform_listener.h>
+#include <cmath>
+#include <cstdlib>
+#include <deque>
+#include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -163,6 +165,13 @@ float distance(float x, float y, float z) {
   return std::sqrt(x*x + y*y + z*z);
 }
 
+double calc_vec_magnitude(double x, double y, double z) {
+  return std::sqrt(x*x + y*y + z*z);
+}
+
+float calc_vec_magnitude(float x, float y, float z) {
+  return std::sqrt(x*x + y*y + z*z);
+}
 
 void scan_around(Drone &drone, int angle) {
     float init_yaw = drone.get_yaw();
@@ -212,7 +221,7 @@ void spin_around(Drone &drone) {
 // Also returns the maximum speed reached while flying along trajectory
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj, yaw_strategy_t yaw_strategy,
-        bool check_position, float max_speed, float time) {
+        bool check_position, float max_speed, float time, float p_vx, float p_vy, float p_vz) {
 
     trajectory_t reversed_commands;
 
@@ -237,13 +246,11 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         double v_z = p.vz;
         //ROS_INFO_STREAM("~~~~~~vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
 
-
-
         if (check_position) {
-            auto pos = drone.position();
-            v_x += 0.2*(p.x-pos.x);
-            v_y += 0.2*(p.y-pos.y);
-            v_z += 0.5*(p.z-pos.z);
+        	auto pos = drone.position();
+        	v_x += p_vx*(p.x-pos.x);
+            v_y += p_vy*(p.y-pos.y);
+            v_z += p_vz*(p.z-pos.z);
         }
 
         // Calculate the yaw we should be flying with
@@ -262,7 +269,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         // Make sure we're not going over the maximum speed
         double speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         double scale = 1;
-        if (speed > max_speed) {
+        if (speed > max_speed && !check_position) {
             scale = max_speed / speed;
             
             v_x *= scale;
@@ -281,7 +288,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         // Fly for flight_time seconds
         auto segment_start_time = std::chrono::system_clock::now();
         //ROS_INFO_STREAM("flying with vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z << "for " << scaled_flight_time);
-        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time);
+        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time+1);
 
         
         std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));

@@ -253,13 +253,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //----------------------------------------------------------------- 
     // *** F:DN Body 
     //----------------------------------------------------------------- 
-    if (DEBUG__global){
-        ROS_WARN_STREAM("call func is "<< req.call_func); // to see which node 
-                                                          // called motion planning
-                                                          // package_delivery or 
-                                                          // future_collision
-    }
-    
     auto hook_end_t_2 = ros::Time::now(); 
     //auto hook_start_t = ros::Time::now();
     //g_start_time = ros::Time::now();

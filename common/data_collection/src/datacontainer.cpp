@@ -36,7 +36,7 @@ std::vector<Data>::iterator DataContainer::find_if_name_equal(std::string name){
 	return this->container.end();
 }
 
-void DataContainer::capture(std::string name, std::string mode, double data_value) {
+void DataContainer::capture(std::string name, std::string mode, double data_value, int sample_size_per_window) {
 	/*
 	auto data_name_equal = [=](Data data_1){return data_1.data_key_name == name;};
 	//find or allocate
@@ -50,7 +50,7 @@ void DataContainer::capture(std::string name, std::string mode, double data_valu
 			throw;
 		}
 
-		this->container.push_back(Data(name));
+		this->container.push_back(Data(name, sample_size_per_window));
 		it = this->container.end() - 1;
 	}
 

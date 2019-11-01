@@ -28,7 +28,7 @@
 class Data {
 public:
 	//function members
-	Data(std::string my_name , double max_duration = 300, int sample_size_per_window = 300);
+	Data(std::string my_name , int sample_size_per_window = 300);
 	~Data();
 	// setters
 	void capture(double Time, std::string mode);

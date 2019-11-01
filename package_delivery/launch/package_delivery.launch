@@ -16,16 +16,16 @@
 
 
   <!-- Drone's physical characteristics /-->
-  <arg name="a_max" default="5"/> 
-  <arg name="v_max" default="2.0"/> 
+  <arg name="a_max" default="6"/> 
+  <arg name="v_max" default="5.0"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.6"/>
   <arg name="planner_drone_radius" default="2"/>
   <arg name="planner_drone_height" default="0.6"/>
   
   <arg name="planning_resolution" default="0.3"/>
-  <arg name="sensor_max_range" default="10" />
-  <arg name="fly_trajectory_time_out" default=".01"/> 
+  <arg name="sensor_max_range" default="20" />
+  <arg name="fly_trajectory_time_out" default=".001"/> 
   <arg name="planning_budget" default="0.3"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>
 
@@ -42,8 +42,12 @@
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
   <param name="fly_trajectory_time_out" value="$(arg fly_trajectory_time_out)"/> 
+  <param name="p_vx" value=".6"/>
+  <param name="p_vy" value=".6"/>
+  <param name="p_vz" value=".2"/>
+  <param name="PID_correction_time" value="3"/>
 
-  
+
   <!-- sensors /-->
   <arg name="all_front" default="true"/>	
 

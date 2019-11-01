@@ -26,6 +26,7 @@ int trajectory_seq = 0;
 
 // Parameters
 float g_v_max;
+float p_vx, p_vy, p_vz; // p factor for the PID controller in follow_trajectory function
 double g_grace_period = 0; // How much time the drone will wait for a new path to be calculated when a collision is near, before pumping the breaks
 double g_time_to_come_to_full_stop = 0;
 double g_fly_trajectory_time_out;
@@ -34,6 +35,8 @@ float g_max_yaw_rate;
 float g_max_yaw_rate_during_flight;
 bool g_trajectory_done = false;
 bool g_got_new_trajectory = false;
+ros::Time last_new_trajectory_time;
+float PID_correction_time; //the time within which we enforce PID (since the last  new trajectory received)
 
 // Profiling
 std::string g_supervisor_mailbox; //file to write to when completed
@@ -199,7 +202,6 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     	fly_backward = true;
         last_to_fly_backward = ros::Time::now(); 
     } else if (trajectory.empty() && !new_trajectory.empty()) {
-    	ROS_INFO_STREAM("trajectory empty but new trajectory not empty");
     	// Add drift correction if the drone is currently idling (because it will float around while idling)
         const double max_idling_drift_distance = 0.5;
         trajectory_t idling_correction_traj;
@@ -218,11 +220,8 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     }
 
     g_got_new_trajectory = true;
-
+    last_new_trajectory_time = ros::Time::now();
    new_trajectory_since_backed_up = !(new_trajectory.empty());
-   if (new_trajectory_since_backed_up) {
-	   ROS_ERROR_STREAM("got a new trajectory since backed up");
-   }
 
     // Profiling
     if (CLCT_DATA){
@@ -256,7 +255,12 @@ void sigIntHandlerPrivate(int signo){
 
 
 void initialize_global_params() {
-    if(!ros::param::get("v_max", g_v_max))  {
+	ros::param::get("p_vx", p_vx);
+	ros::param::get("p_vy", p_vy);
+	ros::param::get("p_vz", p_vz);
+	ros::param::get("PID_correction_time", PID_correction_time);
+
+	if(!ros::param::get("v_max", g_v_max))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory vmax not provided");
         exit(-1);
     }
@@ -287,7 +291,6 @@ void initialize_global_params() {
         ROS_FATAL("Could not start follow_trajectory. Parameter missing! grace_period is not provided");
         exit(-1);
     }
-
     double a_max;
     if(!ros::param::get("a_max", a_max))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory amax not provided");
@@ -305,6 +308,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     signal(SIGINT, sigIntHandlerPrivate);
 
+    p_vx = p_vy = p_vz = .5;
     initialize_global_params();
 
     // Initialize the drone
@@ -350,15 +354,7 @@ int main(int argc, char **argv)
                         if ((ros::Time::now() - g_msg_time_stamp).toSec() < 5){
                             g_img_to_follow_acc += (ros::Time::now() - g_msg_time_stamp).toSec()*1e9;
                             g_follow_ctr++;
-                            ROS_WARN_STREAM("========================================="<<(g_img_to_follow_acc/1e9)/g_follow_ctr<<endl);
-                            ROS_WARN_STREAM("this instance"<<(ros::Time::now() - g_msg_time_stamp).toSec());
                         }
-
-
-                    }
-                    if (DEBUG) {
-                        //ROS_INFO_STREAM("follow_traj_cb to  func" << g_rcv_traj_to_follow_traj_t);
-                        //ROS_INFO_STREAM("whatevs------- " << g_img_to_follow_acc);
                     }
                 }
             }
@@ -395,9 +391,12 @@ int main(int argc, char **argv)
         	}
         }
 
+        bool check_position = (ros::Time::now() - last_new_trajectory_time).toSec() < PID_correction_time;
+        check_position = true;
+
         double max_velocity_reached = follow_trajectory(drone, forward_traj, // @suppress("Invalid arguments")
-                rev_traj, yaw_strategy, true, max_velocity,
-                g_fly_trajectory_time_out);
+                rev_traj, yaw_strategy, check_position , max_velocity,
+                g_fly_trajectory_time_out, p_vx, p_vy, p_vz);
 
         if (max_velocity_reached > g_max_velocity_reached)
             g_max_velocity_reached = max_velocity_reached;

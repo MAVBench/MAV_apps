@@ -10,7 +10,7 @@
 #include <cmath>
 using namespace std;
 
-Data::Data(string name, double max_duration , int sample_size_per_window){
+Data::Data(string name, int sample_size_per_window){
 	// TODO Auto-generated constructor stub
 	this->data_key_name = name;
 	this->sample_size_per_window = sample_size_per_window;

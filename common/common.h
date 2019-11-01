@@ -36,7 +36,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),
         //float max_speed = 3,
-        float time = 2); 
+        float time = 2, float p_vx = .5, float p_vy = .5, float p_vz = .5);
 
 
 // Recovery methods
@@ -51,6 +51,7 @@ void scan_around(Drone &drone, int angle);
 
 // Utility functions
 float distance(float x, float y, float z);
+double calc_vec_magnitude(double x, double y, double z);
 float yawFromQuat(geometry_msgs::Quaternion q);
 float yawFromVelocity(float vx, float vy);
 void waitForLocalization(std::string method);
