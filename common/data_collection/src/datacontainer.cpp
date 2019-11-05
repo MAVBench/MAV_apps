@@ -65,7 +65,7 @@ bool DataContainer::data_name_equal(Data& data1){
 
 
 #ifdef ROS
-void DataContainer::capture(std::string name, std::string mode, ros::Time data_value) {
+void DataContainer::capture(std::string name, std::string mode, ros::Time data_value, int sample_size_per_window) {
 
 	//auto data_name_equal = [=](Data &data_1){return (data_1.data_key_name == name);};
 	//auto it = std::find_if(this->container.begin(), this->container.end(), data_name_equal);
@@ -77,7 +77,7 @@ void DataContainer::capture(std::string name, std::string mode, ros::Time data_v
 			throw;
 		}
 
-		this->container.push_back(Data(name));
+		this->container.push_back(Data(name, sample_size_per_window));
 		it = this->container.end() - 1;
 	}
 	it->capture(data_value, mode);

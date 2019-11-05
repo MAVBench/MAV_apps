@@ -60,7 +60,6 @@ int main(int argc, char **argv)
         control_drone(drone);
         pub_rate.sleep();
     }
-    
 
 }
 

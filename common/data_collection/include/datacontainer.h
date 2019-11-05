@@ -25,7 +25,7 @@ public:
 	bool static data_name_equal(Data& data1);
 
 #ifdef ROS
-	void capture(std::string name, std::string mode, ros::Time data_value); //mode : {start, end}
+	void capture(std::string name, std::string mode, ros::Time data_value, int data_sample_size_per_window = 600); //mode : {start, end}
 #endif
 
 	void findDataByName(std::string name, Data **data);

@@ -116,6 +116,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("compress_map", m_compressMap, m_compressMap);
   private_nh.param("incremental_2D_projection", m_incrementalUpdate, m_incrementalUpdate);
   private_nh.param("CLCT_DATA", CLCT_DATA, false);
+  private_nh.param("measure_time_end_to_end", measure_time_end_to_end, false);
   private_nh.param("data_collection_iteration_freq_OM", data_collection_iteration_freq, 100);
 
   profile_manager_client = 
@@ -291,8 +292,13 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	}
 	rcvd_point_cld_time_stamp = cloud->header.stamp;
 
-	profiling_container.capture("point_cloud_to_octomap_communication_time", "start", cloud->header.stamp);
-	profiling_container.capture("point_cloud_to_octomap_communication_time", "end", ros::Time::now());
+	if (measure_time_end_to_end){
+		profiling_container.capture("sensor_to_octomap_time", "start", cloud->header.stamp);
+		profiling_container.capture("sensor_to_octomap_time", "end", ros::Time::now());
+	}else{
+		profiling_container.capture("point_cloud_to_octomap_communication_time", "start", cloud->header.stamp);
+		profiling_container.capture("point_cloud_to_octomap_communication_time", "end", ros::Time::now());
+	}
 
 	profiling_container.capture(std::string("octomap_insertCloud"), "start", ros::Time::now()); // @suppress("Invalid arguments")
 
@@ -414,8 +420,11 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
       }
   }
   */
-
-  publishAll(cloud->header.stamp);
+  if (measure_time_end_to_end){
+	  publishAll(cloud->header.stamp);
+  }else{
+	  publishAll(ros::Time::now());
+  }
 }
 
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
@@ -757,8 +766,9 @@ void OctomapServer::publishAll(const ros::Time& rostime){
     m_pointCloudPub.publish(cloud);
   }
 
-  if (publishBinaryMap)
-    publishBinaryOctoMap(ros::Time::now());
+  if (publishBinaryMap){
+	  publishBinaryOctoMap(rostime);
+  }
 
   if (publishFullMap)
     publishFullOctoMap(rostime);

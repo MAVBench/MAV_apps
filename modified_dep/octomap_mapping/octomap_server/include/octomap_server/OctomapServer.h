@@ -87,6 +87,7 @@ public:
  long long octomap_integration_acc;
  long long pt_cld_octomap_commun_overhead_acc; 
  int octomap_ctr;
+ bool measure_time_end_to_end;
  ros::Time rcvd_point_cld_time_stamp;
 
  //void log_data_before_shutting_down();

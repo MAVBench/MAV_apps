@@ -10,6 +10,11 @@
 #include <profile_manager/start_profiling_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
+#include "profile_manager/profiling_data_srv.h"
+#include <profile_manager/profiling_data_verbose_srv.h>
+#include <profile_manager.h>
+#include <datacontainer.h>
+
 
 using namespace std;
 
@@ -53,6 +58,11 @@ ros::Time last_to_fly_backward;
 double g_max_velocity_reached = 0;
 bool new_trajectory_since_backed_up = false;
 bool backed_up = false;
+ros::Time  new_traj_msg_time_stamp;
+ProfileManager *profile_manager_client;
+DataContainer *profiling_container;
+bool measure_time_end_to_end;
+
 
 template <class P1, class P2>
 double distance(const P1& p1, const P2& p2) {
@@ -67,7 +77,16 @@ double distance(const P1& p1, const P2& p2) {
 void log_data_before_shutting_down()
 {
     std::cout << "\n\nMax velocity reached by drone: " << g_max_velocity_reached << "\n" << std::endl;
+    profiling_container->setStatsAndClear();
+    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
 
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container->getStatsInString();
+    profile_manager_client->verboseClientCall(profiling_data_verbose_srv_inst);
+
+
+    /*
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     profiling_data_srv_inst.request.key = "localization_status";
     profiling_data_srv_inst.request.value = g_localization_status;
@@ -113,6 +132,10 @@ void log_data_before_shutting_down()
             ros::shutdown();
         }
     }
+
+    */
+
+
 }
 
 void future_collision_callback(const mavbench_msgs::future_collision::ConstPtr& msg) {
@@ -221,9 +244,15 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
     g_got_new_trajectory = true;
     last_new_trajectory_time = ros::Time::now();
-   new_trajectory_since_backed_up = !(new_trajectory.empty());
+    new_trajectory_since_backed_up = !(new_trajectory.empty());
 
-    // Profiling
+    if (measure_time_end_to_end) {
+    	new_traj_msg_time_stamp = msg->header.stamp;
+    }else{
+    	profiling_container->capture("motion_planner_to_follow_traj_com", "start", msg->header.stamp);
+    	profiling_container->capture("motion_planner_to_follow_traj_com", "end", ros::Time::now());
+    }
+   // Profiling
     if (CLCT_DATA){
         g_recieved_traj_t = ros::Time::now();
         g_msg_time_stamp = msg->header.stamp;
@@ -297,6 +326,12 @@ void initialize_global_params() {
         exit(-1);
     }
 
+    if(!ros::param::get("measure_time_end_to_end", measure_time_end_to_end))  {
+        ROS_FATAL_STREAM("Could not start follow_trajectory amax not provided");
+        exit(-1);
+    }
+
+
     g_time_to_come_to_full_stop = g_v_max / a_max;
 }
 
@@ -315,6 +350,10 @@ int main(int argc, char **argv)
     std::string localization_method;
     std::string ip_addr;
     const uint16_t port = 41451;
+
+    profile_manager_client = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
+    profiling_container = new DataContainer();
+
 
 
 //    ros::Duration(20).sleep();
@@ -393,6 +432,14 @@ int main(int argc, char **argv)
 
         bool check_position = (ros::Time::now() - last_new_trajectory_time).toSec() < PID_correction_time;
         check_position = true;
+
+        // profiling
+        if (g_got_new_trajectory){
+        	if (measure_time_end_to_end){
+        		profiling_container->capture("S_A_time", "start", new_traj_msg_time_stamp);
+        		profiling_container->capture("S_A_time", "end", ros::Time::now());
+        	}
+        }
 
         double max_velocity_reached = follow_trajectory(drone, forward_traj, // @suppress("Invalid arguments")
                 rev_traj, yaw_strategy, check_position , max_velocity,

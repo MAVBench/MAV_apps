@@ -21,6 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   message_generation
   nlopt
+  data_collection
+  profile_manager
   )
 
 #add_message_files(
@@ -38,6 +40,7 @@ generate_messages(
   geometry_msgs
 )
 
+add_definitions(-DROS)
 include_directories(
     ${Eigen_INCLUDE_DIRS} 
     ${catkin_INCLUDE_DIRS}
@@ -45,6 +48,7 @@ include_directories(
     ${EIGEN3_INCLUDE_DIR}
     $ENV{AirSim_base_dir}/AirLib/include
     ${common_utility_include} 
+    ${common_utility_include}/profile_manager/include
 )
 
 link_directories(
@@ -64,10 +68,14 @@ catkin_package(
 
 
 
-add_executable(control_thread ${common_utility_src}/control_drone_node.cpp ${common_utility_src}/control_drone.cpp
+add_executable(control_thread control_drone_node.cpp ${common_utility_src}/control_drone.cpp
    ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/timer.cpp)
 target_link_libraries(control_thread ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
-add_dependencies(control_thread ${catkin_EXPORTED_TARGETS})
+
+add_executable(probe_thread probe_drone.cpp ${common_utility_src}/control_drone.cpp
+   ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/timer.cpp)
+target_link_libraries(probe_thread ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
+add_dependencies(probe_thread ${catkin_EXPORTED_TARGETS})
 
 
 

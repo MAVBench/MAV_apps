@@ -80,6 +80,7 @@ public:
 private:
     ProfileManager profile_manager;
     DataContainer profiling_container;
+    bool measure_time_end_to_end;
 
     // ***F:DN call back for octomap msgs
     void octomap_callback(const octomap_msgs::Octomap& msgs);

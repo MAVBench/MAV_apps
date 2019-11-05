@@ -73,6 +73,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   int data_collection_iteration_freq_; 
   std::string g_supervisor_mailbox; //file to write to when completed
   ros::ServiceClient profile_manager_client;
+  bool measure_time_end_to_end;
 
   virtual void onInit();
 
@@ -99,6 +100,7 @@ void PointCloudXyzNodelet::onInit()
   
   // Read parameters
   private_nh.param("queue_size", queue_size_, 5);
+
   
   // Profiling 
   if (!ros::param::get("/DEBUG", DEBUG_)) {
@@ -116,6 +118,11 @@ void PointCloudXyzNodelet::onInit()
   if(!ros::param::get("/supervisor_mailbox",g_supervisor_mailbox))  {
       ROS_FATAL_STREAM("Could not start mapping supervisor_mailbox not provided");
       return ;
+  }
+
+  if (!ros::param::get("/measure_time_end_to_end", measure_time_end_to_end)) {
+    ROS_FATAL("Could not start img_proc. Parameter missing! Looking for measure_time_end_to_end");
+    return ;
   }
   
   pt_cld_ctr = 0;
@@ -193,7 +200,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   
   img_to_pt_cloud_acc += (start_hook_t - depth_msg->header.stamp).toSec()*1e9;
 
-  cloud_msg->header = depth_msg->header;
+  if (measure_time_end_to_end){ 
+    cloud_msg->header = depth_msg->header;
+  }else{
+	  cloud_msg->header = depth_msg->header;
+	  cloud_msg->header.stamp = ros::Time::now();
+  }
   cloud_msg->height = depth_msg->height;
   cloud_msg->width  = depth_msg->width;
   cloud_msg->is_dense = false;

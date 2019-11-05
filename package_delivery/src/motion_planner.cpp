@@ -209,8 +209,10 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
         delete octree;
 	}
     //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
-    profiling_container.capture("point_cloud_to_octomap_comunication_overhead", "start", msg.header.stamp);
-    profiling_container.capture("point_cloud_to_octomap_comunication_overhead", "end", ros::Time::now());
+	if (!measure_time_end_to_end){
+		profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "start", msg.header.stamp);
+		profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
+	}
 
     profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now());
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
@@ -233,7 +235,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
-    this->motion_plan_end_to_end(ros::Time::now(), g_goal_pos);
+    this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
 
 }
@@ -342,7 +344,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     create_response(res, smooth_path);
 
     // Publish the trajectory (for debugging purposes)
-    res.multiDOFtrajectory.header.stamp = req.header.stamp;
+    if (measure_time_end_to_end){ res.multiDOFtrajectory.header.stamp = req.header.stamp;}
+    else{ res.multiDOFtrajectory.header.stamp = ros::Time::now();}
+
     traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
@@ -483,6 +487,8 @@ void MotionPlanner::motion_planning_initialize_params()
     ros::param::get("/motion_planner/drone_height", drone_height__global);
     ros::param::get("/motion_planner/v_max", v_max__global);
     ros::param::get("/motion_planner/a_max", a_max__global);
+
+    ros::param::get("/motion_planner/measure_time_end_to_end", measure_time_end_to_end);
     ros::param::get("ros_DEBUG", DEBUG__global);
     
     if(!ros::param::get("/motion_planner/planner_min_freq", planner_min_freq)) {

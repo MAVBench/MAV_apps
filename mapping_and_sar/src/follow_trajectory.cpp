@@ -254,7 +254,7 @@ int main(int argc, char **argv){
     bool created_slam_loss_traj = false;
     uint16_t port = 41451;
     ros::Rate loop_rate(20);
-    
+
     ros::param::get("/follow_trajectory/ip_addr",ip_addr);
     ros::param::get("/follow_trajectory/mav_name",mav_name);
     if(!ros::param::get("/follow_trajectory/localization_method",localization_method))  {

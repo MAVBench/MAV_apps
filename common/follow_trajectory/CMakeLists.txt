@@ -18,6 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
   trajectory_msgs
   mavbench_msgs
   tf
+  data_collection
+  profile_manager
 )
 
 ## System dependencies are found with CMake's conventions
@@ -129,6 +131,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${common_utility_include} 
+  ${common_utility_include}/profile_manager/include
   $ENV{AirSim_base_dir}/AirLib/include
 )
 
@@ -138,6 +141,8 @@ link_directories(
   /usr/local/cuda/lib64  #added by Behzad (for Behzad)
   ${Airlib_addr}/deps/MavLinkCom/lib  
 )
+
+add_definitions(-DROS)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}

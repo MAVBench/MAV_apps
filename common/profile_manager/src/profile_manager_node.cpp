@@ -486,7 +486,6 @@ bool record_profiling_data_cb(profile_manager::profiling_data_srv::Request &req,
 
 bool record_profiling_data_verbose_cb(profile_manager::profiling_data_verbose_srv::Request &req, profile_manager::profiling_data_verbose_srv::Response &res)
 {
-    ROS_ERROR_STREAM("heeeeeeeeeeeeeeeel");
 	// ROS_ERROR_STREAM("inside the call back");
     if (g_drone == NULL) {
         ROS_ERROR_STREAM("drone object is not initialized");
