@@ -177,7 +177,7 @@ private:
     ros::Subscriber future_col_sub, next_steps_sub, octomap_sub;
     ros::ServiceServer get_trajectory_srv_server, goal_rcv_service;
     ros::Publisher traj_pub;
-
+    ros::Publisher timing_msg_from_mp_pub;
     octomap::OcTree * octree = nullptr; int future_col_seq_id = 0;
     int trajectory_seq_id = 0;
     mavbench_msgs::multiDOFtrajectory g_next_steps_msg;
@@ -208,7 +208,7 @@ private:
     int g_number_of_planning = 0 ;
     float g_planning_budget;
     float g_out_of_bounds_allowance = 5;
-
+    string planning_reason;
     // The following block of variables only exist for debugging purposes
     visualization_msgs::MarkerArray smooth_traj_markers;
     visualization_msgs::MarkerArray piecewise_traj_markers;

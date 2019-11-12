@@ -50,6 +50,7 @@ public:
     bool fly_velocity_at_z(double vx, double vy, double z, float yaw = YAW_UNCHANGED, double duration = 3);
     bool land();
     bool set_yaw_based_on_quaternion(geometry_msgs::Quaternion q);
+    bool fly_position(double x, double y, double vz, float velocity, float scaled_flight_time);
 
     // *** F:DN Localization functions
     coord position(); 

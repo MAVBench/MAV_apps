@@ -36,7 +36,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),
         //float max_speed = 3,
-        float time = 2, float p_vx = .5, float p_vy = .5, float p_vz = .5);
+        float time = 2, float p_vx = .5, float p_vy = .5, float p_vz = .5, float I_px = .5, float I_py = .5, float I_pz=.5, float d_px=.4, float d_py=.5, float d_pz=.5);
 
 
 // Recovery methods

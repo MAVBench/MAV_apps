@@ -36,8 +36,7 @@ def action_upon_termination():
     kill_processes(ros_process_list_filtered)
 
     ctr = 0
-    ctr_threshold = 100 
-    print "==============" 
+    ctr_threshold = 20 
     while (ctr < ctr_threshold):     
         ros_process_list_filtered = get_ros_processes(process_ignore_list) 
         if(len(ros_process_list_filtered)== 0):#rosmaster doesn't show up
@@ -46,7 +45,10 @@ def action_upon_termination():
             print ros_process_list_filtered
         ctr+=1
         sleep(1)
-
+    if not (len(ros_process_list_filtered)== 0):#rosmaster doesn't show up
+        kill_processes(ros_process_list_filtered)
+        sleep(10)
+   
     print("killed all other processes");
     
     # to kill all other processes (including the rosmaster and core and rosout), the

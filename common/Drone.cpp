@@ -351,6 +351,13 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
 	return true;
 }
 
+// the following is blocking, i.e.,  the drone can not recieve another 
+// command untill it arrives the desired/specified position bellow
+bool Drone::fly_position(double x, double y, double z, float velocity, float scaled_flight_time ) {
+	client->moveToPosition(x, y, z, velocity, scaled_flight_time);
+	return true;
+}
+
 bool Drone::fly_velocity_at_z(double vx, double vy, double z, float yaw, double duration)
 {
 
@@ -414,9 +421,9 @@ coord Drone::gps(uint64_t& timestamp)
 
 geometry_msgs::Twist Drone::velocity(){
 	geometry_msgs::Twist twist;
-	twist.linear.x = client->getVelocity().x();
-	twist.linear.y = client->getVelocity().y();
-	twist.linear.z = client->getVelocity().z();
+	twist.linear.x = client->getVelocity().y();
+	twist.linear.y = client->getVelocity().x();
+	twist.linear.z = -client->getVelocity().z();
 	return twist;
 }
 

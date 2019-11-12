@@ -63,6 +63,8 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
+    timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_mp", 1);
+
 
 	// for stress testing
 	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 1);
@@ -187,18 +189,26 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 }
 
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
-    if (!this->haveExistingTraj(&g_next_steps_msg)){ return true;}
-    if (failed_to_plan_last_time) {return true;}
-    if ( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) { return true;}
+    planning_reason = "others";
+	if (!this->haveExistingTraj(&g_next_steps_msg)){ return true;}
+
+	if (failed_to_plan_last_time) {return true;}
+    if ( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
+    	return true;
+    }
 
     profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
     bool collision_coming = this->traj_colliding(&g_next_steps_msg);
     profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now()); // @suppress("Invalid arguments")
     if (collision_coming){
     	ROS_INFO_STREAM("collision coming");
+    	planning_reason = "collision";
     	profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0); // @suppress("Invalid arguments")
     	return true;
+    }else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
+      timing_msg_from_mp_pub.publish(msg.header);
     }
+
     return false;
 }
 
@@ -209,10 +219,8 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
         delete octree;
 	}
     //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
-	if (!measure_time_end_to_end){
-		profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "start", msg.header.stamp);
-		profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
-	}
+	if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "start", msg.header.stamp);
+	if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
 
     profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now());
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
@@ -346,6 +354,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     // Publish the trajectory (for debugging purposes)
     if (measure_time_end_to_end){ res.multiDOFtrajectory.header.stamp = req.header.stamp;}
     else{ res.multiDOFtrajectory.header.stamp = ros::Time::now();}
+    res.multiDOFtrajectory.planning_reason = planning_reason;
 
     traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
@@ -377,6 +386,7 @@ void MotionPlanner::get_start_in_future(Drone& drone,
         start.x = pos.x; start.y = pos.y; start.z = pos.z; 
         twist.linear.x = twist.linear.y = twist.linear.z = 0;
         acceleration.linear.x = acceleration.linear.y = acceleration.linear.z = 0;
+        ROS_ERROR_STREAM("only if I have to reverse");
         return;
     }
 
@@ -934,8 +944,9 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			}
 		}
      smoothening_ctr++;	
+     ROS_ERROR_STREAM("smooothener counting"<<smoothening_ctr);
     } while (col &&
-            smoothening_ctr < 100);
+            smoothening_ctr < 5);
             //ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
 
     if (col) {

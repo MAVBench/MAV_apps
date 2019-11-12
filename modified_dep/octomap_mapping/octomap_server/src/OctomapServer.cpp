@@ -898,7 +898,7 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 
     Octomap map;
   map.header.frame_id = m_worldFrameId;
-  
+
   map.header.stamp = rostime;
   //map.header.stamp = ros::Time::now();
 

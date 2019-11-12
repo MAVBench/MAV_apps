@@ -221,20 +221,27 @@ void spin_around(Drone &drone) {
 // Also returns the maximum speed reached while flying along trajectory
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj, yaw_strategy_t yaw_strategy,
-        bool check_position, float max_speed, float time, float p_vx, float p_vy, float p_vz) {
+        bool check_position, float max_speed, float time, float p_vx, float p_vy, float p_vz, float I_px, float I_py, float I_pz, float d_px, float d_py, float d_pz) {
 
     trajectory_t reversed_commands;
-
     double max_speed_so_far = 0;
-
     ros::Time start_hook_t;
 
-/*
-    for (auto &traj_el: *traj){
-        ROS_INFO_STREAM("==========~~~~~~vx"<<traj_el.vx<<"vy"<<traj_el.vy<<"vz"<<traj_el.vz<<"duration"<<traj_el.duration) ;
-    }
-    ROS_INFO_STREAM("========================================================");
-*/
+    // I controller
+    static double accumulated_x_error = 0;
+    static double accumulated_y_error = 0;
+    static double accumulated_z_error = 0;
+
+    double prev_x_error = 0;
+    double prev_y_error = 0;
+    double prev_z_error = 0;
+    double prev_vx_error = 0;
+    double prev_vy_error = 0;
+    double prev_vz_error = 0;
+
+    double current_x_error, current_y_error, current_z_error;
+    double current_vx_error, current_vy_error, current_vz_error;
+    double target_x, target_y, target_z;
 
     while (time > 0 && traj->size() > 0) {
         start_hook_t = ros::Time::now();  
@@ -248,9 +255,58 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         if (check_position) {
         	auto pos = drone.position();
-        	v_x += p_vx*(p.x-pos.x);
-            v_y += p_vy*(p.y-pos.y);
-            v_z += p_vz*(p.z-pos.z);
+        	auto vel = drone.velocity();
+
+        	target_x = p.x + p.vx*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
+        	target_y = p.y + p.vy*std::min((double)time, p.duration);
+        	target_z = p.z + p.vz*std::min((double)time, p.duration);
+
+        	current_x_error = target_x - pos.x;
+        	current_y_error = target_y - pos.y;
+        	current_z_error = target_z - pos.z;
+
+        	accumulated_x_error += current_x_error;
+        	accumulated_y_error += current_y_error;
+        	accumulated_z_error += current_z_error;
+
+        	current_vx_error =  p.vx - vel.linear.x;
+        	current_vy_error =  p.vy - vel.linear.y;
+        	current_vz_error =  p.vz - vel.linear.z;
+
+        	// tracking velocity, PID is on velocity
+        	/*
+        	v_x += p_vx*(current_vx_error) + I_px*(current_x_error) + d_px*(current_vx_error - prev_vx_error);
+        	v_y += p_vy*(current_vy_error) + I_py*(current_y_error) + d_py*(current_vy_error - prev_vy_error);
+        	v_z += p_vz*(current_vz_error) + I_pz*(current_z_error) + d_pz*(current_vz_error - prev_vz_error);
+        	 */
+
+        	/*
+        	//tracking position, PID is on velocity
+        	v_x +=  p_vx*(current_x_error) + I_px*(accumulated_x_error) + d_px*(current_x_error - prev_x_error);
+        	v_y +=  p_vy*(current_y_error) + I_py*(accumulated_y_error)+ d_py*(current_y_error - prev_y_error);
+        	v_z +=  p_vz*(current_z_error) + I_pz*(accumulated_z_error) + d_pz*(current_z_error - prev_z_error);
+        	 */
+
+        	//tracking position, PID is on position
+        	v_x =  p_vx*(current_x_error) + I_px*(accumulated_x_error) + d_px*(current_x_error - prev_x_error);
+        	v_y =  p_vy*(current_y_error) + I_py*(accumulated_y_error)+ d_py*(current_y_error - prev_y_error);
+        	v_z =  p_vz*(current_z_error) + I_pz*(accumulated_z_error) + d_pz*(current_z_error - prev_z_error);
+
+        	prev_x_error = current_x_error;
+        	prev_y_error = current_y_error;
+        	prev_z_error = current_z_error;
+
+        	prev_vx_error = current_vx_error;
+        	prev_vy_error = current_vy_error;
+        	prev_vz_error = current_vz_error;
+
+        	// printing stuff
+        	//ROS_INFO_STREAM("==============p.x"<<p.x<<"p.y"<<p.y<<"p.z"<<p.z<< " current vels"<<  pos.x<< " " << pos.y<< "  " << pos.z) ;
+        	//ROS_INFO_STREAM("~~~~~~~~~~ error of px "<<p.x - pos.x<<"error py"<<p.y - pos.y<<"error of pz"<<p.z - pos.z);
+        	//ROS_INFO_STREAM("~~~~~~~~~~ error of py "<<p.y - pos.y);
+        	//ROS_INFO_STREAM("p.vx"<<p.vx<<"p.vy"<<p.vy<<"p.vz"<<p.vz<< " current vels"<<  vel.linear.x<< " " << vel.linear.y<< "  " << vel.linear.z) ;
+        	//ROS_INFO_STREAM("error vx "<<current_vx_error<<"error vy"<<current_vy_error<<"error of vz"<<current_vz_error);
+        	//ROS_INFO_STREAM("error vy"<<current_vy_error);
         }
 
         // Calculate the yaw we should be flying with
@@ -269,6 +325,9 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         // Make sure we're not going over the maximum speed
         double speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         double scale = 1;
+
+        // make sure that speed doesn't supercede the maximum value
+        /*
         if (speed > max_speed && !check_position) {
             scale = max_speed / speed;
             
@@ -277,9 +336,11 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
             v_z *= scale;
             speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         }
+		*/
 
-        if (speed > max_speed_so_far)
-            max_speed_so_far = speed;
+        if (speed > max_speed_so_far){
+        	max_speed_so_far = speed;
+        }
 
         // Calculate the time for which these flight commands should run
         double flight_time = p.duration <= time ? p.duration : time;
@@ -287,9 +348,8 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Fly for flight_time seconds
         auto segment_start_time = std::chrono::system_clock::now();
-        //ROS_INFO_STREAM("flying with vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z << "for " << scaled_flight_time);
-        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time+1);
-
+        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time);
+        //drone.fly_position(p.y, p.x, -p.z, calc_vec_magnitude(p.vx, p.vy, p.vz), scaled_flight_time); //doesn't work
         
         std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));
 
@@ -300,8 +360,12 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Update trajectory
         traj->front().duration -= flight_time;
+        traj->front().x = target_x;
+        traj->front().y = target_y;
+        traj->front().z = target_z;
         if (traj->front().duration <= 0){
-            traj->pop_front(); // @suppress("Method cannot be resolved")
+        	traj->pop_front(); // @suppress("Method cannot be resolved")
+        	break; //if done with the way point, break to
         }
 
         time -= flight_time;
