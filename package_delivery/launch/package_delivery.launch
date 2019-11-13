@@ -62,8 +62,10 @@
   <arg name="planning_budget" default="0.3"/>
   <param name="planning_budget" value="$(arg planning_budget)"/>
   <arg name="sampling_interval" default=".050"/> 
+  <param name="sampling_interval" value="$(arg sampling_interval)"/>
   <arg name="planner_min_freq" default=".1"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
+  <param name="sensor_max_range" value="$(arg sensor_max_range)"/>
 
   <arg name="follow_trajectory_loop_rate" default="50"/>   <!-- in Hz-->
 
@@ -262,7 +264,6 @@
     <param name="y_dist_to_sample_from__high_bound" value="200"/>
     <param name="z_dist_to_sample_from__low_bound" value="-1"/>
     <param name="z_dist_to_sample_from__high_bound" value="10"/>
-    <param name="sampling_interval" value="$(arg sampling_interval)"/>
 
     <!-- options for motion_planning core --> 
     <!-- param name="motion_planning_core" value="PRM"/-->
@@ -317,10 +318,14 @@
   <group if="$(eval localization_method == 'gps')">
      <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher" />
   </group>
-    
+
+  <!-- ========================= Run Time ()  ============================ -->
+  <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
+
+
   
   <!-- ========================= Profiler (Profiling)  ============================ -->
-  <node pkg="control_drone" type="probe_thread" name="probe_thread" output="screen"/>
+  <!-- node pkg="control_drone" type="probe_thread" name="probe_thread" output="screen"/-->
 
   <node pkg="profile_manager" type="profile_manager_node" name="profile_manager" output="screen">
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />

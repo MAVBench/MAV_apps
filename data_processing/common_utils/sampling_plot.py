@@ -4,10 +4,7 @@ import numpy as np
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
-import sys
-sys.path.append('../common_utils')
 from calc_sampling_time import *
-from utils import *
 
 
 # ---- velocity data

@@ -2,29 +2,9 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
-def calc_poly_deg_2(a, b, c):
-    return (-b + np.sqrt(b**2 - 4*a*c))/(2*a)
-
-"""
-def calc_v_max(response_time, visibility, m, b_):
-    a = 1 + 2*response_time*m
-    b = -2*m*visibility + 2*response_time*b_
-    c = -2*b_*visibility 
-    return calc_poly_deg_2(a, b, c) 
-"""
-def calc_v_max(response_time, visibility, m, b_):
-    a = 1 + 2*response_time*m
-    b = -2*m*visibility + 2*response_time*b_
-    c = -2*b_*visibility 
-    return calc_poly_deg_2(a, b, c)
-
-
-def fit_func(x, y, deg):
-    m, b = np.polyfit(x, y, deg)
-    return m,b
-
-
+import sys
+sys.path.append('../common_utils')
+from utils import *
 # fit a line through the data
 v_max_l = []
 velocity_vals = np.array([25.7, 18.5, 9.6, 7.7, 5.8, 3.9, 2.0])

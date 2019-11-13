@@ -479,7 +479,7 @@ void MotionPlanner::motion_planning_initialize_params()
     }
 
     ros::param::get("/motion_planner/max_roadmap_size", max_roadmap_size__global);
-    ros::param::get("/motion_planner/sampling_interval", sampling_interval__global);
+    ros::param::get("/sampling_interval", sampling_interval__global);
     ros::param::get("/motion_planner/rrt_step_size", rrt_step_size__global);
     ros::param::get("/motion_planner/rrt_bias", rrt_bias__global);
     ros::param::get("/motion_planner/x_dist_to_sample_from__low_bound", x__low_bound__global);
