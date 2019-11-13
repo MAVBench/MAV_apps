@@ -1,0 +1,7 @@
+throw the drone at the wall and see if it stops before hitting the wall.
+In this experiment, we incrementally increased the velocity untill we couldn't any more.
+pay attention to S_A_response_time and velocity_before_stoppage
+
+commands
+f 0 0 1 4
+0 170 6
