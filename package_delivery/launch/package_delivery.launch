@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="6"/> 
-  <arg name="v_max" default="13"/> 
+  <arg name="v_max" default="4"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -120,8 +120,9 @@
   <!-- ===================================================================== -->
   <!-- ========================== Nodes ==================================== -->
   <!-- ===================================================================== -->
-  <arg name="point_cloud_width" default="5"/>
-  <arg name="point_cloud_height" default="5"/>
+  <arg name="point_cloud_width" default="15"/>
+  <arg name="point_cloud_height" default="15"/>
+  <arg name="point_cloud_density_reduction" default="100"/> <!-- 1 means no density reduction. Higher means more reduction -->
   
   <!-- controller --> 
   <!-- PID controller parames /--> 
@@ -186,6 +187,7 @@
   <!-- =========================Point Cloud  ============================ -->
   <param name="point_cloud_width" value="$(arg point_cloud_width)"/>
   <param name="point_cloud_height" value="$(arg point_cloud_height)"/>
+  <param name="point_cloud_density_reduction" value="$(arg point_cloud_density_reduction)"/>
   <!-- Nodelet manager for this pipeline -->
     <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
         <!-- remap from="/points" to="/cloud_in" / -->
