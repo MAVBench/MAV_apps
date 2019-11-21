@@ -189,26 +189,40 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 }
 
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
-    planning_reason = "others";
-	if (!this->haveExistingTraj(&g_next_steps_msg)){ return true;}
+	enum planning_reason_enum {no_reason, Collision_detected, Failed_to_plan_last_time, Min_freq_passed, First_time_planning};
+    /*
+    if (!this->haveExistingTraj()){
+		ROS_ERROR_STREAM("no trajectory so replan");
+		return true;
+	}
+	*/
 
-	if (failed_to_plan_last_time) {return true;}
-    if ( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
+	if (failed_to_plan_last_time) {
+		//ROS_ERROR_STREAM("failed to plan last time , so replan");
+		planning_reason = Failed_to_plan_last_time;
+		return true;
+	} else if(first_time_planning) {
+		planning_reason = First_time_planning;
+		return true;
+	} else if( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
+		planning_reason = Min_freq_passed;
+		//ROS_ERROR_STREAM("long time since last planning, so replan");
     	return true;
-    }
-
-    profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
-    bool collision_coming = this->traj_colliding(&g_next_steps_msg);
-    profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now()); // @suppress("Invalid arguments")
-    if (collision_coming){
-    	ROS_INFO_STREAM("collision coming");
-    	planning_reason = "collision";
-    	profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0); // @suppress("Invalid arguments")
-    	return true;
-    }else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
-      timing_msg_from_mp_pub.publish(msg.header);
-    }
-
+    } else {
+		profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
+		bool collision_coming = this->traj_colliding(&g_next_steps_msg);
+		profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now()); // @suppress("Invalid arguments")
+		if (collision_coming){
+			planning_reason = Collision_detected;
+			//ROS_INFO_STREAM("there is a collision");
+			profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0); // @suppress("Invalid arguments")
+			//ROS_ERROR_STREAM("collision comming, so replan");
+			return true;
+		}else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
+			planning_reason = no_reason;
+			timing_msg_from_mp_pub.publish(msg.header);
+		}
+	}
     return false;
 }
 
@@ -245,6 +259,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
     this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
+    first_time_planning = false;
 
 }
 
@@ -291,15 +306,20 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
 
     //publish_dummy_octomap_vis(octree);
+    int status;
 
     profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now());
-    piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree);
+    piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
     profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now());
 
 
-
+    //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
-        ROS_ERROR("Empty path returned");
+    	if (notified_failure){ //so we won't fly backward multiple times
+    		return false;
+    	}
+
+    	ROS_ERROR("Empty path returned");
         res.path_found = false;
 
         res.multiDOFtrajectory.future_collision_seq = future_col_seq_id;
@@ -307,7 +327,18 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         trajectory_seq_id++;
 
         res.multiDOFtrajectory.append = false;
-        res.multiDOFtrajectory.reverse = true;
+        if (status == 2) {
+        	//res.multiDOFtrajectory.reverse = false;
+        	res.multiDOFtrajectory.reverse = true;
+        	res.multiDOFtrajectory.stop = false;
+        }else if (status == 0){
+        	res.multiDOFtrajectory.reverse = false;
+        	res.multiDOFtrajectory.stop = true;
+        }else{
+        	ROS_INFO_STREAM("this state should happpen");
+        	exit(0);
+        }
+        notified_failure = true;
 
         res.multiDOFtrajectory.header.stamp = req.header.stamp;
         traj_pub.publish(res.multiDOFtrajectory);
@@ -335,7 +366,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     profiling_container.capture("smoothening_time", "end", ros::Time::now());
 
     if (smooth_path.empty()) {
-        ROS_ERROR("Path could not be smoothened successfully");
+    	if (notified_failure){ //so we won't fly backward multiple times
+    		return false;
+    	}
+
+
+    	ROS_ERROR("Path could not be smoothened successfully");
         res.path_found = false;
 
         res.multiDOFtrajectory.future_collision_seq = future_col_seq_id;
@@ -343,12 +379,15 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         trajectory_seq_id++;
 
         res.multiDOFtrajectory.append = false;
-        res.multiDOFtrajectory.reverse = true;
+        res.multiDOFtrajectory.reverse = false;
+        res.multiDOFtrajectory.stop = true;
+        notified_failure = true;
         res.multiDOFtrajectory.header.stamp = req.header.stamp;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
-	
+    notified_failure = false;
+
     create_response(res, smooth_path);
 
     // Publish the trajectory (for debugging purposes)
@@ -380,13 +419,14 @@ void MotionPlanner::get_start_in_future(Drone& drone,
         geometry_msgs::Point& start, geometry_msgs::Twist& twist,
         geometry_msgs::Twist& acceleration)
 {
- //
-	if (g_next_steps_msg.points.empty() || g_next_steps_msg.reverse) {
-        auto pos = drone.position();
+
+	if (g_next_steps_msg.points.empty()) { //|| g_next_steps_msg.reverse) {
+		//ROS_INFO_STREAM("start in the future is now");
+		auto pos = drone.position();
         start.x = pos.x; start.y = pos.y; start.z = pos.z; 
         twist.linear.x = twist.linear.y = twist.linear.z = 0;
         acceleration.linear.x = acceleration.linear.y = acceleration.linear.z = 0;
-        ROS_ERROR_STREAM("only if I have to reverse");
+       // ROS_ERROR_STREAM("only if I have to reverse");
         return;
     }
 
@@ -508,20 +548,20 @@ void MotionPlanner::motion_planning_initialize_params()
 
     ros::param::get("/motion_planner/motion_planning_core", motion_planning_core_str);
     if (motion_planning_core_str == "lawn_mower")
-        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree) {
+        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
             return this->lawn_mower(start, goal, width, length, n_pts_per_dir, octree);
         };
     else if (motion_planning_core_str == "OMPL-RRT")
-        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree) {
-            return this->OMPL_RRT(start, goal, width, length, n_pts_per_dir, octree);
+        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
+            return this->OMPL_RRT(start, goal, width, length, n_pts_per_dir, octree, status);
         };
     else if (motion_planning_core_str == "OMPL-RRTConnect")
-        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree) {
-            return this->OMPL_RRTConnect(start, goal, width, length, n_pts_per_dir, octree);
+        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
+            return this->OMPL_RRTConnect(start, goal, width, length, n_pts_per_dir, octree, status);
         };
     else if (motion_planning_core_str == "OMPL-PRM")
-        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree) {
-            return this->OMPL_PRM(start, goal, width, length, n_pts_per_dir, octree);
+        motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
+            return this->OMPL_PRM(start, goal, width, length, n_pts_per_dir, octree, status);
         };
     else {
         std::cout<<"This motion planning type is not defined"<<std::endl;
@@ -804,6 +844,7 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
 
     res.multiDOFtrajectory.append = false;
     res.multiDOFtrajectory.reverse = false;
+    res.multiDOFtrajectory.stop = false;
 
     // Mark the trajectory with the correct sequence id's
     res.multiDOFtrajectory.trajectory_seq = trajectory_seq_id;
@@ -944,7 +985,6 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			}
 		}
      smoothening_ctr++;	
-     ROS_ERROR_STREAM("smooothener counting"<<smoothening_ctr);
     } while (col &&
             smoothening_ctr < 5);
             //ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
@@ -1105,21 +1145,21 @@ bool MotionPlanner::OMPLStateValidityChecker(const ompl::base::State * state)
 }
 
 
-MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
+MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status)
 {
-    return OMPL_plan<ompl::geometric::RRT>(start, goal, octree);
+    return OMPL_plan<ompl::geometric::RRT>(start, goal, octree, status);
 }
 
 
-MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
+MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status)
 {
 	//publish_dummy_octomap_vis(octree);
-	return OMPL_plan<ompl::geometric::RRTstar>(start, goal, octree);
+	return OMPL_plan<ompl::geometric::RRTstar>(start, goal, octree, status);
 }
 
 
-MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree)
+MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status)
 {
-    return OMPL_plan<ompl::geometric::PRM>(start, goal, octree);
+    return OMPL_plan<ompl::geometric::PRM>(start, goal, octree, status);
 }
 

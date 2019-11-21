@@ -10,6 +10,7 @@
 #include <profile_manager/start_profiling_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
+#include <mavbench_msgs/follow_traj_debug.h>
 #include "profile_manager/profiling_data_srv.h"
 #include <profile_manager/profiling_data_verbose_srv.h>
 #include <profile_manager.h>
@@ -22,7 +23,7 @@ using namespace std;
 trajectory_t trajectory;
 trajectory_t reverse_trajectory;
 bool fly_backward = false;
-
+bool stop = false;
 // Messages from other nodes
 bool slam_lost = false;
 ros::Time future_collision_time{0}; // The moment in time when the drone should stop because of an upcoming collision
@@ -31,7 +32,7 @@ int trajectory_seq = 0;
 
 // Parameters
 float g_v_max;
-float p_vx, p_vy, p_vz, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
+float p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
 double g_grace_period = 0; // How much time the drone will wait for a new path to be calculated when a collision is near, before pumping the breaks
 double g_time_to_come_to_full_stop = 0;
 double g_fly_trajectory_time_out;
@@ -44,6 +45,7 @@ double g_sampling_time_interval;
 ros::Time last_new_trajectory_time;
 float PID_correction_time; //the time within which we enforce PID (since the last  new trajectory received)
 float g_follow_trajectory_loop_rate; //the time within which we enforce PID (since the last  new trajectory received)
+float g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse;
 
 
 // Profiling
@@ -57,7 +59,6 @@ ros::Time g_msg_time_stamp;
 long long g_pt_cld_to_futurCol_commun_acc = 0;
 int g_traj_ctr = 0; 
 ros::Time g_recieved_traj_t;
-ros::Time last_to_fly_backward;
 double g_max_velocity_reached = 0;
 bool new_trajectory_since_backed_up = false;
 bool backed_up = false;
@@ -65,13 +66,12 @@ ros::Time  new_traj_msg_time_stamp;
 ProfileManager *profile_manager_client;
 DataContainer *profiling_container;
 bool measure_time_end_to_end;
-string planning_reason; //whether because of collision or time expiration (i.e, too long passed since last planning)
 std::vector<ros::Time> timing_msgs_vec; //to collect the timing msgs that are send from imgPublisher for profiling SA latency and throughput profiling
 int timing_msgs_channel_size = -1; //used to ensure we haven't dropped any timing_msgs (this is b/c if we drop msgs, then there is a chance, we can't calculate the
 				  // the SA end to end accurately.
 int timing_msgs_cntr = 0; //counting the number of msgs in the timing_msg topic before it's consumed
 ros::Time timing_msgs_begin_el_time;
-
+int planning_reason;
 int SA_response_time_capture_ctr = 0; //counting the number of response_time captures. This is used to filter out the first
     									  // planning response time, since there is a big lag from the beginning of the
     									  // game execution and first planning which will skew the results
@@ -178,7 +178,8 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 	    if (caller == "callback_trajectory"){ // only make sense to calculate SA metrics when there is a trajectory
 	    	timing_msgs_begin_el_time = *(timing_msgs_vec.begin());
 	    	if (SA_response_time_capture_ctr >=1 && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_waiting_time", "single", (*it - *timing_msgs_vec.begin()).toSec());
-	    	ROS_INFO_STREAM("========== S_A response time"<<(ros::Time::now() - *timing_msgs_vec.begin()).toSec());
+	    ;
+	    	//ROS_INFO_STREAM("========== S_A response time"<<(ros::Time::now() - *timing_msgs_vec.begin()).toSec());
 	    }
 		timing_msgs_vec.erase(timing_msgs_vec.begin(), it);
 	}
@@ -313,9 +314,9 @@ trajectory_t straight_line_trajectory(const P1& start, const P2& end, double v)
 
 // for micro_benchmarking purposes
 // this is called uppon setting the micro_benchmark_flag
-void micro_benchmark_func(int micro_benchmark_number, string planning_reason, Drone *drone){
+void micro_benchmark_func(int micro_benchmark_number, int planning_reason, Drone *drone){
 	if (micro_benchmark_number == 1){ // microbenchmark description: to stop fully once saw an obstacle and quit
-		if (planning_reason == "collision") {
+		if (planning_reason == 1) {
 
 			//collect infomation
 			float sleep_duration = .01;
@@ -363,11 +364,17 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
     trajectory_t new_trajectory = create_trajectory_from_msg(*msg);
 
+
     if (msg->reverse) {
     	ROS_INFO_STREAM("reversing now");
     	fly_backward = true;
-        last_to_fly_backward = ros::Time::now(); 
-    } else if (trajectory.empty() && !new_trajectory.empty()) {
+    	stop = false;
+    } else if (msg->stop){
+    	fly_backward = false;
+    	stop = true;
+    }
+    else if (trajectory.empty() && !new_trajectory.empty()) {
+    	ROS_INFO_STREAM("traj empty but new traj not empty");
     	// Add drift correction if the drone is currently idling (because it will float around while idling)
         const double max_idling_drift_distance = 0.5;
         trajectory_t idling_correction_traj;
@@ -377,11 +384,15 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
         trajectory = append_trajectory(idling_correction_traj, new_trajectory);
         fly_backward = false;
+        stop = false;
     } else if (msg->append) {
-        trajectory = append_trajectory(trajectory, new_trajectory);
+    	ROS_INFO_STREAM("append crap");
+    	trajectory = append_trajectory(trajectory, new_trajectory);
         fly_backward = false;
+        stop = false;
     } else {
-        const double max_idling_drift_distance = 0.5;
+    	ROS_INFO_STREAM("else cond");
+    	const double max_idling_drift_distance = 0.5;
         trajectory_t idling_correction_traj;
         trajectory_t trajectory_annex;
         /*
@@ -391,6 +402,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
         */
         trajectory = new_trajectory;
         fly_backward = false;
+        stop = false;
     }
 
     g_got_new_trajectory = true;
@@ -426,9 +438,9 @@ void sigIntHandlerPrivate(int signo){
 
 
 void initialize_global_params() {
-	ros::param::get("p_vx", p_vx);
-	ros::param::get("p_vy", p_vy);
-	ros::param::get("p_vz", p_vz);
+	ros::param::get("p_vx", p_vx_original);
+	ros::param::get("p_vy", p_vy_original);
+	ros::param::get("p_vz", p_vz_original);
 	ros::param::get("I_px", I_px);
 	ros::param::get("I_py", I_py);
 	ros::param::get("I_pz", I_pz);
@@ -437,6 +449,23 @@ void initialize_global_params() {
 	ros::param::get("d_pz", d_pz);
 
 	ros::param::get("PID_correction_time", PID_correction_time);
+
+	if(!ros::param::get("backup_duration", g_backup_duration))  {
+        ROS_FATAL_STREAM("Could not start follow_trajectory backup_duration not provided");
+        exit(-1);
+	}
+
+	if(!ros::param::get("stay_in_place_duration_for_stop", g_stay_in_place_duration_for_stop))  {
+        ROS_FATAL_STREAM("Could not start follow_trajectory stay_in_place_duration_for_stop not provided");
+        exit(-1);
+	}
+
+	if(!ros::param::get("stay_in_place_duration_for_reverse", g_stay_in_place_duration_for_reverse))  {
+        ROS_FATAL_STREAM("Could not start follow_trajectory stay_in_place_duration_for_reverse not provided");
+        exit(-1);
+	}
+
+
 
 	if(!ros::param::get("follow_trajectory_loop_rate", g_follow_trajectory_loop_rate))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory follow_trajectory_loop_rate not provided");
@@ -448,7 +477,7 @@ void initialize_global_params() {
         exit(-1);
     }
 
-	if(!ros::param::get("/motion_planner/sampling_interval", g_sampling_time_interval))  {
+	if(!ros::param::get("/sampling_interval", g_sampling_time_interval))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory sampling_time  interval not provided");
         exit(-1);
     }
@@ -517,7 +546,9 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     signal(SIGINT, sigIntHandlerPrivate);
 
-    p_vx = p_vy = p_vz = .5;
+    double p_vx;
+    double p_vy;
+    double p_vz = .5;
     initialize_global_params();
 
     // Initialize the drone
@@ -544,11 +575,24 @@ int main(int argc, char **argv)
     // ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("normal_traj", 1, callback_trajectory);
     ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1, boost::bind(callback_trajectory, _1, &drone));
 
+
+    // for debuggin
+    ros::Publisher follow_traj_debug_pub = n.advertise<mavbench_msgs::follow_traj_debug>("/follow_traj_debug", 1);
+
     // Begin execution loop
     bool app_started = false;  //decides when the first planning has occured
                                //this allows us to activate all the
                                //functionaliy in follow_trajectory accordingly
 
+
+    bool reset_PID = false; //if set, PID history is reset
+
+    /*
+    // lambda function for debugging
+    auto publish_debug_data = [&] () {
+           i++;
+    };
+	*/
 
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
     while (ros::ok()) {
@@ -574,6 +618,9 @@ int main(int argc, char **argv)
                 }
             }
         }
+        if (trajectory.size() == 0){
+        	continue;
+        }
 
         // Figure out which direction we will fly in
         trajectory_t * forward_traj;
@@ -582,17 +629,27 @@ int main(int argc, char **argv)
         yaw_strategy_t yaw_strategy = follow_yaw;
         float max_velocity = g_v_max;
 
-        
+        /*
         if (fly_backward && ((ros::Time::now() - last_to_fly_backward).toSec() > 2)) { //prevent continous backward movement
-            ROS_ERROR_STREAM("setting flying back_ward to false");
+        	ROS_ERROR_STREAM("stop backing off  cause backed off already");
+
+        	drone.fly_velocity(0, 0, 0);
             drone.fly_velocity(0, 0, 0);
             drone.fly_velocity(0, 0, 0);
-            drone.fly_velocity(0, 0, 0);
-            fly_backward = false;
+
+            mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj);
+			trajectory_msg.future_collision_seq = future_collision_seq;
+			trajectory_msg.trajectory_seq = trajectory_seq;
+			trajectory_msg.reverse = fly_backward;
+			zero_trajectory_msg(trajectory_msg, drone.position()); //zero out, to get the same position as the current position
+			next_steps_pub.publish(trajectory_msg);
+            loop_rate.sleep();
+			continue;
         }
+		*/
 
         if (new_trajectory_since_backed_up || !backed_up){
-        	if (!fly_backward) {
+        	if (!fly_backward && !stop) {
         		forward_traj = &trajectory;
         		rev_traj = &reverse_trajectory;
         		backed_up = false;
@@ -600,9 +657,12 @@ int main(int argc, char **argv)
         		backed_up = true;
         		forward_traj = &reverse_trajectory;
         		rev_traj = &trajectory;
-//
+
+        		modify_backward_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
+
+        		trajectory_t blah = *forward_traj;
         		yaw_strategy = face_backward;
-        		max_velocity = 3;
+        		//max_velocity = 3;
         	}
         }
 
@@ -623,20 +683,60 @@ int main(int argc, char **argv)
         }
 
         // track the path
-        double max_velocity_reached = follow_trajectory(drone, forward_traj, // @suppress("Invalid arguments")
-                rev_traj, yaw_strategy, check_position , max_velocity,
-                g_fly_trajectory_time_out, p_vx, p_vy, p_vz, I_px, I_py, I_pz, d_px, d_py, d_pz);
+        //debug_follow_trajectory_data debug_data = {};
+        mavbench_msgs::follow_traj_debug debug_data = {};
 
-        if (max_velocity_reached > g_max_velocity_reached)
+
+        // dampening the impact of P controller uppon arrival of a new trajectory
+        if ((ros::Time::now() - last_new_trajectory_time).toSec() < 2) {
+        	float scale = 2/(ros::Time::now() - last_new_trajectory_time).toSec();
+        	p_vx /= scale;
+        	p_vy /= scale;
+        	p_vz /= scale;
+        }else{
+        	p_vx = p_vx_original;
+        	p_vy = p_vy_original;
+        	p_vz = p_vz_original;
+        }
+
+        // reset PID to avoid violent moves uppon stoping or backing up
+        if( fly_backward || stop) {
+        	reset_PID = true;
+        }else{
+        	reset_PID = false;
+        }
+
+        double max_velocity_reached = follow_trajectory(drone, forward_traj,
+        		// @suppress("Invalid arguments")
+                rev_traj,
+        		debug_data,
+				yaw_strategy, check_position , max_velocity,
+                g_fly_trajectory_time_out, p_vx, p_vy, p_vz, I_px, I_py, I_pz, d_px, d_py, d_pz, reset_PID);
+
+        profiling_container->capture("velocity", "single", max_velocity_reached);
+        if (max_velocity_reached > g_max_velocity_reached) {
             g_max_velocity_reached = max_velocity_reached;
-
+            ROS_INFO_STREAM("max speed is"<<max_velocity_reached);
+        }
+        profiling_container->capture("max_velocity", "single", g_max_velocity_reached);
         // Publish the remainder of the trajectory
-        mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj);
+        mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj, &drone);
         trajectory_msg.future_collision_seq = future_collision_seq;
         trajectory_msg.trajectory_seq = trajectory_seq;
         trajectory_msg.reverse = fly_backward;
+        trajectory_msg.stop = stop;
+
+
+
 
         next_steps_pub.publish(trajectory_msg);
+
+        debug_data.new_plan = g_got_new_trajectory;
+        debug_data.fly_backward = fly_backward;
+        debug_data.stop = stop;
+        debug_data.header.stamp = ros::Time::now();
+        debug_data.planning_reason = planning_reason;
+        follow_traj_debug_pub.publish(debug_data);
 
         if (slam_lost){
             ROS_INFO_STREAM("slam loss");

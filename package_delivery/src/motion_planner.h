@@ -106,13 +106,13 @@ private:
     piecewise_trajectory lawn_mower(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
 
     // ***F:DN Use the RRT sampling method from OMPL to find a piecewise path
-    piecewise_trajectory OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
+    piecewise_trajectory OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status);
 
     // ***F:DN Use bi-directonal RRT from OMPL to find a piecewise path
-    piecewise_trajectory OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
+    piecewise_trajectory OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status);
 
     // ***F:DN Use the PRM sampling method from OMPL to find a piecewise path
-    piecewise_trajectory OMPL_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
+    piecewise_trajectory OMPL_PRM(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status);
 
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
     bool occupied(octomap::OcTree * octree, double x, double y, double z);
@@ -158,7 +158,7 @@ private:
 
     // *** F:DN A flexible wrapper for OMPL planners
     template<class PlannerType>
-    piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree);
+    piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int &status);
 
 
     // dummy publishers for debugging/microbenchmarking
@@ -181,6 +181,7 @@ private:
     octomap::OcTree * octree = nullptr; int future_col_seq_id = 0;
     int trajectory_seq_id = 0;
     mavbench_msgs::multiDOFtrajectory g_next_steps_msg;
+    bool first_time_planning = true;
 
     geometry_msgs::Point g_start_pos;
     geometry_msgs::Point g_goal_pos;
@@ -202,13 +203,14 @@ private:
     double max_dist_to_connect_at__global;
     double sampling_interval__global;
     double v_max__global, a_max__global;
+    bool notified_failure = false;
     int max_roadmap_size__global;
-    std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *)> motion_planning_core;
+    std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *, int &status)> motion_planning_core;
     long long g_planning_without_OM_PULL_time_acc = 0;
     int g_number_of_planning = 0 ;
     float g_planning_budget;
     float g_out_of_bounds_allowance = 5;
-    string planning_reason;
+    int planning_reason;
     // The following block of variables only exist for debugging purposes
     visualization_msgs::MarkerArray smooth_traj_markers;
     visualization_msgs::MarkerArray piecewise_traj_markers;
@@ -284,7 +286,7 @@ private:
 
 
 template<class PlannerType>
-MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree)
+MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int& status)
 {
 
 	//publish_dummy_octomap_vis(octree);
@@ -336,6 +338,13 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
     // Solve for path
     ob::PlannerStatus solved = ss.solve(g_planning_budget);
+    if (solved == ob::PlannerStatus::INVALID_START) {
+    	status = 2;
+    }else if (solved){
+    	status = 1;
+    }else {
+    	status = 0;
+    }
 
     if (solved)
     {

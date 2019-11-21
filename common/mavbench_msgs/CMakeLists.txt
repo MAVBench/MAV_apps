@@ -57,7 +57,8 @@ add_message_files(
   multiDOFpoint.msg
   multiDOFtrajectory.msg
   future_collision.msg
-)
+  follow_traj_debug.msg
+  )
 
 ## Generate services in the 'srv' folder
 # add_service_files(

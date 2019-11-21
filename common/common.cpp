@@ -220,46 +220,90 @@ void spin_around(Drone &drone) {
 // Follows trajectory, popping commands off the front of it and returning those commands in reverse order
 // Also returns the maximum speed reached while flying along trajectory
 double follow_trajectory(Drone& drone, trajectory_t * traj,
-        trajectory_t * reverse_traj, yaw_strategy_t yaw_strategy,
-        bool check_position, float max_speed, float time, float p_vx, float p_vy, float p_vz, float I_px, float I_py, float I_pz, float d_px, float d_py, float d_pz) {
+        trajectory_t * reverse_traj,
+		mavbench_msgs::follow_traj_debug& debug_data,
+		yaw_strategy_t yaw_strategy,
+        bool check_position, float max_speed, float time,
+		float p_vx, float p_vy, float p_vz, float I_px, float I_py, float I_pz,
+		float d_px, float d_py, float d_pz, bool reset_PID) {
+		//debug_follow_trajectory_data& debug_data) {
 
     trajectory_t reversed_commands;
     double max_speed_so_far = 0;
-    ros::Time start_hook_t;
 
     // I controller
     static double accumulated_x_error = 0;
     static double accumulated_y_error = 0;
     static double accumulated_z_error = 0;
 
-    double prev_x_error = 0;
-    double prev_y_error = 0;
-    double prev_z_error = 0;
-    double prev_vx_error = 0;
-    double prev_vy_error = 0;
-    double prev_vz_error = 0;
+    static double prev_x_error = 0;
+    static double prev_y_error = 0;
+    static double prev_z_error = 0;
+    static double prev_vx_error = 0;
+    static double prev_vy_error = 0;
+    static double prev_vz_error = 0;
 
     double current_x_error, current_y_error, current_z_error;
     double current_vx_error, current_vy_error, current_vz_error;
     double target_x, target_y, target_z;
+    double target_vx, target_vy, target_vz;
+
 
     while (time > 0 && traj->size() > 0) {
-        start_hook_t = ros::Time::now();  
         multiDOFpoint p = traj->front();
+
+
+        // for debugging
+//        debug_data.vx = p.vx; debug_data.vy = p.vy; debug_data.vz = vz;
+       debug_data.velocity.x = p.vx; debug_data.velocity.y = p.vy; debug_data.velocity.z = p.vz;
+
 
         // Calculate the velocities we should be flying at
         double v_x = p.vx;
         double v_y = p.vy;
         double v_z = p.vz;
-        //ROS_INFO_STREAM("~~~~~~vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
 
-        if (check_position) {
+        //ROS_INFO_STREAM("before ~~~~~~vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
+
+        // reset all the PID values, to avoid over shooting
+        if (reset_PID){
+        	accumulated_x_error = 0;
+			accumulated_y_error = 0;
+			accumulated_z_error = 0;
+
+			prev_x_error = 0;
+			prev_y_error = 0;
+			prev_z_error = 0;
+			prev_vx_error = 0;
+			prev_vy_error = 0;
+			prev_vz_error = 0;
+
+        }
+
+        // use PID for velocity commands (by correcting for position and velocity errors)
+
+        else if (check_position) {
         	auto pos = drone.position();
         	auto vel = drone.velocity();
 
-        	target_x = p.x + p.vx*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
+        	//target_x = p.x + .5*p.ax*pow(std::min((double)time, p.duration),2) + p.vx*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
+        	//target_y = p.y + .5*p.ay*pow(std::min((double)time, p.duration),2) + p.vy*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
+        	//target_z = p.z + .5*p.az*pow(std::min((double)time, p.duration),2) + p.vz*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
+
+        	target_vx = p.vx + p.ax*std::min((double)time, p.duration);
+        	target_vy = p.vy + p.ay*std::min((double)time, p.duration);
+        	target_vz = p.vz + p.az*std::min((double)time, p.duration);
+
+        	/*
+        	target_x = p.x + p.vx*std::min((double)time, p.duration);
         	target_y = p.y + p.vy*std::min((double)time, p.duration);
         	target_z = p.z + p.vz*std::min((double)time, p.duration);
+			*/
+
+        	target_x = p.x + target_vx*std::min((double)time, p.duration);
+        	target_y = p.y + target_vy*std::min((double)time, p.duration);
+        	target_z = p.z + target_vz*std::min((double)time, p.duration);
+
 
         	current_x_error = target_x - pos.x;
         	current_y_error = target_y - pos.y;
@@ -269,28 +313,37 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         	accumulated_y_error += current_y_error;
         	accumulated_z_error += current_z_error;
 
+        	/*
         	current_vx_error =  p.vx - vel.linear.x;
         	current_vy_error =  p.vy - vel.linear.y;
         	current_vz_error =  p.vz - vel.linear.z;
+			*/
+
+        	current_vx_error =  target_vx - vel.linear.x;
+        	current_vy_error =  target_vy - vel.linear.y;
+        	current_vz_error =  target_vz - vel.linear.z;
+
 
         	// tracking velocity, PID is on velocity
         	/*
-        	v_x += p_vx*(current_vx_error) + I_px*(current_x_error) + d_px*(current_vx_error - prev_vx_error);
-        	v_y += p_vy*(current_vy_error) + I_py*(current_y_error) + d_py*(current_vy_error - prev_vy_error);
-        	v_z += p_vz*(current_vz_error) + I_pz*(current_z_error) + d_pz*(current_vz_error - prev_vz_error);
-        	 */
+        	v_x = d_px*(current_vx_error - prev_vx_error) + p_vx*(current_vx_error) + I_px*(current_x_error);
+        	v_y = d_py*(current_vy_error - prev_vy_error) + p_vy*(current_vy_error) + I_py*(current_y_error);
+        	v_z = d_pz*(current_vz_error - prev_vz_error) + p_vz*(current_vz_error) + I_pz*(current_z_error);
+			*/
+        	
+        	//tracking velocity, PID is on position
 
-        	/*
-        	//tracking position, PID is on velocity
-        	v_x +=  p_vx*(current_x_error) + I_px*(accumulated_x_error) + d_px*(current_x_error - prev_x_error);
-        	v_y +=  p_vy*(current_y_error) + I_py*(accumulated_y_error)+ d_py*(current_y_error - prev_y_error);
-        	v_z +=  p_vz*(current_z_error) + I_pz*(accumulated_z_error) + d_pz*(current_z_error - prev_z_error);
-        	 */
+        	v_x += d_px*(current_x_error - prev_x_error) + p_vx*(current_x_error) + I_px*(accumulated_x_error);
+        	v_y += d_py*(current_y_error - prev_y_error) + p_vy*(current_y_error) + I_py*(accumulated_y_error);
+        	v_z +=  d_pz*(current_z_error - prev_z_error) + p_vz*(current_z_error) + I_pz*(accumulated_z_error);
+
 
         	//tracking position, PID is on position
-        	v_x =  p_vx*(current_x_error) + I_px*(accumulated_x_error) + d_px*(current_x_error - prev_x_error);
-        	v_y =  p_vy*(current_y_error) + I_py*(accumulated_y_error)+ d_py*(current_y_error - prev_y_error);
-        	v_z =  p_vz*(current_z_error) + I_pz*(accumulated_z_error) + d_pz*(current_z_error - prev_z_error);
+           /*
+            v_x =  d_px*(current_x_error - prev_x_error)  + p_vx*(current_x_error) + I_px*(accumulated_x_error);
+        	v_y = d_py*(current_y_error - prev_y_error) +  p_vy*(current_y_error) + I_py*(accumulated_y_error);
+        	v_z = d_pz*(current_z_error - prev_z_error) + p_vz*(current_z_error) + I_pz*(accumulated_z_error);
+           */
 
         	prev_x_error = current_x_error;
         	prev_y_error = current_y_error;
@@ -306,7 +359,27 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         	//ROS_INFO_STREAM("~~~~~~~~~~ error of py "<<p.y - pos.y);
         	//ROS_INFO_STREAM("p.vx"<<p.vx<<"p.vy"<<p.vy<<"p.vz"<<p.vz<< " current vels"<<  vel.linear.x<< " " << vel.linear.y<< "  " << vel.linear.z) ;
         	//ROS_INFO_STREAM("error vx "<<current_vx_error<<"error vy"<<current_vy_error<<"error of vz"<<current_vz_error);
+        	//ROS_INFO_STREAM("current error x "<<current_x_error<<"current error y"<<current_y_error <<"current z erro "<<current_z_error);
         	//ROS_INFO_STREAM("error vy"<<current_vy_error);
+
+        	// for debugging
+        	debug_data.velocity_error.x = current_vx_error;
+        	debug_data.velocity_error.y = current_vy_error;
+        	debug_data.velocity_error.z = current_vz_error;
+        	debug_data.position_error.x = current_x_error;
+        	debug_data.position_error.y = current_y_error;
+        	debug_data.position_error.z = current_z_error;
+
+        	debug_data.velocity_corrected.x = p.vx;
+        	debug_data.velocity_corrected.y = p.vy;
+        	debug_data.velocity_corrected.z = p.vz;
+        	/*
+        	debug_data.x_error = current_x_error; debug_data.y_error = current_y_error; debug_data.z_error = current_z_error;
+        	debug_data.vx_error = current_vx_error; debug_data.vy_error = current_vy_error; debug_data.vz_error = current_vz_error;
+        	debug_data.vx_corrected = v_x;   debug_data.vy_corrected = v_y; debug_data.vz_corrected = v_z;
+			*/
+
+        	//ROS_INFO_STREAM("after ========= vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
         }
 
         // Calculate the yaw we should be flying with
@@ -327,8 +400,8 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         double scale = 1;
 
         // make sure that speed doesn't supercede the maximum value
-        /*
-        if (speed > max_speed && !check_position) {
+
+        if (speed > max_speed) {
             scale = max_speed / speed;
             
             v_x *= scale;
@@ -336,7 +409,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
             v_z *= scale;
             speed = std::sqrt((v_x*v_x + v_y*v_y + v_z*v_z));
         }
-		*/
+
 
         if (speed > max_speed_so_far){
         	max_speed_so_far = speed;
@@ -363,8 +436,13 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         traj->front().x = target_x;
         traj->front().y = target_y;
         traj->front().z = target_z;
+        traj->front().vx  = target_vx;
+        traj->front().vy = target_vy;
+        traj->front().vz = target_vz;
+
         if (traj->front().duration <= 0){
         	traj->pop_front(); // @suppress("Method cannot be resolved")
+//        	ROS_INFO_STREAM("pop");
         	break; //if done with the way point, break to
         }
 
@@ -379,13 +457,21 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
 
 static multiDOFpoint reverse_point(multiDOFpoint mdp) {
-    multiDOFpoint result = mdp;
+    multiDOFpoint point = mdp;
 
-    result.vx = -mdp.vx;
-    result.vy = -mdp.vy;
-    result.vz = -mdp.vz;
+    // scaling everything down (normalizing) to avoid a very fast
+    // backing off (and correction on it, since on the way back we start
+    // from zero velocity, so error correction would go crazy
 
-    return result;
+    double scale = 1/magnitude(point.vx, point.vy, point.vz); //scale down to slow down to prevent overshooting
+    point.vx = -mdp.vx*scale;
+    point.vy = -mdp.vy*scale;
+    point.vz = -mdp.vz*scale;
+    point.ax = -mdp.ax*scale;
+    point.ay = -mdp.ay*scale;
+    point.az = -mdp.az*scale;
+
+    return point;
 }
 
 
@@ -415,6 +501,23 @@ float yawFromQuat(geometry_msgs::Quaternion q)
     yaw = (yaw*180)/3.14159265359;
 
     return (yaw <= 180 ? yaw : yaw - 360);
+}
+
+trajectory_t shift_trajectory(const trajectory_t &traj, Drone *drone){
+	trajectory_t shifted_traj = traj;
+	auto first_point = traj.front();
+	coord cur_point = drone->position();
+	multiDOFpoint shift_by;
+	shift_by.x = cur_point.x - first_point.x;
+	shift_by.y = cur_point.y - first_point.y;
+	shift_by.z = cur_point.z - first_point.z;
+
+	for (auto &point: shifted_traj){
+		point.x += shift_by.x;
+		point.y += shift_by.y;
+		point.z += shift_by.z;
+	}
+	return shifted_traj;
 }
 
 trajectory_t create_trajectory_from_msg(const mavbench_msgs::multiDOFtrajectory& t)
@@ -448,14 +551,108 @@ trajectory_t create_trajectory_from_msg(const mavbench_msgs::multiDOFtrajectory&
     return result;
 }
 
-mavbench_msgs::multiDOFtrajectory create_trajectory_msg(const trajectory_t& t)
+// set the velocity of the trajectory after certain duration to zero
+// set the position of the trajectory waypoints after certain duratrion to the last point (immediately before the end of the duration)
+// set the the z velocity after certain duration  to -1 to come down and avoid moving out of the boundary
+void modify_backward_traj(trajectory_t *traj, float backup_duration, float stay_in_place_duration_for_stop , float stay_in_place_duration_for_reverse, bool stop){
+	double fly_down_vel = 2;
+	double time = 0;
+	int ctr = 0;
+	int sign = 1;
+	double duration_incr = traj->front().duration;
+	double first_point_x = traj->front().x;
+	double first_point_y = traj->front().y;
+	double first_point_z = traj->front().z;
+	float stay_still_duration = 0;
+
+
+	if (stop) {
+		stay_still_duration = stay_in_place_duration_for_stop;
+	} else{
+		stay_still_duration = stay_in_place_duration_for_reverse;
+	}
+
+	// only reverse up to backup_duration
+	// and then stop
+	multiDOFpoint last_point, cur_point;
+	for (auto &point: *traj){
+		auto cur_point = point;
+		if(time < backup_duration) {
+			last_point = cur_point;
+		}else{ //zero out the velocity of the rest of the points
+			// zero out vs and as
+			point.vx = 0;
+			point.vy = 0;
+			point.vz = 0;
+
+			point.ax = 0 ;
+			point.ay = 0;
+			point.az = 0;
+			point.x = last_point.x + sign*.75;  //need this otherwise, we'll get ray tracing errors
+			point.y = last_point.y + sign*.75;
+			point.z = last_point.z + sign*.75;
+			sign *= -1;
+		}
+	}
+
+	// stop before reversing, so zero out the velocities
+	for (time = 0; time < stay_still_duration; time +=duration_incr){
+		multiDOFpoint point;
+
+		// zero out vs and as
+		point.vx = 0;
+		point.vy = 0;
+		point.vz = 0;
+
+		point.ax = 0 ;
+		point.ay = 0;
+		point.az = 0;
+		point.x = first_point_x + sign*.75;  //need this otherwise, we'll get ray tracing errors
+		point.y = first_point_y + sign*.75;
+		point.z = first_point_z + sign*.75;
+
+		point.duration = duration_incr;
+		traj->push_front(point);
+		sign *= -1;
+	}
+}
+
+
+void zero_trajectory_msg(mavbench_msgs::multiDOFtrajectory &traj, coord current_pos){
+    for (int i = 0; i < traj.points.size() - 1; ++i) {
+		traj.points[i].x = current_pos.x;
+		traj.points[i].y = current_pos.y;
+		traj.points[i].z = current_pos.z;
+
+		// zero out vs and as
+		traj.points[i].vx = 0;
+		traj.points[i].vy = 0;
+		traj.points[i].vz = 0;
+
+		traj.points[i].ax = 0 ;
+		traj.points[i].ay = 0;
+		traj.points[i].az = 0;
+	}
+}
+mavbench_msgs::multiDOFtrajectory create_trajectory_msg(const trajectory_t& t, Drone *drone)
 {
-    mavbench_msgs::multiDOFtrajectory result;
+
+	trajectory_t traj, shifted_traj;
+	/*
+	// not using it any more, since the trajectory blindely shifted keeps colliding
+	// instead, are correcting the initial position on the planning side
+	if (t.size() != 0){
+		shifted_traj = shift_trajectory(t, drone);
+		traj = shifted_traj;
+	}
+	*/
+	traj = t;
+	mavbench_msgs::multiDOFtrajectory result;
 
     result.append = false;
     result.reverse = false;
 
-    for (const auto& mdp : t) {
+    for (const auto& mdp : traj) {
         mavbench_msgs::multiDOFpoint mdp_msg;
 
         mdp_msg.x = mdp.x;
@@ -526,6 +723,9 @@ multiDOFpoint trajectory_at_time(const mavbench_msgs::multiDOFtrajectory& traj, 
                 mdofp.duration};
     }
 
+
+    ROS_INFO_STREAM("this should not happen");
+    exit(0);
     return {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0};
 }
 

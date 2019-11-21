@@ -301,10 +301,12 @@
     
     
   <!-- ========================= Follow Trajectory (Control)============================ -->
-  <arg name="backup_duration" default=".01"/>
-  <arg name="stay_in_place_duration" default="15"/>
+  <arg name="stay_in_place_duration_for_stop" default="3"/>
+  <arg name="stay_in_place_duration_for_reverse" default="3"/>
+  <arg name="backup_duration" default="2"/>
   <param name="backup_duration" value="$(arg backup_duration)"/>
-  <param name="stay_in_place_duration" value="$(arg stay_in_place_duration)"/>
+  <param name="stay_in_place_duration_for_stop" value="$(arg stay_in_place_duration_for_stop)"/>
+  <param name="stay_in_place_duration_for_reverse" value="$(arg stay_in_place_duration_for_reverse)"/>
   <param name="follow_trajectory/grace_period" type="double" value="0.0" />
   <node pkg="follow_trajectory" type="follow_trajectory" name="follow_trajectory" output="screen">
         <param name="ip_addr" value="$(arg host_ip)"/>

@@ -46,7 +46,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 
 	// corener case
 	if (BudgetTillNextSample <= 0) {
-		std::cout<<"shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
+		//std::cout<<"shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
 		nextSamplingTime = this->timeIncr_;
 		trajItr += 1;
 		return;
@@ -61,7 +61,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
 		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency);
 		if (potentialBudgetTillNextSample <= 0) {
-			std::cout<<"-- shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
+			//std::cout<<"-- shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
 			trajItrTemp +=1;
 			nextSamplingTimeTemp +=  this->timeIncr_;
 			break;

@@ -134,7 +134,7 @@ for idx in range(0, len(sensor_range)):
 # planning resolution of .65
 # point cloud box 5x5
 sensor_range = np.array([25 , 20, 15, 10, 5])
-S_A_latency_65_5 = np.array([.58, .54, .49, .60, .56, .56]) #TODO  last element
+S_A_latency_65_5 = np.array([.58, .54, .49, .60, .56]) #TODO  last element
 S_A_response_time_65_5 = np.array([.75, .72, .79, .8, .81]) # TODO last element
 max_safe_velocity_calculated_65_5 = []
 for idx in range(0, len(sensor_range)):
@@ -155,8 +155,8 @@ plt.close()
 
 fig2 = plt.figure(2)
 ax = fig2.add_subplot(111)
-ax.set_ylabel('sensor_range (m)',fontsize=16)
-ax.set_xlabel('max calculaed velocity (m/s) ',fontsize=16)
+ax.set_ylabel('max sensor_range (m)',fontsize=16)
+ax.set_xlabel('calculaed velocity (m/s) ',fontsize=16)
 ax.legend(loc='best', fontsize="small")
 ax.plot(max_safe_velocity_calculated_25_25, sensor_range, marker='o', color='y', label="resolution = .25, pc_box = 25x25")
 ax.plot(max_safe_velocity_calculated_45_25, sensor_range, marker='o', color='orange', label="resolution = .45, pc_box = 25x25")
@@ -194,8 +194,8 @@ plt.close()
 
 fig = plt.figure(1)
 ax = fig.add_subplot(111)
-ax.set_xlabel('calculated velocity (m/s) ',fontsize=16)
-ax.set_ylabel('max sensor_range (m)',fontsize=16)
+ax.set_xlabel('sensor range (m) ',fontsize=16)
+ax.set_ylabel('S_A latency (s)',fontsize=16)
 
 ax.plot(sensor_range, S_A_latency_25_25,  marker='o', markersize = 15, linestyle = ':', color='gold', label=":: resolution = .25, pc_box=25x25")
 ax.plot(sensor_range, S_A_latency_25_15,  marker='o', markersize = 10, color='gold', linestyle = ":", label=":: resolution = .25, pc_box=15x15")
@@ -220,8 +220,8 @@ plt.close()
 
 fig = plt.figure(1)
 ax = fig.add_subplot(111)
-ax.set_xlabel('calculated velocity (m/s) ',fontsize=16)
-ax.set_ylabel('max sensor_range (m)',fontsize=16)
+ax.set_xlabel('sensor range (m) ',fontsize=16)
+ax.set_ylabel('S_A response time (s)',fontsize=16)
 
 ax.plot(sensor_range, S_A_response_time_25_25,  marker='o', markersize = 15, linestyle = ':', color='gold', label=":: resolution = .25, pc_box=25x25")
 ax.plot(sensor_range, S_A_response_time_25_15,  marker='o', markersize = 10, color='gold', linestyle = ":", label=":: resolution = .25, pc_box=15x15")
@@ -249,13 +249,13 @@ plt.close()
 #  slice by different point cloud box
 fig = plt.figure(1)
 ax = fig.add_subplot(111)
-ax.set_xlabel('sensor_range (m)',fontsize=16)
-ax.set_ylabel('max calculated velocity (m/s) ',fontsize=16)
+ax.set_ylabel('sensor_range (m)',fontsize=16)
+ax.set_xlabel('calculated velocity (m/s) ',fontsize=16)
 
-ax.plot(sensor_range, max_safe_velocity_calculated_25_25, marker='o', markersize = 15, linestyle = ':', color='gold', label="resolution = .25, pc_box=25x25")
-ax.plot(sensor_range, max_safe_velocity_calculated_25_15, marker='o', markersize = 10, color='gold', linestyle = ":", label="resolution = .25, pc_box=15x15")
-ax.plot(sensor_range, max_safe_velocity_calculated_25_10, marker='o', markersize = 5, color='gold', linestyle = ":", label="resolution = .25, pc_box=10x10")
-ax.plot(sensor_range, max_safe_velocity_calculated_25_5, marker='o', markersize = 2, color='gold', linestyle = ":", label="resolution = .25, pc_box=5x5")
+ax.plot(max_safe_velocity_calculated_25_25, sensor_range, marker='o', markersize = 15, linestyle = ':', color='gold', label="resolution = .25, pc_box=25x25")
+ax.plot( max_safe_velocity_calculated_25_15, sensor_range, marker='o', markersize = 10, color='gold', linestyle = ":", label="resolution = .25, pc_box=15x15")
+ax.plot(max_safe_velocity_calculated_25_10, sensor_range, marker='o', markersize = 5, color='gold', linestyle = ":", label="resolution = .25, pc_box=10x10")
+ax.plot(max_safe_velocity_calculated_25_5, sensor_range, marker='o', markersize = 2, color='gold', linestyle = ":", label="resolution = .25, pc_box=5x5")
 ax.legend(loc='best', fontsize="small")
 plt.savefig("sensor_range_max_calc_velocity_diff_pc_b.png")
 plt.close()
@@ -264,25 +264,25 @@ plt.close()
 #  slice by different resolution 
 fig = plt.figure(1)
 ax = fig.add_subplot(111)
-ax.set_xlabel('sensor_range (m)',fontsize=16)
-ax.set_ylabel('max calculated velocity (m/s) ',fontsize=16)
+ax.set_ylabel('sensor_range (m)',fontsize=16)
+ax.set_xlabel('calculated velocity (m/s) ',fontsize=16)
 
-ax.plot(sensor_range, max_safe_velocity_calculated_25_25, marker='o', markersize = 10, linestyle = ':', color='gold', label=": resolution = .25, pc_box=25x25")
-ax.plot(sensor_range, max_safe_velocity_calculated_45_25, marker='o', markersize = 10, color='orange', linestyle = "--", label=" - - resolution = .45, pc_box25x25")
-ax.plot(sensor_range, max_safe_velocity_calculated_65_25, marker='o', markersize = 10, color='darkred', linestyle = "-", label=" __ resolution = .65, pc_h=25x25")
+ax.plot( max_safe_velocity_calculated_25_25, sensor_range,marker='o', markersize = 10, linestyle = ':', color='gold', label=": resolution = .25, pc_box=25x25")
+ax.plot( max_safe_velocity_calculated_45_25, sensor_range, marker='o', markersize = 10, color='orange', linestyle = "--", label=" - - resolution = .45, pc_box25x25")
+ax.plot( max_safe_velocity_calculated_65_25, sensor_range, marker='o', markersize = 10, color='darkred', linestyle = "-", label=" __ resolution = .65, pc_h=25x25")
 ax.legend(loc='best', fontsize="small")
-plt.savefig("sensor_range_max_calc_velocity_diff_resolution.png")
+plt.savefig("calc_velocity_sensor_range_diff_resolution.png")
 plt.close()
 
 
 fig = plt.figure(1)
 ax = fig.add_subplot(111)
-ax.set_xlabel('sensor_range (m)',fontsize=16)
-ax.set_ylabel('max calculated velocity (m/s) ',fontsize=16)
+ax.set_ylabel('sensor_range (m)',fontsize=16)
+ax.set_xlabel('calculated velocity (m/s) ',fontsize=16)
 
-ax.plot(sensor_range, max_safe_velocity_calculated_65_25, marker='o', markersize = 10, color='darkred', linestyle = "-", label=" __ resolution = .65, pc_h=25x25")
+ax.plot(max_safe_velocity_calculated_65_25, sensor_range, marker='o', markersize = 10, color='darkred', linestyle = "-", label=" __ resolution = .65, pc_h=25x25")
 ax.legend(loc='best', fontsize="small")
-plt.savefig("sensor_range_max_calc_velocity_range.png")
+plt.savefig("calc_velocity_sensor_range.png")
 plt.close()
 
 

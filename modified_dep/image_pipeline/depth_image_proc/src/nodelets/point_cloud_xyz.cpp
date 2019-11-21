@@ -74,6 +74,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   std::string g_supervisor_mailbox; //file to write to when completed
   ros::ServiceClient profile_manager_client;
   bool measure_time_end_to_end;
+  float point_cloud_width, point_cloud_height; //point cloud boundary
 
   virtual void onInit();
 
@@ -125,6 +126,16 @@ void PointCloudXyzNodelet::onInit()
     return ;
   }
   
+  if (!ros::param::get("/point_cloud_width", point_cloud_width)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_width Parameter missing! Looking for measure_time_end_to_end");
+    return ;
+  }
+  
+  if (!ros::param::get("/point_cloud_height", point_cloud_height)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_height Parameter missing! Looking for measure_time_end_to_end");
+    return ;
+   }
+
   pt_cld_ctr = 0;
   pt_cld_generation_acc = 0;
   img_to_pt_cloud_acc = 0;
@@ -250,6 +261,42 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
     }
     
   }
+ 
+  int n_points = cloud_msg->width * cloud_msg->height;
+  
+  // trim the point cloud by only keeping points of certain positions
+  sensor_msgs::PointCloud2Iterator<float> old_x(*cloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> old_y(*cloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> old_z(*cloud_msg, "z");
+
+  std::vector<float> xs;
+  std::vector<float> ys;
+  std::vector<float> zs;
+
+  for(size_t i=0; i<n_points; ++i, ++old_x, ++old_y, ++old_z){
+    // Cab change to radius!!
+    if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
+      xs.push_back(*old_x);
+      ys.push_back(*old_y);
+      zs.push_back(*old_z);
+    }
+  }
+
+  sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
+  // modifier.resize(0);
+  modifier.resize(xs.size());
+  sensor_msgs::PointCloud2Iterator<float> new_x(*cloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> new_y(*cloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> new_z(*cloud_msg, "z");
+
+  for(size_t i=0; i<xs.size(); ++i, ++new_x, ++new_y, ++new_z){
+      *new_x = xs[i];
+      *new_y = ys[i];
+      *new_z = zs[i];
+  }
+
+  n_points = cloud_msg->width * cloud_msg->height;
+  // printf("filtered size: %d \n", n_points);
  
   //cloud_msg->header.stamp = ros::Time::now();
   pub_point_cloud_.publish (cloud_msg);
