@@ -122,7 +122,7 @@
   <!-- ===================================================================== -->
   <arg name="point_cloud_width" default="15"/>
   <arg name="point_cloud_height" default="15"/>
-  <arg name="point_cloud_density_reduction" default="100"/> <!-- 1 means no density reduction. Higher means more reduction -->
+  <arg name="point_cloud_density_reduction" default="10"/> <!-- 1 means no density reduction. Higher means more reduction -->
   
   <!-- controller --> 
   <!-- PID controller parames /--> 
