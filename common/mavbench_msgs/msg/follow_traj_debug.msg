@@ -1,14 +1,28 @@
 Header header
+
 geometry_msgs/Vector3 velocity
-
 geometry_msgs/Vector3 velocity_error
-geometry_msgs/Vector3 position_error
-
 geometry_msgs/Vector3 velocity_corrected
+geometry_msgs/Vector3 measured_velocity
+geometry_msgs/Vector3 target_velocity
 geometry_msgs/Vector3 position_corrected
+geometry_msgs/Vector3 position_error
+geometry_msgs/Vector3 position_acc_error
+geometry_msgs/Vector3 position_deriv_error
+geometry_msgs/Vector3 target_position
+geometry_msgs/Vector3 measured_position
+geometry_msgs/Vector3 measured_acceleration
+geometry_msgs/Vector3 calc_acceleration
+geometry_msgs/Vector3 target_acceleration
 
-int32 planning_reason
 
-bool new_plan
-bool fly_backward
-bool stop
+float32 time_between_samples
+
+int32 replanning_reason
+int32 planning_status
+int32 planning_failure_short_time
+int32 planning_failure_inital_state
+int32 planning_success
+int32 new_plan
+int32 fly_backward
+int32 stop

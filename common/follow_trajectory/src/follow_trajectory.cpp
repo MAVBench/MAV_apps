@@ -32,7 +32,7 @@ int trajectory_seq = 0;
 
 // Parameters
 float g_v_max;
-float p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
+double p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
 double g_grace_period = 0; // How much time the drone will wait for a new path to be calculated when a collision is near, before pumping the breaks
 double g_time_to_come_to_full_stop = 0;
 double g_fly_trajectory_time_out;
@@ -71,7 +71,7 @@ int timing_msgs_channel_size = -1; //used to ensure we haven't dropped any timin
 				  // the SA end to end accurately.
 int timing_msgs_cntr = 0; //counting the number of msgs in the timing_msg topic before it's consumed
 ros::Time timing_msgs_begin_el_time;
-int planning_reason;
+int replanning_reason, planning_status;
 int SA_response_time_capture_ctr = 0; //counting the number of response_time captures. This is used to filter out the first
     									  // planning response time, since there is a big lag from the beginning of the
     									  // game execution and first planning which will skew the results
@@ -314,9 +314,9 @@ trajectory_t straight_line_trajectory(const P1& start, const P2& end, double v)
 
 // for micro_benchmarking purposes
 // this is called uppon setting the micro_benchmark_flag
-void micro_benchmark_func(int micro_benchmark_number, int planning_reason, Drone *drone){
+void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Drone *drone){
 	if (micro_benchmark_number == 1){ // microbenchmark description: to stop fully once saw an obstacle and quit
-		if (planning_reason == 1) {
+		if (replanning_reason == 1) {
 
 			//collect infomation
 			float sleep_duration = .01;
@@ -416,7 +416,8 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     	profiling_container->capture("motion_planner_to_follow_traj_com", "start", msg->header.stamp);
     	profiling_container->capture("motion_planner_to_follow_traj_com", "end", ros::Time::now());
     }
-    planning_reason = msg->planning_reason; // @suppress("Field cannot be resolved")
+    replanning_reason = msg->replanning_reason; // @suppress("Field cannot be resolved")
+    planning_status = msg->planning_status;
 }
 
 
@@ -546,9 +547,9 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     signal(SIGINT, sigIntHandlerPrivate);
 
-    double p_vx;
-    double p_vy;
-    double p_vz = .5;
+    double p_vx = p_vx_original;
+    double p_vy = p_vy_original;
+    double p_vz = p_vz_original;
     initialize_global_params();
 
     // Initialize the drone
@@ -594,6 +595,7 @@ int main(int argc, char **argv)
     };
 	*/
 
+    mavbench_msgs::follow_traj_debug debug_data = {};
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
     while (ros::ok()) {
         ros::spinOnce();
@@ -679,17 +681,13 @@ int main(int argc, char **argv)
         }
         // microbenchmarks
         if (micro_benchmark){
-    	 micro_benchmark_func(micro_benchmark_number, planning_reason, &drone);
+    	 micro_benchmark_func(micro_benchmark_number, replanning_reason, &drone);
         }
-
-        // track the path
-        //debug_follow_trajectory_data debug_data = {};
-        mavbench_msgs::follow_traj_debug debug_data = {};
 
 
         // dampening the impact of P controller uppon arrival of a new trajectory
-        if ((ros::Time::now() - last_new_trajectory_time).toSec() < 2) {
-        	float scale = 2/(ros::Time::now() - last_new_trajectory_time).toSec();
+        if ((ros::Time::now() - last_new_trajectory_time).toSec() < 1) {
+            double scale = 1/(ros::Time::now() - last_new_trajectory_time).toSec();
         	p_vx /= scale;
         	p_vy /= scale;
         	p_vz /= scale;
@@ -731,12 +729,17 @@ int main(int argc, char **argv)
 
         next_steps_pub.publish(trajectory_msg);
 
+        // debugging
         debug_data.new_plan = g_got_new_trajectory;
         debug_data.fly_backward = fly_backward;
         debug_data.stop = stop;
         debug_data.header.stamp = ros::Time::now();
-        debug_data.planning_reason = planning_reason;
+        debug_data.replanning_reason = replanning_reason;
+        debug_data.planning_failure_short_time = (planning_status == 0) ;
+        debug_data.planning_failure_inital_state = (planning_status == 1);
+        debug_data.planning_success = (planning_status == 2);
         follow_traj_debug_pub.publish(debug_data);
+        replanning_reason = 0; //zero it out for the next round
 
         if (slam_lost){
             ROS_INFO_STREAM("slam loss");

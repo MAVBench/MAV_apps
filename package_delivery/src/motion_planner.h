@@ -81,6 +81,8 @@ private:
     ProfileManager profile_manager;
     DataContainer profiling_container;
     bool measure_time_end_to_end;
+    bool got_new_next_steps_since_last_attempted_plan = false; //only plan if you have recieved new next steps otherwise, we'll predict wrong
+
 
     // ***F:DN call back for octomap msgs
     void octomap_callback(const octomap_msgs::Octomap& msgs);
@@ -187,6 +189,9 @@ private:
     geometry_msgs::Point g_goal_pos;
     bool goal_known = false;
     ros::Time g_start_time{0};
+	enum planning_reason_enum {No_need_to_plan, Collision_detected, Failed_to_plan_last_time, Min_freq_passed, First_time_planning};
+	enum planning_status {Short_time_failure, Initial_state_failure, Success};
+
 
     // Parameters
     std::string motion_planning_core_str;
@@ -210,7 +215,7 @@ private:
     int g_number_of_planning = 0 ;
     float g_planning_budget;
     float g_out_of_bounds_allowance = 5;
-    int planning_reason;
+    int replanning_reason;
     // The following block of variables only exist for debugging purposes
     visualization_msgs::MarkerArray smooth_traj_markers;
     visualization_msgs::MarkerArray piecewise_traj_markers;

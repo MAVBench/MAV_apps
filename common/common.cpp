@@ -243,13 +243,22 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
     static double prev_vy_error = 0;
     static double prev_vz_error = 0;
 
-    double current_x_error, current_y_error, current_z_error;
+    double current_x_error, current_y_error, current_z_error, position_deriv_error_x,  position_deriv_error_y,  position_deriv_error_z;
     double current_vx_error, current_vy_error, current_vz_error;
     double target_x, target_y, target_z;
     double target_vx, target_vy, target_vz;
 
 
-    while (time > 0 && traj->size() > 0) {
+
+    static ::geometry_msgs::Vector3 prev_linear_vel;
+    static ::geometry_msgs::Vector3 prev_linear_acc;
+    static ros::Time last_time_sample = ros::Time::now();
+
+	auto pos = drone.position();
+	auto vel = drone.velocity();
+	auto acc = drone.acceleration();
+
+	while (time > 0 && traj->size() > 0) {
         multiDOFpoint p = traj->front();
 
 
@@ -283,8 +292,6 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         // use PID for velocity commands (by correcting for position and velocity errors)
 
         else if (check_position) {
-        	auto pos = drone.position();
-        	auto vel = drone.velocity();
 
         	//target_x = p.x + .5*p.ax*pow(std::min((double)time, p.duration),2) + p.vx*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
         	//target_y = p.y + .5*p.ay*pow(std::min((double)time, p.duration),2) + p.vy*std::min((double)time, p.duration);  //corrected target, since we slice the way points further
@@ -294,16 +301,65 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         	target_vy = p.vy + p.ay*std::min((double)time, p.duration);
         	target_vz = p.vz + p.az*std::min((double)time, p.duration);
 
+        	target_x = p.x + target_vx*std::min((double)time, p.duration);
+        	target_y = p.y + target_vy*std::min((double)time, p.duration);
+        	target_z = p.z + target_vz*std::min((double)time, p.duration);
+
+
+        	target_vx = p.vx;
+        	target_vy = p.vy;
+        	target_vz = p.vz;
+
+        	/*
+        	target_x = p.x;
+        	target_y = p.y;
+        	target_z = p.z;
+			*/
+        	target_x = (*traj)[1].x;
+        	target_y = (*traj)[1].y;
+        	target_z = (*traj)[1].z;
+
+
+        	// collecting debug data
+        	debug_data.target_acceleration.x = prev_linear_acc.x;
+        	debug_data.target_acceleration.y = prev_linear_acc.y;
+        	debug_data.target_acceleration.z = prev_linear_acc.z;
+
+        	debug_data.measured_acceleration.x = acc.linear.x;
+        	debug_data.measured_acceleration.y = acc.linear.y;
+        	debug_data.measured_acceleration.z = acc.linear.z;
+
+
+        	debug_data.time_between_samples = (ros::Time::now() - last_time_sample).toSec();
+        	debug_data.calc_acceleration.x = (vel.linear.x - prev_linear_vel.x)/debug_data.time_between_samples;
+        	debug_data.calc_acceleration.y = (vel.linear.y - prev_linear_vel.y)/debug_data.time_between_samples;
+        	debug_data.calc_acceleration.z = (vel.linear.z - prev_linear_vel.z)/debug_data.time_between_samples;
+        	last_time_sample = ros::Time::now();
+
+        	debug_data.target_velocity.x = target_vx;
+        	debug_data.target_velocity.y = target_vy;
+        	debug_data.target_velocity.z = target_vz;
+
+        	debug_data.measured_velocity.x = vel.linear.x;
+        	debug_data.measured_velocity.y = vel.linear.y;
+        	debug_data.measured_velocity.z = vel.linear.z;
+
+        	debug_data.target_position.x = p.x;
+        	debug_data.target_position.y = p.y;
+        	debug_data.target_position.z = p.z;
+
+        	debug_data.measured_position.x = pos.x;
+        	debug_data.measured_position.y = pos.y;
+        	debug_data.measured_position.z = pos.z;
+
+
+
+
         	/*
         	target_x = p.x + p.vx*std::min((double)time, p.duration);
         	target_y = p.y + p.vy*std::min((double)time, p.duration);
         	target_z = p.z + p.vz*std::min((double)time, p.duration);
 			*/
-
-        	target_x = p.x + target_vx*std::min((double)time, p.duration);
-        	target_y = p.y + target_vy*std::min((double)time, p.duration);
-        	target_z = p.z + target_vz*std::min((double)time, p.duration);
-
 
         	current_x_error = target_x - pos.x;
         	current_y_error = target_y - pos.y;
@@ -323,6 +379,10 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         	current_vy_error =  target_vy - vel.linear.y;
         	current_vz_error =  target_vz - vel.linear.z;
 
+        	position_deriv_error_x = current_x_error - prev_x_error;
+        	position_deriv_error_y = current_y_error - prev_y_error;
+        	position_deriv_error_z = current_z_error - prev_z_error;
+
 
         	// tracking velocity, PID is on velocity
         	/*
@@ -333,9 +393,9 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         	
         	//tracking velocity, PID is on position
 
-        	v_x += d_px*(current_x_error - prev_x_error) + p_vx*(current_x_error) + I_px*(accumulated_x_error);
-        	v_y += d_py*(current_y_error - prev_y_error) + p_vy*(current_y_error) + I_py*(accumulated_y_error);
-        	v_z +=  d_pz*(current_z_error - prev_z_error) + p_vz*(current_z_error) + I_pz*(accumulated_z_error);
+        	v_x += d_px*(position_deriv_error_x) + p_vx*(current_x_error) + I_px*(accumulated_x_error);
+        	v_y += d_py*(position_deriv_error_y) + p_vy*(current_y_error) + I_py*(accumulated_y_error);
+        	v_z +=  d_pz*(position_deriv_error_z) + p_vz*(current_z_error) + I_pz*(accumulated_z_error);
 
 
         	//tracking position, PID is on position
@@ -369,10 +429,31 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         	debug_data.position_error.x = current_x_error;
         	debug_data.position_error.y = current_y_error;
         	debug_data.position_error.z = current_z_error;
+        	debug_data.position_acc_error.x = accumulated_x_error;
+        	debug_data.position_acc_error.y = accumulated_y_error;
+        	debug_data.position_acc_error.z = accumulated_z_error;
 
+        	debug_data.position_deriv_error.x = position_deriv_error_x;
+        	debug_data.position_deriv_error.y = position_deriv_error_y;
+        	debug_data.position_deriv_error.z = position_deriv_error_z;
+
+
+
+
+
+
+        	/*
         	debug_data.velocity_corrected.x = p.vx;
         	debug_data.velocity_corrected.y = p.vy;
         	debug_data.velocity_corrected.z = p.vz;
+        */
+        	/*
+        	debug_data.target_velocity_uncorrected.x = p.vx;
+        	debug_data.target_velocity_uncorrected.y = p.vy;
+        	debug_data.target_velocity_uncorrected.z = p.vz;
+			*/
+
+
         	/*
         	debug_data.x_error = current_x_error; debug_data.y_error = current_y_error; debug_data.z_error = current_z_error;
         	debug_data.vx_error = current_vx_error; debug_data.vy_error = current_vy_error; debug_data.vz_error = current_vz_error;
@@ -381,6 +462,15 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         	//ROS_INFO_STREAM("after ========= vx"<<v_x<<"vy"<<v_y<<"vz"<<v_z) ;
         }
+
+        prev_linear_vel.x = vel.linear.x;
+        prev_linear_vel.y = vel.linear.y;
+        prev_linear_vel.z = vel.linear.z;
+
+        prev_linear_acc.x = p.ax;
+        prev_linear_acc.y = p.ay;
+        prev_linear_acc.z = p.az;
+
 
         // Calculate the yaw we should be flying with
         float yaw = p.yaw;
@@ -421,7 +511,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
         // Fly for flight_time seconds
         auto segment_start_time = std::chrono::system_clock::now();
-        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time);
+        drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time + 1);
         //drone.fly_position(p.y, p.x, -p.z, calc_vec_magnitude(p.vx, p.vy, p.vz), scaled_flight_time); //doesn't work
         
         std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));
@@ -451,6 +541,8 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
     if (reverse_traj != nullptr)
         *reverse_traj = append_trajectory(reversed_commands, *reverse_traj);
+
+
 
     return max_speed_so_far;
 }
