@@ -75,6 +75,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::ServiceClient profile_manager_client;
   bool measure_time_end_to_end;
   float point_cloud_width, point_cloud_height; //point cloud boundary
+  int point_cloud_density_reduction; // How much to de-densify the point cloud by
 
   virtual void onInit();
 
@@ -134,7 +135,12 @@ void PointCloudXyzNodelet::onInit()
   if (!ros::param::get("/point_cloud_height", point_cloud_height)) {
     ROS_FATAL("Could not start img_proc. point_cloud_height Parameter missing! Looking for measure_time_end_to_end");
     return ;
-   }
+  }
+
+  if (!ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_density_reduction Parameter missing!");
+    return ;
+  }
 
   pt_cld_ctr = 0;
   pt_cld_generation_acc = 0;
@@ -274,11 +280,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs;
 
   for(size_t i=0; i<n_points; ++i, ++old_x, ++old_y, ++old_z){
-    // Cab change to radius!!
-    if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
-      xs.push_back(*old_x);
-      ys.push_back(*old_y);
-      zs.push_back(*old_z);
+    if (i % point_cloud_density_reduction == 0) {
+      // Cab change to radius!!
+      if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
+        xs.push_back(*old_x);
+        ys.push_back(*old_y);
+        zs.push_back(*old_z);
+      }
     }
   }
 
