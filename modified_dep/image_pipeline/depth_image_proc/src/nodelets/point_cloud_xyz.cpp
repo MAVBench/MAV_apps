@@ -40,10 +40,11 @@
 #include <depth_image_proc/depth_conversions.h>
 #include <signal.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
-
+#include <datacontainer.h>
 #include "Profiling.h"
 #include "profile_manager/start_profiling_srv.h"
 #include "profile_manager/profiling_data_srv.h"
+#include <profile_manager.h>
 
 namespace depth_image_proc {
 
@@ -77,20 +78,20 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   float point_cloud_width, point_cloud_height; //point cloud boundary
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
   double point_cloud_resolution; // specifies the minimum distance between the points
-
+  bool first_time = true;
   virtual void onInit();
 
   void connectCb();
 
   void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                const sensor_msgs::CameraInfoConstPtr& info_msg);
-
   // Profiling
   //void sigIntHandlerPrivate(int signo);
   void log_data_before_shutting_down();
   ~PointCloudXyzNodelet();
+  ProfileManager *profile_manager_;
+  DataContainer *profiling_container;
 };
-
 
 
 void PointCloudXyzNodelet::onInit()
@@ -98,13 +99,15 @@ void PointCloudXyzNodelet::onInit()
   ros::NodeHandle& nh         = getNodeHandle();
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   it_.reset(new image_transport::ImageTransport(nh));
-
+  //profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
   //signal(SIGINT, sigIntHandlerPrivate);
   
   // Read parameters
   private_nh.param("queue_size", queue_size_, 5);
 
-  
+  profiling_container = new DataContainer();
+  profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
+
   // Profiling 
   if (!ros::param::get("/DEBUG", DEBUG_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for DEBUG");
@@ -183,10 +186,9 @@ void PointCloudXyzNodelet::connectCb()
 }
 
 void PointCloudXyzNodelet::log_data_before_shutting_down(){
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    //std::string ns = ros::this_node::getName();
 
-    std::string ns = ros::this_node::getName();
-    
+    /*
     profiling_data_srv_inst.request.key = "img_to_cloud_commun_t";
     profiling_data_srv_inst.request.value = (((double)img_to_pt_cloud_acc)/1e9)/pt_cld_ctr;
     
@@ -203,6 +205,15 @@ void PointCloudXyzNodelet::log_data_before_shutting_down(){
             ros::shutdown();
         }
     }
+	*/
+
+    profiling_container->setStatsAndClear();
+    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container->getStatsInString();
+    profile_manager_->verboseClientCall(profiling_data_verbose_srv_inst);
+
 }
 
 
@@ -268,9 +279,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
     pt_cld_generation_acc += pt_cloud_generation_t.toSec()*1e9; 
     pt_cld_ctr++; 
      
-    if ((pt_cld_ctr+1) % data_collection_iteration_freq_ == 0) {
+    if ((pt_cld_ctr+1) % data_collection_iteration_freq_ == 0) { // this is because I can't figure out how
+    															 // insert the shutting_down function in the sigInt
         log_data_before_shutting_down();       
-        //profiling_data_srv_inst.request.value = (((double)pt_cld_generation_acc)/1e9)/pt_cld_ctr;
     }
     
   }
@@ -281,12 +292,11 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   sensor_msgs::PointCloud2Iterator<float> old_x(*cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> old_y(*cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> old_z(*cloud_msg, "z");
-
   std::vector<float> xs;
   std::vector<float> ys;
   std::vector<float> zs;
 
-
+  profiling_container->capture("filtering", "start", ros::Time::now());
   /*
   // filter based on density
   // problem with this method is that due to the nature of point cloud
@@ -345,8 +355,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 		  }
 	  }
   }
+  profiling_container->capture("filtering", "end", ros::Time::now());
 
   /*
+  // distance between two points
   for(size_t i=0; i< n_points - 1 ; ++i, ++old_x, ++old_y, ++old_z){
       double x_diff = xs[i+1] - xs[i];
 	  double y_diff = ys[i+1] - ys[i];
@@ -360,34 +372,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 		  }
       }
   }
+ //ROS_INFO_STREAM("number of points in point cloud " << xs.size());
  */
-  //ROS_INFO_STREAM("number of points in point cloud " << xs.size());
-
-  /*
-  for (int i = 0; i<xs.size() -1 ; i++){
-	  double x_diff = xs[i+1] - xs[i];
-	  double y_diff = ys[i+1] - ys[i];
-	  double z_diff = zs[i+1] - zs[i];
-	  ROS_INFO_STREAM("points in pc distance" <<std::sqrt(x_diff*x_diff + y_diff*y_diff + z_diff*z_diff)<<" "<<zs[i]);
-  }
-
-
-   double prev_z = zs[0];
-   double cur_z;
-   double size = 0;
-   for (int i = 0; i<xs.size() -1 ; i++){
-	   cur_z = zs[i];
-	   if (cur_z != prev_z){
-		   std::cout<<"points per z:"<<size <<","<<"\n new z is:"<<cur_z<<":";
-		   prev_z = cur_z;
-		   size = 0;
-	   }
-	   std::cout<<"  ("<<xs[i]<<","<<ys[i]<<","<<zs[i]<<"),";
-	   size +=1;
-
-   }
-
-	*/
 
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);

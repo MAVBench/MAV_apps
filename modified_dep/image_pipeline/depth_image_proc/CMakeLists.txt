@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(depth_image_proc)
 
+add_definitions(-DROS)
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
-find_package(catkin REQUIRED cmake_modules cv_bridge eigen_conversions image_geometry image_transport message_filters nodelet sensor_msgs stereo_msgs tf2 tf2_ros)
+find_package(catkin REQUIRED cmake_modules cv_bridge eigen_conversions image_geometry image_transport message_filters nodelet sensor_msgs stereo_msgs tf2 tf2_ros
+    data_collection profile_manager)
 
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
   add_compile_options(-std=c++11)
@@ -14,6 +16,7 @@ catkin_package(
 
 find_package(Boost REQUIRED)
 find_package(Eigen3 QUIET)
+
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
@@ -29,6 +32,8 @@ find_package(OpenCV REQUIRED)
 include_directories(include ${BOOST_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} 
    ${blah} ${common_utility_include}  ${EIGEN3_INCLUDE_DIRS} 
   ${CATKIN_DEVEL_PREFIX}/include
+  ${common_utility_include}/profile_manager/include
+  ${common_utility_include}/data_collection/include
   )
 
 add_library(${PROJECT_NAME} src/nodelets/convert_metric.cpp

@@ -71,7 +71,7 @@
   <!-- ===========================Profiling ================================ -->
   <!-- ===================================================================== -->
   <!-- profiling params -->
-  <arg name="measure_time_end_to_end" default="false" />
+  <arg name="measure_time_end_to_end" default="true" />
   <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/> 
 
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
@@ -93,7 +93,7 @@
   <!--param name="statistics_window_max_elements" value="100000"/-->
   </group> 
   <!-- only for to octomap and pt cloud--> 
-  <arg name="data_collection_iteration_freq" value="150" />
+  <arg name="data_collection_iteration_freq" value="150" />  <!-- how often collect data in point cloud -->
   <param name="data_collection_iteration_freq_ptCld" value="$(eval 5*arg('data_collection_iteration_freq'))"/>
 
   <!-- ===================================================================== -->
