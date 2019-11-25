@@ -165,6 +165,7 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 		return;
 	}
 
+	// search throug hthe timeing_msgs to find the msg of interest (with the same header)
 	vector<ros::Time>::iterator it ;
 	for (it = timing_msgs_vec.begin(); it != timing_msgs_vec.end(); it++){
 		if (*it == msg_s_header.stamp) {
@@ -172,6 +173,8 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 		}
 	}
 
+	//uppon finding, log it, and erase everything before it (to improve performance and space)
+	// if call back is motion planner, then erase up to msg (
 	if (it == timing_msgs_vec.end()){
 		ROS_ERROR_STREAM("couldn't find a header with the same time stamp to erase the elements before of");
 	}else{
@@ -678,6 +681,7 @@ int main(int argc, char **argv)
         	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
         			(ros::Time::now() - timing_msgs_begin_el_time).toSec()); //ignoring the first planning since it takse forever
         	SA_response_time_capture_ctr++;
+        	ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
         }
         // microbenchmarks
         if (micro_benchmark){

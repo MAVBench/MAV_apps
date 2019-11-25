@@ -76,6 +76,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   bool measure_time_end_to_end;
   float point_cloud_width, point_cloud_height; //point cloud boundary
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
+  double point_cloud_resolution; // specifies the minimum distance between the points
 
   virtual void onInit();
 
@@ -141,6 +142,12 @@ void PointCloudXyzNodelet::onInit()
     ROS_FATAL("Could not start img_proc. point_cloud_density_reduction Parameter missing!");
     return ;
   }
+
+  if (!ros::param::get("/point_cloud_resolution", point_cloud_resolution)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_resolution Parameter missing!");
+    return ;
+  }
+
 
   pt_cld_ctr = 0;
   pt_cld_generation_acc = 0;
@@ -279,6 +286,15 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> ys;
   std::vector<float> zs;
 
+
+  /*
+  // filter based on density
+  // problem with this method is that due to the nature of point cloud
+  // different depths have different resolutions, hence the maximum
+  // distance between unfilterd points increases as the depth increases.
+  // this is bad because we don't know how reducing the point cloud resolution
+  // impacts the world resolution. We need to know this to be able to inflate
+  // the drone in the case of low resolution
   for(size_t i=0; i<n_points; ++i, ++old_x, ++old_y, ++old_z){
     if (i % point_cloud_density_reduction == 0) {
       // Cab change to radius!!
@@ -289,6 +305,89 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
       }
     }
   }
+  */
+
+  // filter based on octomap resolution
+  auto cur_x_itr = old_x;
+  auto cur_y_itr = old_y;
+  auto cur_z_itr = old_z;
+  double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
+
+  bool first_point = true; //used for filtering
+
+
+  for(size_t i=0; i< n_points - 1 ; ++i, ++old_x, ++old_y, ++old_z){
+	  // filter based on distance between adjacent nodes
+	  if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
+		  if (first_point) {
+			  cur_x_itr = (old_x); // increment cur_x only if we are not filtering it
+			  cur_y_itr = (old_y); // increment cur_x only if we are not filtering it
+			  cur_z_itr = (old_z); // increment cur_x only if we are not filtering it
+			  first_point = false;
+		  }
+		  // a pointer to the next point
+		  auto next_x_itr = (old_x+1);
+		  auto next_y_itr = (old_y+1);
+		  auto next_z_itr = (old_z+1);
+
+		  // calc differnce in distnace between adjacent nodes
+		  double x_diff = *(next_x_itr) - *(cur_x_itr);
+		  double y_diff = *(next_y_itr) - *(cur_y_itr);
+		  double z_diff = *(next_z_itr) - *(cur_z_itr);
+		  double p2p_distance = std::sqrt(x_diff*x_diff + y_diff*y_diff + z_diff*z_diff); // distance between two adjacent points
+		  if (p2p_distance >= point_cloud_resolution_in_cubic) {
+			  xs.push_back(*old_x);
+			  ys.push_back(*old_y);
+			  zs.push_back(*old_z);
+			  cur_x_itr = (old_x + 1); // increment cur_x only if we are not filtering it
+			  cur_y_itr = (old_y + 1); // increment cur_x only if we are not filtering it
+			  cur_z_itr = (old_z + 1); // increment cur_x only if we are not filtering it
+		  }
+	  }
+  }
+
+  /*
+  for(size_t i=0; i< n_points - 1 ; ++i, ++old_x, ++old_y, ++old_z){
+      double x_diff = xs[i+1] - xs[i];
+	  double y_diff = ys[i+1] - ys[i];
+	  double z_diff = zs[i+1] - zs[i];
+      double p2p_distance = std::sqrt(x_diff*x_diff + y_diff*y_diff + z_diff*z_diff); // distance between two adjacent points
+      if (p2p_distance >= point_cloud_resolution){
+		  if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
+			xs.push_back(*old_x);
+			ys.push_back(*old_y);
+			zs.push_back(*old_z);
+		  }
+      }
+  }
+ */
+  //ROS_INFO_STREAM("number of points in point cloud " << xs.size());
+
+  /*
+  for (int i = 0; i<xs.size() -1 ; i++){
+	  double x_diff = xs[i+1] - xs[i];
+	  double y_diff = ys[i+1] - ys[i];
+	  double z_diff = zs[i+1] - zs[i];
+	  ROS_INFO_STREAM("points in pc distance" <<std::sqrt(x_diff*x_diff + y_diff*y_diff + z_diff*z_diff)<<" "<<zs[i]);
+  }
+
+
+   double prev_z = zs[0];
+   double cur_z;
+   double size = 0;
+   for (int i = 0; i<xs.size() -1 ; i++){
+	   cur_z = zs[i];
+	   if (cur_z != prev_z){
+		   std::cout<<"points per z:"<<size <<","<<"\n new z is:"<<cur_z<<":";
+		   prev_z = cur_z;
+		   size = 0;
+	   }
+	   std::cout<<"  ("<<xs[i]<<","<<ys[i]<<","<<zs[i]<<"),";
+	   size +=1;
+
+   }
+
+	*/
 
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);

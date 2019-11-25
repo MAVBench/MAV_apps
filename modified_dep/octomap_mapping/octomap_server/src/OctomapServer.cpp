@@ -396,6 +396,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 
   //double total_elapsed = (ros::Time::now() - startTime).toSec();
   profiling_container.capture("octomap_insertCloud", "end", ros::Time::now());
+  //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
 
   /*
   if(CLCT_DATA){

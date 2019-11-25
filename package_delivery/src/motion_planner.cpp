@@ -179,6 +179,7 @@ void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
 }
 
 
+// debugging
 void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 	octomap_msgs::Octomap_<std::allocator<void> > map;
 
@@ -188,28 +189,28 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 	//publish_dummy_octomap_vis(m_octree);
 }
 
-bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
-    /*
-    if (!this->haveExistingTraj()){
-		ROS_ERROR_STREAM("no trajectory so replan");
-		return true;
-	}
-	*/
 
-	 if(first_time_planning) {
+// determine whether it's time to replan
+bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
+	bool replan;
+
+	if(first_time_planning) {
 		replanning_reason = First_time_planning;
-		return true;
-	}
-	else if (got_new_next_steps_since_last_attempted_plan){
-		if (failed_to_plan_last_time && got_new_next_steps_since_last_attempted_plan) {
+		replan = true;
+	} else if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
+		if (failed_to_plan_last_time) {
 		//ROS_ERROR_STREAM("failed to plan last time , so replan");
 		replanning_reason = Failed_to_plan_last_time;
-		return true;
+		replan = true;
+		} else if(planned_approximately){
+			replanning_reason = Last_plan_approximate;
+			replan = true;
+			ROS_ERROR_STREAM("approximate planning");
 		}
 		else if( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
 			replanning_reason = Min_freq_passed;
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
-			return true;
+			replan = true;
 		} else {
 			profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
 			bool collision_coming = this->traj_colliding(&g_next_steps_msg);
@@ -219,15 +220,22 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				//ROS_INFO_STREAM("there is a collision");
 				profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0); // @suppress("Invalid arguments")
 				//ROS_ERROR_STREAM("collision comming, so replan");
-				return true;
-			}else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
+				replan = true;
+			} else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
 				replanning_reason = No_need_to_plan;
-				timing_msg_from_mp_pub.publish(msg.header);
+				replan = false;
 			}
 		}
 	}
-	return false;
+
+	// for profiling
+	if (!replan) { //notify the follow trajectory to erase up to this msg
+		timing_msg_from_mp_pub.publish(msg.header);
+	}
+
+	return replan;
 }
+
 
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
@@ -260,6 +268,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
+
     this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
     first_time_planning = false;
@@ -345,8 +354,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         }
 
         notified_failure = true;
-
-        res.multiDOFtrajectory.header.stamp = req.header.stamp;
+        if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
+        else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -389,7 +398,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.stop = true;
         res.multiDOFtrajectory.planning_status = Short_time_failure; //profiling
         notified_failure = true;
-        res.multiDOFtrajectory.header.stamp = req.header.stamp;
+        if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
+        else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -398,10 +408,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     create_response(res, smooth_path);
 
     // Publish the trajectory (for debugging purposes)
-    if (measure_time_end_to_end){ res.multiDOFtrajectory.header.stamp = req.header.stamp;}
-    else{ res.multiDOFtrajectory.header.stamp = ros::Time::now();}
+    if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
+    else{ res.multiDOFtrajectory.header.stamp = req.header.stamp;}
     res.multiDOFtrajectory.replanning_reason = replanning_reason;
-
     res.multiDOFtrajectory.planning_status = Success;
     got_new_next_steps_since_last_attempted_plan = false;
 
@@ -411,7 +420,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     g_number_of_planning++; 
     res.path_found = true;
-
+    planned_approximately = (status == 3);
     return true;
 }
 

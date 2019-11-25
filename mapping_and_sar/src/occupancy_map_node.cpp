@@ -36,11 +36,6 @@ int main(int argc, char** argv)
     std::string mapFilename(""), mapFilenameParam("");
     signal(SIGINT, sigIntHandlerPrivate);
 
-    //----------------------------------------------------------------- 
-	// *** F:DN variables	
-	//----------------------------------------------------------------- 
-    
-    // Create a Drone object
     std::string ip_addr, localization_method;
     ros::param::get("/ip_addr", ip_addr);
     uint16_t port = 41451;
@@ -54,6 +49,7 @@ int main(int argc, char** argv)
     octomap_server::OctomapServer server;
     octomap::OcTree * octree = server.tree_ptr();
 
+    // getting a map from a file
     if (nh.getParam("map_file", mapFilenameParam)) {
         if (mapFilename != "") {
             ROS_WARN("map_file is specified by the argument '%s' and rosparam '%s'. now loads '%s'", mapFilename.c_str(), mapFilenameParam.c_str(), mapFilename.c_str());
@@ -61,7 +57,6 @@ int main(int argc, char** argv)
             mapFilename = mapFilenameParam;
         }
     }
-
     if (mapFilename != "") {
         if (!server.openFile(mapFilename)){
             ROS_ERROR("Could not open file %s", mapFilename.c_str());
@@ -74,6 +69,7 @@ int main(int argc, char** argv)
     fcc.setOctomapServer(&server); // This is only used for profiling purposes.
     fcc_ptr = &fcc;
 
+    // spin
     while (ros::ok()) {
         ros::spinOnce();
         fcc.spinOnce();

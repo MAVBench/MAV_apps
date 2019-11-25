@@ -492,7 +492,6 @@ bool record_profiling_data_verbose_cb(profile_manager::profiling_data_verbose_sr
         return false;
     }
     g_highlevel_application_stats_verbose.push_back(KeyValueStringPairStruct(req.key, req.value));
-    ROS_ERROR_STREAM("heeeeeeeeeeeeeeeel");
     return true;
 }
 

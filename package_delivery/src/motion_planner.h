@@ -189,8 +189,9 @@ private:
     geometry_msgs::Point g_goal_pos;
     bool goal_known = false;
     ros::Time g_start_time{0};
-	enum planning_reason_enum {No_need_to_plan, Collision_detected, Failed_to_plan_last_time, Min_freq_passed, First_time_planning};
+	enum planning_reason_enum {No_need_to_plan, Collision_detected, Last_plan_approximate, Failed_to_plan_last_time, Min_freq_passed, First_time_planning};
 	enum planning_status {Short_time_failure, Initial_state_failure, Success};
+	bool planned_approximately = false; //if true, we replan again
 
 
     // Parameters
@@ -345,9 +346,12 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     ob::PlannerStatus solved = ss.solve(g_planning_budget);
     if (solved == ob::PlannerStatus::INVALID_START) {
     	status = 2;
-    }else if (solved){
+    }else if (solved == ob::PlannerStatus::APPROXIMATE_SOLUTION){
+    	status = 3;
+    }
+    else if (solved == ob::PlannerStatus::EXACT_SOLUTION){
     	status = 1;
-    }else {
+    } else {
     	status = 0;
     }
 
