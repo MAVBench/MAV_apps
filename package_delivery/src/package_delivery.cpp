@@ -53,7 +53,7 @@ bool g_start_profiling = false;
 double v_max__global, a_max__global, g_fly_trajectory_time_out;
 float g_max_yaw_rate;
 float g_max_yaw_rate_during_flight;
-double g_planning_budget;
+double g_piecewise_planning_budget;
 long long g_planning_time_including_ros_overhead_acc  = 0;
 int  g_planning_ctr = 0; 
 bool clct_data = true;
@@ -268,7 +268,7 @@ void package_delivery_initialize_params()
         return; 
     }
 
-    if(!ros::param::get("/planning_budget", g_planning_budget)) {
+    if(!ros::param::get("/piecewise_planning_budget", g_piecewise_planning_budget)) {
         ROS_FATAL_STREAM("Could not start pkg delivery planning_budget not provided");
         return;
     }
@@ -311,7 +311,7 @@ void get_start_in_future(Drone& drone, geometry_msgs::Point& start,
         return;
     }
 
-    multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, g_planning_budget);
+    multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, g_piecewise_planning_budget);
 
     // Shift the drone's planned position at time "g_planning_budget" seconds
     // by its current position

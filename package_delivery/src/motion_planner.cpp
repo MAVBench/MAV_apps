@@ -231,6 +231,8 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	// for profiling
 	if (!replan) { //notify the follow trajectory to erase up to this msg
 		timing_msg_from_mp_pub.publish(msg.header);
+	}else{
+		profiling_container.capture("planning_count", "counter", 0); // @suppress("Invalid arguments")
 	}
 
 	return replan;
@@ -244,8 +246,15 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
         delete octree;
 	}
     //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
-	if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "start", msg.header.stamp);
-	if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
+	if (measure_time_end_to_end){
+		profiling_container.capture("sensor_to_motion_planner_time", "single",
+				(ros::Time::now() - msg.header.stamp).toSec());
+	}else{
+		profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "single",
+				(ros::Time::now() - msg.header.stamp).toSec());
+	}
+
+	//if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
 
     profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now());
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
@@ -292,7 +301,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //----------------------------------------------------------------- 
     auto hook_end_t_2 = ros::Time::now(); 
     //auto hook_start_t = ros::Time::now();
-    //g_start_time = ros::Time::now();
     //g_start_pos = req.start;
     //g_goal_pos = req.goal;
 
@@ -421,6 +429,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_number_of_planning++; 
     res.path_found = true;
     planned_approximately = (status == 3);
+    if (planned_approximately) {
+		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
+    }
     return true;
 }
 
@@ -455,7 +466,7 @@ void MotionPlanner::get_start_in_future(Drone& drone,
 	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, .2);
 
 
-    // Shift the drone's planned position at time "g_planning_budget" seconds
+    // Shift the drone's planned position at time "g_piecewise_planning_budget" seconds
     // by its current position
     auto current_pos = drone.position();
     auto planned_pos = g_next_steps_msg.points[0];
@@ -522,6 +533,9 @@ void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_m
 	req.header.stamp = invocation_time;
 	req.call_func = 1;  //used for debugging purposes
 	failed_to_plan_last_time = !get_trajectory_fun(req, res);
+	if (failed_to_plan_last_time){
+		profiling_container.capture("planning_failure_count", "counter", 0); // @suppress("Invalid arguments")
+	}
 }
 
 
@@ -533,8 +547,13 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 
 void MotionPlanner::motion_planning_initialize_params()
 {
-    if(!ros::param::get("/planning_budget", g_planning_budget)){
-      ROS_FATAL_STREAM("Could not start pkg delivery planning_budget not provided");
+    if(!ros::param::get("/piecewise_planning_budget", g_piecewise_planning_budget)){
+      ROS_FATAL_STREAM("Could not start pkg delivery piecewise_planning_budget not provided");
+      return ;
+    }
+
+    if(!ros::param::get("/smoothening_budget", g_smoothening_budget)){
+      ROS_FATAL_STREAM("Could not start pkg delivery smoothening_budget not provided");
       return ;
     }
 
@@ -591,7 +610,14 @@ void MotionPlanner::motion_planning_initialize_params()
 
 void MotionPlanner::log_data_before_shutting_down()
 {
-    std::string ns = ros::this_node::getName();
+    // post processing for some statistics
+    int total_planning_count = profiling_container.findDataByName("planning_count")->values.back();
+    int approximate_planning_count = profiling_container.findDataByName("approximate_plans_count")->values.back();
+    int planning_failure_count = profiling_container.findDataByName("planning_failure_count")->values.back();
+    profiling_container.capture("planning_failure_rate", "single", float(planning_failure_count)/total_planning_count); // @suppress("Invalid arguments")
+    profiling_container.capture("approximate_planning_rate", "single", float(approximate_planning_count)/total_planning_count); // @suppress("Invalid arguments")
+
+	std::string ns = ros::this_node::getName();
     profiling_container.setStatsAndClear();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
@@ -610,14 +636,12 @@ void MotionPlanner::log_data_before_shutting_down()
     }
 	*/
 
+
     profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
     profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container.getStatsInString();
     profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
 
     /*
-
-
-
     profiling_data_srv_inst.request.key = "number_of_plannings";
     profiling_data_srv_inst.request.value = g_number_of_planning;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
@@ -903,7 +927,9 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj)
 
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
 {
-    // Variables for visualization for debugging purposes
+
+    ros::Time smoothening_start_time = ros::Time::now();
+	// Variables for visualization for debugging purposes
 	double distance = 0.5; 
 	std::string frame_id = "world";
 
@@ -941,6 +967,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Optimize until no collisions are present
 	bool col;
     int smoothening_ctr = 0;	
+    ros::Duration smoothening_time_so_far;
     do {
 		col = false;
 
@@ -1005,9 +1032,11 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			}
 		}
      smoothening_ctr++;	
+     smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
     } while (col &&
-            smoothening_ctr < 5);
-            //ros::Time::now() < g_start_time+ros::Duration(g_planning_budget));
+            smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec());
+    		//smoothening_ctr < 5);
+            //ros::Time::now() < g_start_time+ros::Duration(g_piecewise_planning_budget));
 
     if (col) {
         return smooth_trajectory();
