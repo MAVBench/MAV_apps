@@ -68,6 +68,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   nlopt
   future_collision
+  profile_manager
+  data_collection
 )
 
 add_message_files(
@@ -92,6 +94,8 @@ include_directories(
     $ENV{AirSim_base_dir}/AirLib/include
     $ENV{mavbench_apps_base_dir}/follow_the_leader/
     ${common_utility_include} 
+    ${common_utility_include}/profile_manager/include
+    ${common_utility_include}/data_collection/include
     ${darknet_include_dir}
     ${CUDA_INCLUDE_DIRS}
 )
