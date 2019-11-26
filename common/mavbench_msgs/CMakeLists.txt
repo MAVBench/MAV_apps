@@ -58,6 +58,8 @@ add_message_files(
   multiDOFtrajectory.msg
   future_collision.msg
   follow_traj_debug.msg
+  motion_planning_debug.msg
+  octomap_debug.msg
   )
 
 ## Generate services in the 'srv' folder

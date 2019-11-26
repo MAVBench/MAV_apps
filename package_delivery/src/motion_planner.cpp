@@ -36,6 +36,8 @@
 #include <tf/transform_datatypes.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <XmlRpcValue.h>
+#include <mavbench_msgs/motion_planning_debug.h>
+
 
 #include "../../deps/mav_comm/mav_msgs/include/mav_msgs/eigen_mav_msgs.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/impl/polynomial_optimization_linear_impl.h"
@@ -64,7 +66,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
     timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_mp", 1);
-
+    motion_planning_debug_pub = nh.advertise<mavbench_msgs::motion_planning_debug>("/motion_planning_debug", 1);
 
 	// for stress testing
 	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 1);
@@ -212,13 +214,13 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
 			replan = true;
 		} else {
-			profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now()); // @suppress("Invalid arguments")
+			profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 			bool collision_coming = this->traj_colliding(&g_next_steps_msg);
-			profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now()); // @suppress("Invalid arguments")
+			profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 			if (collision_coming){
 				replanning_reason = Collision_detected;
 				//ROS_INFO_STREAM("there is a collision");
-				profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0); // @suppress("Invalid arguments")
+				profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0, capture_size); // @suppress("Invalid arguments")
 				//ROS_ERROR_STREAM("collision comming, so replan");
 				replan = true;
 			} else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
@@ -232,7 +234,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	if (!replan) { //notify the follow trajectory to erase up to this msg
 		timing_msg_from_mp_pub.publish(msg.header);
 	}else{
-		profiling_container.capture("planning_count", "counter", 0); // @suppress("Invalid arguments")
+		profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
 	}
 
 	return replan;
@@ -248,21 +250,21 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
 	if (measure_time_end_to_end){
 		profiling_container.capture("sensor_to_motion_planner_time", "single",
-				(ros::Time::now() - msg.header.stamp).toSec());
+				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
 	}else{
 		profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "single",
-				(ros::Time::now() - msg.header.stamp).toSec());
+				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
 	}
 
 	//if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
 
-    profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now());
+    profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now(), capture_size);
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
-    profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now());
+    profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now(), capture_size);
 
-    profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now());
+    profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now(), capture_size);
     octree = dynamic_cast<octomap::OcTree*> (tree);
-    profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now());
+    profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
     // check whether the goal has already been provided or not, if not, return
     if (!this->goal_known) { //
@@ -276,10 +278,11 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     this->last_planning_time = ros::Time::now();
 
     // if already have a plan, but not colliding, plan again
-    profiling_container.capture("motion_planning_time_total", "start", ros::Time::now()); // @suppress("Invalid arguments")
+    profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 
     this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
-    profiling_container.capture("motion_planning_time_total", "end", ros::Time::now()); // @suppress("Invalid arguments")
+    profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
     first_time_planning = false;
 
 }
@@ -328,10 +331,14 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //publish_dummy_octomap_vis(octree);
     int status;
 
-    profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now());
+    profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now(), capture_size);
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
-    profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now());
-
+    profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now(), capture_size);
+    if (DEBUG_RQT) {
+    		debug_data.header.stamp = ros::Time::now();
+    		debug_data.motion_planning_piece_wise_time = profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back();
+    		motion_planning_debug_pub.publish(debug_data);
+    }
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
@@ -368,17 +375,17 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         return false;
     }
 
-    profiling_container.capture("RRT_path_length", "single", calculate_path_length(piecewise_path));
+    profiling_container.capture("RRT_path_length", "single", calculate_path_length(piecewise_path), capture_size);
 
     if (motion_planning_core_str != "lawn_mower") {
-    	profiling_container.capture("piecewise_path_post_process", "start", ros::Time::now());
+    	profiling_container.capture("piecewise_path_post_process", "start", ros::Time::now(), capture_size);
     	postprocess(piecewise_path);
-    	profiling_container.capture("piecewise_path_post_process", "end", ros::Time::now());
+    	profiling_container.capture("piecewise_path_post_process", "end", ros::Time::now(), capture_size);
     }
 
     // Smoothen the path and build the multiDOFtrajectory response
     //ROS_INFO("Smoothenning...");
-    profiling_container.capture("smoothening_time", "start", ros::Time::now());
+    profiling_container.capture("motion_planning_smoothening_time", "start", ros::Time::now(), capture_size);
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
                                         req.twist.linear.y,
@@ -386,7 +393,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
                                     Eigen::Vector3d(req.acceleration.linear.x,
                                                     req.acceleration.linear.y,
                                                     req.acceleration.linear.z));
-    profiling_container.capture("smoothening_time", "end", ros::Time::now());
+    profiling_container.capture("motion_planning_smoothening_time", "end", ros::Time::now(), capture_size);
+    if (DEBUG_RQT) {
+    		debug_data.header.stamp = ros::Time::now();
+    		debug_data.motion_planning_smoothening_time = profiling_container.findDataByName("motion_planning_smoothening_time")->values.back();
+    		motion_planning_debug_pub.publish(debug_data);
+	}
 
     if (smooth_path.empty()) {
     	if (notified_failure){ //so we won't fly backward multiple times
@@ -429,9 +441,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_number_of_planning++; 
     res.path_found = true;
     planned_approximately = (status == 3);
-    if (planned_approximately) {
+    if (planned_approximately || first_time_planning) {
 		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
     }
+
     return true;
 }
 
@@ -523,6 +536,7 @@ bool MotionPlanner::haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj){
 	return true;
 }
 
+
 void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point g_goal){
 
 	package_delivery::get_trajectory::Request req;
@@ -533,9 +547,10 @@ void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_m
 	req.header.stamp = invocation_time;
 	req.call_func = 1;  //used for debugging purposes
 	failed_to_plan_last_time = !get_trajectory_fun(req, res);
-	if (failed_to_plan_last_time){
+	if (failed_to_plan_last_time || first_time_planning){
 		profiling_container.capture("planning_failure_count", "counter", 0); // @suppress("Invalid arguments")
 	}
+
 }
 
 
@@ -547,8 +562,18 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 
 void MotionPlanner::motion_planning_initialize_params()
 {
-    if(!ros::param::get("/piecewise_planning_budget", g_piecewise_planning_budget)){
+	if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
+      ROS_FATAL_STREAM("Could not start pkg delivery DEBUG_RQT not provided");
+      return ;
+    }
+
+	if(!ros::param::get("/piecewise_planning_budget", g_piecewise_planning_budget)){
       ROS_FATAL_STREAM("Could not start pkg delivery piecewise_planning_budget not provided");
+      return ;
+    }
+
+    if(!ros::param::get("/capture_size", capture_size)){
+      ROS_FATAL_STREAM("Could not start pkg delivery capture_size not provided");
       return ;
     }
 

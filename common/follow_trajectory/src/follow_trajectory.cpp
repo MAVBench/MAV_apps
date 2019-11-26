@@ -46,7 +46,8 @@ ros::Time last_new_trajectory_time;
 float PID_correction_time; //the time within which we enforce PID (since the last  new trajectory received)
 float g_follow_trajectory_loop_rate; //the time within which we enforce PID (since the last  new trajectory received)
 float g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse;
-
+int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
+bool DEBUG_RQT = false; //to publish for rqt_plotter
 
 // Profiling
 std::string g_supervisor_mailbox; //file to write to when completed
@@ -180,7 +181,8 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 	}else{
 	    if (caller == "callback_trajectory"){ // only make sense to calculate SA metrics when there is a trajectory
 	    	timing_msgs_begin_el_time = *(timing_msgs_vec.begin());
-	    	if (SA_response_time_capture_ctr >=1 && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_waiting_time", "single", (*it - *timing_msgs_vec.begin()).toSec());
+	    	if (SA_response_time_capture_ctr >=1 && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_waiting_time", "single",
+	    			(*it - *timing_msgs_vec.begin()).toSec(), g_capture_size);
 	    ;
 	    	//ROS_INFO_STREAM("========== S_A response time"<<(ros::Time::now() - *timing_msgs_vec.begin()).toSec());
 	    }
@@ -326,7 +328,7 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 			int cntr = 0;
 			geometry_msgs::Twist twist = drone->velocity();
 			double velocity_magnitude =  calc_vec_magnitude(twist.linear.x, twist.linear.y, twist.linear.z);
-			if (!micro_benchmark_signaled_supervisor) profiling_container->capture("velocity_before_stoppping", "single", velocity_magnitude);
+			if (!micro_benchmark_signaled_supervisor) profiling_container->capture("velocity_before_stoppping", "single", velocity_magnitude, g_capture_size);
 
 			drone->fly_velocity(0, 0, 0, 10);
 			ROS_WARN("stopping the dronne");
@@ -336,7 +338,7 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 				twist = drone->velocity();
 				velocity_magnitude =  calc_vec_magnitude(twist.linear.x, twist.linear.y, twist.linear.z);
 			}
-			if (!micro_benchmark_signaled_supervisor) profiling_container->capture("stoppage_time", "single", cntr*sleep_duration);
+			if (!micro_benchmark_signaled_supervisor) profiling_container->capture("stoppage_time", "single", cntr*sleep_duration, g_capture_size);
 			signal_supervisor(g_supervisor_mailbox, "kill");
 			micro_benchmark_signaled_supervisor = true;
 		}
@@ -415,9 +417,10 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     // profiling
     if (measure_time_end_to_end) {
     	new_traj_msg_time_stamp = msg->header.stamp;
+    	profiling_container->capture("sensor_to_follow_trajectorytime", "single", (ros::Time::now() - msg->header.stamp).toSec(), g_capture_size);
     }else{
-    	profiling_container->capture("motion_planner_to_follow_traj_com", "start", msg->header.stamp);
-    	profiling_container->capture("motion_planner_to_follow_traj_com", "end", ros::Time::now());
+    	profiling_container->capture("motion_planner_to_follow_traj_com", "start", msg->header.stamp, g_capture_size);
+    	profiling_container->capture("motion_planner_to_follow_traj_com", "end", ros::Time::now(), g_capture_size);
     }
     replanning_reason = msg->replanning_reason; // @suppress("Field cannot be resolved")
     planning_status = msg->planning_status;
@@ -453,6 +456,16 @@ void initialize_global_params() {
 	ros::param::get("d_pz", d_pz);
 
 	ros::param::get("PID_correction_time", PID_correction_time);
+
+	 if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
+      ROS_FATAL_STREAM("Could not start pkg delivery DEBUG_RQT not provided");
+      return ;
+    }
+
+    if(!ros::param::get("/capture_size", g_capture_size)){
+      ROS_FATAL_STREAM("Could not start pkg delivery capture_size not provided");
+      return ;
+    }
 
 	if(!ros::param::get("backup_duration", g_backup_duration))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory backup_duration not provided");
@@ -600,8 +613,17 @@ int main(int argc, char **argv)
 
     mavbench_msgs::follow_traj_debug debug_data = {};
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
+    ros::Time last_time_following = ros::Time::now();
     while (ros::ok()) {
         ros::spinOnce();
+
+        if ((ros::Time::now() - last_time_following).toSec() < g_fly_trajectory_time_out && !g_got_new_trajectory) {
+        	loop_rate.sleep();
+			continue;
+        }
+        last_time_following = ros::Time::now();
+
+
         timing_msgs_cntr = 0 ; //resetting the cntr, this is just for profiling
 
         if (trajectory.size() > 0) {
@@ -676,10 +698,10 @@ int main(int argc, char **argv)
 
         // profiling
         if (g_got_new_trajectory){
-        	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp);
-        	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now());
+        	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
+        	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
         	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
-        			(ros::Time::now() - timing_msgs_begin_el_time).toSec()); //ignoring the first planning since it takse forever
+        			(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
         	SA_response_time_capture_ctr++;
         	ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
         }
@@ -715,12 +737,12 @@ int main(int argc, char **argv)
 				yaw_strategy, check_position , max_velocity,
                 g_fly_trajectory_time_out, p_vx, p_vy, p_vz, I_px, I_py, I_pz, d_px, d_py, d_pz, reset_PID);
 
-        profiling_container->capture("velocity", "single", max_velocity_reached);
+        profiling_container->capture("velocity", "single", max_velocity_reached, g_capture_size);
         if (max_velocity_reached > g_max_velocity_reached) {
             g_max_velocity_reached = max_velocity_reached;
             ROS_INFO_STREAM("max speed is"<<max_velocity_reached);
         }
-        profiling_container->capture("max_velocity", "single", g_max_velocity_reached);
+        profiling_container->capture("max_velocity", "single", g_max_velocity_reached, g_capture_size);
         // Publish the remainder of the trajectory
         mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj, &drone);
         trajectory_msg.future_collision_seq = future_collision_seq;
@@ -742,7 +764,8 @@ int main(int argc, char **argv)
         debug_data.planning_failure_short_time = (planning_status == 0) ;
         debug_data.planning_failure_inital_state = (planning_status == 1);
         debug_data.planning_success = (planning_status == 2);
-        follow_traj_debug_pub.publish(debug_data);
+
+        if (DEBUG_RQT) {follow_traj_debug_pub.publish(debug_data);}
         replanning_reason = 0; //zero it out for the next round
 
         if (slam_lost){

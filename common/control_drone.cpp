@@ -28,6 +28,22 @@
 
 using namespace std;
 
+void output_steps_taken_to_a_file(Drone *drone){
+	ofstream recorded_steps_file;
+	recorded_steps_file.open("recorded_steps.txt");
+	recorded_steps_file <<"#!/bin/bash"<<endl;
+	for (auto el: drone->all_steps_taken) {
+		if (el.vx == 0 && el.vy == 0 && el.vz == 0 && el.yaw != 0){
+			recorded_steps_file <<"echo y"<<" "<< el.yaw<<endl;
+		} else{
+			recorded_steps_file <<"echo f"<<" "<< el.vx << " " << el.vy<< " " << el.vz << " " << el.duration <<std::endl;
+		}
+		recorded_steps_file <<"sleep"<< " " << el.duration<<endl;
+	}
+	recorded_steps_file.close();
+}
+
+
 bool control_drone(Drone& drone)
 {
 	cout << "Initialize drone:\n";
@@ -98,7 +114,10 @@ bool control_drone(Drone& drone)
             cout << "energy consumed: " << flight_stats.energy_consumed << endl;
         } else if (cmd == "r") {
             spin_around(drone); 
-        } else if (cmd != "c") {
+        } else if (cmd == "r"){
+        	output_steps_taken_to_a_file(&drone);
+        }
+        else if (cmd != "c") {
 			cout << "Unknown command" << endl;
             // ros::shutdown();
             // exit(0);

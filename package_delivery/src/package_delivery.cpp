@@ -106,20 +106,7 @@ void trajectory_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 
 Drone *g_drone ;
 
-void output_steps_taken_to_a_file(){
-	ofstream recorded_steps_file;
-	recorded_steps_file.open("recorded_steps.txt");
-	recorded_steps_file <<"#!/bin/bash"<<endl;
-	for (auto el: g_drone->all_steps_taken) {
-		if (el.vx == 0 && el.vy == 0 && el.vz == 0 && el.yaw != 0){
-			recorded_steps_file <<"echo y"<<" "<< el.yaw<<endl;
-		} else{
-			recorded_steps_file <<"echo f"<<" "<< el.vx << " " << el.vy<< " " << el.vz << " " << el.duration <<std::endl;
-		}
-		recorded_steps_file <<"sleep"<< " " << el.duration<<endl;
-	}
-	recorded_steps_file.close();
-}
+
 
 void log_data_before_shutting_down()
 {
@@ -128,7 +115,6 @@ void log_data_before_shutting_down()
 	std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
 
-    output_steps_taken_to_a_file();
 
     profiling_data_srv_inst.request.key = "mission_status";
     if (g_mission_status == "time_out") {
