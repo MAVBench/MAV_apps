@@ -42,6 +42,7 @@
 #include <std_srvs/Empty.h>
 #include <dynamic_reconfigure/server.h>
 #include <octomap_server/OctomapServerConfig.h>
+#include <mavbench_msgs/octomap_debug.h>
 
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
@@ -93,7 +94,7 @@ public:
  //void log_data_before_shutting_down();
  void sigIntHandlerPrivate(int);
  long long g_pt_cld_to_octomap_commun_olverhead_acc;
-
+ int capture_size = 600;
 
 #ifdef COLOR_OCTOMAP_SERVER
   typedef pcl::PointXYZRGB PCLPoint;
@@ -109,11 +110,15 @@ public:
 
   OcTreeT *tree_ptr() const { return m_octree; }
 
+  mavbench_msgs::octomap_debug debug_data;
+  bool DEBUG_RQT;
   OctomapServer(ros::NodeHandle private_nh_ = ros::NodeHandle("~"));
   virtual ~OctomapServer();
   virtual bool octomapBinarySrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   virtual bool octomapFullSrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   bool clearBBXSrv(BBXSrv::Request& req, BBXSrv::Response& resp);
+
+  bool changeResolution(octomap::point3d bbxMin, octomap::point3d bbxMax);
   bool resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp);
   void OctomapHeaderColDetectedcb(std_msgs::Int32ConstPtr header) ;
   bool maxRangecb(octomap_server::maxRangeSrv::Request& req, octomap_server::maxRangeSrv::Response& resp);
@@ -222,7 +227,7 @@ protected:
 
   static std_msgs::ColorRGBA heightMapColor(double h);
   ros::NodeHandle m_nh;
-  ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub;
+  ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService, m_octomapResetMaxRange;

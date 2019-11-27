@@ -22,6 +22,7 @@
 #include <profile_manager/profiling_data_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
+#include <mavbench_msgs/motion_planning_debug.h>
 
 // Misc messages
 #include <geometry_msgs/Point.h>
@@ -78,12 +79,13 @@ public:
 
 
 private:
+	mavbench_msgs::motion_planning_debug debug_data = {};
     ProfileManager profile_manager;
     DataContainer profiling_container;
     bool measure_time_end_to_end;
     bool got_new_next_steps_since_last_attempted_plan = false; //only plan if you have recieved new next steps otherwise, we'll predict wrong
 
-
+    ros::Publisher motion_planning_debug_pub;
     // ***F:DN call back for octomap msgs
     void octomap_callback(const octomap_msgs::Octomap& msgs);
 
@@ -171,7 +173,7 @@ private:
     ros::Time last_planning_time;
     bool failed_to_plan_last_time = false;
     Drone * drone = nullptr;
-
+    int capture_size = 600; //set this to 1 if you want to see every data captured separately
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
@@ -181,9 +183,11 @@ private:
     ros::Publisher traj_pub;
     ros::Publisher timing_msg_from_mp_pub;
     octomap::OcTree * octree = nullptr; int future_col_seq_id = 0;
+    ros::Publisher motion_plannineg_debug_pub;
     int trajectory_seq_id = 0;
     mavbench_msgs::multiDOFtrajectory g_next_steps_msg;
     bool first_time_planning = true;
+    bool DEBUG_RQT;
 
     geometry_msgs::Point g_start_pos;
     geometry_msgs::Point g_goal_pos;
@@ -343,6 +347,8 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
     ss.setup();
 
+
+	profiling_container.capture("OMPL_planning_time", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     // Solve for path
     ob::PlannerStatus solved = ss.solve(g_piecewise_planning_budget);
     if (solved == ob::PlannerStatus::INVALID_START) {
@@ -356,9 +362,19 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     	status = 0;
     }
 
-    if (solved)
+    // profiling, debugging
+    profiling_container.capture("OMPL_planning_time", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+	if (DEBUG_RQT) {
+		debug_data.header.stamp = ros::Time::now();
+		debug_data.OMPL_planning_time = profiling_container.findDataByName("OMPL_planning_time")->values.back();
+		motion_planning_debug_pub.publish(debug_data);
+	}
+
+	if (solved)
     {
-        ROS_INFO("Solution found!");
+
+    	profiling_container.capture("OMPL_simplification_time", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    	ROS_INFO("Solution found!");
         ss.simplifySolution();
 
         for (auto state : ss.getSolutionPath().getStates()) {
@@ -370,6 +386,14 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
             result.push_back({x, y, z});
         }
+
+        //profiling/debugging
+        profiling_container.capture("OMPL_simplification_time", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    	if (DEBUG_RQT) {
+    		debug_data.header.stamp  = ros::Time::now();
+    		debug_data.OMPL_simplification_time = profiling_container.findDataByName("OMPL_simplification_time")->values.back();
+    		motion_planning_debug_pub.publish(debug_data);
+		}
     }
     else
         ROS_ERROR("Path not found!");

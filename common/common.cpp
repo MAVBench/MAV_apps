@@ -514,7 +514,8 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         drone.fly_velocity(v_x, v_y, v_z, yaw, scaled_flight_time + 1);
         //drone.fly_position(p.y, p.x, -p.z, calc_vec_magnitude(p.vx, p.vy, p.vz), scaled_flight_time); //doesn't work
         
-        std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));
+        // uncomment this for sleeping in this thread which is required if we want to update time
+        //std::this_thread::sleep_until(segment_start_time + std::chrono::duration<double>(scaled_flight_time));
 
         // Push completed command onto reverse-command stack
         multiDOFpoint rev_point = reverse_point(p);

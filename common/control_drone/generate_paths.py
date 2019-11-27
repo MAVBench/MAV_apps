@@ -25,10 +25,17 @@ def run_cmds(cmds):
             #print(cmd)
 
 #lift off  (total duration: 30 seconds)
-def lift_up(cmds):
+def lift_up(cmds, duration):
     cmds.append("sleep 10")
     cmds.append("f 0 0 2 3")
-    cmds.append("sleep 20")
+    cmds.append("sleep "+ str(duration))
+
+
+#accelerate forward (total of 30 seconds)
+def yaw(cmds, degree):
+    cmds.append("y " + str(degree))
+    cmds.append("sleep 2");
+
 
 
 #accelerate forward (total of 30 seconds)
@@ -58,6 +65,11 @@ def deccel(cmds, max_vel):
         cmds.append("sleep 1");
 
 
+#accelerate forward (total of 30 seconds)
+def const_speed_fw(cmds, const_speed, duration):
+    for i in range(0,duration):
+        cmds.append("f 0 "+ str(const_speed) + " 0 2");
+        cmds.append("sleep 1");
 
 
 # lift up, accel up, accel fw, decel
@@ -65,18 +77,31 @@ def path_1():
     #max_vel = [30, 20, 10, 8, 6, 4, 2] 
     max_vel = 30
     cmds = [] 
-    lift_up(cmds)
+    lift_up(cmds, 20)
     accel_uw(cmds, max_vel)
     accel_fw(cmds, max_vel)
     full_stop(cmds) 
     #deccel(cmds, max_vel)
     return cmds
 
+# lift up, yaw 90, fly : octomap_microbenchmark (microhenchmark number 2, to measure octomap insertCloud time vaires)
+def path_2():
+    #max_vel = [30, 20, 10, 8, 6, 4, 2] 
+    max_vel = 3
+    duration =  30 
+    cmds = [] 
+    lift_up(cmds, 5)
+    yaw(cmds, 90) 
+    const_speed_fw(cmds, max_vel, 90 )
+    full_stop(cmds) 
+    #deccel(cmds, max_vel)
+    return cmds
+
 def main():
-    cmds = path_1()    
-    print(cmds)  
+    cmds = path_2()    
+    #print(cmds)  
     run_cmds(cmds) 
-    #pre_mission(cmds)
+    pre_mission(cmds)
 
 main()
 
