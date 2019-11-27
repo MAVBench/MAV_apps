@@ -45,6 +45,7 @@
 #include "profile_manager/start_profiling_srv.h"
 #include "profile_manager/profiling_data_srv.h"
 #include <profile_manager.h>
+#include <mavbench_msgs/point_cloud_debug.h>
 
 namespace depth_image_proc {
 
@@ -62,6 +63,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   boost::mutex connect_mutex_;
   typedef sensor_msgs::PointCloud2 PointCloud;
   ros::Publisher pub_point_cloud_;
+  ros::Publisher pc_debug_pub;
 
   image_geometry::PinholeCameraModel model_;
     
@@ -79,7 +81,10 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
   double point_cloud_resolution; // specifies the minimum distance between the points
   bool first_time = true;
+  mavbench_msgs::point_cloud_debug debug_data = {};
+  bool DEBUG_RQT = false;
   virtual void onInit();
+
 
   void connectCb();
 
@@ -151,6 +156,10 @@ void PointCloudXyzNodelet::onInit()
     return ;
   }
 
+  if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
+      ROS_FATAL_STREAM("Could not start point cloud DEBUG_RQT not provided");
+      return ;
+   }
 
   pt_cld_ctr = 0;
   pt_cld_generation_acc = 0;
@@ -160,6 +169,7 @@ void PointCloudXyzNodelet::onInit()
   // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
   pub_point_cloud_ = nh.advertise<PointCloud>("points", 1, connect_cb, connect_cb);
+  pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
   
   profile_manager_client = 
       private_nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data", true);
@@ -374,6 +384,11 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   }
  //ROS_INFO_STREAM("number of points in point cloud " << xs.size());
  */
+ if (DEBUG_RQT){
+     debug_data.header.stamp = ros::Time::now();
+	 debug_data.point_cloud_point_cnt = xs.size()/float(10000);
+	 pc_debug_pub.publish(debug_data);
+ }
 
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);

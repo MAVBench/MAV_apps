@@ -60,6 +60,7 @@ add_message_files(
   follow_traj_debug.msg
   motion_planning_debug.msg
   octomap_debug.msg
+  point_cloud_debug.msg
   )
 
 ## Generate services in the 'srv' folder

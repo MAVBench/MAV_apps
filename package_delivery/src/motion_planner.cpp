@@ -563,7 +563,7 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 void MotionPlanner::motion_planning_initialize_params()
 {
 	if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
-      ROS_FATAL_STREAM("Could not start pkg delivery DEBUG_RQT not provided");
+      ROS_FATAL_STREAM("Could not start motion_planning DEBUG_RQT not provided");
       return ;
     }
 

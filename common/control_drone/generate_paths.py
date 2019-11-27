@@ -92,7 +92,7 @@ def path_2():
     cmds = [] 
     lift_up(cmds, 5)
     yaw(cmds, 90) 
-    const_speed_fw(cmds, max_vel, 30 )
+    const_speed_fw(cmds, max_vel, 90 )
     full_stop(cmds) 
     #deccel(cmds, max_vel)
     return cmds

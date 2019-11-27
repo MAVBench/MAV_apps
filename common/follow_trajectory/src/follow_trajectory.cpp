@@ -458,7 +458,7 @@ void initialize_global_params() {
 	ros::param::get("PID_correction_time", PID_correction_time);
 
 	 if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
-      ROS_FATAL_STREAM("Could not start pkg delivery DEBUG_RQT not provided");
+      ROS_FATAL_STREAM("Could not start follow_trajectory DEBUG_RQT not provided");
       return ;
     }
 
