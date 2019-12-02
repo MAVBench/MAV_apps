@@ -44,15 +44,12 @@
 #include "Profiling.h"
 #include "profile_manager/start_profiling_srv.h"
 #include "profile_manager/profiling_data_srv.h"
+#include <mavbench_msgs/point_cloud_debug.h>
 #include <profile_manager.h>
-<<<<<<< HEAD
 #include <unordered_map>
 #include <unordered_set>
 #include "boost/functional/hash.hpp"
 using namespace std;
-=======
-#include <mavbench_msgs/point_cloud_debug.h>
->>>>>>> 8452a1a7ce1acc7ced126e3e976231f2b2d74eff
 
 namespace depth_image_proc {
 
@@ -340,9 +337,11 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width && 
         *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
       // Filter by resolution
-      double rounded_x = round_to_resolution(*cloud_x, point_cloud_resolution);
-      double rounded_y = round_to_resolution(*cloud_y, point_cloud_resolution);
-      double rounded_z = round_to_resolution(*cloud_z, point_cloud_resolution);
+      double distance_from_center = (*cloud_x ** 2 + *cloud_y ** 2) ** 0.5;
+      double resolution = point_cloud_resolution * math.max(1, distance_from_center);
+      double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
       double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
       // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
       // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
