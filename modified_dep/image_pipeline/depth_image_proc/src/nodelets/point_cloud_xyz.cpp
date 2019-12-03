@@ -45,14 +45,11 @@
 #include "profile_manager/start_profiling_srv.h"
 #include "profile_manager/profiling_data_srv.h"
 #include <profile_manager.h>
-<<<<<<< HEAD
 #include <unordered_map>
 #include <unordered_set>
 #include "boost/functional/hash.hpp"
 using namespace std;
-=======
 #include <mavbench_msgs/point_cloud_debug.h>
->>>>>>> 8452a1a7ce1acc7ced126e3e976231f2b2d74eff
 
 namespace depth_image_proc {
 

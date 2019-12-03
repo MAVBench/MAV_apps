@@ -29,7 +29,6 @@
 
 #ifndef OCTOMAP_SERVER_OCTOMAPSERVER_H
 #define OCTOMAP_SERVER_OCTOMAPSERVER_H
-
 #include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <nav_msgs/OccupancyGrid.h>
@@ -43,7 +42,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <octomap_server/OctomapServerConfig.h>
 #include <mavbench_msgs/octomap_debug.h>
-
+#include <vector>
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
 #include <pcl_ros/transforms.h>
@@ -213,6 +212,8 @@ protected:
 
   }
 
+
+  inline double calc_dist(octomap::point3d point1, octomap::point3d point2);
   /**
    * Adjust data of map due to a change in its info properties (origin or size,
    * resolution needs to stay fixed). map already contains the new map info,
@@ -224,7 +225,8 @@ protected:
 
   void adjustMapData(nav_msgs::OccupancyGrid& map, const nav_msgs::MapMetaData& oldMapInfo) const;
 
-  void update_lower_res_map(octomap::KeySet::iterator it, octomap::OcTreeNode* node);
+  void update_lower_res_map(octomap::point3d , octomap::OcTreeNode* node);
+  inline void update_closest_obstacle(octomap::point3d coordinate, octomap::point3d sensorOrigin); //update the cloests obstacle distance and coordinates. It's conservate (read description in .cpp)
 
   inline bool mapChanged(const nav_msgs::MapMetaData& oldMapInfo, const nav_msgs::MapMetaData& newMapInfo) {
     return (    oldMapInfo.height != newMapInfo.height
@@ -259,6 +261,12 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   std_msgs::ColorRGBA m_color;
   std_msgs::ColorRGBA m_colorFree;
   double m_colorFactor;
+  double dist_to_closest_obs; //distant to the closest obstacle perceived
+  int closest_obs_coordinate_vect_size = 20;
+  octomap::point3d closest_obs_coord; // closeset obstacle (coordinate) perceived.
+
+
+
 
   bool m_latchedTopics;
   bool m_publishFreeSpace;
