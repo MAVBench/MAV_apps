@@ -45,7 +45,14 @@
 #include "profile_manager/start_profiling_srv.h"
 #include "profile_manager/profiling_data_srv.h"
 #include <profile_manager.h>
+<<<<<<< HEAD
+#include <unordered_map>
+#include <unordered_set>
+#include "boost/functional/hash.hpp"
+using namespace std;
+=======
 #include <mavbench_msgs/point_cloud_debug.h>
+>>>>>>> 8452a1a7ce1acc7ced126e3e976231f2b2d74eff
 
 namespace depth_image_proc {
 
@@ -299,97 +306,72 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   int n_points = cloud_msg->width * cloud_msg->height;
   
   // trim the point cloud by only keeping points of certain positions
-  sensor_msgs::PointCloud2Iterator<float> old_x(*cloud_msg, "x");
-  sensor_msgs::PointCloud2Iterator<float> old_y(*cloud_msg, "y");
-  sensor_msgs::PointCloud2Iterator<float> old_z(*cloud_msg, "z");
+  sensor_msgs::PointCloud2Iterator<float> cloud_x(*cloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> cloud_y(*cloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> cloud_z(*cloud_msg, "z");
   std::vector<float> xs;
   std::vector<float> ys;
   std::vector<float> zs;
 
   profiling_container->capture("filtering", "start", ros::Time::now());
-  /*
-  // filter based on density
-  // problem with this method is that due to the nature of point cloud
-  // different depths have different resolutions, hence the maximum
-  // distance between unfilterd points increases as the depth increases.
-  // this is bad because we don't know how reducing the point cloud resolution
-  // impacts the world resolution. We need to know this to be able to inflate
-  // the drone in the case of low resolution
-  for(size_t i=0; i<n_points; ++i, ++old_x, ++old_y, ++old_z){
-    if (i % point_cloud_density_reduction == 0) {
-      // Cab change to radius!!
-      if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
-        xs.push_back(*old_x);
-        ys.push_back(*old_y);
-        zs.push_back(*old_z);
+  
+  // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
+  
+  // TODO: make collisions less likely? Library to do this?
+  auto point_hash_xyz = [](double x, double y, double z) {
+    return boost::hash_value(make_tuple(x, y, z));
+  };
+  auto point_hash_xy = [](double x, double y) {
+    return boost::hash_value(make_tuple(x, y));
+  };
+  auto round_to_resolution = [](double v, double resolution) {
+    // add half, then truncate to round to nearest multiple of resolution
+    v += boost::math::sign(v) * resolution / 2;
+    return v - fmod(v, resolution);
+  };
+  // map of whether a point has been seen (rounded by resolution)
+  std::unordered_set<double> seen;
+  seen.clear();
+  // map of maximum z for each (x, y
+  std::unordered_map<double, double> frontier;
+  // printf("--------------------------------\n\n\n\n\n\n\n\n\n");
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+	  // filter based on FOV
+	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width && 
+        *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
+      // Filter by resolution
+      double rounded_x = round_to_resolution(*cloud_x, point_cloud_resolution);
+      double rounded_y = round_to_resolution(*cloud_y, point_cloud_resolution);
+      double rounded_z = round_to_resolution(*cloud_z, point_cloud_resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+      // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
+      // add to filtered cloud only if it is not close to one already seen
+      if (seen.find(hashed_point) == seen.end()) {
+        seen.insert(hashed_point);
+        // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+			  xs.push_back(*cloud_x);
+			  ys.push_back(*cloud_y);
+			  zs.push_back(*cloud_z);
+		  }
+      // add to frontier if it is the closest z for given xy
+      double hashed_xy = point_hash_xy(rounded_x, rounded_y);
+      if (frontier.find(hashed_xy) == frontier.end() || *cloud_z < frontier.at(hashed_xy)) {
+        frontier[hashed_xy] = *cloud_z;
       }
-    }
-  }
-  */
-
-  // filter based on octomap resolution
-  auto cur_x_itr = old_x;
-  auto cur_y_itr = old_y;
-  auto cur_z_itr = old_z;
-  double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
-
-  bool first_point = true; //used for filtering
-
-
-  for(size_t i=0; i< n_points - 1 ; ++i, ++old_x, ++old_y, ++old_z){
-	  // filter based on distance between adjacent nodes
-	  if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
-		  if (first_point) {
-			  cur_x_itr = (old_x); // increment cur_x only if we are not filtering it
-			  cur_y_itr = (old_y); // increment cur_x only if we are not filtering it
-			  cur_z_itr = (old_z); // increment cur_x only if we are not filtering it
-			  first_point = false;
-		  }
-		  // a pointer to the next point
-		  auto next_x_itr = (old_x+1);
-		  auto next_y_itr = (old_y+1);
-		  auto next_z_itr = (old_z+1);
-
-		  // calc differnce in distnace between adjacent nodes
-		  double x_diff = *(next_x_itr) - *(cur_x_itr);
-		  double y_diff = *(next_y_itr) - *(cur_y_itr);
-		  double z_diff = *(next_z_itr) - *(cur_z_itr);
-		  double p2p_distance = std::sqrt(x_diff*x_diff + y_diff*y_diff + z_diff*z_diff); // distance between two adjacent points
-		  if (p2p_distance >= point_cloud_resolution_in_cubic) {
-			  xs.push_back(*old_x);
-			  ys.push_back(*old_y);
-			  zs.push_back(*old_z);
-			  cur_x_itr = (old_x + 1); // increment cur_x only if we are not filtering it
-			  cur_y_itr = (old_y + 1); // increment cur_x only if we are not filtering it
-			  cur_z_itr = (old_z + 1); // increment cur_x only if we are not filtering it
-		  }
 	  }
   }
-  profiling_container->capture("filtering", "end", ros::Time::now());
 
-  /*
-  // distance between two points
-  for(size_t i=0; i< n_points - 1 ; ++i, ++old_x, ++old_y, ++old_z){
-      double x_diff = xs[i+1] - xs[i];
-	  double y_diff = ys[i+1] - ys[i];
-	  double z_diff = zs[i+1] - zs[i];
-      double p2p_distance = std::sqrt(x_diff*x_diff + y_diff*y_diff + z_diff*z_diff); // distance between two adjacent points
-      if (p2p_distance >= point_cloud_resolution){
-		  if (*old_x > -1*point_cloud_width && *old_x < point_cloud_width && *old_y > -1*point_cloud_height && *old_y < point_cloud_height) {
-			xs.push_back(*old_x);
-			ys.push_back(*old_y);
-			zs.push_back(*old_z);
-		  }
-      }
+  // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
+  // Name the function "entropy"?!?! 8-)
+
+  if (DEBUG_RQT){
+    debug_data.header.stamp = ros::Time::now();
+    debug_data.point_cloud_point_cnt = xs.size()/float(10000);
+    pc_debug_pub.publish(debug_data);
   }
- //ROS_INFO_STREAM("number of points in point cloud " << xs.size());
- */
- if (DEBUG_RQT){
-     debug_data.header.stamp = ros::Time::now();
-	 debug_data.point_cloud_point_cnt = xs.size()/float(10000);
-	 pc_debug_pub.publish(debug_data);
- }
 
+  // reset point cloud and load in filtered in points
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);
   modifier.resize(xs.size());
@@ -402,11 +384,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
       *new_y = ys[i];
       *new_z = zs[i];
   }
-
-  n_points = cloud_msg->width * cloud_msg->height;
+  // ROS_INFO_STREAM("number of points in point cloud " << xs.size());
+  // n_points = cloud_msg->width * cloud_msg->height;
   // printf("filtered size: %d \n", n_points);
  
   //cloud_msg->header.stamp = ros::Time::now();
+  profiling_container->capture("filtering", "end", ros::Time::now());
   pub_point_cloud_.publish (cloud_msg);
 
 }
