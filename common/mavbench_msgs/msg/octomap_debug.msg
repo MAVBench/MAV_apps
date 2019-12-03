@@ -4,3 +4,5 @@ float32 octomap_insertCloud
 float32 octomap_insertScan
 float32 octomap_calc_disjoint_and_update
 float32 octomap_calc_hash
+float32 construct_lower_resolution_map
+float32 update_lower_resolution_map

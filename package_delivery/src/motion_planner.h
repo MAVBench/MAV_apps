@@ -71,7 +71,7 @@ public:
     // does  what ROS::spinceOnce which is to "call all the callback functions if there is any packets in the queues"
     void spinOnce();
     // planning end to end
-    void motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point goal);
+    bool motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point goal);
     octomap::OcTree *getOctree();
     Drone *get_drone();
 
@@ -187,6 +187,7 @@ private:
     int trajectory_seq_id = 0;
     mavbench_msgs::multiDOFtrajectory g_next_steps_msg;
     bool first_time_planning = true;
+    bool first_time_planning_succeeded = false;
     bool DEBUG_RQT;
 
     geometry_msgs::Point g_start_pos;
@@ -370,7 +371,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 		motion_planning_debug_pub.publish(debug_data);
 	}
 
-	if (solved)
+	if (status == 1) //only take exact solution
     {
 
     	profiling_container.capture("OMPL_simplification_time", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")

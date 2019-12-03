@@ -117,8 +117,10 @@ public:
   virtual bool octomapBinarySrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   virtual bool octomapFullSrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   bool clearBBXSrv(BBXSrv::Request& req, BBXSrv::Response& resp);
+  void publish_octomap_vis(octomap::OcTree *m_octree); //for now only publishes for lower_res octomap, i.e, the publishing topic is fixed
 
-  bool changeResolution(octomap::point3d bbxMin, octomap::point3d bbxMax);
+
+  //bool changeResolution(octomap::point3d bbxMin, octomap::point3d bbxMax);
   bool resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp);
   void OctomapHeaderColDetectedcb(std_msgs::Int32ConstPtr header) ;
   bool maxRangecb(octomap_server::maxRangeSrv::Request& req, octomap_server::maxRangeSrv::Response& resp);
@@ -150,6 +152,7 @@ protected:
 
   void reconfigureCallback(octomap_server::OctomapServerConfig& config, uint32_t level);
   void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) ;
+  void publishBinaryLowerResOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFullOctoMap(const ros::Time& rostime = ros::Time::now()) const;
   virtual void publishAll(const ros::Time& rostime = ros::Time::now());
 
@@ -216,7 +219,12 @@ protected:
    * but the data is stored according to oldMapInfo.
    */
 
+  void construct_lower_res_map(double resolution, octomap::point3d drone_cur_pos); //construct a lower resolution map from a higher one
+
+
   void adjustMapData(nav_msgs::OccupancyGrid& map, const nav_msgs::MapMetaData& oldMapInfo) const;
+
+  void update_lower_res_map(octomap::KeySet::iterator it, octomap::OcTreeNode* node);
 
   inline bool mapChanged(const nav_msgs::MapMetaData& oldMapInfo, const nav_msgs::MapMetaData& newMapInfo) {
     return (    oldMapInfo.height != newMapInfo.height
@@ -227,7 +235,7 @@ protected:
 
   static std_msgs::ColorRGBA heightMapColor(double h);
   ros::NodeHandle m_nh;
-  ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub;
+  ros::Publisher  m_markerPub, m_markerLowerResPub, m_binaryMapPub, m_binaryMapLowerResPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService, m_octomapResetMaxRange;
@@ -238,7 +246,9 @@ protected:
   dynamic_reconfigure::Server<OctomapServerConfig> m_reconfigureServer;
 
   OcTreeT* m_octree;
-  octomap::KeyRay m_keyRay;  // temp storage for ray casting
+  OcTreeT* m_octree_lower_res;
+
+octomap::KeyRay m_keyRay;  // temp storage for ray casting
   octomap::OcTreeKey m_updateBBXMin;
   octomap::OcTreeKey m_updateBBXMax;
 
@@ -253,7 +263,8 @@ protected:
   bool m_latchedTopics;
   bool m_publishFreeSpace;
 
-  double m_res;
+  double m_res, m_lower_res;
+  double m_lower_res_rel_vol_height, m_lower_res_rel_vol_width, m_lower_res_rel_vol_length; //width and height of the lower resolution with respect to the current drone position
   unsigned m_treeDepth;
   unsigned m_maxTreeDepth;
 
@@ -268,6 +279,8 @@ protected:
   double m_minSizeX;
   double m_minSizeY;
   bool m_filterSpeckles;
+
+
 
   bool m_filterGroundPlane;
   double m_groundFilterDistance;

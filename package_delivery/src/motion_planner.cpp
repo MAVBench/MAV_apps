@@ -63,7 +63,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 
 	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
-	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
+	octomap_sub = nh.subscribe("/octomap_binary_lower_res", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
     timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_mp", 1);
     motion_planning_debug_pub = nh.advertise<mavbench_msgs::motion_planning_debug>("/motion_planning_debug", 1);
@@ -196,7 +196,7 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	bool replan;
 
-	if(first_time_planning) {
+	if(!first_time_planning_succeeded) {
 		replanning_reason = First_time_planning;
 		replan = true;
 	} else if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
@@ -280,11 +280,19 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 
-    this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
+    bool planning_succeeded = this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
-    first_time_planning = false;
 
+    if (planning_succeeded) {
+		profiling_container.capture("planning_failure_count", "counter", 0);
+	}
+
+    if (!first_time_planning_succeeded){
+    	if (planning_succeeded){
+    		first_time_planning_succeeded = true;
+    	}
+	}
 }
 
 octomap::OcTree* MotionPlanner::getOctree() {
@@ -359,12 +367,13 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         	res.multiDOFtrajectory.reverse = true;
         	res.multiDOFtrajectory.stop = false;
         	res.multiDOFtrajectory.planning_status = Initial_state_failure;
-        }else if (status == 0){
+        	ROS_INFO_STREAM("curent state, x:"<<drone->position().x<< ",  y:"<< drone->position().y<< ", z:"<< drone->position().z);
+        }else if (status == 0 || status == 3){ //if couldn't find an exact path within the time frame reverse
         	res.multiDOFtrajectory.planning_status = Short_time_failure;
         	res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.stop = true;
         }else{
-        	ROS_INFO_STREAM("this state should happpen");
+        	ROS_INFO_STREAM("this state shouldn't happpen"<< status);
         	exit(0);
         }
 
@@ -401,12 +410,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 	}
 
     if (smooth_path.empty()) {
+    	ROS_ERROR("Path could not be smoothened successfully");
     	if (notified_failure){ //so we won't fly backward multiple times
     		return false;
     	}
 
-
-    	ROS_ERROR("Path could not be smoothened successfully");
         res.path_found = false;
 
         res.multiDOFtrajectory.future_collision_seq = future_col_seq_id;
@@ -441,7 +449,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_number_of_planning++; 
     res.path_found = true;
     planned_approximately = (status == 3);
-    if (planned_approximately || first_time_planning) {
+    if (planned_approximately || !first_time_planning_succeeded) {
 		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
     }
 
@@ -537,7 +545,7 @@ bool MotionPlanner::haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj){
 }
 
 
-void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point g_goal){
+bool MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_msgs::Point g_goal){
 
 	package_delivery::get_trajectory::Request req;
 	package_delivery::get_trajectory::Response res;
@@ -547,10 +555,17 @@ void MotionPlanner::motion_plan_end_to_end(ros::Time invocation_time, geometry_m
 	req.header.stamp = invocation_time;
 	req.call_func = 1;  //used for debugging purposes
 	failed_to_plan_last_time = !get_trajectory_fun(req, res);
+	return !failed_to_plan_last_time;
+
+	/*
 	if (failed_to_plan_last_time || first_time_planning){
 		profiling_container.capture("planning_failure_count", "counter", 0); // @suppress("Invalid arguments")
 	}
 
+    if (!failed_to_plan_last_time && first_time_planning){
+    	first_time_planning_succeeded = true;
+    }
+	*/
 }
 
 
@@ -1034,7 +1049,15 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
                 //if (motion_planning_core_str != "lawn_mower") {
                 if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2)) {
 
-                    // Add a new vertex in the middle of the segment we are currently on
+                	/*
+                	if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2)){
+                		ROS_INFO_STREAM("out of bound n1");
+                	}else{
+                		ROS_INFO_STREAM("collision");
+                		collision(octree, n1, n2);
+                	}
+                	*/
+                	// Add a new vertex in the middle of the segment we are currently on
 					mav_trajectory_generation::Vertex middle(dimension);
 
 					double middle_x = (segment_start.x + segment_end.x) / 2;
@@ -1053,17 +1076,26 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 					break;
 				}
+                /*
+                else{
+                		ROS_INFO_STREAM("succeed at smoothening some parts");
+				}
+                */
                 //}
 			}
 		}
      smoothening_ctr++;	
      smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
+     if (smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
+    	 bool now = 1;
+     }
+
     } while (col &&
             smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec());
     		//smoothening_ctr < 5);
             //ros::Time::now() < g_start_time+ros::Duration(g_piecewise_planning_budget));
 
-    if (col) {
+    if (col || smoothening_time_so_far.toSec() >= ros::Duration(g_smoothening_budget).toSec()) {
         return smooth_trajectory();
     }
 
