@@ -364,7 +364,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   if (DEBUG_RQT){
     debug_data.header.stamp = ros::Time::now();
-    debug_data.point_cloud_point_cnt = xs.size()/float(10000);
+    debug_data.point_cloud_point_cnt = xs.size();
     pc_debug_pub.publish(debug_data);
   }
 

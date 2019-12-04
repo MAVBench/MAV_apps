@@ -492,13 +492,17 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
 
     //update the closest obstacle
-  	point3d closest_possible_unseen_obstacle(sensorOrigin.x()+m_maxRange,
-			sensorOrigin.y()+m_maxRange, sensorOrigin.z()+m_maxRange);
+	dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
+  //point3d closest_possible_unseen_obstacle(sensorOrigin.x()+m_maxRange,
+	//		sensorOrigin.y()+m_maxRange, sensorOrigin.z()+m_maxRange);
+  	//update_closest_obstacle(closest_possible_unseen_obstacle, sensorOrigin);
+  	/*
   	double distance_to_closest_possible_unseen_obstacle = calc_dist(closest_possible_unseen_obstacle, sensorOrigin);
   	if (distance_to_closest_possible_unseen_obstacle < calc_dist(closest_obs_coord, sensorOrigin)){
 		dist_to_closest_obs = distance_to_closest_possible_unseen_obstacle;
 		closest_obs_coord = closest_possible_unseen_obstacle;
   	}
+  	*/
 
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
@@ -581,14 +585,17 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   // mark free cells only if not seen occupied in this cloud
   double update_low_res_total = 0;
 
-
+  float depth_acc_touched = 0;
+  int cell_touched_cnt = 0;
   for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ++it){
 	  if (occupied_cells.find(*it) == occupied_cells.end()){
     	auto high_res_node = m_octree->updateNode(*it, false);
 
     	ros::Time low_res_start = ros::Time::now() ;
     	auto coordinate = m_octree->keyToCoord(*it);
-    	update_lower_res_map(coordinate, high_res_node); //only update for occupied cells, the rest is assumed to be free
+    	//depth_acc_touched += m_octree->depth_touched; //comment this if your octomap is unmodified
+        cell_touched_cnt +=1;
+    	update_lower_res_map(coordinate, high_res_node);
     	update_low_res_total += (ros::Time::now() - low_res_start).toSec();
 
 	  }
@@ -600,12 +607,16 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
     //lower resolution map handling
     ros::Time low_res_start = ros::Time::now() ;
+    //depth_acc_touched += m_octree->depth_touched; //comment this if your octomap is unmodified
+    cell_touched_cnt +=1;
     auto coordinate = m_octree->keyToCoord(*it);
     update_closest_obstacle(coordinate, sensorOrigin);
-    update_lower_res_map(coordinate, high_res_node); //only update for occupied cells, the rest is assumed to be free
+    update_lower_res_map(coordinate, high_res_node);
     update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
+
+  profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
   /*
   if (DEBUG_RQT) {
@@ -620,7 +631,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	    debug_data.update_lower_resolution_map = profiling_container.findDataByName("update_lower_res_map")->values.back();
 	  	debug_data.octomap_calc_disjoint_and_update = profiling_container.findDataByName("octomap_calc_disjoint_and_update")->values.back();
 		debug_data.perceived_closest_obs_distance = profiling_container.findDataByName("perceived_closest_obs_distance")->values.back();
-	  	octomap_debug_pub.publish(debug_data);
+		debug_data.octomap_avg_depth_touched= profiling_container.findDataByName("octomap_avg_depth_touched")->values.back();
+		octomap_debug_pub.publish(debug_data);
   }
 
 
@@ -647,6 +659,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   maxPt = m_octree->keyToCoord(m_updateBBXMax);
   ROS_DEBUG_STREAM("Updated area bounding box: "<< minPt << " - "<<maxPt);
   ROS_DEBUG_STREAM("Bounding box keys (after): " << m_updateBBXMin[0] << " " <<m_updateBBXMin[1] << " " << m_updateBBXMin[2] << " / " <<m_updateBBXMax[0] << " "<<m_updateBBXMax[1] << " "<< m_updateBBXMax[2]);
+
 
   if (m_compressMap)
     m_octree->prune();
@@ -676,7 +689,8 @@ double OctomapServer::calc_dist(point3d point1, point3d point2) {
 // labeled as occupied before, but not occupied now anymore
 void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensorOrigin) {
 	double dist_to_this_obs = calc_dist(coordinate, sensorOrigin);
-	if (dist_to_this_obs < dist_to_closest_obs){
+	dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
+	if (dist_to_this_obs <= dist_to_closest_obs){
 		dist_to_closest_obs = dist_to_this_obs;
 		closest_obs_coord = coordinate;
 	}
