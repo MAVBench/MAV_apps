@@ -17,6 +17,8 @@ geometry_msgs/Vector3 target_acceleration
 
 
 float32 time_between_samples
+float32 S_A_latency
+float32 S_A_response_time
 
 int32 replanning_reason
 int32 planning_status

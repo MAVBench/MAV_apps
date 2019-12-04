@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <signal.h>
+
 #include <iostream>
 #include <math.h>
 #include <stdio.h>
@@ -700,10 +701,16 @@ int main(int argc, char **argv)
         if (g_got_new_trajectory){
         	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
         	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
-        	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
-        			(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
-        	SA_response_time_capture_ctr++;
+
         	ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
+        	debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
+        	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
+        		profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
+        				(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+        		debug_data.S_A_response_time = profiling_container->findDataByName("S_A_response_time_calculated_from_imgPublisher")->values.back();
+        	}
+
+        	SA_response_time_capture_ctr++;
         }
         // microbenchmarks
         if (micro_benchmark){

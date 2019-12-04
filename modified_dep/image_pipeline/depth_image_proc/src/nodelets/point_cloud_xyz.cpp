@@ -50,6 +50,7 @@
 #include <unordered_set>
 #include "boost/functional/hash.hpp"
 using namespace std;
+#include <mavbench_msgs/point_cloud_debug.h>
 
 namespace depth_image_proc {
 
@@ -407,12 +408,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   } 
   std::cout << "]" << std::endl;
 
-  // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
-  // Name the function "entropy"?!?! 8-)
-
   if (DEBUG_RQT){
     debug_data.header.stamp = ros::Time::now();
-    debug_data.point_cloud_point_cnt = xs_fov_filtered.size()/float(10000);
+    debug_data.point_cloud_point_cnt = xs_fov_filtered.size();
     pc_debug_pub.publish(debug_data);
   }
 

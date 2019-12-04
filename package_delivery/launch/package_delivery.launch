@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="2"/> 
-  <arg name="v_max" default="4"/> 
+  <arg name="v_max" default="9"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -180,11 +180,15 @@
 
 
   <!-- =========================Point Cloud  ============================ -->
-  <arg name="point_cloud_width" default="25"/>
-  <arg name="point_cloud_height" default="25"/>
+  <arg name="point_cloud_shard_cnt" default="1"/>
+  <arg name="point_cloud_width" default="5"/>
+  <arg name="point_cloud_height" default="5"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
-  <arg name="perception_resolution" default="0.5"/> <!-- OM voxels size-->
-  <arg name="point_cloud_resolution" default="0.5"/> <!-- minimum the distance between pc points-->
+  <arg name="perception_resolution" default="0.7"/> <!-- OM voxels size-->
+  <arg name="perception_lower_resolution" default="0.7"/> <!-- OM voxels size-->
+  <arg name="point_cloud_resolution" default="0.7"/> <!-- minimum the distance between pc points-->
+  
+  <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
   <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />
   <param name="point_cloud_width" value="$(arg point_cloud_width)"/>
   <param name="point_cloud_height" value="$(arg point_cloud_height)"/>
@@ -213,7 +217,11 @@
     
 
   <!-- ========================= Octomap (Occupancy Map)============================ -->
-  <arg name="sensor_max_range" default="25" />
+  <arg name="sensor_max_range" default="24" />
+  <arg name="octomap_lower_resolution_volume_width" default="50" />
+  <arg name="octomap_lower_resolution_volume_height" default="50" />
+  <arg name="octomap_lower_resolution_volume_length" default="50" />
+  
   <param name="sensor_max_range" value="$(arg sensor_max_range)"/>
   <!-- node pkg="package_delivery" type="future_collision" name="future_collision" output="screen" -->
   <!-- node pkg="octomap_server" type="octomap_server_node" name="octomap_server" output="screen"-->
@@ -222,6 +230,10 @@
 	<param name="capture_size" value="$(arg capture_size)"/>
     <!--param name="map_file" type="string" value="/home/reddi-rtx/Downloads/octomap_base.ot" /-->
         <param name="resolution" value="$(arg perception_resolution)" />
+        <param name="lower_resolution" value="$(arg perception_lower_resolution)" />
+        <param name="lower_resolution_relative_volume_width" value="$(arg octomap_lower_resolution_volume_width)" />
+        <param name="lower_resolution_relative_volume_height" value="$(arg octomap_lower_resolution_volume_height)" />
+        <param name="lower_resolution_relative_volume_length" value="$(arg octomap_lower_resolution_volume_length)" />
         <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 		<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
 		<param name="frame_id" type="string" value="world" />
@@ -261,8 +273,8 @@
     ?>
 
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="piecewise_planning_budget" default="0.5"/>
-  <arg name="smoothening_budget" default="0.5"/>
+  <arg name="piecewise_planning_budget" default=".5"/>
+  <arg name="smoothening_budget" default=".7"/>
   <param name="piecewise_planning_budget" value="$(arg piecewise_planning_budget)"/>
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
   <!--group ns="motion_planner"-->
@@ -290,8 +302,8 @@
     <param name="x_dist_to_sample_from__high_bound" value="200"/>
     <param name="y_dist_to_sample_from__low_bound" value="-100"/>
     <param name="y_dist_to_sample_from__high_bound" value="550"/>
-    <param name="z_dist_to_sample_from__low_bound" value="-1"/>
-    <param name="z_dist_to_sample_from__high_bound" value="15"/>
+    <param name="z_dist_to_sample_from__low_bound" value="0"/>
+    <param name="z_dist_to_sample_from__high_bound" value="80"/>
 
     <!-- options for motion_planning core --> 
     <!-- param name="motion_planning_core" value="PRM"/-->
