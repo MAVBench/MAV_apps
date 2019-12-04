@@ -240,6 +240,17 @@ void PointCloudXyzNodelet::sigIntHandlerPrivate(int signo){
 }
 */
 
+// int get_entropy(std::unordered_map<double, double> frontier) {
+//   int count = 0;
+//   for (auto it = frontier.begin(); it != frontier.end(); ++it) {
+//     if (it->second < 25) {
+//       count += 1;
+//     }
+//   }
+//   std::cout << count << std::endl; 
+// }
+
+
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
@@ -326,19 +337,24 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
     v += boost::math::sign(v) * resolution / 2;
     return v - fmod(v, resolution);
   };
+
   // map of whether a point has been seen (rounded by resolution)
   std::unordered_set<double> seen;
   seen.clear();
-  // map of maximum z for each (x, y
-  std::unordered_map<double, double> frontier;
-  // printf("--------------------------------\n\n\n\n\n\n\n\n\n");
+
+  const int num_entropy_buckets = 10;
+  int entropy_counters [num_entropy_buckets];
+  memset(&entropy_counters[0], 0,  sizeof(entropy_counters));
+  // TODO: Add actual sensor max range here
+  int sensor_max_range = 25;
+  double max_radius = sensor_max_range * std::pow(2, 0.5);
+  double bucket_width = max_radius / 10;
+
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
-	  // filter based on FOV
-	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width && 
-        *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
       // Filter by resolution
-      double distance_from_center = (*cloud_x ** 2 + *cloud_y ** 2) ** 0.5;
-      double resolution = point_cloud_resolution * math.max(1, distance_from_center);
+      // I don't think variable resolution makes much sense - it leave holes and stuff
+      double distance_from_center = abs(*cloud_x); //pow(pow(*cloud_x, 2) + pow(*cloud_y, 2), 0.5);
+      double resolution = point_cloud_resolution; // * max(1.0, distance_from_center);
       double rounded_x = round_to_resolution(*cloud_x, resolution);
       double rounded_y = round_to_resolution(*cloud_y, resolution);
       double rounded_z = round_to_resolution(*cloud_z, resolution);
@@ -347,42 +363,74 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
       // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
       // add to filtered cloud only if it is not close to one already seen
       if (seen.find(hashed_point) == seen.end()) {
+
         seen.insert(hashed_point);
         // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
 			  xs.push_back(*cloud_x);
 			  ys.push_back(*cloud_y);
 			  zs.push_back(*cloud_z);
+        // Add point to entropy counters
+        if (*cloud_z < sensor_max_range) {
+          int radius_bucket = (int) (std::pow(std::pow(*cloud_x, 2) + std::pow(*cloud_y, 2), 0.5) / bucket_width);
+          // contribute to all buckets that we fall within
+          for (int radius = radius_bucket; radius <= num_entropy_buckets - 1; radius++) {
+            entropy_counters[radius] += 1;
+          }
+        }
 		  }
-      // add to frontier if it is the closest z for given xy
-      double hashed_xy = point_hash_xy(rounded_x, rounded_y);
-      if (frontier.find(hashed_xy) == frontier.end() || *cloud_z < frontier.at(hashed_xy)) {
-        frontier[hashed_xy] = *cloud_z;
-      }
-	  }
+	  // }
   }
+
+  // Dynamically update cloud_width and cloud_height?
+  int min_cloud_width = 5;
+  int min_cloud_height = 5;
+  int scaled_cloud_height = max(min_cloud_height, entropy_counters[num_entropy_buckets - 1] / 200);
+  int scaled_cloud_width = max(min_cloud_width, entropy_counters[num_entropy_buckets - 1] / 200);
+
+  // Filter point cloud to specified field of view
+  std::vector<float> xs_fov_filtered;
+  std::vector<float> ys_fov_filtered;
+  std::vector<float> zs_fov_filtered;
+
+  for (int i = 0; i < xs.size(); i++) {
+    if (xs[i] > -1*scaled_cloud_width && xs[i] < scaled_cloud_width && 
+        ys[i] > -1*scaled_cloud_height && ys[i] < scaled_cloud_height) {
+      xs_fov_filtered.push_back(xs[i]);
+      ys_fov_filtered.push_back(ys[i]);
+      zs_fov_filtered.push_back(zs[i]);
+    }
+  }
+
+  std::cout << "[ ";
+  for (int i = 0; i < num_entropy_buckets; i++) {
+    std::cout << entropy_counters[i] << ", ";
+  } 
+  std::cout << "]" << std::endl;
 
   // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
   // Name the function "entropy"?!?! 8-)
 
   if (DEBUG_RQT){
     debug_data.header.stamp = ros::Time::now();
-    debug_data.point_cloud_point_cnt = xs.size()/float(10000);
+    debug_data.point_cloud_point_cnt = xs_fov_filtered.size()/float(10000);
     pc_debug_pub.publish(debug_data);
   }
 
   // reset point cloud and load in filtered in points
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);
-  modifier.resize(xs.size());
+  modifier.resize(xs_fov_filtered.size());
   sensor_msgs::PointCloud2Iterator<float> new_x(*cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> new_y(*cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> new_z(*cloud_msg, "z");
 
-  for(size_t i=0; i<xs.size(); ++i, ++new_x, ++new_y, ++new_z){
-      *new_x = xs[i];
-      *new_y = ys[i];
-      *new_z = zs[i];
+  for(size_t i=0; i<xs_fov_filtered.size(); ++i, ++new_x, ++new_y, ++new_z){
+      *new_x = xs_fov_filtered[i];
+      *new_y = ys_fov_filtered[i];
+      *new_z = zs_fov_filtered[i];
   }
+
+
   // ROS_INFO_STREAM("number of points in point cloud " << xs.size());
   // n_points = cloud_msg->width * cloud_msg->height;
   // printf("filtered size: %d \n", n_points);
