@@ -1,3 +1,8 @@
 Header header
 
 float32 point_cloud_point_cnt
+float32 point_cloud_width
+float32 point_cloud_height
+float32 point_cloud_resolution
+float32 points_avg_distance
+float32 points_max_min

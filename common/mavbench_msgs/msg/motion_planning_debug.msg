@@ -5,3 +5,4 @@ float32 motion_planning_piece_wise_time
 float32 OMPL_planning_time
 float32 OMPL_simplification_time
 float32 motion_planning_smoothening_time
+float32 octomap_deserialization_time

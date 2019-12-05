@@ -8,3 +8,9 @@ float32 construct_lower_resolution_map
 float32 update_lower_resolution_map
 float32 perceived_closest_obs_distance
 float32 octomap_avg_depth_touched
+float32 octomap_memory_usage
+float32 octomap_low_res_memory_usage
+float32 octomap_serialization_high_res_time
+float32 octomap_serialization_low_res_time
+float32 octomap_prune_in_octomap_server
+float32 octomap_construct_lower_res_map

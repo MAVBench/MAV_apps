@@ -240,9 +240,21 @@ void PointCloudXyzNodelet::sigIntHandlerPrivate(int signo){
 }
 */
 
+
+
+
+
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
+
+   // changing the paramer online, comment out later
+   ros::param::get("/point_cloud_resolution", point_cloud_resolution);
+   ros::param::get("/point_cloud_width", point_cloud_width);
+   ros::param::get("/point_cloud_height", point_cloud_height);
+   ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
+
+
   PointCloud::Ptr cloud_msg(new PointCloud);
 
   ros::Time start_hook_t = ros::Time::now();
@@ -315,6 +327,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
   
   // TODO: make collisions less likely? Library to do this?
+
   auto point_hash_xyz = [](double x, double y, double z) {
     return boost::hash_value(make_tuple(x, y, z));
   };
@@ -331,12 +344,16 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   seen.clear();
   // map of maximum z for each (x, y
   std::unordered_map<double, double> frontier;
+
+
+  // subsampling based on resolution
   // printf("--------------------------------\n\n\n\n\n\n\n\n\n");
+
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
 	  // filter based on FOV
 	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width && 
         *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
-      // Filter by resolution
+	  // Filter by resolution
       double rounded_x = round_to_resolution(*cloud_x, point_cloud_resolution);
       double rounded_y = round_to_resolution(*cloud_y, point_cloud_resolution);
       double rounded_z = round_to_resolution(*cloud_z, point_cloud_resolution);
@@ -359,11 +376,63 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  }
   }
 
+
+
+  double avg_distance = 0;
+  double max_min = 0; //max of all the mins
+
+  //subsamping based on density
+  /*
+  int cntr = 0;
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+	  // filter based on FOV
+	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width &&
+        *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height && ((cntr % point_cloud_density_reduction) == 0)) {
+		  xs.push_back(*cloud_x);
+		  ys.push_back(*cloud_y);
+		  zs.push_back(*cloud_z);
+      // add to frontier if it is the closest z for given xy
+	  }
+	  cntr +=1;
+  }
+ */
+
+  /*
+  //calculate the avg and worse case distance between points
+  for (int i = 0; i<xs.size() ; i++){
+	  double min_distance;
+	  bool min_distance_collected = false;
+	  for (int j = 0; j<xs.size(); j++){
+		  if (i == j){
+			  continue;
+		  }
+		  double dx = xs[i] - xs[j];
+		  double dy = ys[i] - ys[j];
+		  double dz = zs[i] - zs[j];
+		  if (min_distance_collected){
+			  min_distance = std::min(min_distance, std::sqrt(dx*dx + dy*dy + dz*dz));
+		  }else{
+			  min_distance =  std::sqrt(dx*dx + dy*dy + dz*dz);
+			  min_distance_collected = true;
+		  }
+	  }
+	  if (min_distance_collected){
+		  avg_distance += min_distance;
+		  max_min = std::max(min_distance, max_min);
+	  }
+  }
+*/
+
   // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
   // Name the function "entropy"?!?! 8-)
 
   if (DEBUG_RQT){
     debug_data.header.stamp = ros::Time::now();
+    debug_data.points_avg_distance = (float)avg_distance/xs.size();
+    debug_data.points_max_min = (float)max_min;
+    debug_data.point_cloud_width = point_cloud_width;
+    debug_data.point_cloud_height = point_cloud_height;
+    debug_data.point_cloud_resolution = point_cloud_resolution;
     debug_data.point_cloud_point_cnt = xs.size();
     pc_debug_pub.publish(debug_data);
   }

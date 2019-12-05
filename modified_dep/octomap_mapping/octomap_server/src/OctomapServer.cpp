@@ -421,14 +421,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   //double total_elapsed = (ros::Time::now() - startTime).toSec();
   profiling_container.capture("octomap_insertCloud", "end", ros::Time::now(), capture_size);
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
-  if (DEBUG_RQT) {
-	  	debug_data.header.stamp = ros::Time::now();
-	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScan")->values.back();
-	  	debug_data.octomap_insertCloud = profiling_container.findDataByName("octomap_insertCloud")->values.back();
-	  	debug_data.perceived_closest_obs_distance =  profiling_container.findDataByName("perceived_closest_obstacle")->values.back();
-	  	octomap_debug_pub.publish(debug_data);
-  }
-
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
 
   /*
@@ -472,6 +464,19 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	  publishAll(cloud->header.stamp);
   }else{
 	  publishAll(ros::Time::now());
+  }
+
+
+  if (DEBUG_RQT) {
+	  	debug_data.header.stamp = ros::Time::now();
+	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScan")->values.back();
+	  	debug_data.octomap_insertCloud = profiling_container.findDataByName("octomap_insertCloud")->values.back();
+	  	debug_data.octomap_memory_usage =  m_octree->memoryUsage();
+	  	debug_data.octomap_low_res_memory_usage =  m_octree_lower_res->memoryUsage();
+	  	debug_data.perceived_closest_obs_distance =  profiling_container.findDataByName("perceived_closest_obstacle")->values.back();
+	  	debug_data.octomap_serialization_high_res_time =  profiling_container.findDataByName("octomap_serialization_high_res_time")->values.back();
+	  	debug_data.octomap_serialization_low_res_time =  profiling_container.findDataByName("octomap_serialization_low_res_time")->values.back();
+	  	octomap_debug_pub.publish(debug_data);
   }
 }
 
@@ -616,6 +621,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   }
 
 
+
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
   /*
@@ -626,15 +632,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   */
   profiling_container.capture("perceived_closest_obs_distance", "single", dist_to_closest_obs, capture_size);
   profiling_container.capture("octomap_calc_disjoint_and_update", "end", ros::Time::now(), capture_size);
-  if (DEBUG_RQT) {
-	  	debug_data.header.stamp = ros::Time::now();
-	    debug_data.update_lower_resolution_map = profiling_container.findDataByName("update_lower_res_map")->values.back();
-	  	debug_data.octomap_calc_disjoint_and_update = profiling_container.findDataByName("octomap_calc_disjoint_and_update")->values.back();
-		debug_data.perceived_closest_obs_distance = profiling_container.findDataByName("perceived_closest_obs_distance")->values.back();
-		debug_data.octomap_avg_depth_touched= profiling_container.findDataByName("octomap_avg_depth_touched")->values.back();
-		octomap_debug_pub.publish(debug_data);
-  }
-
 
   // TODO: eval lazy+updateInner vs. proper insertion
   // non-lazy by default (updateInnerOccupancy() too slow for large maps)
@@ -661,10 +658,30 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   ROS_DEBUG_STREAM("Bounding box keys (after): " << m_updateBBXMin[0] << " " <<m_updateBBXMin[1] << " " << m_updateBBXMin[2] << " / " <<m_updateBBXMax[0] << " "<<m_updateBBXMax[1] << " "<< m_updateBBXMax[2]);
 
 
-  if (m_compressMap)
+  profiling_container.capture("octomap_prune_in_octomap_server", "start", ros::Time::now(), capture_size);
+
+  profiling_container.capture(std::string("construct_lower_res_map"), "start", ros::Time::now());
+  //construct_lower_res_map(m_lower_res, point3d(0,0,0));//, sensorToWorldTf.getOrigin()));
+  profiling_container.capture(std::string("construct_lower_res_map"), "end", ros::Time::now());
+
+
+  if (m_compressMap){
     m_octree->prune();
+    m_octree_lower_res->prune();
+  }
 
+  profiling_container.capture("octomap_prune_in_octomap_server", "end", ros::Time::now(), capture_size);
 
+  if (DEBUG_RQT) {
+	  	debug_data.header.stamp = ros::Time::now();
+	    debug_data.update_lower_resolution_map = profiling_container.findDataByName("update_lower_res_map")->values.back();
+	  	debug_data.octomap_calc_disjoint_and_update = profiling_container.findDataByName("octomap_calc_disjoint_and_update")->values.back();
+		debug_data.perceived_closest_obs_distance = profiling_container.findDataByName("perceived_closest_obs_distance")->values.back();
+		debug_data.octomap_avg_depth_touched= profiling_container.findDataByName("octomap_avg_depth_touched")->values.back();
+		debug_data.octomap_prune_in_octomap_server = profiling_container.findDataByName("octomap_prune_in_octomap_server")->values.back();
+		debug_data.octomap_construct_lower_res_map= profiling_container.findDataByName("construct_lower_res_map")->values.back();
+		octomap_debug_pub.publish(debug_data);
+  }
 
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -748,20 +765,17 @@ void OctomapServer::construct_lower_res_map(double resolution, point3d drone_cur
 	low_res_min_y = drone_cur_pos.y() - m_lower_res_rel_vol_length; //into the screen
 	low_res_min_z = drone_cur_pos.z() - m_lower_res_rel_vol_height;
 
-	auto bbxMin = octomap::point3d(std::max(low_res_min_x, high_res_min_x), std::max(low_res_min_y, high_res_min_y), std::max(low_res_min_z, high_res_min_z));
-	auto bbxMax = octomap::point3d(std::min(low_res_max_x, high_res_max_x), std::min(low_res_max_y, high_res_max_y), std::min(low_res_max_z, high_res_max_z));
+//	auto bbxMin = octomap::point3d(std::max(low_res_min_x, high_res_min_x), std::max(low_res_min_y, high_res_min_y), std::max(low_res_min_z, high_res_min_z));
+//	auto bbxMax = octomap::point3d(std::min(low_res_max_x, high_res_max_x), std::min(low_res_max_y, high_res_max_y), std::min(low_res_max_z, high_res_max_z));
+
+	auto bbxMin = octomap::point3d(high_res_min_x, high_res_min_y, high_res_min_z);
+	auto bbxMax = octomap::point3d( high_res_max_x, high_res_max_y, high_res_max_z);
 
 	for(typename OcTreeT::leaf_bbx_iterator it = m_octree->begin_leafs_bbx(bbxMin,bbxMax), end=m_octree->end_leafs_bbx(); it!= end; ++it){
 		bool occupancy = m_octree->isNodeOccupied((*it));
-		auto node_to_look_at = m_octree_lower_res->search(it.getCoordinate());
-		bool currently_occupied = false;
-		if (node_to_look_at){ //if node already exist
-			currently_occupied = m_octree_lower_res->isNodeOccupied(m_octree_lower_res->search(it.getCoordinate()));
-		}
-		if (!currently_occupied){ //avoid redundant updates, if already occupied
-			m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, true);
-		}
-  }
+		//auto node_to_look_at = m_octree_lower_res->search(it.getCoordinate());
+		m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, true);
+	}
 }
 
 
@@ -977,18 +991,24 @@ void OctomapServer::publishAll(const ros::Time& rostime){
     m_pointCloudPub.publish(cloud);
   }
 
+  profiling_container.capture("octomap_serialization_high_res_time", "start", ros::Time::now(), capture_size);
   if (publishBinaryMap){
 	  publishBinaryOctoMap(rostime);
   }
+  profiling_container.capture("octomap_serialization_high_res_time", "end", ros::Time::now(), capture_size);
+
+  profiling_container.capture("octomap_serialization_low_res_time", "start", ros::Time::now(), capture_size);
+  if (publishBinaryLowerResMap){
+	  publishBinaryLowerResOctoMap(rostime);
+  }
+  profiling_container.capture("octomap_serialization_low_res_time", "end", ros::Time::now(), capture_size);
+
 
 
   if (publishMarkerArrayLowerRes){
 	publish_octomap_vis(m_octree_lower_res);
   }
 
-  if (publishBinaryLowerResMap){
-	  publishBinaryLowerResOctoMap(rostime);
-  }
 
   if (publishFullMap)
     publishFullOctoMap(rostime);
@@ -1188,7 +1208,7 @@ void OctomapServer::publishBinaryLowerResOctoMap(const ros::Time& rostime) {
   if (octomap_msgs::binaryMapToMsg(*m_octree_lower_res, map)){
 	  int serialization_length = ros::serialization::serializationLength(map);
 //	  ROS_INFO_STREAM("serialization length is:"<< serialization_length);
-	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
+	  profiling_container.capture("octomap_serialization_low_res_load_in_BW", "single", (double) serialization_length, capture_size);
 	  m_binaryMapLowerResPub.publish(map);
   }
   else

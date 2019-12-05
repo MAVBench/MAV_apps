@@ -266,6 +266,13 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
+
+     if (DEBUG_RQT) {
+    		debug_data.header.stamp = ros::Time::now();
+    		debug_data.octomap_deserialization_time = profiling_container.findDataByName("octomap_deserialization_time")->values.back();
+    		motion_planning_debug_pub.publish(debug_data);
+    }
+
     // check whether the goal has already been provided or not, if not, return
     if (!this->goal_known) { //
     	return;
