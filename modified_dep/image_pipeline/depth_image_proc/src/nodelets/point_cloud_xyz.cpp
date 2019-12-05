@@ -343,13 +343,16 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::unordered_set<double> seen;
   seen.clear();
 
-  const int num_entropy_buckets = 10;
-  int entropy_counters [num_entropy_buckets];
-  memset(&entropy_counters[0], 0,  sizeof(entropy_counters));
-  // TODO: Add actual sensor max range here
+  // TODO: calculate diagnostics for run time - right now just counts number of points within sensor max range
   int sensor_max_range = 25;
+  int entropy_diagnostic = 0;
+
+  // bucket points by distance from center for choosing best ones
+  const int num_radius_buckets = 100;
+  int radius_counters [num_radius_buckets];
+  memset(&radius_counters[0], 0,  sizeof(radius_counters));
   double max_radius = sensor_max_range * std::pow(2, 0.5);
-  double bucket_width = max_radius / 10;
+  double bucket_width = max_radius / num_radius_buckets;
 
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
       // Filter by resolution
@@ -370,43 +373,50 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 			  xs.push_back(*cloud_x);
 			  ys.push_back(*cloud_y);
 			  zs.push_back(*cloud_z);
-        // Add point to entropy counters
+        // Add point to radius bucket
+        int radius_bucket = (int) (std::pow(std::pow(*cloud_x, 2) + std::pow(*cloud_y, 2), 0.5) / bucket_width);
+        radius_counters[radius_bucket] += 1;  
         if (*cloud_z < sensor_max_range) {
-          int radius_bucket = (int) (std::pow(std::pow(*cloud_x, 2) + std::pow(*cloud_y, 2), 0.5) / bucket_width);
-          // contribute to all buckets that we fall within
-          for (int radius = radius_bucket; radius <= num_entropy_buckets - 1; radius++) {
-            entropy_counters[radius] += 1;
-          }
+          entropy_diagnostic++;
         }
 		  }
-	  // }
   }
 
-  // Dynamically update cloud_width and cloud_height?
-  int min_cloud_width = 5;
-  int min_cloud_height = 5;
-  int scaled_cloud_height = max(min_cloud_height, entropy_counters[num_entropy_buckets - 1] / 200);
-  int scaled_cloud_width = max(min_cloud_width, entropy_counters[num_entropy_buckets - 1] / 200);
+  /*std::cout << "[ ";
+  for (int i = 0; i < num_radius_buckets; i++) {
+    std::cout << radius_counters[i] << ", ";
+  } 
+  std::cout << "]" << std::endl;*/
 
-  // Filter point cloud to specified field of view
+  // select the most central points to include
+  int points_budget = 100;
+  points_budget = entropy_diagnostic;  // prototype dynamic adjustment
+  int max_radius_bucket = 0;
+  int points_to_include = radius_counters[0] + radius_counters[1];
+  while (points_to_include <= points_budget && max_radius_bucket < num_radius_buckets) {
+    max_radius_bucket++;
+    points_to_include += radius_counters[max_radius_bucket + 1];
+  }
+
+  // Pick best points
   std::vector<float> xs_fov_filtered;
   std::vector<float> ys_fov_filtered;
   std::vector<float> zs_fov_filtered;
 
   for (int i = 0; i < xs.size(); i++) {
-    if (xs[i] > -1*scaled_cloud_width && xs[i] < scaled_cloud_width && 
+    /*if (xs[i] > -1*scaled_cloud_width && xs[i] < scaled_cloud_width && 
         ys[i] > -1*scaled_cloud_height && ys[i] < scaled_cloud_height) {
+      xs_fov_filtered.push_back(xs[i]);
+      ys_fov_filtered.push_back(ys[i]);
+      zs_fov_filtered.push_back(zs[i]);
+    }*/
+    int radius_bucket = (int) (std::pow(std::pow(xs[i], 2) + std::pow(ys[i], 2), 0.5) / bucket_width);
+    if (radius_bucket <= max_radius_bucket) {
       xs_fov_filtered.push_back(xs[i]);
       ys_fov_filtered.push_back(ys[i]);
       zs_fov_filtered.push_back(zs[i]);
     }
   }
-
-  std::cout << "[ ";
-  for (int i = 0; i < num_entropy_buckets; i++) {
-    std::cout << entropy_counters[i] << ", ";
-  } 
-  std::cout << "]" << std::endl;
 
   if (DEBUG_RQT){
     debug_data.header.stamp = ros::Time::now();
