@@ -92,6 +92,9 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 
   void connectCb();
 
+  void filterBasedOnWidthHeight(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+		  std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points);
+
   void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                const sensor_msgs::CameraInfoConstPtr& info_msg);
   // Profiling
@@ -242,6 +245,86 @@ void PointCloudXyzNodelet::sigIntHandlerPrivate(int signo){
 
 
 
+unsigned long int point_hash_xyz (double x, double y, double z) {
+    return boost::hash_value(make_tuple(x, y, z));
+}
+
+unsigned long int point_hash_xy(double x, double y) {
+    return boost::hash_value(make_tuple(x, y));
+}
+
+double round_to_resolution(double v, double resolution) {
+    // add half, then truncate to round to nearest multiple of resolution
+    v += boost::math::sign(v) * resolution / 2;
+    return v - fmod(v, resolution);
+}
+
+
+void PointCloudXyzNodelet::filterBasedOnWidthHeight(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+  std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points){
+
+  // map of whether a point has been seen (rounded by resolution)
+  std::unordered_set<double> seen;
+  seen.clear();
+  // map of maximum z for each (x, y
+  std::unordered_map<double, double> frontier;
+
+  // subsampling based on resolution
+  // printf("--------------------------------\n\n\n\n\n\n\n\n\n");
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+	  // filter based on FOV
+	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width &&
+			  *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
+		  // Filter by resolution
+		  double rounded_x = round_to_resolution(*cloud_x, point_cloud_resolution);
+		  double rounded_y = round_to_resolution(*cloud_y, point_cloud_resolution);
+		  double rounded_z = round_to_resolution(*cloud_z, point_cloud_resolution);
+		  double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+		  // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+		  // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
+		  // add to filtered cloud only if it is not close to one already seen
+		  if (seen.find(hashed_point) == seen.end()) {
+			  seen.insert(hashed_point);
+			  // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+			  xs.push_back(*cloud_x);
+			  ys.push_back(*cloud_y);
+			  zs.push_back(*cloud_z);
+		  }
+		  // add to frontier if it is the closest z for given xy
+		  double hashed_xy = point_hash_xy(rounded_x, rounded_y);
+		  if (frontier.find(hashed_xy) == frontier.end() || *cloud_z < frontier.at(hashed_xy)) {
+			  frontier[hashed_xy] = *cloud_z;
+		  }
+	  }
+  }
+}
+
+void calc_avg_worse_point_distance(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, double &avg_distance, double &max_min){
+
+  //calculate the avg and worse case distance between points
+  for (int i = 0; i<xs.size() ; i++){
+	  double min_distance;
+	  bool min_distance_collected = false;
+	  for (int j = 0; j<xs.size(); j++){
+		  if (i == j){
+			  continue;
+		  }
+		  double dx = xs[i] - xs[j];
+		  double dy = ys[i] - ys[j];
+		  double dz = zs[i] - zs[j];
+		  if (min_distance_collected){
+			  min_distance = std::min(min_distance, std::sqrt(dx*dx + dy*dy + dz*dz));
+		  }else{
+			  min_distance =  std::sqrt(dx*dx + dy*dy + dz*dz);
+			  min_distance_collected = true;
+		  }
+	  }
+	  if (min_distance_collected){
+		  avg_distance += min_distance;
+		  max_min = std::max(min_distance, max_min);
+	  }
+  }
+}
 
 
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
@@ -323,61 +406,11 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs;
 
   profiling_container->capture("filtering", "start", ros::Time::now());
+  filterBasedOnWidthHeight(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points);
+  //filterBasedOnNumPoints(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points);
   
   // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
-  
   // TODO: make collisions less likely? Library to do this?
-
-  auto point_hash_xyz = [](double x, double y, double z) {
-    return boost::hash_value(make_tuple(x, y, z));
-  };
-  auto point_hash_xy = [](double x, double y) {
-    return boost::hash_value(make_tuple(x, y));
-  };
-  auto round_to_resolution = [](double v, double resolution) {
-    // add half, then truncate to round to nearest multiple of resolution
-    v += boost::math::sign(v) * resolution / 2;
-    return v - fmod(v, resolution);
-  };
-  // map of whether a point has been seen (rounded by resolution)
-  std::unordered_set<double> seen;
-  seen.clear();
-  // map of maximum z for each (x, y
-  std::unordered_map<double, double> frontier;
-
-
-  // subsampling based on resolution
-  // printf("--------------------------------\n\n\n\n\n\n\n\n\n");
-
-  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
-	  // filter based on FOV
-	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width && 
-        *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
-	  // Filter by resolution
-      double rounded_x = round_to_resolution(*cloud_x, point_cloud_resolution);
-      double rounded_y = round_to_resolution(*cloud_y, point_cloud_resolution);
-      double rounded_z = round_to_resolution(*cloud_z, point_cloud_resolution);
-      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
-      // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
-      // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
-      // add to filtered cloud only if it is not close to one already seen
-      if (seen.find(hashed_point) == seen.end()) {
-        seen.insert(hashed_point);
-        // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
-			  xs.push_back(*cloud_x);
-			  ys.push_back(*cloud_y);
-			  zs.push_back(*cloud_z);
-		  }
-      // add to frontier if it is the closest z for given xy
-      double hashed_xy = point_hash_xy(rounded_x, rounded_y);
-      if (frontier.find(hashed_xy) == frontier.end() || *cloud_z < frontier.at(hashed_xy)) {
-        frontier[hashed_xy] = *cloud_z;
-      }
-	  }
-  }
-
-
-
   double avg_distance = 0;
   double max_min = 0; //max of all the mins
 
@@ -396,33 +429,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  cntr +=1;
   }
  */
-
-  /*
-  //calculate the avg and worse case distance between points
-  for (int i = 0; i<xs.size() ; i++){
-	  double min_distance;
-	  bool min_distance_collected = false;
-	  for (int j = 0; j<xs.size(); j++){
-		  if (i == j){
-			  continue;
-		  }
-		  double dx = xs[i] - xs[j];
-		  double dy = ys[i] - ys[j];
-		  double dz = zs[i] - zs[j];
-		  if (min_distance_collected){
-			  min_distance = std::min(min_distance, std::sqrt(dx*dx + dy*dy + dz*dz));
-		  }else{
-			  min_distance =  std::sqrt(dx*dx + dy*dy + dz*dz);
-			  min_distance_collected = true;
-		  }
-	  }
-	  if (min_distance_collected){
-		  avg_distance += min_distance;
-		  max_min = std::max(min_distance, max_min);
-	  }
-  }
-*/
-
+  //calc_avg_worse_point_distance(xs, ys, zs, avg_distance, max_min);
   // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
   // Name the function "entropy"?!?! 8-)
 
