@@ -83,6 +83,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::ServiceClient profile_manager_client;
   bool measure_time_end_to_end;
   float point_cloud_width, point_cloud_height; //point cloud boundary
+  int point_cloud_num_points; // budget for how many points we can send
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
   double point_cloud_resolution; // specifies the minimum distance between the points
   bool first_time = true;
@@ -138,6 +139,11 @@ void PointCloudXyzNodelet::onInit()
 
   if (!ros::param::get("/measure_time_end_to_end", measure_time_end_to_end)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for measure_time_end_to_end");
+    return ;
+  }
+
+  if (!ros::param::get("/point_cloud_num_points", point_cloud_num_points)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_num_points Parameter missing!");
     return ;
   }
   
@@ -389,8 +395,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::cout << "]" << std::endl;*/
 
   // select the most central points to include
-  int points_budget = 100;
-  points_budget = entropy_diagnostic;  // prototype dynamic adjustment
+  int points_budget = point_cloud_num_points;
+  // points_budget = entropy_diagnostic;  // prototype dynamic adjustment
   int max_radius_bucket = 0;
   int points_to_include = radius_counters[0] + radius_counters[1];
   while (points_to_include <= points_budget && max_radius_bucket < num_radius_buckets) {
