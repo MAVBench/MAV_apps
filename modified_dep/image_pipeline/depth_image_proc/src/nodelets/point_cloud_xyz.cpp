@@ -433,17 +433,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
   // Name the function "entropy"?!?! 8-)
 
-  if (DEBUG_RQT){
-    debug_data.header.stamp = ros::Time::now();
-    debug_data.points_avg_distance = (float)avg_distance/xs.size();
-    debug_data.points_max_min = (float)max_min;
-    debug_data.point_cloud_width = point_cloud_width;
-    debug_data.point_cloud_height = point_cloud_height;
-    debug_data.point_cloud_resolution = point_cloud_resolution;
-    debug_data.point_cloud_point_cnt = xs.size();
-    pc_debug_pub.publish(debug_data);
-  }
-
   // reset point cloud and load in filtered in points
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);
@@ -463,6 +452,19 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
  
   //cloud_msg->header.stamp = ros::Time::now();
   profiling_container->capture("filtering", "end", ros::Time::now());
+
+    if (DEBUG_RQT){
+		debug_data.header.stamp = ros::Time::now();
+		debug_data.points_avg_distance = (float)avg_distance/xs.size();
+		debug_data.points_max_min = (float)max_min;
+		debug_data.point_cloud_width = point_cloud_width;
+		debug_data.point_cloud_height = point_cloud_height;
+		debug_data.point_cloud_resolution = point_cloud_resolution;
+		debug_data.point_cloud_point_cnt = xs.size();
+		debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
+		pc_debug_pub.publish(debug_data);
+  }
+
   pub_point_cloud_.publish (cloud_msg);
 
 }
