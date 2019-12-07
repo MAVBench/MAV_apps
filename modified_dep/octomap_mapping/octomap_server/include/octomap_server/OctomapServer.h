@@ -33,6 +33,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <std_msgs/ColorRGBA.h>
+#include <std_msgs/Bool.h>
 #include <octomap_server/maxRangeSrv.h>
 #include <std_msgs/Int32.h>
 // #include <moveit_msgs/CollisionObject.h>
@@ -224,6 +225,8 @@ protected:
 
 
   void adjustMapData(nav_msgs::OccupancyGrid& map, const nav_msgs::MapMetaData& oldMapInfo) const;
+  void SaveMapCb(std_msgs::Bool msg);
+
 
   void update_lower_res_map(octomap::point3d , octomap::OcTreeNode* node);
   inline void update_closest_obstacle(octomap::point3d coordinate, octomap::point3d sensorOrigin); //update the cloests obstacle distance and coordinates. It's conservate (read description in .cpp)
@@ -239,6 +242,10 @@ protected:
   ros::NodeHandle m_nh;
   ros::Publisher  m_markerPub, m_markerLowerResPub, m_binaryMapPub, m_binaryMapLowerResPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
+
+ ros::Subscriber m_save_map_pub;
+ bool m_save_map;
+
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService, m_octomapResetMaxRange;
   ros::Subscriber m_octomapHeaderSub;  

@@ -1,6 +1,8 @@
 <launch>
     <node pkg="compare_octomaps" type="compare_octomaps" name="compare_octomaps" output="screen">
-    <param name="octomap_file" value="/home/nvidia/catkin_ws/mapfile2.bt" />
+    <param name="first_map" value="/home/reddi-rtx/high_res_map_no_filter.ot"/>
+    <param name="second_map" value="/home/reddi-rtx/high_res_map_2.ot"/>
+    <param name="mode" value="volume_overlap"/>
     <param name="minX" value="0"/>
     <param name="minY" value="0"/>
     <param name="minZ" value="0"/>
