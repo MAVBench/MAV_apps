@@ -291,7 +291,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
 
-    if (planning_succeeded) {
+    if (!planning_succeeded) {
 		profiling_container.capture("planning_failure_count", "counter", 0);
 	}
 
@@ -357,6 +357,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
+    	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
+
     	if (notified_failure){ //so we won't fly backward multiple times
     		return false;
     	}
@@ -418,6 +420,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     if (smooth_path.empty()) {
     	ROS_ERROR("Path could not be smoothened successfully");
+    	profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
     		return false;
     	}
@@ -653,16 +656,28 @@ void MotionPlanner::motion_planning_initialize_params()
         std::cout<<"This motion planning type is not defined"<<std::endl;
         exit(0);
     }
+
+
+	profiling_container.capture("planning_failure_count", "counter", 0);
+	profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
+	profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
+    profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
+    profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
 }
 
 void MotionPlanner::log_data_before_shutting_down()
 {
     // post processing for some statistics
-    int total_planning_count = profiling_container.findDataByName("planning_count")->values.back();
-    int approximate_planning_count = profiling_container.findDataByName("approximate_plans_count")->values.back();
-    int planning_failure_count = profiling_container.findDataByName("planning_failure_count")->values.back();
-    profiling_container.capture("planning_failure_rate", "single", float(planning_failure_count)/total_planning_count); // @suppress("Invalid arguments")
-    profiling_container.capture("approximate_planning_rate", "single", float(approximate_planning_count)/total_planning_count); // @suppress("Invalid arguments")
+	int total_planning_count = profiling_container.findDataByName("planning_count")->values.back();
+	int approximate_planning_count = profiling_container.findDataByName("approximate_plans_count")->values.back();
+	int planning_failure_count = profiling_container.findDataByName("planning_failure_count")->values.back();
+	profiling_container.capture("planning_failure_rate", "single", float(planning_failure_count)/total_planning_count);
+	profiling_container.capture("approximate_planning_rate", "single", float(approximate_planning_count)/total_planning_count);
+	int  piecewise_failure_cnt =  profiling_container.findDataByName("motion_planning_piecewise_failure_cnt")->values.back();
+	profiling_container.capture("planning_piecewise_failure_rate", "single", float(piecewise_failure_cnt)/total_planning_count);
+
+	int  smoothening_failure_cnt =  profiling_container.findDataByName("motion_planning_smoothening_failure_cnt")->values.back();
+	profiling_container.capture("planning_smoothening_failure_rate", "single", float(smoothening_failure_cnt)/total_planning_count);
 
 	std::string ns = ros::this_node::getName();
     profiling_container.setStatsAndClear();

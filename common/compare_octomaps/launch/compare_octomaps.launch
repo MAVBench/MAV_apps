@@ -1,7 +1,7 @@
 <launch>
     <node pkg="compare_octomaps" type="compare_octomaps" name="compare_octomaps" output="screen">
-    <param name="first_map" value="/home/reddi-rtx/high_res_map_no_filter.ot"/>
-    <param name="second_map" value="/home/reddi-rtx/high_res_map_2.ot"/>
+    <param name="first_map" value="/home/reddi-rtx/high_resolution_map_no_filter.ot"/>
+    <param name="second_map" value="/home/reddi-rtx/high_resolution_map_4.ot"/>
     <param name="mode" value="volume_overlap"/>
     <param name="minX" value="0"/>
     <param name="minY" value="0"/>
