@@ -81,6 +81,8 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   std::string g_supervisor_mailbox; //file to write to when completed
   ros::ServiceClient profile_manager_client;
   bool measure_time_end_to_end;
+  // TODO: should num_points be the API for runtime? Seems pretty reasonable.
+  int point_cloud_num_points; // budget for how many points we can send
   float point_cloud_width, point_cloud_height; //point cloud boundary
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
   double point_cloud_resolution; // specifies the minimum distance between the points
@@ -91,9 +93,6 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 
 
   void connectCb();
-
-  void filterBasedOnWidthHeight(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
-		  std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points);
 
   void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                const sensor_msgs::CameraInfoConstPtr& info_msg);
@@ -140,6 +139,11 @@ void PointCloudXyzNodelet::onInit()
 
   if (!ros::param::get("/measure_time_end_to_end", measure_time_end_to_end)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for measure_time_end_to_end");
+    return ;
+  }
+
+  if (!ros::param::get("/point_cloud_num_points", point_cloud_num_points)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_num_points Parameter missing!");
     return ;
   }
   
@@ -259,43 +263,96 @@ double round_to_resolution(double v, double resolution) {
     return v - fmod(v, resolution);
 }
 
-
-void PointCloudXyzNodelet::filterBasedOnWidthHeight(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
-  std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points){
-
+void filterByResolution(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
   // map of whether a point has been seen (rounded by resolution)
   std::unordered_set<double> seen;
   seen.clear();
-  // map of maximum z for each (x, y
-  std::unordered_map<double, double> frontier;
 
-  // subsampling based on resolution
-  // printf("--------------------------------\n\n\n\n\n\n\n\n\n");
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
-	  // filter based on FOV
-	  if (*cloud_x > -1*point_cloud_width && *cloud_x < point_cloud_width &&
-			  *cloud_y > -1*point_cloud_height && *cloud_y < point_cloud_height) {
-		  // Filter by resolution
-		  double rounded_x = round_to_resolution(*cloud_x, point_cloud_resolution);
-		  double rounded_y = round_to_resolution(*cloud_y, point_cloud_resolution);
-		  double rounded_z = round_to_resolution(*cloud_z, point_cloud_resolution);
-		  double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
-		  // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
-		  // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
-		  // add to filtered cloud only if it is not close to one already seen
-		  if (seen.find(hashed_point) == seen.end()) {
-			  seen.insert(hashed_point);
-			  // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+      // Filter by resolution
+      // I don't think variable resolution makes much sense - it leave holes and stuff
+      double distance_from_center = abs(*cloud_x); //pow(pow(*cloud_x, 2) + pow(*cloud_y, 2), 0.5);
+      double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+      // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
+      // add to filtered cloud only if it is not close to one already seen
+      if (seen.find(hashed_point) == seen.end()) {
+
+        seen.insert(hashed_point);
+        // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
 			  xs.push_back(*cloud_x);
 			  ys.push_back(*cloud_y);
 			  zs.push_back(*cloud_z);
 		  }
-		  // add to frontier if it is the closest z for given xy
-		  double hashed_xy = point_hash_xy(rounded_x, rounded_y);
-		  if (frontier.find(hashed_xy) == frontier.end() || *cloud_z < frontier.at(hashed_xy)) {
-			  frontier[hashed_xy] = *cloud_z;
-		  }
-	  }
+  }
+}
+
+// gets an estimate of how many points are interesting (for runtime to make budget decision)
+int getEntropyDiagnostic(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs) {
+  int sensor_max_range = 25;
+  int entropy_diagnostic = 0;
+  // TODO: improve
+  for (int i = 0; i < xs.size(); i++) {
+    if (zs[i] < sensor_max_range) {
+      entropy_diagnostic++;
+    }
+  }
+  return entropy_diagnostic;
+}
+
+// gets the points that are most central
+void getCentralPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, 
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget) {
+
+  // bucket points by distance from center for choosing best ones
+  const int num_radius_buckets = 100;
+  int radius_counters [num_radius_buckets];
+  memset(&radius_counters[0], 0, sizeof(radius_counters));
+  double max_radius = 25 * std::pow(2, 0.5);
+  double bucket_width = max_radius / num_radius_buckets;
+
+  for (int i = 0; i < xs.size(); i++) {
+    // Add point to radius bucket
+    int radius_bucket = (int) (std::pow(std::pow(xs[i], 2) + std::pow(ys[i], 2), 0.5) / bucket_width);
+    radius_counters[radius_bucket] += 1;  
+  }
+    /*std::cout << "[ ";
+  for (int i = 0; i < num_radius_buckets; i++) {
+    std::cout << radius_counters[i] << ", ";
+  } 
+  std::cout << "]" << std::endl;*/
+
+  // select the most central points to include
+  int max_radius_bucket = 0;
+  int points_to_include = radius_counters[0] + radius_counters[1];
+  while (points_to_include <= points_budget && max_radius_bucket < num_radius_buckets) {
+    max_radius_bucket++;
+    points_to_include += radius_counters[max_radius_bucket + 1];
+  }
+
+  for (int i = 0; i < xs.size(); i++) {
+      int radius_bucket = (int) (std::pow(std::pow(xs[i], 2) + std::pow(ys[i], 2), 0.5) / bucket_width);
+      if (radius_bucket <= max_radius_bucket) {
+        xs_best.push_back(xs[i]);
+        ys_best.push_back(ys[i]);
+        zs_best.push_back(zs[i]);
+      }
+    }
+}
+
+void filterBasedOnWidthHeight(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, 
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int width, int height) {
+  for (int i = 0; i < xs.size(); i++) {
+    if (xs[i] > -1*width/2 && xs[i] < width/2 && 
+        ys[i] > -1*height/2 && ys[i] < height/2) {
+        xs_best.push_back(xs[i]);
+        ys_best.push_back(ys[i]);
+        zs_best.push_back(zs[i]);
+    }
   }
 }
 
@@ -406,15 +463,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs;
 
   profiling_container->capture("filtering", "start", ros::Time::now());
-  filterBasedOnWidthHeight(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points);
-  //filterBasedOnNumPoints(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points);
+  filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
   
   // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
-  // TODO: make collisions less likely? Library to do this?
-  double avg_distance = 0;
-  double max_min = 0; //max of all the mins
+  // double avg_distance = 0;
+  // double max_min = 0; // max of all the mins
 
-  //subsamping based on density
+  // drop fixed proportion of points - we should delete this, seems it is always bad idea
   /*
   int cntr = 0;
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
@@ -428,35 +483,42 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  }
 	  cntr +=1;
   }
- */
-  //calc_avg_worse_point_distance(xs, ys, zs, avg_distance, max_min);
-  // TODO: do something vaguely smart using the frontier - i.e. see which FOV areas have more closer depths/depth variation. 
-  // Name the function "entropy"?!?! 8-)
+  */
+
+  // Pick best points
+  std::vector<float> xs_best;
+  std::vector<float> ys_best;
+  std::vector<float> zs_best;
+
+  // filterBasedOnWidthHeight(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_width, point_cloud_height);
+  getCentralPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points);
 
   // reset point cloud and load in filtered in points
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
   // modifier.resize(0);
-  modifier.resize(xs.size());
+  modifier.resize(xs_best.size());
   sensor_msgs::PointCloud2Iterator<float> new_x(*cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> new_y(*cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> new_z(*cloud_msg, "z");
 
-  for(size_t i=0; i<xs.size(); ++i, ++new_x, ++new_y, ++new_z){
-      *new_x = xs[i];
-      *new_y = ys[i];
-      *new_z = zs[i];
+  for(size_t i=0; i<xs_best.size(); ++i, ++new_x, ++new_y, ++new_z){
+      *new_x = xs_best[i];
+      *new_y = ys_best[i];
+      *new_z = zs_best[i];
   }
+
   // ROS_INFO_STREAM("number of points in point cloud " << xs.size());
   // n_points = cloud_msg->width * cloud_msg->height;
   // printf("filtered size: %d \n", n_points);
+
  
   //cloud_msg->header.stamp = ros::Time::now();
   profiling_container->capture("filtering", "end", ros::Time::now());
 
-    if (DEBUG_RQT){
+  if (DEBUG_RQT){
 		debug_data.header.stamp = ros::Time::now();
-		debug_data.points_avg_distance = (float)avg_distance/xs.size();
-		debug_data.points_max_min = (float)max_min;
+		// debug_data.points_avg_distance = (float)avg_distance/xs.size();
+		// debug_data.points_max_min = (float)max_min;
 		debug_data.point_cloud_width = point_cloud_width;
 		debug_data.point_cloud_height = point_cloud_height;
 		debug_data.point_cloud_resolution = point_cloud_resolution;
