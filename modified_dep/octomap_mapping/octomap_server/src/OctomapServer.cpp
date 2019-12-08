@@ -221,7 +221,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
   m_octomapResetMaxRange = private_nh.advertiseService("reset_max_range", &OctomapServer::maxRangecb, this);
   m_octomapHeaderSub = private_nh.subscribe("octomap_header_col_detected", 1, &OctomapServer::OctomapHeaderColDetectedcb, this);
-
+  m_save_map_pub = private_nh.subscribe("save_map", 1, &OctomapServer::SaveMapCb, this);
 
 
   dynamic_reconfigure::Server<OctomapServerConfig>::CallbackType f;
@@ -415,56 +415,13 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
   profiling_container.capture("insertScan", "end", ros::Time::now(), capture_size);
-
-  //ROS_INFO_STREAM("octomap insertScan time"<<this->profiling_container.findDataByName("insertScan")->values.back());
-
-  //double total_elapsed = (ros::Time::now() - startTime).toSec();
   profiling_container.capture("octomap_insertCloud", "end", ros::Time::now(), capture_size);
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
+
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
 
-  /*
-  if(CLCT_DATA){
-      octomap_integration_acc += total_elapsed*1e9;
-      if ((octomap_ctr+1) % data_collection_iteration_freq == 0) {
-          profile_manager::profiling_data_srv profiling_data_srv_inst;
-          profiling_data_srv_inst.request.key = "img_to_octomap_commun_t";
-          profiling_data_srv_inst.request.value = ((double)pt_cld_octomap_commun_overhead_acc/1e9)/octomap_ctr;
-
-          if (!profile_manager_client.call(profiling_data_srv_inst)){ 
-              ROS_ERROR_STREAM("could not probe data using stats manager using octomap");
-              ros::shutdown();
-          }
-          
-          std::string ns = ros::this_node::getName();
-          profiling_data_srv_inst.request.key = "octomap_integration";
-          profiling_data_srv_inst.request.value = (((double)octomap_integration_acc)/1e9)/octomap_ctr;
-          if (!profile_manager_client.call(profiling_data_srv_inst)){ 
-              ROS_ERROR_STREAM("could not probe data using stats manager using octomap");
-              ros::shutdown();
-          }
-      }
-  }
-  */
-
-
-  //create another octomap with lower resolution
-  /*
-  profiling_container.capture("construct_lower_resolution_map", "start", ros::Time::now(), capture_size);
-  construct_lower_res_map(m_lower_res, pointTfToOctomap(sensorToWorldTf.getOrigin()));
-  profiling_container.capture("construct_lower_resolution_map", "end", ros::Time::now(), capture_size);
-  if (DEBUG_RQT) {
-	  	debug_data.header.stamp = ros::Time::now();
-	  	debug_data.construct_lower_resolution_map = profiling_container.findDataByName("construct_lower_resolution_map")->values.back();
-		octomap_debug_pub.publish(debug_data);
-  }
-  */
-
-  if (measure_time_end_to_end){
-	  publishAll(cloud->header.stamp);
-  }else{
-	  publishAll(ros::Time::now());
-  }
+  if (measure_time_end_to_end){ publishAll(cloud->header.stamp);}
+  else{publishAll(ros::Time::now()); }
 
 
   if (DEBUG_RQT) {
@@ -478,12 +435,25 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	  	debug_data.octomap_serialization_low_res_time =  profiling_container.findDataByName("octomap_serialization_low_res_time")->values.back();
 	  	octomap_debug_pub.publish(debug_data);
   }
+
+  if (m_save_map){
+	  m_octree->write("high_res_map.ot");
+	  m_octree_lower_res->write("low_res_map.ot");
+	  m_save_map = false; //reset m_save_map to avoid rewriting
+  }
 }
 
+void OctomapServer::SaveMapCb(std_msgs::Bool msg){
+	m_save_map = true;
+}
+
+
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
-  point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
 
+   ros::param::get("/lower_resolution", m_lower_res);
+   ros::param::get("/lower_resolution", m_lower_res);
 
+   point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
 
   if (!m_octree->coordToKeyChecked(sensorOrigin, m_updateBBXMin)
     || !m_octree->coordToKeyChecked(sensorOrigin, m_updateBBXMax))
@@ -496,18 +466,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 #endif
 
 
-    //update the closest obstacle
-	dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
-  //point3d closest_possible_unseen_obstacle(sensorOrigin.x()+m_maxRange,
-	//		sensorOrigin.y()+m_maxRange, sensorOrigin.z()+m_maxRange);
-  	//update_closest_obstacle(closest_possible_unseen_obstacle, sensorOrigin);
-  	/*
-  	double distance_to_closest_possible_unseen_obstacle = calc_dist(closest_possible_unseen_obstacle, sensorOrigin);
-  	if (distance_to_closest_possible_unseen_obstacle < calc_dist(closest_obs_coord, sensorOrigin)){
-		dist_to_closest_obs = distance_to_closest_possible_unseen_obstacle;
-		closest_obs_coord = closest_possible_unseen_obstacle;
-  	}
-  	*/
+  //update the closest obstacle
+  dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
 
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
@@ -624,12 +584,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
-  /*
-  if (DEBUG_RQT) {
-	  	debug_data.header.stamp = ros::Time::now();
-		octomap_debug_pub.publish(debug_data);
-  }
-  */
   profiling_container.capture("perceived_closest_obs_distance", "single", dist_to_closest_obs, capture_size);
   profiling_container.capture("octomap_calc_disjoint_and_update", "end", ros::Time::now(), capture_size);
 
