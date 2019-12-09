@@ -4,8 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
-#include "data_types.h"
+#include <common.h>
+//#include "data_types.h"
 
 class TimeBudgetter {
 public:

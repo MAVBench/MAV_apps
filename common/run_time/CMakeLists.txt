@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
+
 project(run_time)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -209,7 +210,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
   PATTERN ".svn" EXCLUDE
 )
 
-add_executable(run_time_thread src/run_time_node.cpp src/TimeBudgetter.cpp src/SensorActuatorModel.cpp)
+add_executable(run_time_thread src/run_time_node.cpp src/TimeBudgetter.cpp src/SensorActuatorModel.cpp ${common_utility_src}/common.cpp  ${common_utility_src}/Drone.cpp )
 target_link_libraries(run_time_thread ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)

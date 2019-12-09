@@ -114,7 +114,7 @@ void PointCloudXyzNodelet::onInit()
   //signal(SIGINT, sigIntHandlerPrivate);
   
   // Read parameters
-  private_nh.param("queue_size", queue_size_, 5);
+  private_nh.param("queue_size", queue_size_, 1);
 
   profiling_container = new DataContainer();
   profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
@@ -305,7 +305,7 @@ int getEntropyDiagnostic(std::vector<float> &xs,  std::vector<float> &ys, std::v
 }
 
 // gets the points that are most central
-void getCentralPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, 
+void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget) {
 
   // bucket points by distance from center for choosing best ones
@@ -344,7 +344,7 @@ void getCentralPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vect
     }
 }
 
-void filterBasedOnWidthHeight(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, 
+void filterByWidthHeight(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int width, int height) {
   for (int i = 0; i < xs.size(); i++) {
     if (xs[i] > -1*width/2 && xs[i] < width/2 && 
@@ -392,6 +392,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    ros::param::get("/point_cloud_resolution", point_cloud_resolution);
    ros::param::get("/point_cloud_width", point_cloud_width);
    ros::param::get("/point_cloud_height", point_cloud_height);
+   ros::param::get("/point_cloud_num_points", point_cloud_num_points);
    ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
 
 
@@ -490,8 +491,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> ys_best;
   std::vector<float> zs_best;
 
-  // filterBasedOnWidthHeight(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_width, point_cloud_height);
-  getCentralPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points);
+  //filterByWidthHeight(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_width, point_cloud_height);
+  filterByNumOfPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points);
+
 
   // reset point cloud and load in filtered in points
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
@@ -522,7 +524,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 		debug_data.point_cloud_width = point_cloud_width;
 		debug_data.point_cloud_height = point_cloud_height;
 		debug_data.point_cloud_resolution = point_cloud_resolution;
-		debug_data.point_cloud_point_cnt = xs.size();
+		debug_data.point_cloud_point_cnt = xs_best.size();
 		debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
 		pc_debug_pub.publish(debug_data);
   }

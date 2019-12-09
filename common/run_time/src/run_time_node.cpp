@@ -26,6 +26,7 @@
 #include <mavbench_msgs/multiDOFpoint.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include "TimeBudgetter.h"
+#include <Drone.h>
 
 using namespace std;
 std::string ip_addr__global;
@@ -51,6 +52,7 @@ typedef struct node_param_t {
 
 vector<string> node_types;
 
+
 vector<NodeBudget> calc_micro_budget(double macro_time_budget){
 	vector<NodeBudget> node_budget_vec;
 	double node_coeff;
@@ -72,7 +74,6 @@ vector<NodeBudget> calc_micro_budget(double macro_time_budget){
 	return node_budget_vec;
 }
 
-int ctr = 0;
 
 vector<ParamVal> perf_model(NodeBudget node_budget) {
 	vector<ParamVal> results;
@@ -188,6 +189,7 @@ void initialize_global_params() {
 	}
 }
 
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
@@ -202,21 +204,70 @@ int main(int argc, char **argv)
 
 
     std::string ns = ros::this_node::getName();
-    ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
+    //ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
 
-    uint16_t port = 41451;
 
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);
-    //Drone drone(ip_addr__global.c_str(), port);
-	ros::Rate pub_rate(5);
 
+    std::string ip_addr, localization_method;
+    ros::param::get("/ip_addr", ip_addr);
+    uint16_t port = 41451;
+
+    if(!ros::param::get("/localization_method", localization_method)) {
+        ROS_FATAL("Could not start occupancy map node. Localization parameter missing!");
+        exit(-1);
+    }
+
+    double v_max;
+    ros::param::get("/motion_planner/v_max", v_max);
+
+    Drone drone(ip_addr.c_str(), port, localization_method);
+    //Drone drone(ip_addr__global.c_str(), port);
+	ros::Rate pub_rate(50);
 
     while (ros::ok())
 	{
-        ros::spinOnce();
-        pub_rate.sleep();
-    }
+    	ros::spinOnce();
+    	pub_rate.sleep();
+    	auto vel = drone.velocity();
+    	auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+
+
+        //simple policty based on velocity
+    	//ros::param::set("point_cloud_height", (1 - vel_mag/v_max)*(50 - 1) + 1);
+    	//ros::param::set("point_cloud_width", (1 - vel_mag/v_max)*(50 - 1 ) + 1);
+    	//ros::param::set("point_cloud_num_points", (1 - vel_mag/v_max)*(2500 - 200) + 200);
+
+    	// filter based on resolution
+    	double max_point_cloud_resolution = .2;
+        double min_point_cloud_resolution = .8;
+        double point_cloud_resolution =  ((max_point_cloud_resolution - min_point_cloud_resolution)/(0 - v_max)) * vel_mag + max_point_cloud_resolution;
+        ros::param::set("point_cloud_resolution", point_cloud_resolution);
+
+        // filtering based on num of points
+        // need to calculate the modified max number of points in point cloud since resolution impacts the maximum unfiltered point count
+        double max_point_cloud_point_count_max_resolution = 40000;
+        double max_point_cloud_point_count_min_resolution = 2500;
+        double min_point_cloud_point_count = 300;
+        // calculate the maximum number of points in an unfiltered point cloud as a function of resolution
+        double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(max_point_cloud_resolution - min_point_cloud_resolution)*(point_cloud_resolution - max_point_cloud_resolution) + max_point_cloud_point_count_max_resolution;
+        // calucate num of points as function of velocity
+        double point_cloud_num_points = (modified_max_point_cloud_point_count - min_point_cloud_point_count)/(0 - v_max)*vel_mag + modified_max_point_cloud_point_count;
+        ros::param::set("point_cloud_num_points", point_cloud_num_points);
+
+    	/*
+    	if (vel_mag < v_max/float(2)){
+    		ros::param::set("point_cloud_height", 50);
+    		ros::param::set("point_cloud_width", 50);
+    		ros::param::set("point_cloud_resolution", .3);
+    	}else{
+    		ros::param::set("point_cloud_height", 5);
+    		ros::param::set("point_cloud_width", 5);
+    		ros::param::set("point_cloud_resolution", .9);
+    	}
+    	*/
+	}
 
 }
 
