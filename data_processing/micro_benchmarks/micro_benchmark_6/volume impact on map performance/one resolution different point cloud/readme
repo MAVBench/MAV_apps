@@ -1,0 +1,3 @@
+chaning the resolution of octomap and point cloud resolution (with it) at the same.
+In this scenarios, octomap only keeps track of one resolution.
+In this scenarios octomap only keeps track of one resolution at the same time.
