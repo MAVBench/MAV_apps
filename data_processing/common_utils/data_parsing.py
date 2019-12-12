@@ -167,7 +167,17 @@ def avg_over_sequence(result_dic, seq_length):
 
     for idx in range(gen_length/seq_length):
         for key, val in result_dic.items():
-                new_result_dict[key].append(sum(val[idx*seq_length: idx*seq_length+ seq_length])/seq_length)
+                sum = 0
+                cnt = 0
+                for el in val[idx*seq_length: idx*seq_length + seq_length]:
+                    if not (el == float("inf")): # if inifity skip it
+                        sum += el
+                        cnt +=1;
+                if not (cnt == 0): # if there was at least one value that wasn't inifinity
+                    #new_result_dict[key].append(sum(val[idx*seq_length: idx*seq_length+ seq_length])/seq_length)
+                    new_result_dict[key].append(sum/cnt)
+                else:
+                    new_result_dict[key].append(float("inf"))
 
     return new_result_dict
 

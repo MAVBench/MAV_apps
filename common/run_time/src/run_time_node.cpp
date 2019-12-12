@@ -32,6 +32,7 @@ using namespace std;
 std::string ip_addr__global;
 double g_sensor_max_range, g_sampling_interval, g_v_max;
 std::deque<double> MacroBudgets;
+bool dynamic_budgetting, reactive_runtime;
 
 typedef struct node_budget_t {
 	string node_type;
@@ -190,6 +191,29 @@ void initialize_global_params() {
 }
 
 
+void reactive_budgetting(double vel_mag){
+	// filter in reaction to velocity
+	// filter based on resolution
+	double max_point_cloud_resolution = .2;
+	double min_point_cloud_resolution = .8;
+	double point_cloud_resolution =  ((max_point_cloud_resolution - min_point_cloud_resolution)/(0 - g_v_max)) * vel_mag + max_point_cloud_resolution;
+	ros::param::set("point_cloud_resolution", point_cloud_resolution);
+	ros::param::set("point_cloud_resolution",0.3);
+
+
+	// filtering based on num of points
+	// need to calculate the modified max number of points in point cloud since resolution impacts the maximum unfiltered point count
+	double max_point_cloud_point_count_max_resolution = 40000;
+	double max_point_cloud_point_count_min_resolution = 2500;
+	double min_point_cloud_point_count = 300;
+	// calculate the maximum number of points in an unfiltered point cloud as a function of resolution
+	double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(max_point_cloud_resolution - min_point_cloud_resolution)*(point_cloud_resolution - max_point_cloud_resolution) + max_point_cloud_point_count_max_resolution;
+	// calucate num of points as function of velocity
+	double point_cloud_num_points = (modified_max_point_cloud_point_count - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + modified_max_point_cloud_point_count;
+	ros::param::set("point_cloud_num_points", point_cloud_num_points);
+	ros::param::set("point_cloud_num_points", 80000);
+}
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
@@ -219,8 +243,15 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    double v_max;
-    ros::param::get("/motion_planner/v_max", v_max);
+    if(!ros::param::get("/dynamic_budgetting", dynamic_budgetting)) {
+        ROS_FATAL("Could not start occupancy map node. dynamic_budgetting parameter missing!");
+        exit(-1);
+    }
+
+    if(!ros::param::get("/reactive_runtime", reactive_runtime)) {
+        ROS_FATAL("Could not start occupancy map node. reactive_runtime parameter missing!");
+        exit(-1);
+    }
 
     Drone drone(ip_addr.c_str(), port, localization_method);
     //Drone drone(ip_addr__global.c_str(), port);
@@ -229,44 +260,15 @@ int main(int argc, char **argv)
     while (ros::ok())
 	{
     	ros::spinOnce();
-    	pub_rate.sleep();
-    	auto vel = drone.velocity();
-    	auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
-
-
-        //simple policty based on velocity
-    	//ros::param::set("point_cloud_height", (1 - vel_mag/v_max)*(50 - 1) + 1);
-    	//ros::param::set("point_cloud_width", (1 - vel_mag/v_max)*(50 - 1 ) + 1);
-    	//ros::param::set("point_cloud_num_points", (1 - vel_mag/v_max)*(2500 - 200) + 200);
-
-    	// filter based on resolution
-    	double max_point_cloud_resolution = .2;
-        double min_point_cloud_resolution = .8;
-        double point_cloud_resolution =  ((max_point_cloud_resolution - min_point_cloud_resolution)/(0 - v_max)) * vel_mag + max_point_cloud_resolution;
-        ros::param::set("point_cloud_resolution", point_cloud_resolution);
-
-        // filtering based on num of points
-        // need to calculate the modified max number of points in point cloud since resolution impacts the maximum unfiltered point count
-        double max_point_cloud_point_count_max_resolution = 40000;
-        double max_point_cloud_point_count_min_resolution = 2500;
-        double min_point_cloud_point_count = 300;
-        // calculate the maximum number of points in an unfiltered point cloud as a function of resolution
-        double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(max_point_cloud_resolution - min_point_cloud_resolution)*(point_cloud_resolution - max_point_cloud_resolution) + max_point_cloud_point_count_max_resolution;
-        // calucate num of points as function of velocity
-        double point_cloud_num_points = (modified_max_point_cloud_point_count - min_point_cloud_point_count)/(0 - v_max)*vel_mag + modified_max_point_cloud_point_count;
-        ros::param::set("point_cloud_num_points", point_cloud_num_points);
-
-    	/*
-    	if (vel_mag < v_max/float(2)){
-    		ros::param::set("point_cloud_height", 50);
-    		ros::param::set("point_cloud_width", 50);
-    		ros::param::set("point_cloud_resolution", .3);
-    	}else{
-    		ros::param::set("point_cloud_height", 5);
-    		ros::param::set("point_cloud_width", 5);
-    		ros::param::set("point_cloud_resolution", .9);
+    	if (dynamic_budgetting){
+    		if (reactive_runtime){
+    			auto vel = drone.velocity();
+    			auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+    			reactive_budgetting(vel_mag);
+    		}
     	}
-    	*/
+
+    	pub_rate.sleep();
 	}
 
 }

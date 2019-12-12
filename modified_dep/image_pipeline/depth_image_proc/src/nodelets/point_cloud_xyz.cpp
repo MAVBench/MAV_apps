@@ -344,6 +344,18 @@ void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::v
     }
 }
 
+
+// no filter
+void filterNoFilter(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best) {
+	for (int i = 0; i < xs.size(); i++) {
+		xs_best.push_back(xs[i]);
+		ys_best.push_back(ys[i]);
+		zs_best.push_back(zs[i]);
+	}
+}
+
+
 void filterByWidthHeight(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int width, int height) {
   for (int i = 0; i < xs.size(); i++) {
@@ -491,6 +503,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> ys_best;
   std::vector<float> zs_best;
 
+
+  //filterNoFilter(xs, ys, zs, xs_best, ys_best, zs_best);
   //filterByWidthHeight(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_width, point_cloud_height);
   filterByNumOfPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points);
 

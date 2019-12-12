@@ -37,7 +37,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <XmlRpcValue.h>
 #include <mavbench_msgs/motion_planning_debug.h>
-
+#include <common.h>
 
 #include "../../deps/mav_comm/mav_msgs/include/mav_msgs/eigen_mav_msgs.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/impl/polynomial_optimization_linear_impl.h"
@@ -63,7 +63,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 
 	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
-	octomap_sub = nh.subscribe("/octomap_binary_lower_res", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
+	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
     timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_mp", 1);
     motion_planning_debug_pub = nh.advertise<mavbench_msgs::motion_planning_debug>("/motion_planning_debug", 1);
@@ -393,7 +393,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         return false;
     }
 
-    profiling_container.capture("RRT_path_length", "single", calculate_path_length(piecewise_path), capture_size);
+    profiling_container.capture("RRT_path_length_normalized_to_direct_path", "single",
+    		calculate_path_length(piecewise_path)/calc_vec_magnitude(drone->position().x - req.goal.x, drone->position().y - req.goal.y, drone->position().z - req.goal.z),
+    		capture_size);
 
     if (motion_planning_core_str != "lawn_mower") {
     	profiling_container.capture("piecewise_path_post_process", "start", ros::Time::now(), capture_size);

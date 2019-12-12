@@ -14,3 +14,6 @@ float32 octomap_serialization_high_res_time
 float32 octomap_serialization_low_res_time
 float32 octomap_prune_in_octomap_server
 float32 octomap_construct_lower_res_map
+float32 high_res_map_volume
+float32 low_res_map_volume
+

@@ -117,7 +117,7 @@ public:
   virtual bool octomapBinarySrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   virtual bool octomapFullSrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   bool clearBBXSrv(BBXSrv::Request& req, BBXSrv::Response& resp);
-  void publish_octomap_vis(octomap::OcTree *m_octree); //for now only publishes for lower_res octomap, i.e, the publishing topic is fixed
+  void publish_octomap_vis(octomap::OcTree *m_octree, ros::Publisher& om_pub); //for now only publishes for lower_res octomap, i.e, the publishing topic is fixed
 
 
   //bool changeResolution(octomap::point3d bbxMin, octomap::point3d bbxMax);
@@ -193,6 +193,9 @@ protected:
 
   /// hook that is called when traversing free nodes of the updated Octree
   virtual void handleFreeNode(const OcTreeT::iterator& it);
+
+
+  double calcTreeVolume(OcTreeT* tree);
 
   /// hook that is called when traversing free nodes in the updated area (updates 2D map projection here)
   virtual void handleFreeNodeInBBX(const OcTreeT::iterator& it);

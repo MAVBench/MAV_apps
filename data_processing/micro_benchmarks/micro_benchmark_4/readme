@@ -1,0 +1,8 @@
+purpose: measure the impact of  map size on octomap perforamnce. Note that you can measure the impact of any parameter on the octomap with this benchmark
+intentend behavior: drone lifting up and flying for 200 second
+
+map: microbenchark_4_octomap_side_view_walk
+
+how to run: 
+  # fly and collect performance measurements
+  ./script_1.bash

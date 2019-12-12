@@ -1,0 +1,4 @@
+- the map inefficinecy vs time budget is not that insighfull. I think I need to collect more data (and also 
+it's possible that this metric is not gonna be the intersting since the distance differenece between the direct and generated path is too smal (this is because the obstacles are not that big)
+
+- the relationship between distance travelled and time budget is interesteing. However, we need to understand which factors impact this. 

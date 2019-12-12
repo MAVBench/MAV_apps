@@ -1,8 +1,0 @@
-purpose: measure the impact of  point cloud's point count on octomap performance
-intentend behavior: drone lifting up and flying toward an obstacle (as the drone's FOV is occluded more and more, the number of points in the PC decreases)
-
-map:simple_map_20_20_closer_start_player
-
-how to run: 
-  # fly and collect performance measurements 
-  ./script_1.bash

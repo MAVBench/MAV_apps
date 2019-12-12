@@ -58,7 +58,8 @@ void printUsage(char* self){
 
 typedef struct volume_t {
 	double shared_volume;
-	double unshared_volume;
+	double unshared_volume_different_val; // one tree hasn't incorperated this volume (i.e., one tree treats the volume as unknown)
+	double unshared_volume_unknown_to_one; //  tree's don't have the same occupancy/free interpretation of the volume
 } Volume;
 
 Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
@@ -69,7 +70,8 @@ Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
 
 	vector<CoordVolume> first_tree_coord_volume_vec, second_tree_coord_volume_vec;
 	double shared_volume = 0;
-	double unshared_volume = 0;
+	double unshared_volume_unknown_to_one = 0; // one tree hasn't incorperated this volume (i.e., one tree treats the volume as unknown)
+	double unshared_volume_different_val = 0;  //  tree's don't have the same occupancy/free interpretation of the volume
 
 	// get all coordinates associated with each tree
 	for (OcTree::leaf_iterator it = tree1->begin_leafs(),
@@ -87,13 +89,13 @@ Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
     //calc non overlapping coordinates' volume
     for (auto &first_tree_coord_volume: first_tree_coord_volume_vec){
     	if (!tree2->search(first_tree_coord_volume.coordinates)) {
-    		unshared_volume += first_tree_coord_volume.volume;
+    		unshared_volume_unknown_to_one += first_tree_coord_volume.volume;
     	}
     }
 
    for (auto &second_tree_coord_volume: second_tree_coord_volume_vec){
     	if (!tree1->search(second_tree_coord_volume.coordinates)) {
-    		unshared_volume += second_tree_coord_volume.volume;
+    		unshared_volume_unknown_to_one += second_tree_coord_volume.volume;
     	}
     }
 
@@ -112,12 +114,12 @@ Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
     		if (tree1_node_occupancy == tree2_node_occupancy){
     			shared_volume += coord_volume.volume;
     		}else{
-    			unshared_volume += coord_volume.volume;
+    			unshared_volume_different_val += coord_volume.volume;
     		}
     	}
     }
 
-    return Volume{shared_volume, unshared_volume};
+    return Volume{shared_volume, unshared_volume_different_val, unshared_volume_unknown_to_one};
 }
 
 
@@ -136,22 +138,16 @@ double compare_maps_kld(string first_map, string second_map) {
     exit(-1);
   }
 
-  if (tree1->getNumLeafNodes() != tree2->getNumLeafNodes()){
-      OCTOMAP_ERROR_STR("Octrees have different size: " << tree1->getNumLeafNodes() << "!=" <<tree2->getNumLeafNodes() << endl);
-      exit(-1);
-  }
-
-
-
 
   cout << "Expanding octrees... \n";
   // expand both to full resolution:
   tree1->expand();
   tree2->expand();
 
+
   if (tree1->getNumLeafNodes() != tree2->getNumLeafNodes()){
-      OCTOMAP_ERROR_STR("Octrees have different size: " << tree1->getNumLeafNodes() << "!=" <<tree2->getNumLeafNodes() << endl);
-      exit(-1);
+      ROS_ERROR_STREAM("Octrees have different size: " << tree1->getNumLeafNodes() << "!=" <<tree2->getNumLeafNodes() << endl);
+      ROS_ERROR_STREAM("this can be problematic, but for now we skip this issue. For points that doesn't exist in both map, we simply skip them");
   }
 
   cout << "Expanded num. leafs: " << tree1->getNumLeafNodes() << endl;
@@ -166,7 +162,7 @@ double compare_maps_kld(string first_map, string second_map) {
       || (fabs(z1-z2) > 1e-6))
   {
     OCTOMAP_WARNING("Trees span over different volumes, results may be wrong\n");
-    exit(1);
+    ROS_ERROR_STREAM("this can be problematic, but for now we skip this issue");
   }
 
   double kld_sum = 0.0;
@@ -254,7 +250,9 @@ void compare_maps(string first_map, string second_map, string mode) {
   if (mode == "volume_overlap") {
 	  auto volume = calc_volume_overlap(tree1, tree2);
 	  std::cout<<"shared_volume"<<volume.shared_volume<<std::endl;;
-	  std::cout<<"unshared_volume"<<volume.unshared_volume<<std::endl;
+	  std::cout<<"unshared_volume unknown to one "<<volume.unshared_volume_unknown_to_one<<std::endl;
+	  std::cout<<"unshared_volume different occupancy perception"<<volume.unshared_volume_different_val<<std::endl;
+	  std::cout<<"total unshared_volume"<<volume.unshared_volume_different_val + volume.unshared_volume_unknown_to_one<<std::endl;
   }else if (mode == "kld"){
 	  auto kld_sum = compare_maps_kld(first_map, second_map);
 	  std::cout<<"kld_sum"<<kld_sum <<std::endl;
