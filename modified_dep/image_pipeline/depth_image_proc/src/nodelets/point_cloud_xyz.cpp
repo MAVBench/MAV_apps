@@ -263,6 +263,7 @@ double round_to_resolution(double v, double resolution) {
     return v - fmod(v, resolution);
 }
 
+
 void filterByResolution(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
     std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
   // map of whether a point has been seen (rounded by resolution)
@@ -290,6 +291,20 @@ void filterByResolution(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor
 		  }
   }
 }
+
+
+// populate xs,ys,zs, with the same points, so no filtering. Just used for comparison purposes with filtering
+void filterByResolutionNoFilter(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y,
+		sensor_msgs::PointCloud2Iterator<float> &cloud_z, std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
+  // map of whether a point has been seen (rounded by resolution)
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+	xs.push_back(*cloud_x);
+	ys.push_back(*cloud_y);
+	zs.push_back(*cloud_z);
+
+  }
+}
+
 
 // gets an estimate of how many points are interesting (for runtime to make budget decision)
 int getEntropyDiagnostic(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs) {
@@ -523,6 +538,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs;
 
   profiling_container->capture("filtering", "start", ros::Time::now());
+
   filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
 
   // get diagnostics for runtime 
@@ -540,6 +556,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   printf("x gap diagnostic: %d\n", xGapCount);
 
   
+  filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
+   //filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
+
   // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
   // double avg_distance = 0;
   // double max_min = 0; // max of all the mins
