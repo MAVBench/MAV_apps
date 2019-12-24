@@ -319,6 +319,53 @@ int getEntropyDiagnostic(std::vector<float> &xs,  std::vector<float> &ys, std::v
   return entropy_diagnostic;
 }
 
+// estimates the number of open regions in cloud that fall within specified width
+int xGapDiagnostic(std::vector<float> &xs, std::vector<float> &ys, std::vector<float> &zs, 
+  double min_gap_size, double max_gap_size, double y_bucket_size, double y_min, double y_max, double max_sensor_range) {
+  // bucket points by y value, store x and whether we see obstacle
+  std::vector<map<double, bool>> y_buckets;
+  const int num_y_buckets = (y_max - y_min) / y_bucket_size + 1;
+  y_buckets.resize(num_y_buckets);
+  for (int i = 0; i < xs.size(); i ++) {
+    int y_bucket = (int)((ys[i] - y_min) / y_bucket_size);
+    // printf("bucket number %d\n", y_bucket);
+    y_buckets[y_bucket].insert(pair<double,bool>(xs[i], zs[i] < max_sensor_range));
+
+  }
+
+  // count streaks of x values where there are no obstacles
+  int num_gaps = 0;
+  map<double, bool>::iterator itr;
+  for (int bucket_num = 0; bucket_num < num_y_buckets; bucket_num++){
+    map<double, bool> bucket = y_buckets[bucket_num];
+    bool first_obstacle_seen = false;
+    bool is_gap_active = false;
+    double current_gap_start = 0;
+    for (itr = bucket.begin(); itr != bucket.end(); ++itr) {
+      first_obstacle_seen |= itr->second;
+      // printf("%d\n", itr->second);
+      if (is_gap_active && (itr->second)) {
+        // end of gap
+        // printf("gap start, end: %f, %f \n", current_gap_start, itr->first);
+        double gap_length = itr->first - current_gap_start;
+        is_gap_active = false;
+        if (gap_length > min_gap_size && gap_length < max_gap_size) {
+          // printf("gap length : %f\n", gap_length);
+          num_gaps++;
+        }
+        // printf("gap length: %f\n", gap_length);
+      } else if (!is_gap_active && !itr->second && first_obstacle_seen) {
+        // printf("gap start: %f\n", itr->first);
+        is_gap_active = true;
+        current_gap_start = itr->first;
+      }
+    }
+  }
+  
+  return num_gaps;
+}
+
+
 // gets the points that are most central
 void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget) {
@@ -491,6 +538,23 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs;
 
   profiling_container->capture("filtering", "start", ros::Time::now());
+
+  filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
+
+  // get diagnostics for runtime 
+  // (this function is good for environments with vertical obstacles, if concerned about horizontal
+  // ones then y gap diagnostic may be useful)
+  double max_sensor_range = 25.5; // TODO: use params?
+  double min_gap_size = .5; // use drone height here?
+  double max_gap_size = 50;
+  double y_bucket_size = 3;
+  // could convert this to give an array of values for different max sizes, if multiple calls too expensive.
+  // (for now just seems more confusing to do that than it's worth)
+  double y_min = -25;
+  double y_max = 25;
+  int xGapCount = xGapDiagnostic(xs, ys, zs, min_gap_size, max_gap_size, y_bucket_size, y_min, y_max, max_sensor_range);
+  printf("x gap diagnostic: %d\n", xGapCount);
+
   
   filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
    //filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
