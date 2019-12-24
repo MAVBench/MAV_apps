@@ -211,7 +211,7 @@ void reactive_budgetting(double vel_mag){
 	// calucate num of points as function of velocity
 	double point_cloud_num_points = (modified_max_point_cloud_point_count - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + modified_max_point_cloud_point_count;
 	ros::param::set("point_cloud_num_points", point_cloud_num_points);
-	ros::param::set("point_cloud_num_points", 80000);
+	//ros::param::set("point_cloud_num_points", 80000);
 }
 
 // *** F:DN main function

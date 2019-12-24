@@ -1,0 +1,2 @@
+changing octomap resolution and point cloud at the same time.
+In this scenario, octomap keep track of two resolutions at the same time

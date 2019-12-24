@@ -1,8 +1,8 @@
 purpose: calculate the map difference for difference point cloud resolutions (quantifying the impact of point cloud resolutiong mapping on octomap. In other words, what is the acceptable resolution
 for point cloud relative to octomap)
-intentend behavior: drone sititing and taking snap shot of the environemehnt
+intentend behavior: drone lifting up and flying for a little while 
 
-map: any map
+map: _octomap_side_view
 
 how to run: 
   # get a map with some param configuration (say point cloud resolution of .3)

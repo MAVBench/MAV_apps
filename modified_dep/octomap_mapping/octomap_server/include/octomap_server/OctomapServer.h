@@ -152,9 +152,15 @@ protected:
 
   void reconfigureCallback(octomap_server::OctomapServerConfig& config, uint32_t level);
   void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) ;
+  void publishFilteredBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin, int depth_to_transfer);
   void publishBinaryLowerResOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFullOctoMap(const ros::Time& rostime = ros::Time::now()) const;
+  //virtual void publishAll(const ros::Time& rostime = ros::Time::now(), octomap::point3d = octomap::point3d(0,0,0));
   virtual void publishAll(const ros::Time& rostime = ros::Time::now());
+  octomap::point3d sensorOrigin_; // helps avoid having to overleading the publishAll function by remembering sensorOrigin (TODO: overload later)
+  octomap::point3d originalSensorOrigin; // register the first sensorOrigin to ensure
+  	  	  	  	  	  	  	  	  	  	 // bothe shrunk and normal tree has the same original point
+  bool first_time_scanning = true; //used to register originalSensorOrigin (only once obviously)
 
   /**
   * @brief update occupancy map with a scan labeled as ground and nonground.
@@ -259,6 +265,7 @@ protected:
 
   OcTreeT* m_octree;
   OcTreeT* m_octree_lower_res;
+  ros::Time last_time_cleared;
 
 octomap::KeyRay m_keyRay;  // temp storage for ray casting
   octomap::OcTreeKey m_updateBBXMin;
@@ -272,6 +279,8 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   std_msgs::ColorRGBA m_colorFree;
   double m_colorFactor;
   double dist_to_closest_obs; //distant to the closest obstacle perceived
+  int depth_to_transfer;
+  int gridSize; // how big the grid for sampling the octomap is
   int closest_obs_coordinate_vect_size = 20;
   octomap::point3d closest_obs_coord; // closeset obstacle (coordinate) perceived.
 

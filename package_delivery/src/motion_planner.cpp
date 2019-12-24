@@ -252,24 +252,34 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 		profiling_container.capture("sensor_to_motion_planner_time", "single",
 				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
 	}else{
-		profiling_container.capture("octomap_to_motion_planner_comunication_overhead", "single",
+		profiling_container.capture("octomap_to_motion_planner_communication_overhead", "single",
 				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
 	}
 
-	//if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_comunication_overhead","end", ros::Time::now());
+	//if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_communication_overhead","end", ros::Time::now());
 
     profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now(), capture_size);
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
     profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now(), capture_size);
 
+
+
+
     profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now(), capture_size);
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
+    {
+    	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
+    	publish_dummy_octomap_vis(octree);
+    }
 
-     if (DEBUG_RQT) {
+    if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
     		debug_data.octomap_deserialization_time = profiling_container.findDataByName("octomap_deserialization_time")->values.back();
+    		if (!measure_time_end_to_end){
+    			debug_data.octomap_to_motion_planner_communication_overhead = profiling_container.findDataByName("octomap_to_motion_planner_communication_overhead")->values.back();
+    		}
     		motion_planning_debug_pub.publish(debug_data);
     }
 

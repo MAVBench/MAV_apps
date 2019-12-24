@@ -1,6 +1,7 @@
 
 from collections import OrderedDict
 from copy import *
+import math
 #planning_failure_rate, planning_piecewise_failure_rate, planning_smoothening_failure_rate
 #        "S_A_latency", S_A_response_time_calculated_from_imgPublisher
 """
@@ -109,7 +110,7 @@ def filter_based_on_value(result_dict, value, mode):
     gen_length = len(list(result_dic.values())[0])
     for idx in range(gen_length):
         for val in result_dic.values():
-            if float(val[idx]) == float(value):
+            if float(round(val[idx], 4)) == float(round(value_, 4)):
                 remove_idx = True
                 break
         if (remove_idx):
@@ -125,7 +126,7 @@ def filter_based_on_key_value(result_dic, key_, value_, mode):
     idx_to_pay_attention_to = []
     for idx in range(gen_length):
         for key, val in result_dic.items():
-            if float(val[idx]) == float(value_) and key_ == key:
+            if round(val[idx], 4) == round(value_, 4) and key_ == key:
                 idx_to_pay_attention_to.append(idx)
                 break
 
@@ -180,6 +181,39 @@ def avg_over_sequence(result_dic, seq_length):
                     new_result_dict[key].append(float("inf"))
 
     return new_result_dict
+
+
+def std_over_sequence(result_dic, seq_length, easy_metrics):
+    gen_length = len(list(result_dic.values())[0])
+    assert (int(gen_length/seq_length) == gen_length/seq_length), "should be able to split evenly"
+
+    new_result_dict = OrderedDict()
+
+    for key in list(result_dic.keys()):
+        new_result_dict[key] = []
+
+    avg_results = avg_over_sequence(result_dic, seq_length)
+
+    for idx in range(gen_length/seq_length):
+        for key, val in result_dic.items():
+                sum = 0
+                cnt = 0
+                for el in val[idx*seq_length: idx*seq_length + seq_length]:
+                    if not (el == float("inf")): # if inifity skip it
+                        sum += (el - avg_results[key][idx])**2
+                        cnt +=1;
+
+
+                if (key in easy_metrics):
+                    new_result_dict[key].append(avg_results[key][idx])
+                elif not (cnt == 0) and not(cnt ==1): # if there was at least one value that wasn't inifinity
+                    #new_result_dict[key].append(sum(val[idx*seq_length: idx*seq_length+ seq_length])/seq_length)
+                    new_result_dict[key].append(math.sqrt(sum/(cnt-1)))
+                else:
+                    new_result_dict[key].append(float("inf"))
+
+    return new_result_dict
+
 
 
 def template():

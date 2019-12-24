@@ -125,6 +125,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("capture_size", capture_size, 600);
   private_nh.param("DEBUG_RQT", DEBUG_RQT, false);
 
+
   dist_to_closest_obs = m_maxRange;
 
   profile_manager_client = 
@@ -173,6 +174,9 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
   closest_obs_coord = point3d(m_maxRange, m_maxRange, m_maxRange);
   dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0));
+  gridSize = m_maxRange;
+  depth_to_transfer = m_octree->getTreeDepth() - int(log2(m_maxRange/m_res)) - 1;
+
 
   double r, g, b, a;
   private_nh.param("color/r", r, 0.0);
@@ -194,6 +198,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_colorFree.a = a;
 
   private_nh.param("publish_free_space", m_publishFreeSpace, m_publishFreeSpace);
+  last_time_cleared = ros::Time::now();
 
   private_nh.param("latch", m_latchedTopics, m_latchedTopics);
   if (m_latchedTopics){
@@ -324,6 +329,13 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 
 using namespace std; //
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+	/*
+	if ((ros::Time::now() - last_time_cleared).toSec() > 5){
+		m_octree->clear();
+		last_time_cleared = ros::Time::now();
+	}
+	*/
+
 	if(CLCT_DATA) {
 		ros::Time start_time = ros::Time::now();
 		pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
@@ -437,8 +449,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
 
   if (measure_time_end_to_end){ publishAll(cloud->header.stamp);}
-  else{publishAll(ros::Time::now()); }
-
+  else{publishAll(ros::Time::now());}
 
 
   /*
@@ -500,6 +511,11 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   unsigned char* colors = new unsigned char[3];
 #endif
 
+
+  if (first_time_scanning) {
+	  originalSensorOrigin = sensorOrigin; // to ensure the shrunk tree maintains the same origin as the normal tree
+	  first_time_scanning = false;
+  }
 
   //update the closest obstacle
   dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
@@ -582,6 +598,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
   profiling_container.capture("octomap_calc_disjoint_and_update", "start", ros::Time::now(), capture_size);
 
+  sensorOrigin_ = sensorOrigin;
   // mark free cells only if not seen occupied in this cloud
   double update_low_res_total = 0;
 
@@ -589,9 +606,12 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   int cell_touched_cnt = 0;
   for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ++it){
 	  if (occupied_cells.find(*it) == occupied_cells.end()){
-    	auto high_res_node = m_octree->updateNode(*it, false);
-    	ros::Time low_res_start = ros::Time::now() ;
     	auto coordinate = m_octree->keyToCoord(*it);
+    	const OcTreeKey my_key = *it;
+    	auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, false, true);
+		//auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), false);
+    	ros::Time low_res_start = ros::Time::now() ;
+    	//std::cout<<"in server"<<" key is"<< (*it).k[0] << " "<<(*it).k[1] << " "<< (*it).k[2]<< " " <<coordinate.x() << " " << coordinate.y() << " " << coordinate.z()<<std::endl;
 
         /*
     	// attempt to delete
@@ -611,19 +631,22 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
   // now mark all occupied cells:
   for (KeySet::iterator it = occupied_cells.begin(), end=occupied_cells.end(); it!= end; it++) {
-    auto high_res_node = m_octree->updateNode(*it, true);
+      auto coordinate = m_octree->keyToCoord(*it);
+	  //auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), true);
+	  auto high_res_node = m_octree->updateNode(*it, true);
 
     //lower resolution map handling
     ros::Time low_res_start = ros::Time::now() ;
     //depth_acc_touched += m_octree->depth_touched; //comment this if your octomap is unmodified
     cell_touched_cnt +=1;
-    auto coordinate = m_octree->keyToCoord(*it);
+    //auto coordinate = m_octree->keyToCoord(*it);
     update_closest_obstacle(coordinate, sensorOrigin);
     //update_lower_res_map(coordinate, high_res_node);
     update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
-
+  auto blah = free_cells.size();
+  auto blah_2 = occupied_cells.size();
 
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
@@ -1027,6 +1050,9 @@ void OctomapServer::publishAll(const ros::Time& rostime){
 
   profiling_container.capture("octomap_serialization_high_res_time", "start", ros::Time::now(), capture_size);
   if (publishBinaryMap){
+	  //auto sensorOrigin_shifted = point3d(sensorOrigin_.x()1, sensorOrigin_.y() + 1, sensorOrigin_.z() + 1);
+	  //auto sensorOrigin_shifted = sensorOrigin_;
+	  //publishFilteredBinaryOctoMap(rostime, sensorOrigin_, depth_to_transfer);
 	  publishBinaryOctoMap(rostime);
   }
   profiling_container.capture("octomap_serialization_high_res_time", "end", ros::Time::now(), capture_size);
@@ -1168,6 +1194,7 @@ bool OctomapServer::clearBBXSrv(BBXSrv::Request& req, BBXSrv::Response& resp){
   return true;
 }
 
+
 bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp) {
   visualization_msgs::MarkerArray occupiedNodesVis;
   occupiedNodesVis.markers.resize(m_treeDepth +1);
@@ -1214,15 +1241,89 @@ bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Res
   return true;
 }
 
-void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 
-    Octomap map;
+void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin, int child_depth) {
+  Octomap map;
+  map.header.frame_id = m_worldFrameId;
+
+  map.header.stamp = rostime;
+  //map.header.stamp = ros::Time::now();
+
+  // publish part of the tree
+  OcTreeT* m_octree_shrunk = new OcTreeT(m_res);
+  m_octree_shrunk->setProbHit(m_octree->getProbHit());
+  m_octree_shrunk->setProbMiss(m_octree->getProbMiss());
+  m_octree_shrunk->setClampingThresMin(m_octree->getClampingThresMin());
+  m_octree_shrunk->setClampingThresMax(m_octree->getClampingThresMax());
+  //m_octree_shrunk->s(m_octree->getClampingThresMakx());
+
+  m_octree_shrunk->updateNode(m_octree->coordToKey(originalSensorOrigin), true);
+
+  int depth = child_depth - 1;
+  //auto child_depth = m_octree->getTreeDepth() -1 - depth;
+  //auto key_adjusted = m_octree->adjustKeyAtDepth(m_octree->coordToKey(sensorOrigin), 10);
+  //m_octree->expand();
+
+  vector<point3d> offset;
+  offset.push_back(point3d(0,0,0));
+  offset.push_back(point3d(gridSize,0,0));
+  offset.push_back(point3d(-gridSize,0,0));
+  offset.push_back(point3d(0,gridSize,0));
+  offset.push_back(point3d(0,-gridSize,0));
+  offset.push_back(point3d(gridSize,gridSize, 0));
+  offset.push_back(point3d(-gridSize,gridSize,0));
+  offset.push_back(point3d(-gridSize,gridSize, 0));
+  offset.push_back(point3d(-gridSize,-gridSize,0));
+
+  for (auto it = offset.begin(); it != offset.end(); it++) {
+      point3d offset_point = *it;
+	  auto key = m_octree->coordToKey(sensorOrigin + offset_point);
+	  unsigned int pos;
+	  auto m_octree_node = m_octree->search_with_pos_return_(key, pos, child_depth);
+	  if (!m_octree_node){
+		  continue;
+	  }
+	  m_octree_shrunk->updateNode(m_octree->coordToKey(sensorOrigin + offset_point), true);
+	  auto m_octree_shrunk_node = m_octree_shrunk->search(key, depth); //parent
+	  m_octree_shrunk->setChild(m_octree_shrunk_node, m_octree_node, pos);
+  }
+  /*
+  if (depth_found_at != child_depth - 1){
+	  m_octree->expandRecursForShrinking_(m_octree_node, depth_found_at, child_depth);
+	  m_octree_node = m_octree->search_with_depth_return_(key, depth_found_at, child_depth);
+	  ROS_ERROR_STREAM(" ------- after adjustment after" << depth_found_at);
+  }
+  */
+
+  //m_octree_shrunk_node->copyData(*m_octree_node);
+  //auto m_octree_node_ = m_octree->search(m_octree->coordToKey(sensorOrigin), 10);
+  //auto m_octree_shrunk_node_ = m_octree_shrunk->search(m_octree->coordToKey(sensorOrigin), 10);
+  //ros::Duration(6).sleep();
+  //auto key_ = m_octree_shrunk->coordToKey(sensorOrigin);
+  //auto key_at_depth = m_octree_shrunk->adjustKeyAtDepth(m_octree_shrunk->coordToKey(sensorOrigin), child_depth);
+  //unsigned int pos = octomap::computeChildIdx(key_at_depth, m_octree->getTreeDepth() -1-child_depth);
+  //unsigned int pos = octomap::computeChildIdx(key_at_depth, child_depth);
+
+    if (octomap_msgs::binaryMapToMsg(*m_octree_shrunk, map)){
+	  int serialization_length = ros::serialization::serializationLength(map);
+	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
+	  m_binaryMapPub.publish(map);
+  }
+  else
+    ROS_ERROR("Error serializing OctoMap");
+}
+
+
+void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
+  Octomap map;
   map.header.frame_id = m_worldFrameId;
 
   map.header.stamp = rostime;
   //map.header.stamp = ros::Time::now();
 
 
+
+  // publish part of the tree
   if (octomap_msgs::binaryMapToMsg(*m_octree, map)){
 	  int serialization_length = ros::serialization::serializationLength(map);
 //	  ROS_INFO_STREAM("serialization length is:"<< serialization_length);

@@ -2,7 +2,7 @@ purpose: measure the impact of  map volume on octomap perforamnce. Note that you
 intentend behavior: drone lifting up and flying for 100 second.
 note that we have collected data for different resolutions (one and two resolutions and same point cloud)
 
-map: simple_map_00
+map: octomap_side_view
 
 how to run: 
   # fly and collect performance measurements

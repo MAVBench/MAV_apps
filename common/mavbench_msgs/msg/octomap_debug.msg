@@ -17,3 +17,4 @@ float32 octomap_construct_lower_res_map
 float32 high_res_map_volume
 float32 low_res_map_volume
 
+

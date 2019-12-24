@@ -60,6 +60,17 @@ typedef struct volume_t {
 	double shared_volume;
 	double unshared_volume_different_val; // one tree hasn't incorperated this volume (i.e., one tree treats the volume as unknown)
 	double unshared_volume_unknown_to_one; //  tree's don't have the same occupancy/free interpretation of the volume
+
+	double free_free = 0;
+	double free_occupied = 0;
+	double free_unknown = 0;
+	double occupied_free = 0;
+	double occupied_occupied = 0;
+	double occupied_unknown = 0;
+	double unknown_free = 0;
+	double unknown_occupied = 0;
+	double uknown_unknown = 0;
+	double total_volume = 0;
 } Volume;
 
 Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
@@ -72,6 +83,8 @@ Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
 	double shared_volume = 0;
 	double unshared_volume_unknown_to_one = 0; // one tree hasn't incorperated this volume (i.e., one tree treats the volume as unknown)
 	double unshared_volume_different_val = 0;  //  tree's don't have the same occupancy/free interpretation of the volume
+	Volume volume_;
+
 
 	// get all coordinates associated with each tree
 	for (OcTree::leaf_iterator it = tree1->begin_leafs(),
@@ -86,21 +99,49 @@ Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
     }
 
 
-    //calc non overlapping coordinates' volume
+    //compare the two trees one coordinate at a time
+    for (auto &second_tree_coord_volume: second_tree_coord_volume_vec){
+    	if (!tree1->search(second_tree_coord_volume.coordinates)) {
+    		if (tree2->isNodeOccupied(tree2->search(second_tree_coord_volume.coordinates))) {
+    			volume_.unknown_occupied += second_tree_coord_volume.volume;
+    			//unshared_volume_unknown_to_one += second_tree_coord_volume.volume;
+    		}
+    		else {
+    			volume_.unknown_free += second_tree_coord_volume.volume;
+    		}
+    	}
+    }
+
     for (auto &first_tree_coord_volume: first_tree_coord_volume_vec){
     	if (!tree2->search(first_tree_coord_volume.coordinates)) {
-    		unshared_volume_unknown_to_one += first_tree_coord_volume.volume;
+    		if (tree1->isNodeOccupied(tree1->search(first_tree_coord_volume.coordinates))) {
+    			volume_.occupied_unknown += first_tree_coord_volume.volume;
+    			//unshared_volume_unknown_to_one += second_tree_coord_volume.volume;
+    		}
+    		else {
+    			volume_.free_unknown += first_tree_coord_volume.volume;
+    		}
     	}
     }
 
-   for (auto &second_tree_coord_volume: second_tree_coord_volume_vec){
-    	if (!tree1->search(second_tree_coord_volume.coordinates)) {
-    		unshared_volume_unknown_to_one += second_tree_coord_volume.volume;
+    for (auto &coord_volume: first_tree_coord_volume_vec){
+    	auto tree2_node = tree2->search(coord_volume.coordinates);
+    	if (!tree2_node){ //if doesn't exist already counted
+    		continue;
     	}
-    }
+    	auto tree1_node = tree1->search(coord_volume.coordinates);
+    	if (tree1->isNodeOccupied(tree1_node) &&  tree2->isNodeOccupied(tree2_node)){
+    			volume_.occupied_occupied += coord_volume.volume;
+    	}else if (!tree1->isNodeOccupied(tree1_node) &&  tree2->isNodeOccupied(tree2_node)){
+    			volume_.free_occupied += coord_volume.volume;
+    	}else if (tree1->isNodeOccupied(tree1_node) &&  !tree2->isNodeOccupied(tree2_node)){
+    			volume_.occupied_free += coord_volume.volume;
+     	}else if (!tree1->isNodeOccupied(tree1_node) &&  !tree2->isNodeOccupied(tree2_node)){
+    			volume_.free_free += coord_volume.volume;
+    	}
+     }
 
-
-
+    /*
    //calc overlapping coordinate similarities
     for (auto &coord_volume: first_tree_coord_volume_vec){
     	auto tree1_node = tree1->search(coord_volume.coordinates);
@@ -118,8 +159,13 @@ Volume calc_volume_overlap(OcTree* tree1, OcTree* tree2){
     		}
     	}
     }
+    */
 
-    return Volume{shared_volume, unshared_volume_different_val, unshared_volume_unknown_to_one};
+    volume_.total_volume = volume_.free_free + volume_.free_occupied + volume_.free_unknown +
+    		volume_.occupied_free + volume_.occupied_occupied + volume_.occupied_unknown +
+		   volume_.unknown_free + volume_.unknown_occupied;
+
+    return volume_;
 }
 
 
@@ -249,10 +295,19 @@ void compare_maps(string first_map, string second_map, string mode) {
 
   if (mode == "volume_overlap") {
 	  auto volume = calc_volume_overlap(tree1, tree2);
-	  std::cout<<"shared_volume"<<volume.shared_volume<<std::endl;;
-	  std::cout<<"unshared_volume unknown to one "<<volume.unshared_volume_unknown_to_one<<std::endl;
-	  std::cout<<"unshared_volume different occupancy perception"<<volume.unshared_volume_different_val<<std::endl;
-	  std::cout<<"total unshared_volume"<<volume.unshared_volume_different_val + volume.unshared_volume_unknown_to_one<<std::endl;
+	  //std::cout<<"shared_volume"<<volume.shared_volume<<std::endl;;
+	  //std::cout<<"unshared_volume unknown to one "<<volume.unshared_volume_unknown_to_one<<std::endl;
+	  //std::cout<<"unshared_volume different occupancy perception"<<volume.unshared_volume_different_val<<std::endl;
+	  //std::cout<<"total unshared_volume"<<volume.unshared_volume_different_val + volume.unshared_volume_unknown_to_one<<std::endl;
+	  std::cout<<"free_free %"<<volume.free_free/volume.total_volume<<std::endl;;
+	  std::cout<<"free_occupied %"<<volume.free_occupied/volume.total_volume<<std::endl;;
+	  std::cout<<"free_uknown %"<<volume.free_unknown/volume.total_volume<<std::endl;;
+	  std::cout<<"occupied_free %"<<volume.occupied_free/volume.total_volume<<std::endl;;
+	  std::cout<<"occupied_occupied %"<<volume.occupied_occupied/volume.total_volume<<std::endl;;
+	  std::cout<<"occupied_uknown %"<<volume.occupied_unknown/volume.total_volume<<std::endl;;
+	  std::cout<<"uknown_free %"<<volume.unknown_free/volume.total_volume<<std::endl;;
+	  std::cout<<"unknown_occupied %"<<volume.unknown_occupied/volume.total_volume<<std::endl;;
+	  std::cout<<"total_volume"<<volume.total_volume<<std::endl;;
   }else if (mode == "kld"){
 	  auto kld_sum = compare_maps_kld(first_map, second_map);
 	  std::cout<<"kld_sum"<<kld_sum <<std::endl;

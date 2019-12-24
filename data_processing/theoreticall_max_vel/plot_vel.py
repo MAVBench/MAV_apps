@@ -12,6 +12,9 @@ acceleration_vals = np.array([4.3, 3.55, 2.46, 2.11, 1.73, 1.25, .75])
 deg = 1
 m, b = fit_func(velocity_vals, acceleration_vals, deg)
 
+#print calc_v_max(.5, 25, m, b)
+#exit(0)
+
 # draw the fitted graph
 fig1 = plt.figure(1)
 ax2 = fig1.add_subplot(111)

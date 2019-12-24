@@ -419,6 +419,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     if (measure_time_end_to_end) {
     	new_traj_msg_time_stamp = msg->header.stamp;
     	profiling_container->capture("sensor_to_follow_trajectorytime", "single", (ros::Time::now() - msg->header.stamp).toSec(), g_capture_size);
+    	ROS_INFO_STREAM("end to end"<< (ros::Time::now() - msg->header.stamp).toSec());
     }else{
     	profiling_container->capture("motion_planner_to_follow_traj_com", "start", msg->header.stamp, g_capture_size);
     	profiling_container->capture("motion_planner_to_follow_traj_com", "end", ros::Time::now(), g_capture_size);
@@ -747,7 +748,7 @@ int main(int argc, char **argv)
         profiling_container->capture("velocity", "single", max_velocity_reached, g_capture_size);
         if (max_velocity_reached > g_max_velocity_reached) {
             g_max_velocity_reached = max_velocity_reached;
-            ROS_INFO_STREAM("max speed is"<<max_velocity_reached);
+            //ROS_INFO_STREAM("max speed is"<<max_velocity_reached);
         }
         profiling_container->capture("max_velocity", "single", g_max_velocity_reached, g_capture_size);
         // Publish the remainder of the trajectory
@@ -771,6 +772,7 @@ int main(int argc, char **argv)
         debug_data.planning_failure_short_time = (planning_status == 0) ;
         debug_data.planning_failure_inital_state = (planning_status == 1);
         debug_data.planning_success = (planning_status == 2);
+        debug_data.vel_magnitude = profiling_container->findDataByName("velocity")->values.back();
 
         if (DEBUG_RQT) {follow_traj_debug_pub.publish(debug_data);}
         replanning_reason = 0; //zero it out for the next round

@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="2"/> 
-  <arg name="v_max" default="4"/> 
+  <arg name="v_max" default="12"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -74,7 +74,7 @@
   <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 
   <param name="capture_size" value="$(arg capture_size)"/> 
-  <arg name="measure_time_end_to_end" default="true" />
+  <arg name="measure_time_end_to_end" default="false" />
   <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/> 
 
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
@@ -181,11 +181,11 @@
 
   <!-- =========================Point Cloud  ============================ -->
   <arg name="point_cloud_shard_cnt" default="1"/>
-  <arg name="point_cloud_num_points" default="30000"/>
+  <arg name="point_cloud_num_points" default="300000"/>
   <arg name="point_cloud_width" default="50"/>
   <arg name="point_cloud_height" default="50"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
-  <arg name="perception_resolution" default="0.5"/> <!-- OM voxels size-->
+  <arg name="perception_resolution" default="0.30"/> <!-- OM voxels size-->
   <arg name="perception_lower_resolution" default="0.7"/> <!-- OM voxels size-->
   <arg name="point_cloud_resolution" default=".3"/> <!-- minimum the distance between pc points-->
   
@@ -275,8 +275,8 @@
     ?>
 
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="piecewise_planning_budget" default=".5"/>
-  <arg name="smoothening_budget" default=".5"/>
+  <arg name="piecewise_planning_budget" default=".3"/>
+  <arg name="smoothening_budget" default=".3"/>
 
   <param name="piecewise_planning_budget" value="$(arg piecewise_planning_budget)"/>
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
