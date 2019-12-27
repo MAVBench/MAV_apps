@@ -285,7 +285,7 @@
     ?>
 
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="piecewise_planning_budget" default=".2"/>
+  <arg name="piecewise_planning_budget" default=".4"/>
   <arg name="smoothening_budget" default=".2"/>
 
   <param name="piecewise_planning_budget" value="$(arg piecewise_planning_budget)"/>
@@ -322,7 +322,7 @@
     <!-- param name="motion_planning_core" value="PRM"/-->
     <!--param name="motion_planning_core" value="RRT"/-->
     <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
-    <param name="motion_planning_core" value="OMPL-RRTConnect"/>
+    <param name="motion_planning_core" value="OMPL-RRTStar"/>
     <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
   </node>
     

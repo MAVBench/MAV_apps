@@ -88,6 +88,7 @@ Drone* MotionPlanner::get_drone() {
 }
 
 bool MotionPlanner::goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res){
+    first_time_planning_succeeded = false;
 	g_goal_pos = req.goal;
 	goal_known = true;
 
@@ -671,9 +672,9 @@ void MotionPlanner::motion_planning_initialize_params()
         motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
             return this->OMPL_RRT(start, goal, width, length, n_pts_per_dir, octree, status);
         };
-    else if (motion_planning_core_str == "OMPL-RRTConnect")
+    else if (motion_planning_core_str == "OMPL-RRTStar")
         motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
-            return this->OMPL_RRTConnect(start, goal, width, length, n_pts_per_dir, octree, status);
+            return this->OMPL_RRTStar(start, goal, width, length, n_pts_per_dir, octree, status);
         };
     else if (motion_planning_core_str == "OMPL-PRM")
         motion_planning_core = [this] (geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status) {
@@ -1307,7 +1308,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRT(geometry_msgs::Point
 }
 
 
-MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status)
+MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_RRTStar(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree, int &status)
 {
 	//publish_dummy_octomap_vis(octree);
 	return OMPL_plan<ompl::geometric::RRTstar>(start, goal, octree, status);

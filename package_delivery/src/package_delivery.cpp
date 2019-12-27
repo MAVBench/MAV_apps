@@ -406,7 +406,8 @@ int main(int argc, char **argv)
     g_drone = &drone;
     bool delivering_mission_complete = false; //if true, we have delivered the 
                                               //pkg and successfully returned to origin
-    
+
+    int reached_goal_ctr = 0;
     int fail_ctr = 0;
     int fail_threshold = 50;
 
@@ -623,9 +624,20 @@ int main(int argc, char **argv)
         }
     	*/
         // get rid of this later, I just pulled it out for a hack
-        if (dist(drone.position(), goal) < goal_s_error_margin) {
-    	  signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
-    	  ros::shutdown();
+        if (dist(drone.position(), goal) < goal_s_error_margin){
+        	if (reached_goal_ctr == 1) {
+        		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
+        		ros::shutdown();
+        	}
+    	    else{
+    	    	package_delivery::point goal_srv_inst;
+    	    	goal.x = start.x;
+    	    	goal.y = start.y;
+    	    	goal.z = start.z;
+    	    	goal_srv_inst.request.goal = goal;
+    	    	goal_transmit_client.call(goal_srv_inst);
+    	    	reached_goal_ctr +=1;
+    	    }
         }
         state = next_state;
     }

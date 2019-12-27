@@ -629,7 +629,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  if (occupied_cells.find(*it) == occupied_cells.end()){
     	auto coordinate = m_octree->keyToCoord(*it);
     	const OcTreeKey my_key = *it;
-    	auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, false, true);
+    	auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, false, false);
 		//auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), false);
     	ros::Time low_res_start = ros::Time::now() ;
     	//std::cout<<"in server"<<" key is"<< (*it).k[0] << " "<<(*it).k[1] << " "<< (*it).k[2]<< " " <<coordinate.x() << " " << coordinate.y() << " " << coordinate.z()<<std::endl;
@@ -654,7 +654,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   for (KeySet::iterator it = occupied_cells.begin(), end=occupied_cells.end(); it!= end; it++) {
       auto coordinate = m_octree->keyToCoord(*it);
 	  //auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), true);
-	  auto high_res_node = m_octree->updateNode(*it, true);
+	  auto high_res_node = m_octree->updateNode(*it, true, false);
 
     //lower resolution map handling
     ros::Time low_res_start = ros::Time::now() ;
@@ -793,7 +793,7 @@ void OctomapServer::update_lower_res_map(point3d coordinate, OcTreeNode* high_re
     //auto node_to_look_at = m_octree_lower_res->search(coordinate, m_treeDepth);
     //auto high_res_node = m_octree->search(coordinate);
     bool occupancy = m_octree->isNodeOccupied(high_res_node);
-    m_octree_lower_res->updateNode(coordinate, occupancy, true);
+    m_octree_lower_res->updateNode(coordinate, occupancy, false);
    /*
     if (node_to_look_at){ //if node already exist
     	currently_occupied = m_octree_lower_res->isNodeOccupied(node_to_look_at);
@@ -848,7 +848,7 @@ void OctomapServer::construct_lower_res_map(double resolution, point3d drone_cur
 	for(typename OcTreeT::leaf_bbx_iterator it = m_octree->begin_leafs_bbx(bbxMin,bbxMax), end=m_octree->end_leafs_bbx(); it!= end; ++it){
 		bool occupancy = m_octree->isNodeOccupied((*it));
 		//auto node_to_look_at = m_octree_lower_res->search(it.getCoordinate());
-		m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, true);
+		m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, false);
 	}
 }
 
