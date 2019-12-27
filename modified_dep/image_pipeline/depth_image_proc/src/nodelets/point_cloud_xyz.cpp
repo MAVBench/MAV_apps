@@ -540,25 +540,26 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   profiling_container->capture("filtering", "start", ros::Time::now());
 
   filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
+  //filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
 
-  // get diagnostics for runtime 
-  // (this function is good for environments with vertical obstacles, if concerned about horizontal
-  // ones then y gap diagnostic may be useful)
-  double max_sensor_range = 25.5; // TODO: use params?
-  double min_gap_size = .5; // use drone height here?
-  double max_gap_size = 50;
-  double y_bucket_size = 3;
-  // could convert this to give an array of values for different max sizes, if multiple calls too expensive.
-  // (for now just seems more confusing to do that than it's worth)
-  double y_min = -25;
-  double y_max = 25;
-  int xGapCount = xGapDiagnostic(xs, ys, zs, min_gap_size, max_gap_size, y_bucket_size, y_min, y_max, max_sensor_range);
-  printf("x gap diagnostic: %d\n", xGapCount);
+  /* added by Kindell for gap diagnostics
+  {
+	  // get diagnostics for runtime
+	  // (this function is good for environments with vertical obstacles, if concerned about horizontal
+	  // ones then y gap diagnostic may be useful)
+	  double max_sensor_range = 25.5; // TODO: use params?
+	  double min_gap_size = .5; // use drone height here?
+	  double max_gap_size = 50;
+	  double y_bucket_size = 3;
+	  // could convert this to give an array of values for different max sizes, if multiple calls too expensive.
+	  // (for now just seems more confusing to do that than it's worth)
+	  double y_min = -25;
+	  double y_max = 25;
+	  int xGapCount = xGapDiagnostic(xs, ys, zs, min_gap_size, max_gap_size, y_bucket_size, y_min, y_max, max_sensor_range);
+	  printf("x gap diagnostic: %d\n", xGapCount);
+  }*/
 
   
-  filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
-   //filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
-
   // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
   // double avg_distance = 0;
   // double max_min = 0; // max of all the mins

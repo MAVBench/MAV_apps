@@ -9,7 +9,7 @@
 #include <functional>
 #include <limits>
 #include <visualization_msgs/Marker.h>
-
+#include <std_msgs/Bool.h>
 // MAVBench headers
 #include "common.h"
 #include "graph.h"
@@ -102,6 +102,7 @@ private:
     bool traj_colliding(mavbench_msgs::multiDOFtrajectory *traj);
 
 
+    void octomap_communication_proxy_msg_cb(const std_msgs::Header& msg);
 
     // ***F:DN Find where the drone will be in a few seconds
     void get_start_in_future(Drone& drone, geometry_msgs::Point& start, geometry_msgs::Twist& twist, geometry_msgs::Twist& acceleration);
@@ -178,7 +179,7 @@ private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
     ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub;
-    ros::Subscriber future_col_sub, next_steps_sub, octomap_sub;
+    ros::Subscriber future_col_sub, next_steps_sub, octomap_sub, octomap_communication_proxy_msg;
     ros::ServiceServer get_trajectory_srv_server, goal_rcv_service;
     ros::Publisher traj_pub;
     ros::Publisher timing_msg_from_mp_pub;

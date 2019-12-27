@@ -128,6 +128,8 @@ public:
   virtual bool openFile(const std::string& filename);
   void log_data_before_shutting_down();
 
+
+
 protected:
   inline static void updateMinKey(const octomap::OcTreeKey& in, octomap::OcTreeKey& min) {
     for (unsigned i = 0; i < 3; ++i)
@@ -152,7 +154,7 @@ protected:
 
   void reconfigureCallback(octomap_server::OctomapServerConfig& config, uint32_t level);
   void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) ;
-  void publishFilteredBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin, int depth_to_transfer);
+  void publishFilteredBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin);
   void publishBinaryLowerResOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFullOctoMap(const ros::Time& rostime = ros::Time::now()) const;
   //virtual void publishAll(const ros::Time& rostime = ros::Time::now(), octomap::point3d = octomap::point3d(0,0,0));
@@ -249,7 +251,7 @@ protected:
 
   static std_msgs::ColorRGBA heightMapColor(double h);
   ros::NodeHandle m_nh;
-  ros::Publisher  m_markerPub, m_markerLowerResPub, m_binaryMapPub, m_binaryMapLowerResPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub;
+  ros::Publisher  m_markerPub, m_markerLowerResPub, m_binaryMapPub, m_binaryMapLowerResPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub, octomap_communication_proxy_msg;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
 
  ros::Subscriber m_save_map_pub;
@@ -280,11 +282,20 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   double m_colorFactor;
   double dist_to_closest_obs; //distant to the closest obstacle perceived
   int depth_to_transfer;
-  int gridSize; // how big the grid for sampling the octomap is
+  int MapToTransferGridSize; // how big the grid (side of the cubic grid) for sampling the octomap is
+  int MapToTransferGridCount; // Number of grids (with the side size of MapToTransferGridSize) to include in the transfered map
+  int MapToTransferBorrowedDepth; // the depth that is borrowed (attached) from the main octomap
   int closest_obs_coordinate_vect_size = 20;
   octomap::point3d closest_obs_coord; // closeset obstacle (coordinate) perceived.
 
-
+  int gridSliceCountPerSide = 2; // how many gridslice per Map to transfer Side lenght (in other words, how many time should we slice the Side lenght). This is necessary since the space is gridded, so we
+  	  	  	  	  	  	  	  	 // we can never exactly maintain the map side length, but rather we need to include some extra. Note that if we increase
+  	  	  	  	  	  	  	     // this value, we can reduce the extra space overhead we need to carry over
+  float MapToTransferSideLength;
+  std::string gridMode; // 2d or 3d
+  bool filterOctoMap = true; // if true, we grid the space and filter how much of the map to be communicated over to planner
+  float gridSideLength; // the bigger this is, the more of the map we keep the map
+  float gridSliceCountToInclude; // How many grid slices to include (centered around the current drone's position)
 
 
   bool m_latchedTopics;

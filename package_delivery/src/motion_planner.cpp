@@ -62,6 +62,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	get_trajectory_srv_server = nh.advertiseService("/get_trajectory_srv", &MotionPlanner::get_trajectory_fun, this);
 
 	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
+	octomap_communication_proxy_msg = nh.subscribe("/octomap_communication_proxy_msg", 1, &MotionPlanner::octomap_communication_proxy_msg_cb, this);
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
@@ -241,6 +242,18 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 }
 
 
+
+// call back to register the octomap to motion planner communication overhead
+void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& msg)
+{
+	if (measure_time_end_to_end) { // if measuring end_to_end use the proxy msg to measure the overhead
+		profiling_container.capture("octomap_to_motion_planner_communication_overhead", "single",
+				(ros::Time::now() - msg.stamp).toSec(), capture_size);
+    	debug_data.octomap_to_motion_planner_communication_overhead = profiling_container.findDataByName("octomap_to_motion_planner_communication_overhead")->values.back();
+	}
+}
+
+
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
@@ -269,10 +282,12 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
+    /*
     {
     	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
     	publish_dummy_octomap_vis(octree);
     }
+	*/
 
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
@@ -280,7 +295,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     		if (!measure_time_end_to_end){
     			debug_data.octomap_to_motion_planner_communication_overhead = profiling_container.findDataByName("octomap_to_motion_planner_communication_overhead")->values.back();
     		}
-    		motion_planning_debug_pub.publish(debug_data);
+    		//motion_planning_debug_pub.publish(debug_data);
     }
 
     // check whether the goal has already been provided or not, if not, return
@@ -362,7 +377,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
     		debug_data.motion_planning_piece_wise_time = profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back();
-    		motion_planning_debug_pub.publish(debug_data);
+    		//motion_planning_debug_pub.publish(debug_data);
     }
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
@@ -427,7 +442,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
     		debug_data.motion_planning_smoothening_time = profiling_container.findDataByName("motion_planning_smoothening_time")->values.back();
-    		motion_planning_debug_pub.publish(debug_data);
+    		//motion_planning_debug_pub.publish(debug_data);
 	}
 
     if (smooth_path.empty()) {
@@ -973,6 +988,7 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
 
 void MotionPlanner::spinOnce() {
 	callback_queue.callAvailable(ros::WallDuration());
+    motion_planning_debug_pub.publish(debug_data);
 }
 
 
