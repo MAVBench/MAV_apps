@@ -292,6 +292,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     }
 	*/
 
+
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
     		debug_data.octomap_deserialization_time = profiling_container.findDataByName("octomap_deserialization_time")->values.back();

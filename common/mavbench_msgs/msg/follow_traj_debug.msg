@@ -20,6 +20,7 @@ float32 time_between_samples
 float32 S_A_latency
 float32 S_A_response_time
 float32 vel_magnitude
+float32 entire_follow_trajectory
 
 int32 replanning_reason
 int32 planning_status

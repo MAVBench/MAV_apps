@@ -617,7 +617,8 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
     ros::Time last_time_following = ros::Time::now();
     while (ros::ok()) {
-        ros::spinOnce();
+    	profiling_container->capture("entire_follow_trajectory", "start", ros::Time::now(), g_capture_size);
+    	ros::spinOnce();
 
         if ((ros::Time::now() - last_time_following).toSec() < g_fly_trajectory_time_out && !g_got_new_trajectory) {
         	loop_rate.sleep();
@@ -700,10 +701,9 @@ int main(int argc, char **argv)
 
         // profiling
         if (g_got_new_trajectory){
-        	//if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
-        	//if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
-        	//if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
-
+        	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
+        	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
+        	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
         	ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
         	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
         		profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
@@ -759,10 +759,9 @@ int main(int argc, char **argv)
         trajectory_msg.stop = stop;
 
 
-
-
         next_steps_pub.publish(trajectory_msg);
 
+    	profiling_container->capture("entire_follow_trajectory", "end", ros::Time::now(), g_capture_size);
         // debugging
         debug_data.new_plan = g_got_new_trajectory;
         debug_data.fly_backward = fly_backward;
@@ -773,6 +772,7 @@ int main(int argc, char **argv)
         debug_data.planning_failure_inital_state = (planning_status == 1);
         debug_data.planning_success = (planning_status == 2);
         debug_data.vel_magnitude = profiling_container->findDataByName("velocity")->values.back();
+        debug_data.entire_follow_trajectory = profiling_container->findDataByName("entire_follow_trajectory")->values.back();
 
         if (DEBUG_RQT) {follow_traj_debug_pub.publish(debug_data);}
         replanning_reason = 0; //zero it out for the next round

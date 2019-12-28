@@ -183,13 +183,13 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   // take care of space gridding for filtering octomap
   int grid_coeff;
   if (gridMode == "2d"){
-	  grid_coeff = 9;
+	  grid_coeff = 2;
   }else{
-	  grid_coeff = 27;
+	  grid_coeff = 3;
   }
 
   gridSideLength = float(MapToTransferSideLength)/gridSliceCountPerSide;
-  gridSliceCountToInclude =  int(grid_coeff*gridSliceCountPerSide); //9(2d grid), 27 (3d grid)
+  gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
   MapToTransferBorrowedDepth = m_octree->getTreeDepth() - int(log2(gridSideLength/m_res)) - 1;
 
 
@@ -497,11 +497,8 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	  	debug_data.octomap_serialization_low_res_time =  profiling_container.findDataByName("octomap_serialization_low_res_time")->values.back();
 	  	debug_data.high_res_map_volume =  profiling_container.findDataByName("high_res_map_volume")->values.back();
 	  	debug_data.low_res_map_volume =  profiling_container.findDataByName("low_res_map_volume")->values.back();
-	  	if (filterOctoMap) {
-	  		debug_data.octomap_filtering_time =  profiling_container.findDataByName("octomap_filtering_time")->values.back();
-	  	}else{
-	  		debug_data.octomap_filtering_time =  0;
-	  	}
+	  	if (filterOctoMap) { debug_data.octomap_filtering_time =  profiling_container.findDataByName("octomap_filtering_time")->values.back();}
+	  	else{debug_data.octomap_filtering_time =  0;}
 	  	octomap_debug_pub.publish(debug_data);
   }
 
@@ -1288,7 +1285,7 @@ void generateOffSets(vector<point3d> & offset, int GridSize, int GridCount, stri
 	for (int i = lowerBoundX; i < upperBoundX; i++){
 		for (int j = lowerBoundY; j < upperBoundY; j++){
 			for (int k = lowerBoundZ; k < upperBoundZ; k++){
-				offset.push_back(point3d(i*GridSize, j*GridSize, k*GridSize));
+				offset.push_back(point3d(i*GridSize, j*GridSize, k*GridSize/4));  // note that I hald z, because I am making a decision that maintaing z is not as important
 			}
 		}
 	}
