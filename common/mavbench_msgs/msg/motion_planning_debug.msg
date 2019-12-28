@@ -7,3 +7,7 @@ float32 OMPL_simplification_time
 float32 motion_planning_smoothening_time
 float32 octomap_deserialization_time
 float32 octomap_to_motion_planner_communication_overhead
+float32 entire_octomap_callback
+float32 collision_check_for_replanning
+float32 octomap_dynamic_casting
+

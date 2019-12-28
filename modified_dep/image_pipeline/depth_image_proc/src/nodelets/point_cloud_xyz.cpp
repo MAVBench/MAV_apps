@@ -462,7 +462,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
 
-   // changing the paramer online, comment out later
+
+   profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
+	// changing the paramer online, comment out later
    ros::param::get("/point_cloud_resolution", point_cloud_resolution);
    ros::param::get("/point_cloud_width", point_cloud_width);
    ros::param::get("/point_cloud_height", point_cloud_height);
@@ -612,20 +614,23 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
  
   //cloud_msg->header.stamp = ros::Time::now();
   profiling_container->capture("filtering", "end", ros::Time::now());
+  pub_point_cloud_.publish (cloud_msg);
+
+  profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
 
   if (DEBUG_RQT){
-		debug_data.header.stamp = ros::Time::now();
-		// debug_data.points_avg_distance = (float)avg_distance/xs.size();
-		// debug_data.points_max_min = (float)max_min;
-		debug_data.point_cloud_width = point_cloud_width;
-		debug_data.point_cloud_height = point_cloud_height;
-		debug_data.point_cloud_resolution = point_cloud_resolution;
-		debug_data.point_cloud_point_cnt = xs_best.size();
-		debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
-		pc_debug_pub.publish(debug_data);
+	  debug_data.header.stamp = ros::Time::now();
+	  // debug_data.points_avg_distance = (float)avg_distance/xs.size();
+	  // debug_data.points_max_min = (float)max_min;
+	  debug_data.point_cloud_width = point_cloud_width;
+	  debug_data.point_cloud_height = point_cloud_height;
+	  debug_data.point_cloud_resolution = point_cloud_resolution;
+	  debug_data.point_cloud_point_cnt = xs_best.size();
+	  debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
+	  debug_data.entire_point_cloud_depth_callback= profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
+	  pc_debug_pub.publish(debug_data);
   }
 
-  pub_point_cloud_.publish (cloud_msg);
 
 }
 

@@ -459,7 +459,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
   profiling_container.capture("insertScan", "end", ros::Time::now(), capture_size);
-  profiling_container.capture("octomap_insertCloud", "end", ros::Time::now(), capture_size);
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
 
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
@@ -468,7 +467,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   else{publishAll(ros::Time::now());}
 
 
-  /*
+  /*// for debugging purposes. Don't delete, just comment out
   {
 	  ROS_ERROR_STREAM("--------- this is very expensive operation, deactive the block when not needed");
 	  double high_res_volume  = calcTreeVolume(m_octree);
@@ -479,6 +478,13 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   }
 */
 
+  profiling_container.capture("octomap_insertCloud", "end", ros::Time::now(), capture_size);
+
+  if (m_save_map){ // for micro benchmarking purposes
+	  m_octree->write("high_res_map.ot");
+	  m_octree_lower_res->write("low_res_map.ot");
+	  m_save_map = false; //reset m_save_map to avoid rewriting
+  }
 
   if (DEBUG_RQT) {
 	  	debug_data.header.stamp = ros::Time::now();
@@ -498,14 +504,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	  	}
 	  	octomap_debug_pub.publish(debug_data);
   }
-
-  if (m_save_map){
-	  m_octree->write("high_res_map.ot");
-	  m_octree_lower_res->write("low_res_map.ot");
-	  m_save_map = false; //reset m_save_map to avoid rewriting
-  }
-
-
 
 }
 
@@ -793,7 +791,7 @@ void OctomapServer::update_lower_res_map(point3d coordinate, OcTreeNode* high_re
     //auto node_to_look_at = m_octree_lower_res->search(coordinate, m_treeDepth);
     //auto high_res_node = m_octree->search(coordinate);
     bool occupancy = m_octree->isNodeOccupied(high_res_node);
-    m_octree_lower_res->updateNode(coordinate, occupancy, false);
+    m_octree_lower_res->updateNode(coordinate, occupancy, true);
    /*
     if (node_to_look_at){ //if node already exist
     	currently_occupied = m_octree_lower_res->isNodeOccupied(node_to_look_at);
@@ -848,7 +846,7 @@ void OctomapServer::construct_lower_res_map(double resolution, point3d drone_cur
 	for(typename OcTreeT::leaf_bbx_iterator it = m_octree->begin_leafs_bbx(bbxMin,bbxMax), end=m_octree->end_leafs_bbx(); it!= end; ++it){
 		bool occupancy = m_octree->isNodeOccupied((*it));
 		//auto node_to_look_at = m_octree_lower_res->search(it.getCoordinate());
-		m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, false);
+		m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, true);
 	}
 }
 

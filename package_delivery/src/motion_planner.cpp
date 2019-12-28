@@ -219,6 +219,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 			bool collision_coming = this->traj_colliding(&g_next_steps_msg);
 			profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+			debug_data.collision_check_for_replanning = profiling_container.findDataByName("collision_check_for_replanning")->values.back();
 			if (collision_coming){
 				replanning_reason = Collision_detected;
 				//ROS_INFO_STREAM("there is a collision");
@@ -258,6 +259,7 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
+    profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
 	if (octree != nullptr) {
         delete octree;
 	}
@@ -315,7 +317,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
     bool planning_succeeded = this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
-    ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
+    //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
 
     if (!planning_succeeded) {
 		profiling_container.capture("planning_failure_count", "counter", 0);
@@ -326,6 +328,11 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     		first_time_planning_succeeded = true;
     	}
 	}
+
+    profiling_container.capture("entire_octomap_callback", "end", ros::Time::now(), capture_size);
+    debug_data.motion_planning_total_time = profiling_container.findDataByName("motion_planning_time_total")->values.back();
+    debug_data.octomap_dynamic_casting = profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
+    debug_data.entire_octomap_callback = profiling_container.findDataByName("entire_octomap_callback")->values.back();
 }
 
 octomap::OcTree* MotionPlanner::getOctree() {

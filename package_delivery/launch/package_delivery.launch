@@ -74,7 +74,7 @@
   <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 
   <param name="capture_size" value="$(arg capture_size)"/> 
-  <arg name="measure_time_end_to_end" default="false" />
+  <arg name="measure_time_end_to_end" default="true" />
   <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/> 
 
   <param name="stats_file_addr" value="$(find package_delivery)/../data/package_delivery/stats.json" />
