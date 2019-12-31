@@ -513,11 +513,22 @@ void OctomapServer::SaveMapCb(std_msgs::Bool msg){
 
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
 
-   ros::param::get("/lower_resolution", m_lower_res);
-
    point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
 
-  if (!m_octree->coordToKeyChecked(sensorOrigin, m_updateBBXMin)
+   double temp_res;
+   ros::param::get("/perception_resolution", temp_res);
+   if (temp_res != m_res) { //construct a new map
+	   ROS_INFO_STREAM("--- request was placed to change resolution. This is costly, so avoid overusing it!");
+	   profiling_container.capture("construct_diff_res_map_latency", "start", ros::Time::now(), capture_size);
+	   construct_diff_res_map(temp_res, sensorOrigin);
+	   profiling_container.capture("construct_diff_res_map_latency", "end", ros::Time::now(), capture_size);
+	    cout<<"constructing map took:"<<profiling_container.findDataByName("construct_diff_res_map_latency")->values.back()<<endl;;
+	   m_res = temp_res;
+	   return;
+   }
+
+
+   if (!m_octree->coordToKeyChecked(sensorOrigin, m_updateBBXMin)
     || !m_octree->coordToKeyChecked(sensorOrigin, m_updateBBXMax))
   {
     ROS_ERROR_STREAM("Could not generate Key for origin "<<sensorOrigin);
@@ -804,26 +815,101 @@ void OctomapServer::update_lower_res_map(point3d coordinate, OcTreeNode* high_re
     */
 }
 
-void OctomapServer::construct_lower_res_map(double resolution, point3d drone_cur_pos){
-	if (m_lower_res == m_res){ //if resolutions are the same, copy the pointer
-		m_octree_lower_res = m_octree;
-		return;
+// generate the offsets from thet current drone's position to sample octomap from
+void generateOffSets(vector<point3d> & offset_vals, float GridSize, float zGridSize, int GridCount, string mode ="2d", string bias_mode = "none"){
+	int lowerBoundX,  lowerBoundY, lowerBoundZ, upperBoundX, upperBoundY, upperBoundZ;
+	if (mode == "3d"){
+		if (bias_mode == "pos"){ lowerBoundX = lowerBoundY = lowerBoundZ = 0;}
+		else{lowerBoundX = lowerBoundY = lowerBoundZ = -1*int(pow(GridCount, float(1)/3)/2);}
+
+		upperBoundX = upperBoundY = upperBoundZ = int(pow(GridCount, float(1)/3)/2) + 1;
+		//lowerBoundZ = -1*int(pow(ZGridCount, float(1)/3)/2);
+		//upperBoundZ = int(pow(ZGridCount, float(1)/3)/2) + 1;
+	}else{ // 2d
+
+		if (bias_mode == "pos"){ lowerBoundX = lowerBoundY = lowerBoundZ = 0;}
+		else{lowerBoundX = lowerBoundY = -1*int(pow(GridCount, float(1)/2)/2);}
+		upperBoundX = upperBoundY =  int(pow(GridCount, float(1)/2)/2) + 1;
+		upperBoundZ = 1;
+		lowerBoundZ = 0;
 	}
-	m_octree_lower_res = new OcTreeT(resolution);
-	m_octree_lower_res->setProbHit(m_octree->getProbHit());
-	m_octree_lower_res->setProbMiss(m_octree->getProbMiss());
-	m_octree_lower_res->setClampingThresMin(m_octree->getClampingThresMin());
-	m_octree_lower_res->setClampingThresMax(m_octree->getClampingThresMax());
+
+	for (int i = lowerBoundX; i < upperBoundX; i++){
+		for (int j = lowerBoundY; j < upperBoundY; j++){
+			for (int k = lowerBoundZ; k < upperBoundZ; k++){
+				offset_vals.push_back(point3d(i*GridSize, j*GridSize, k*zGridSize));  // note that I hald z, because I am making a decision that maintaing z is not as important
+			}
+		}
+	}
+}
 
 
-	//m_octree_lower_res->setResolution(.7);
+void OctomapServer::gen_coordinates_to_consider(const OcTreeT::leaf_bbx_iterator &it, OcTreeT* cur_octree, vector<octomap::point3d> &coord_vec){
+	//cout<<"depth is" <<it.getDepth();
+	if (it.getDepth() != cur_octree->getTreeDepth()) {
+		int cubeSize = 1 << (cur_octree->getTreeDepth() - it.getDepth());
+		octomap::OcTreeKey key=it.getIndexKey();
+		for(int dx = 0; dx < cubeSize; dx++){
+			for(int dy = 0; dy < cubeSize; dy++){
+				for(int dz = 0; dz < cubeSize; dz++){
+					unsigned short int tmpx = key[0]+dx;
+					unsigned short int tmpy = key[1]+dy;
+					unsigned short int tmpz = key[2]+dz;
+					coord_vec.push_back(m_octree->keyToCoord(octomap::OcTreeKey(tmpx, tmpy, tmpz)));
+				}
+			}
+		}
+	}else{
+		coord_vec.push_back(it.getCoordinate());
+	}
+	/*
+	if (coord_vec.size() > 1) {
+		cout<<"vec size"<<coord_vec.size()<<endl;
+	}
+	*/
+}
+
+// traverse the current tree entirely, expand leafs (if not at max depth possible) and sample arround them properly
+// to generate the different resolution tree
+void OctomapServer::construct_diff_res_multiple_of_two_map(double diff_res, OcTreeT* m_octree_temp){
+	double cur_res_max_x, cur_res_max_y, cur_res_max_z;
+	double cur_res_min_x, cur_res_min_y, cur_res_min_z;
+	m_octree->getMetricMax(cur_res_max_x, cur_res_max_y, cur_res_max_z);
+	m_octree->getMetricMin(cur_res_min_x, cur_res_min_y, cur_res_min_z);
+	auto bbxMin = octomap::point3d(cur_res_min_x, cur_res_min_y, cur_res_min_z);
+	auto bbxMax = octomap::point3d(cur_res_max_x, cur_res_max_y, cur_res_max_z);
+	for(typename OcTreeT::leaf_bbx_iterator it = m_octree->begin_leafs_bbx(bbxMin,bbxMax), end=m_octree->end_leafs_bbx(); it!= end; ++it){
+		;
+		/*
+		//cout<<it.getDepth()<<endl;
+		// generate coordinates to iterate over for this it
+		coord_vec.clear();
+		gen_coordinates_to_consider(it, m_octree, coord_vec);
+		*/
+	}
+}
+
+// traverse the current tree entirely, expand leafs (if not at max depth possible) and sample arround them properly
+// to generate the different resolution tree
+void OctomapServer::construct_diff_res_non_multiple_of_two_map(double diff_res, OcTreeT* m_octree_temp){
+	m_octree_temp->setProbHit(m_octree->getProbHit());
+	m_octree_temp->setProbMiss(m_octree->getProbMiss());
+	m_octree_temp->setClampingThresMin(m_octree->getClampingThresMin());
+	m_octree_temp->setClampingThresMax(m_octree->getClampingThresMax());
+
+	auto key = m_octree->coordToKey(originalSensorOrigin);
+	auto m_octree_node = m_octree->search(key);
+	m_octree_temp->updateNode(m_octree->coordToKey(originalSensorOrigin), m_octree->isNodeOccupied(m_octree_node));
+
 
 	//m_octree->calcMinMax();
-	double high_res_max_x, high_res_max_y, high_res_max_z;
-	double high_res_min_x, high_res_min_y, high_res_min_z;
-	m_octree->getMetricMax(high_res_max_x, high_res_max_y, high_res_max_z);
-	m_octree->getMetricMin(high_res_min_x, high_res_min_y, high_res_min_z);
+	double cur_res_max_x, cur_res_max_y, cur_res_max_z;
+	double cur_res_min_x, cur_res_min_y, cur_res_min_z;
+	m_octree->getMetricMax(cur_res_max_x, cur_res_max_y, cur_res_max_z);
+	m_octree->getMetricMin(cur_res_min_x, cur_res_min_y, cur_res_min_z);
 
+	/*
+	// logic to filter in a cerat volume around drone's current position
 	double low_res_max_x, low_res_max_y, low_res_max_z;
 	double low_res_min_x, low_res_min_y, low_res_min_z;
 	low_res_max_x = drone_cur_pos.x() + m_lower_res_rel_vol_width;
@@ -834,20 +920,64 @@ void OctomapServer::construct_lower_res_map(double resolution, point3d drone_cur
 	low_res_min_y = drone_cur_pos.y() - m_lower_res_rel_vol_length; //into the screen
 	low_res_min_z = drone_cur_pos.z() - m_lower_res_rel_vol_height;
 
-//	auto bbxMin = octomap::point3d(std::max(low_res_min_x, high_res_min_x), std::max(low_res_min_y, high_res_min_y), std::max(low_res_min_z, high_res_min_z));
-//	auto bbxMax = octomap::point3d(std::min(low_res_max_x, high_res_max_x), std::min(low_res_max_y, high_res_max_y), std::min(low_res_max_z, high_res_max_z));
+	//	auto bbxMin = octomap::point3d(std::max(low_res_min_x, cur_res_min_x), std::max(low_res_min_y, cur_res_min_y), std::max(low_res_min_z, cur_res_min_z));
+	//	auto bbxMax = octomap::point3d(std::min(low_res_max_x, cur_res_max_x), std::min(low_res_max_y, cur_res_max_y), std::min(low_res_max_z, cur_res_max_z));
+	 */
 
-	auto bbxMin = octomap::point3d(high_res_min_x, high_res_min_y, high_res_min_z);
-	auto bbxMax = octomap::point3d( high_res_max_x, high_res_max_y, high_res_max_z);
+	auto bbxMin = octomap::point3d(cur_res_min_x, cur_res_min_y, cur_res_min_z);
+	auto bbxMax = octomap::point3d(cur_res_max_x, cur_res_max_y, cur_res_max_z);
 
+
+	// upsample (if necessary) a current coordinate to fill the holes (generated due to increasing resolution)
+	// to do this, we calculate offsets form the coordinate and later on sample the cur resolution tree with them
+	vector<point3d> offset_vals;
+	double grid_size = diff_res;
+	// note: pow(2,3) is for include both forward and backward in 3 axis.
+	int macroGridCount = pow(2,3); // 8 macro grids, basically 8 quadrants (rahter octoants)
+	int microGridCount = int(pow(2,3))*int(pow(int(m_res/diff_res)+1, 3));  // +1 is to make sure if the two resolutions
+																			 // do not align, we sample a bit more to
+																		     // cover everything
+	generateOffSets(offset_vals, grid_size, grid_size, macroGridCount*microGridCount, gridMode) ;
+
+	vector<point3d> coord_vec; // vector containing the coordinates from tree one to incoorperate (generated from specific
+							   // iterator. This is handy when the leaf iterator is not at max depth
+							   // and we need to expan the leaf
 	for(typename OcTreeT::leaf_bbx_iterator it = m_octree->begin_leafs_bbx(bbxMin,bbxMax), end=m_octree->end_leafs_bbx(); it!= end; ++it){
-		bool occupancy = m_octree->isNodeOccupied((*it));
-		//auto node_to_look_at = m_octree_lower_res->search(it.getCoordinate());
-		m_octree_lower_res->updateNode(it.getCoordinate(), occupancy, true);
+		// generate coordinates to iterate over for this it
+		coord_vec.clear();
+		// expand the leafs that do not have max depth and generate their coordinates
+		gen_coordinates_to_consider(it, m_octree, coord_vec);
+		for (auto it_coord = coord_vec.begin(); it_coord != coord_vec.end(); it_coord++){
+			for (auto it_ = offset_vals.begin(); it_ != offset_vals.end(); it_++) {
+				auto node_to_look_at = m_octree->search(*it_ + *it_coord);
+				if (!node_to_look_at){
+					continue;
+				}
+				float occupancy_value = node_to_look_at->getLogOdds();
+				m_octree_temp->updateNode(*it_ + it.getCoordinate(), occupancy_value, true);
+			}
+		}
 	}
 }
 
+// construct another map from the first, by traversing the entire tree
+// and upsampling (if necessary); this operation is computationaly very expensive
+void OctomapServer::construct_diff_res_map(double diff_res, point3d drone_cur_pos){
+	auto m_octree_temp = new OcTreeT(diff_res);
+	if (diff_res == m_res){ //if resolutions are the same, copy the pointer
+		//m_octree_lower_res = m_octree;
+		delete m_octree_temp;
+		return;
+	} else if (int(diff_res/m_res) == 2) {
+		construct_diff_res_multiple_of_two_map(diff_res, m_octree_temp);
+	} else{
+		construct_diff_res_non_multiple_of_two_map(diff_res, m_octree_temp);
 
+	}
+
+	delete m_octree;
+	m_octree = m_octree_temp;
+}
 
 
 void OctomapServer::publishAll(const ros::Time& rostime){
@@ -1268,29 +1398,6 @@ bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Res
   return true;
 }
 
-// generate the offsets from thet current drone's position to sample octomap from
-void generateOffSets(vector<point3d> & offset, int GridSize, int GridCount, string mode ="2d"){
-	int lowerBoundX,  lowerBoundY, lowerBoundZ, upperBoundX, upperBoundY, upperBoundZ;
-	if (mode == "3d"){
-		lowerBoundX = lowerBoundY = lowerBoundZ = -1*int(pow(GridCount, float(1)/3)/2);
-		upperBoundX = upperBoundY = upperBoundZ = int(pow(GridCount, float(1)/3)/2) + 1;
-
-	}else{ // 2d
-		lowerBoundX = lowerBoundY = -1*int(pow(GridCount, float(1)/2)/2);
-		upperBoundX = upperBoundY =  int(pow(GridCount, float(1)/2)/2) + 1;
-		upperBoundZ = 1;
-		lowerBoundZ = 0;
-	}
-
-	for (int i = lowerBoundX; i < upperBoundX; i++){
-		for (int j = lowerBoundY; j < upperBoundY; j++){
-			for (int k = lowerBoundZ; k < upperBoundZ; k++){
-				offset.push_back(point3d(i*GridSize, j*GridSize, k*GridSize/4));  // note that I hald z, because I am making a decision that maintaing z is not as important
-			}
-		}
-	}
-}
-
 // filter octomap before publishing
 void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
   Octomap map;
@@ -1298,7 +1405,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   //map.header.stamp = rostime;
   profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
   // create a smaller tree (comparing to the tree maintained for octomap), to reduce the communication (serialization, OM->MP and deserealization) overhead
-  OcTreeT* m_octree_shrunk = new OcTreeT(m_res);
+  OcTreeT* m_octree_shrunk = new OcTreeT(m_octree->getResolution());
   m_octree_shrunk->setProbHit(m_octree->getProbHit());
   m_octree_shrunk->setProbMiss(m_octree->getProbMiss());
   m_octree_shrunk->setClampingThresMin(m_octree->getClampingThresMin());
@@ -1314,11 +1421,11 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 
   int parentBorrowedDepth = MapToTransferBorrowedDepth - 1;
 
-  vector<point3d> offset;
-  generateOffSets(offset, gridSideLength, gridSliceCountToInclude, gridMode) ;
+  vector<point3d> offset_vals;
+  generateOffSets(offset_vals, gridSideLength, gridSideLength/4, gridSliceCountToInclude, gridMode) ;
   OcTreeNode* prev_node = nullptr;
   // iteratve and add slices TODO: possibly add a prune, but probably not necessary
-  for (auto it = offset.begin(); it != offset.end(); it++) {
+  for (auto it = offset_vals.begin(); it != offset_vals.end(); it++) {
       point3d offset_point = *it;
 	  auto key = m_octree->coordToKey(sensorOrigin + offset_point);
 	  unsigned int pos;

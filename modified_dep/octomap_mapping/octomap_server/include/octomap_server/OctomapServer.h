@@ -96,6 +96,8 @@ public:
  long long g_pt_cld_to_octomap_commun_olverhead_acc;
  int capture_size = 600;
 
+ //typedef typename OcTreeT::leaf_bbx_iterator leaf_itr;
+
 #ifdef COLOR_OCTOMAP_SERVER
   typedef pcl::PointXYZRGB PCLPoint;
   typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
@@ -190,6 +192,12 @@ protected:
   /// hook that is called when traversing all nodes of the updated Octree (does nothing here)
   virtual void handleNode(const OcTreeT::iterator& it) {};
 
+  // expand the non_max depth tree leafs and push their coordinates into a vector
+  void gen_coordinates_to_consider(const OcTreeT::leaf_bbx_iterator &it, OcTreeT* cur_octree, std::vector<octomap::point3d> &coord_vec);
+  void construct_diff_res_multiple_of_two_map(double diff_res, OcTreeT* m_octree_temp);
+  void construct_diff_res_non_multiple_of_two_map(double diff_res, OcTreeT* m_octree_temp);
+
+
   /// hook that is called when traversing all nodes of the updated Octree in the updated area (does nothing here)
   virtual void handleNodeInBBX(const OcTreeT::iterator& it) {};
 
@@ -232,7 +240,7 @@ protected:
    * but the data is stored according to oldMapInfo.
    */
 
-  void construct_lower_res_map(double resolution, octomap::point3d drone_cur_pos); //construct a lower resolution map from a higher one
+  void construct_diff_res_map(double resolution, octomap::point3d drone_cur_pos); //construct a lower resolution map from a higher one
 
 
   void adjustMapData(nav_msgs::OccupancyGrid& map, const nav_msgs::MapMetaData& oldMapInfo) const;
