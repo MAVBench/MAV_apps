@@ -65,6 +65,10 @@ public:
 	using piecewise_trajectory = vector<graph::node>;
     using smooth_trajectory = mav_trajectory_generation::Trajectory;
 
+
+    int get_num_of_optimums(piecewise_trajectory& piecewise, mav_trajectory_generation::Trajectory &traj, int num_of_optimums_till_idx);
+    int find_optimum_vec_index(mavbench_msgs::multiDOFpoint cur_point, piecewise_trajectory& vertecis, int cur_vertex_idx);
+
     MotionPlanner(octomap::OcTree * octree_, Drone * drone_);
     void log_data_before_shutting_down();
 
@@ -173,6 +177,7 @@ private:
     double planner_min_freq;
     ros::Time last_planning_time;
     bool failed_to_plan_last_time = false;
+    bool planned_optimally = true; // if smoothener spits out suboptimal paths, use this to replan
     Drone * drone = nullptr;
     int capture_size = 600; //set this to 1 if you want to see every data captured separately
 private:

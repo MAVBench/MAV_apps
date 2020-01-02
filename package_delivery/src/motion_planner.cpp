@@ -206,7 +206,9 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		//ROS_ERROR_STREAM("failed to plan last time , so replan");
 		replanning_reason = Failed_to_plan_last_time;
 		replan = true;
-		} else if(planned_approximately){
+		} else if (!planned_optimally && (ros::Time::now() - this->last_planning_time).toSec() < 3) {
+			replan = true;
+		}else if(planned_approximately){
 			replanning_reason = Last_plan_approximate;
 			replan = true;
 			ROS_ERROR_STREAM("approximate planning");
@@ -1024,6 +1026,77 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj)
 }
 
 
+
+
+int MotionPlanner::find_optimum_vec_index(mavbench_msgs::multiDOFpoint cur_point, piecewise_trajectory& vertecis, int cur_vertex_idx) {
+	if (cur_vertex_idx + 2 >= vertecis.size()){
+		return cur_vertex_idx;
+	}else{
+		if (
+		(distance(cur_point.x - vertecis[cur_vertex_idx].x, cur_point.y - vertecis[cur_vertex_idx].y, cur_point.z - vertecis[cur_vertex_idx].z) +
+		 distance(cur_point.x - vertecis[cur_vertex_idx+1].x, cur_point.y - vertecis[cur_vertex_idx+1].y, cur_point.z - vertecis[cur_vertex_idx+1].z)) <
+		(distance(cur_point.x - vertecis[cur_vertex_idx+1].x, cur_point.y - vertecis[cur_vertex_idx+1].y, cur_point.z - vertecis[cur_vertex_idx+1].z) +
+		 distance(cur_point.x - vertecis[cur_vertex_idx+2].x, cur_point.y - vertecis[cur_vertex_idx+2].y, cur_point.z - vertecis[cur_vertex_idx+2].z))){
+			return cur_vertex_idx;
+		}else{
+			return cur_vertex_idx +1;
+		}
+	}
+}
+
+// traverse the entire trajectory and find the number of optimums up to certain vertex
+int MotionPlanner::get_num_of_optimums(piecewise_trajectory& piecewise, mav_trajectory_generation::Trajectory &traj, int vertex_num) {
+	mav_msgs::EigenTrajectoryPoint::Vector states;
+	double sampling_interval = .1;
+	mav_trajectory_generation::sampleWholeTrajectory(traj, sampling_interval, &states);
+	mavbench_msgs::multiDOFpoint cur_point;
+	mavbench_msgs::multiDOFpoint next_point;
+	int optimum_cnt = 0;
+	vector<int> optimum_vec;
+	for (int i =0; i <piecewise.size(); i++){
+		optimum_vec.push_back(0);
+	}
+	int cur_vertex_idx = 0;
+	for (int i = 0; i < states.size() - 1; i++) {
+        const auto& s = states[i];
+        const auto& s_next = states[i+1];
+
+
+        cur_point.vx = s.velocity_W.x();
+		cur_point.vy = s.velocity_W.y();
+		cur_point.vz = s.velocity_W.z();
+
+		next_point.vx = s_next.velocity_W.x();
+		next_point.vy = s_next.velocity_W.y();
+		next_point.vz = s_next.velocity_W.z();
+
+		// if found an optimum, store it in the
+		// optimum_vec according to the index of the vertex
+		// of the first of two points that it's closest to (distance wise
+		// this means if the optimum is between vertex two and three (of the piecewise path)
+		// add incremenet the optimum_vec[2]
+		if (next_point.vx * cur_point.vx < 0  ||
+			next_point.vy * cur_point.vy < 0  ||
+			next_point.vz * cur_point.vz < 0 ) {
+			cur_vertex_idx = find_optimum_vec_index(cur_point, piecewise, cur_vertex_idx);
+//			cout<<"cur_vertex_idx"<< cur_vertex_idx<<" "<<optimum_vec.size()<<endl;
+			optimum_vec[cur_vertex_idx] += 1;
+		}
+    }
+	for (auto it=optimum_vec.begin(); it!= optimum_vec.end(); it++){
+		cout<< *it << " ";
+	}
+
+	int accumulated_num_of_optimums= 0;
+	int idx = 0;
+	for (auto it= optimum_vec.begin(); it!=optimum_vec.end() || idx < vertex_num; it++){
+		accumulated_num_of_optimums += *it;
+		idx +=1;
+	}
+	return accumulated_num_of_optimums;
+}
+
+
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
 {
 
@@ -1031,6 +1104,12 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Variables for visualization for debugging purposes
 	double distance = 0.5; 
 	std::string frame_id = "world";
+
+	// deep copy the piecewise trajectory
+	vector<graph::node> piecewise_path_copy_of_original;
+	for (auto it=piecewise_path.begin(); it!=piecewise_path.end(); it++){
+		piecewise_path_copy_of_original.push_back(*it);
+	}
 
 	// Setup optimizer
 	mav_trajectory_generation::Vertex::Vector vertices;
@@ -1161,14 +1240,54 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Return the collision-free smooth trajectory
 	mav_trajectory_generation::Trajectory traj;
 	opt.getTrajectory(&traj);
+	int num_of_optimums_till_idx = 3; // return the accumulated number of optimums until this index. The idea is that
+									  // we are only concern with suboptimal (oscilating) paths at the intial vertecis of the trajectory. Such behavior is the result of sudden
+									  // direction changes to dampen the high velocity while meeting intricate maneuvers. Note that if we don't replan the path is very suboptimal which
+									  // means that we'll loose the benefits of high speed capability
 
-	ROS_INFO("Smoothened path!");
+	// figure out how many extra vertecies were (artifically) added (to avoid the obstacle collision introduced by smoothening) up to the
+	// num_of_optimums_till_idx and add the value when passiging to  get_num_of_optimums.
+	int idx_of_interest = std::min(int(piecewise_path.size() - 1), num_of_optimums_till_idx-1);
+	int starting_idx = idx_of_interest;
+	int counting_idx = starting_idx;
+	for (auto it=piecewise_path.begin()+ starting_idx; it!=piecewise_path.end(); it++){
+		if (it->x == piecewise_path_copy_of_original[idx_of_interest].x && it->y == piecewise_path_copy_of_original[idx_of_interest].y
+				&& it->z == piecewise_path_copy_of_original[idx_of_interest].z){
+			break;
+		}else{
+			counting_idx +=1;
+		}
+	}
+	/*
+	cout<<"--------------------------"<<endl;
+	cout<<"====================== modified"<<endl;
+	for (auto it=piecewise_path.begin(); it!=piecewise_path.end(); it++){
+		cout<< "("<<it->x<< "," <<it->y<<","<<it->z<< ") ";
+	}
+	cout<<endl;
+	for (auto it=piecewise_path_copy_of_original.begin(); it!=piecewise_path_copy_of_original.end(); it++){
+		cout<< "("<<it->x<< "," <<it->y<<","<<it->z<< ") ";
+	}
+	cout<<endl;
+	*/
+
+	int num_of_optimums = get_num_of_optimums(piecewise_path, traj, counting_idx);
+	ROS_INFO_STREAM("Smoothened path! with "<< num_of_optimums << " num of optimums up to " << counting_idx << " index");
+	if (num_of_optimums <= 3*(num_of_optimums_till_idx-1)) {
+		planned_optimally = true;
+	}else{
+		ROS_INFO_STREAM("---planning suboptimally--");
+		planned_optimally = false;
+	}
+
 	// Visualize path for debugging purposes
 	mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
 	mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
 
 	return traj;
 }
+
+
 
 
 void MotionPlanner::postprocess(piecewise_trajectory& path)
