@@ -345,6 +345,8 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 
 using namespace std; //
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+	bool catched = false;
+	try{
 	/*
 	if ((ros::Time::now() - last_time_cleared).toSec() > 5){
 		m_octree->clear();
@@ -501,7 +503,14 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	  	else{debug_data.octomap_filtering_time =  0;}
 	  	octomap_debug_pub.publish(debug_data);
   }
-
+  catched = false;
+	}
+catch(...){
+	catched = true;
+	}
+	if (catched){
+		ROS_INFO_STREAM("waht");
+	}
 }
 
 void OctomapServer::SaveMapCb(std_msgs::Bool msg){
@@ -1427,7 +1436,14 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   // iteratve and add slices TODO: possibly add a prune, but probably not necessary
   for (auto it = offset_vals.begin(); it != offset_vals.end(); it++) {
       point3d offset_point = *it;
-	  auto key = m_octree->coordToKey(sensorOrigin + offset_point);
+
+      if (offset_point.z() <= m_occupancyMinZ) {
+    	  offset_point.z() = m_occupancyMinZ + m_res;
+      }else if (offset_point.z() >= m_occupancyMaxZ) {
+    	  offset_point.z() = m_occupancyMaxZ - m_res;
+      }
+
+      auto key = m_octree->coordToKey(sensorOrigin + offset_point);
 	  unsigned int pos;
 	  auto m_octree_block = m_octree->search_with_pos_return_(key, pos, MapToTransferBorrowedDepth);
 	  auto m_octree_leaf_node = m_octree->search(key);
@@ -1438,12 +1454,15 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 	  //m_octree_shrunk->updateNode(m_octree->coordToKey(sensorOrigin + offset_point), m_octree->isNodeOccupied(m_octree_node));
 	  //const point3d point = sensorOrigin + offset_point;
 	  if (!m_octree_leaf_node){
-		  m_octree_shrunk->updateNode(key, false);
+		  m_octree_shrunk->updateNode(key, false, true);
 	  }else{
-		  m_octree_shrunk->updateNode(key, m_octree_leaf_node->getValue());
+		  m_octree_shrunk->updateNode(key, m_octree_leaf_node->getValue(), true);
 	  }
 
 	  auto m_octree_shrunk_block_parent = m_octree_shrunk->search(key, parentBorrowedDepth); //parent
+//	  if (!m_octree_shrunk_block_parent){
+//		  ROS_INFO_STREAM("makes nt senese");
+//	  }
 	  m_octree_shrunk->setChild(m_octree_shrunk_block_parent, m_octree_block, pos);
   }
 
