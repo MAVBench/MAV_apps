@@ -1381,11 +1381,40 @@ bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Res
   return true;
 }
 
+
+template <class OctomapT>
+static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg, double resolution =0, int depth_limit = 0){
+	if (depth_limit == 0){
+		depth_limit =  octomap.getTreeDepth();
+	}
+	if (resolution == 0){
+		resolution = octomap.getResolution();
+	}
+	msg.resolution = resolution; //octomap.getResolution();
+	msg.id = octomap.getTreeType();
+	msg.binary = true;
+
+	std::stringstream datastream;
+	if (!octomap.writeBinaryData(datastream, depth_limit))
+		return false;
+
+	std::string datastring = datastream.str();
+	msg.data = std::vector<int8_t>(datastring.begin(), datastring.end());
+	return true;
+}
+
+
+
 // filter octomap before publishing
 void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
-	// take care of space gridding for filtering octomap
+  ros::param::get("/perception_lower_resolution", m_lower_res);
+  assert(m_lower_res >= m_res);
+  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(m_lower_res/m_res));
+
+
+  // take care of space gridding for filtering octomap
   int grid_coeff;
   if (gridMode == "2d"){ grid_coeff = 2;}
   else{grid_coeff = 3;}
@@ -1469,7 +1498,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
   // serialize
-  if (octomap_msgs::binaryMapToMsg(*m_octree_shrunk, map)){
+  if (binaryMapToMsgModified(*m_octree_shrunk, map, m_octree->getResolution(), lower_res_map_depth)){
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;

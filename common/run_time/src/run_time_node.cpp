@@ -194,11 +194,15 @@ void initialize_global_params() {
 void reactive_budgetting(double vel_mag){
 	// filter in reaction to velocity
 	// filter based on resolution
-	double max_point_cloud_resolution = .2;
-	double min_point_cloud_resolution = .8;
-	double point_cloud_resolution =  ((max_point_cloud_resolution - min_point_cloud_resolution)/(0 - g_v_max)) * vel_mag + max_point_cloud_resolution;
+	double max_point_cloud_resolution = .4;
+	double min_point_cloud_resolution = 4.9;
+	double point_cloud_resolution_temp =  (max_point_cloud_resolution - min_point_cloud_resolution)/(0 - g_v_max) * vel_mag + max_point_cloud_resolution;
+	double point_cloud_resolution =  pow(2, int(log2(point_cloud_resolution_temp/max_point_cloud_resolution)))*max_point_cloud_resolution;
+	double perception_lower_resolution = point_cloud_resolution*2;
+
 	ros::param::set("point_cloud_resolution", point_cloud_resolution);
-	ros::param::set("point_cloud_resolution",0.3);
+	ros::param::set("perception_lower_resolution", perception_lower_resolution);
+	//ros::param::set("point_cloud_resolution",0.3);
 
 
 	// filtering based on num of points
