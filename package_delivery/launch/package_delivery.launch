@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="2"/> 
-  <arg name="v_max" default="13"/> 
+  <arg name="v_max" default="12"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -185,9 +185,9 @@
   <arg name="point_cloud_width" default="50"/>
   <arg name="point_cloud_height" default="50"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
-  <arg name="perception_resolution" default=".8"/> <!-- OM voxels size-->
+  <arg name="perception_resolution" default=".6"/> <!-- OM voxels size-->
   <arg name="perception_lower_resolution" default="0.7"/> <!-- OM voxels size-->
-  <arg name="point_cloud_resolution" default=".3"/> <!-- minimum the distance between pc points-->
+  <arg name="point_cloud_resolution" default=".5"/> <!-- minimum the distance between pc points-->
   
   <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
   <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />

@@ -287,12 +287,12 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
-    /*
+
     {
     	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
     	publish_dummy_octomap_vis(octree);
     }
-	*/
+
 
 
     if (DEBUG_RQT) {
