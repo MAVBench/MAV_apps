@@ -191,7 +191,21 @@ void initialize_global_params() {
 }
 
 
-void reactive_budgetting(double vel_mag){
+int get_point_count(double resolution, vector<std::pair<double, int>>& point_cloud_resolution_point_count){
+	for (auto it= point_cloud_resolution_point_count.begin(); it!=point_cloud_resolution_point_count.end(); it++){
+		if (it->first >= resolution){
+			return it->second;
+		}
+	}
+
+	ROS_ERROR_STREAM("should have found a resolution greater or equal to the requested one");
+	exit(0);
+}
+
+
+void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_cloud_resolution_point_count){
+
+
 	// filter in reaction to velocity
 	// filter based on resolution
 	double max_point_cloud_resolution = .4;
@@ -207,13 +221,13 @@ void reactive_budgetting(double vel_mag){
 
 	// filtering based on num of points
 	// need to calculate the modified max number of points in point cloud since resolution impacts the maximum unfiltered point count
-	double max_point_cloud_point_count_max_resolution = 40000;
-	double max_point_cloud_point_count_min_resolution = 2500;
-	double min_point_cloud_point_count = 300;
+	double max_point_cloud_point_count_max_resolution = (double) get_point_count(point_cloud_resolution, point_cloud_resolution_point_count);
+	double max_point_cloud_point_count_min_resolution = max_point_cloud_point_count_max_resolution/15;
+	double min_point_cloud_point_count = max_point_cloud_point_count_min_resolution;
 	// calculate the maximum number of points in an unfiltered point cloud as a function of resolution
-	double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(max_point_cloud_resolution - min_point_cloud_resolution)*(point_cloud_resolution - max_point_cloud_resolution) + max_point_cloud_point_count_max_resolution;
+	//double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(max_point_cloud_resolution - min_point_cloud_resolution)*(point_cloud_resolution - max_point_cloud_resolution) + max_point_cloud_point_count_max_resolution;
 	// calucate num of points as function of velocity
-	double point_cloud_num_points = (modified_max_point_cloud_point_count - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + modified_max_point_cloud_point_count;
+	double point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + max_point_cloud_point_count_max_resolution;
 	ros::param::set("point_cloud_num_points", point_cloud_num_points);
 
 
@@ -243,6 +257,56 @@ int main(int argc, char **argv)
 
 
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);
+
+
+
+    vector<std::pair<double,int>>point_cloud_resolution_point_count;
+	//.1, 14600
+	//.2, 36700
+	//.3 16500
+	//.4 9500
+	//.5 6000
+	//.6 4200
+	//.7 3000
+	//.8 2400
+	//.9 1900
+	//1.0 1500
+	//1.1 1270
+	//1.2 1100
+	//1.3 950
+	//1.4 800
+	//1.5 700
+	//1.6 620
+	//1.7 520
+	//1.8 500
+	//1.9 430
+	//2.0 400
+	//2.1 375
+	//2.2 350
+	//2.3 300
+	//2.4 300
+	//2.5 270
+	//2.6 250
+	//2.7 210
+	//2.8 210
+	//2.9 210
+	//3 200
+	//3.5 135
+	//4 117
+	//4.5 90
+
+    float point_cloud_resolution_array[] = {.1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4,
+    							1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9,
+								3.0, 3.6, 4, 4.5};
+
+    float point_cloud_count_array[] = {146000, 36700, 16500, 9500, 6000, 4200, 3000, 2400, 1900, 1500, 1270,
+    		1100, 950 , 800, 700, 620, 520, 500, 430, 400, 375, 350, 300, 300, 270, 250, 210, 210, 210,
+								200, 135, 117, 90};
+
+    for (int i=0; i< sizeof(point_cloud_resolution_array)/sizeof(point_cloud_resolution_array[0]); i++){
+    	point_cloud_resolution_point_count.push_back(
+    			std::make_pair(point_cloud_resolution_array[i], point_cloud_count_array[i]));
+    }
 
     std::string ip_addr, localization_method;
     ros::param::get("/ip_addr", ip_addr);
@@ -274,7 +338,7 @@ int main(int argc, char **argv)
     		if (reactive_runtime){
     			auto vel = drone.velocity();
     			auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
-    			reactive_budgetting(vel_mag);
+    			reactive_budgetting(vel_mag, point_cloud_resolution_point_count);
     		}
     	}
 

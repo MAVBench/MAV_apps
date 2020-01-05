@@ -407,7 +407,7 @@ void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::v
 }
 
 
-// no filter
+// no filter for num of points
 void filterNoFilter(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best) {
 	for (int i = 0; i < xs.size(); i++) {
@@ -617,6 +617,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pub_point_cloud_.publish (cloud_msg);
 
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
+  //ROS_INFO_STREAM("point cound"<<xs_best.size());
 
   if (DEBUG_RQT){
 	  debug_data.header.stamp = ros::Time::now();
