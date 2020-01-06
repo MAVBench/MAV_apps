@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   geometry_msgs
+  data_collection
+  profile_manager
   tf
 )
 
@@ -139,6 +141,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
   ${common_utility_include} 
+  ${common_utility_include}/profile_manager/include
   $ENV{AirSim_base_dir}/AirLib/include
   )
 

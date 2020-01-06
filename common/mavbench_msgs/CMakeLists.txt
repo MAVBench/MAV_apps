@@ -61,6 +61,7 @@ add_message_files(
   motion_planning_debug.msg
   octomap_debug.msg
   point_cloud_debug.msg
+  runtime_debug.msg
   )
 
 ## Generate services in the 'srv' folder

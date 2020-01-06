@@ -355,7 +355,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 		profiling_container.capture("point_cloud_to_octomap_communication_time", "end", ros::Time::now(), capture_size);
 	}
 
-	profiling_container.capture(std::string("octomap_insertCloud"), "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+	profiling_container.capture(std::string("octomap_insertCloud_minus_publish_all"), "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 
 	// ground filtering in base frame
 	PCLPointCloud pc; // input cloud for filtering and ground-detection
@@ -450,9 +450,12 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
 
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
+  profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
 
+  profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
   if (measure_time_end_to_end){ publishAll(cloud->header.stamp);}
   else{publishAll(ros::Time::now());}
+  profiling_container.capture("octomap_publish_all", "end", ros::Time::now(), capture_size);
 
 
   /*// for debugging purposes. Don't delete, just comment out
@@ -466,7 +469,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   }
 */
 
-  profiling_container.capture("octomap_insertCloud", "end", ros::Time::now(), capture_size);
 
   if (m_save_map){ // for micro benchmarking purposes
 	  m_octree->write("high_res_map.ot");
@@ -477,9 +479,10 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   if (DEBUG_RQT) {
 	  	debug_data.header.stamp = ros::Time::now();
 	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScan")->values.back();
-	  	debug_data.octomap_insertCloud = profiling_container.findDataByName("octomap_insertCloud")->values.back();
-	  	debug_data.octomap_memory_usage =  m_octree->memoryUsage();
-	  	debug_data.octomap_low_res_memory_usage =  m_octree_lower_res->memoryUsage();
+	  	debug_data.octomap_insertCloud_minus_publish_all = profiling_container.findDataByName("octomap_insertCloud_minus_publish_all")->values.back();
+	  	debug_data.octomap_publish_all = profiling_container.findDataByName("octomap_publish_all")->values.back();
+	  	//debug_data.octomap_memory_usage =  m_octree->memoryUsage();
+	  	//debug_data.octomap_low_res_memory_usage =  m_octree_lower_res->memoryUsage();
 	  	debug_data.perceived_closest_obs_distance =  profiling_container.findDataByName("perceived_closest_obstacle")->values.back();
 	  	debug_data.octomap_serialization_high_res_time =  profiling_container.findDataByName("octomap_serialization_high_res_time")->values.back();
 	  	debug_data.octomap_serialization_low_res_time =  profiling_container.findDataByName("octomap_serialization_low_res_time")->values.back();
@@ -1446,7 +1449,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   vector<point3d> offset_vals;
   generateOffSets(offset_vals, gridSideLength, gridSideLength/4, gridSliceCountToInclude, gridMode) ;
   vector<point3d> point_to_consider_vec;
-
+  //ros::Duration(10).sleep();
   // iteratve and add slices TODO: possibly add a prune, but probably not necessary
   for (auto it = offset_vals.begin(); it != offset_vals.end(); it++) {
       point3d offset_point = *it;
@@ -1459,10 +1462,12 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
       }
 
 
+     /*
       if (std::find(point_to_consider_vec.begin(), point_to_consider_vec.end(),point_to_consider)!=point_to_consider_vec.end()) {
     //	  ROS_ERROR_STREAM("already inclucded the point");
     	  continue;
       }
+	*/
 
       point_to_consider_vec.push_back(point_to_consider);
 
@@ -1475,10 +1480,13 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 		  continue;
 	  }
 
+	  // now we just insert a leaf (of depth max) as a place holder to replace later
+	  // we delete this node later
+	  OcTreeNode* m_octree_shrunk_node;
 	  if (!m_octree_leaf_node){ //if the node doesn't exist, add it
-		  m_octree_shrunk->updateNode(key, false, false);
+		  m_octree_shrunk_node = m_octree_shrunk->updateNode(key, false, false);
 	  }else{
-		  m_octree_shrunk->updateNode(key, m_octree_leaf_node->getValue(), true);
+		  m_octree_shrunk_node = m_octree_shrunk->updateNode(key, m_octree_leaf_node->getValue(), true);
 	  }
 
 
@@ -1494,6 +1502,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 	  }
 
 	  m_octree_shrunk->setChild(m_octree_shrunk_block_parent, m_octree_block, pos);
+	  //delete m_octree_shrunk_node;
   }
 
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);

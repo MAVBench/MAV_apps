@@ -180,8 +180,8 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 	if (it == timing_msgs_vec.end()){
 		ROS_ERROR_STREAM("couldn't find a header with the same time stamp to erase the elements before of");
 	}else{
-	    if (caller == "callback_trajectory"){ // only make sense to calculate SA metrics when there is a trajectory
-	    	timing_msgs_begin_el_time = *(timing_msgs_vec.begin());
+	    timing_msgs_begin_el_time = *(timing_msgs_vec.begin());
+		if (caller == "callback_trajectory"){ // only make sense to calculate SA metrics when there is a trajectory
 	    	if (SA_response_time_capture_ctr >=1 && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_waiting_time", "single",
 	    			(*it - *timing_msgs_vec.begin()).toSec(), g_capture_size);
 	    ;
@@ -207,7 +207,15 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 //call back function to receive timing msgs_from_mp. Using this, we reset the vector because this means
 //that we have already made a decision to not make a traj for those imgs
 void timing_msgs_from_mp_callback(const std_msgs::Header::ConstPtr& msg) {
-	erase_up_to_msg(*msg, "timing_msgs_from_mp_callback");
+    erase_up_to_msg(*msg, "timing_msgs_from_mp_callback");
+    if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", msg->stamp, g_capture_size);
+    if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
+    //ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
+    if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
+    	profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
+    			(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+    }
+    SA_response_time_capture_ctr++;
 }
 
 // call back uppon future collision msgs received. deprecated
@@ -703,16 +711,17 @@ int main(int argc, char **argv)
         if (g_got_new_trajectory){
         	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
         	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
-        	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
-        	ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
+        	//ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
         	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
         		profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
         				(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
-        		debug_data.S_A_response_time = profiling_container->findDataByName("S_A_response_time_calculated_from_imgPublisher")->values.back();
         	}
 
         	SA_response_time_capture_ctr++;
         }
+        if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
+        if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && SA_response_time_capture_ctr>=2) debug_data.S_A_response_time = profiling_container->findDataByName("S_A_response_time_calculated_from_imgPublisher")->values.back();
+
         // microbenchmarks
         if (micro_benchmark){
     	 micro_benchmark_func(micro_benchmark_number, replanning_reason, &drone);

@@ -288,12 +288,12 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
 
+    /*
     {
     	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
     	publish_dummy_octomap_vis(octree);
     }
-
-
+	*/
 
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
@@ -354,6 +354,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     // *** F:DN Body 
     //----------------------------------------------------------------- 
     auto hook_end_t_2 = ros::Time::now(); 
+
+	ros::param::get("/piecewise_planning_budget", g_piecewise_planning_budget);
+	ros::param::get("/smoothening_budget", g_smoothening_budget);
+
     //auto hook_start_t = ros::Time::now();
     //g_start_pos = req.start;
     //g_goal_pos = req.goal;
@@ -529,9 +533,10 @@ void MotionPlanner::get_start_in_future(Drone& drone,
         return;
     }
 
-    Data *look_ahead_time;
-    profiling_container.findDataByName("motion_planning_time_total", &look_ahead_time);
-	multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back());
+    //Data *look_ahead_time;
+    //profiling_container.findDataByName("motion_planning_time_total", &look_ahead_time);
+    //multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back());
+    multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, g_smoothening_budget + g_piecewise_planning_budget);
 	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, .2);
 
 

@@ -1,6 +1,7 @@
 Header header
 
-float32 octomap_insertCloud
+float32 octomap_insertCloud_minus_publish_all
+float32 octomap_publish_all
 float32 octomap_insertScan
 float32 octomap_calc_disjoint_and_update
 float32 octomap_calc_hash
