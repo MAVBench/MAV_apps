@@ -208,15 +208,23 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 //that we have already made a decision to not make a traj for those imgs
 void timing_msgs_from_mp_callback(const std_msgs::Header::ConstPtr& msg) {
     erase_up_to_msg(*msg, "timing_msgs_from_mp_callback");
-    if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", msg->stamp, g_capture_size);
-    if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
-    //ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
-    if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
-    	profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
-    			(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+    if (msg->frame_id != "first_time_planning") {
+		if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", msg->stamp, g_capture_size);
+		if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
+		//ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
+		if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
+			profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
+					(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+		}
+		SA_response_time_capture_ctr++;
     }
-    SA_response_time_capture_ctr++;
 }
+
+/*
+void timing_msgs_from_pd_callback(const std_msgs::Header::ConstPtr& msg) {
+    erase_up_to_msg(*msg, "timing_msgs_from_pd_callback");
+}
+*/
 
 // call back uppon future collision msgs received. deprecated
 void future_collision_callback(const mavbench_msgs::future_collision::ConstPtr& msg) {
@@ -598,6 +606,7 @@ int main(int argc, char **argv)
     ros::Subscriber col_coming_sub = n.subscribe<mavbench_msgs::future_collision>("/col_coming", 1, future_collision_callback);
     ros::Subscriber timing_msg_sub = n.subscribe<std_msgs::Header> ("/timing_msgs", timing_msgs_channel_size, timing_msgs_callback);
     ros::Subscriber timing_msg_from_mp_sub = n.subscribe<std_msgs::Header> ("/timing_msgs_from_mp", timing_msgs_channel_size, timing_msgs_from_mp_callback);
+    //ros::Subscriber timing_msg_from_pd_sub = n.subscribe<std_msgs::Header> ("/timing_msgs_from_pd", timing_msgs_channel_size, timing_msgs_from_pd_callback);
 
     // ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("normal_traj", 1, callback_trajectory);
     ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1, boost::bind(callback_trajectory, _1, &drone));

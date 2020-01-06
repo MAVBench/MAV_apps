@@ -26,7 +26,7 @@
 #include <profile_manager.h>
 #include <profile_manager/profiling_data_srv.h>
 #include "package_delivery/point.h"
-
+#include <std_msgs/Header.h>
 
 
 
@@ -480,6 +480,9 @@ int main(int argc, char **argv)
 	ros::Rate pub_rate(80);
     State next_state = invalid;
 
+    ros::Publisher timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_pd", 1);
+
+
     for (State state = setup; ros::ok(); ) {
 		pub_rate.sleep();
         ros::spinOnce();
@@ -501,6 +504,9 @@ int main(int argc, char **argv)
             package_delivery::point goal_srv_inst;
             goal_srv_inst.request.goal = goal;
             goal_transmit_client.call(goal_srv_inst);
+            //std_msgs::Header my_header;
+            //my_header.stamp = ros::Time::now();
+            //timing_msg_from_mp_pub.publish(my_header);
         }
 
 
@@ -636,6 +642,9 @@ int main(int argc, char **argv)
     	    	goal.z = start.z;
     	    	goal_srv_inst.request.goal = goal;
     	    	goal_transmit_client.call(goal_srv_inst);
+  //  	    	std_msgs::Header my_header;
+ //   	    	my_header.stamp = ros::Time::now();
+//    	    	timing_msg_from_mp_pub.publish(my_header);
     	    	reached_goal_ctr +=1;
     	    }
         }

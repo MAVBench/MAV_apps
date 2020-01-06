@@ -91,7 +91,6 @@ bool MotionPlanner::goal_rcv_call_back(package_delivery::point::Request &req, pa
     first_time_planning_succeeded = false;
 	g_goal_pos = req.goal;
 	goal_known = true;
-
 }
 
 void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
@@ -197,8 +196,11 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 // determine whether it's time to replan
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	bool replan;
-
+	std_msgs::Header msg_for_follow_traj;
+	msg_for_follow_traj.stamp = msg.header.stamp;
 	if(!first_time_planning_succeeded) {
+		msg_for_follow_traj.frame_id = "first_time_planning";
+		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 		replanning_reason = First_time_planning;
 		replan = true;
 	} else if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
@@ -237,7 +239,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 
 	// for profiling
 	if (!replan) { //notify the follow trajectory to erase up to this msg
-		timing_msg_from_mp_pub.publish(msg.header);
+		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 	}else{
 		profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
 	}
@@ -400,6 +402,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
 
     	if (notified_failure){ //so we won't fly backward multiple times
+    		std_msgs::Header msg_for_follow_traj;
+			if (!measure_time_end_to_end) { msg_for_follow_traj.stamp = ros::Time::now(); }
+			else{ msg_for_follow_traj.stamp = req.header.stamp; }
+    		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
 
@@ -464,6 +470,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	ROS_ERROR("Path could not be smoothened successfully");
     	profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
+    		std_msgs::Header msg_for_follow_traj;
+			if (!measure_time_end_to_end) { msg_for_follow_traj.stamp = ros::Time::now(); }
+			else{ msg_for_follow_traj.stamp = req.header.stamp; }
+    		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
 
