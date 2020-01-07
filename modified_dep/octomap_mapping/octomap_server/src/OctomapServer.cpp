@@ -658,8 +658,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  //update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
-  auto blah = free_cells.size();
-  auto blah_2 = occupied_cells.size();
+  auto free_cell_volume = free_cells.size()*pow(m_octree->getResolution(),3);
+  auto occupied_cell_volume = occupied_cells.size()*pow(m_octree->getResolution(),3);;
 
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
@@ -746,6 +746,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 		debug_data.octomap_avg_depth_touched= profiling_container.findDataByName("octomap_avg_depth_touched")->values.back();
 		debug_data.octomap_prune_in_octomap_server = profiling_container.findDataByName("octomap_prune_in_octomap_server")->values.back();
 		debug_data.octomap_construct_lower_res_map= profiling_container.findDataByName("construct_lower_res_map")->values.back();
+		debug_data.octomap_space_volume_congested =  free_cell_volume + occupied_cell_volume;
 		//octomap_debug_pub.publish(debug_data);
   }
 

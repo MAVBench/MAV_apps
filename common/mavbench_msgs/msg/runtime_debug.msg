@@ -1,0 +1,8 @@
+Header header
+
+float32 point_cloud_resolution
+float32 perception_lower_resolution
+float32 point_cloud_num_points
+float32 piecewise_planning_budget
+float32 smoothening_budget
+

@@ -216,7 +216,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 
 	// -- determine the point cloud resolution and perception resolution together.
 	//    this is because
-	double max_point_cloud_resolution = .2;
+	double max_point_cloud_resolution = .15;
 	int num_of_steps_on_y = 4;
 	double min_point_cloud_resolution = pow(2, num_of_steps_on_y)*max_point_cloud_resolution;  //this value must be a power of two
 	float offset_v_max = g_v_max/num_of_steps_on_y; // this is used to offsset the g_v_max; this is necessary otherwise, the step function basically never reacehs the min_point_cloud_resolution
@@ -250,7 +250,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 //	double piecewise_planning_budget = (piecewise_planning_budget_max - piecewise_planning_budget_min)/(max_point_cloud_resolution- min_point_cloud_resolution)*point_cloud_resolution +
 //			piecewise_planning_budget_max;
 
-	vector<double> piecewise_planning_budget_vec{.6, .3, .1, .05, .01};
+	vector<double> piecewise_planning_budget_vec{.8, .3, .1, .05, .01};
 	double piecewise_planning_budget = piecewise_planning_budget_vec[point_cloud_resolution_power_index];
 	ros::param::set("piecewise_planning_budget", piecewise_planning_budget);
 	double smoothening_budget = piecewise_planning_budget;
@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 	//4 117
 	//4.5 90
 
-    float point_cloud_resolution_array[] = {.1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4,
+    float point_cloud_resolution_array[] = {.15, .2, .3, .4, .5, .6, .7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4,
     							1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9,
 								3.0, 3.6, 4, 4.5};
 

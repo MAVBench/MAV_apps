@@ -62,6 +62,7 @@ add_message_files(
   octomap_debug.msg
   point_cloud_debug.msg
   runtime_debug.msg
+  response_time_capture.msg
   )
 
 ## Generate services in the 'srv' folder

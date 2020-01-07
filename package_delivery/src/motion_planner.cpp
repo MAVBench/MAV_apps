@@ -38,7 +38,7 @@
 #include <XmlRpcValue.h>
 #include <mavbench_msgs/motion_planning_debug.h>
 #include <common.h>
-
+#include <mavbench_msgs/response_time_capture.h>
 #include "../../deps/mav_comm/mav_msgs/include/mav_msgs/eigen_mav_msgs.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/impl/polynomial_optimization_linear_impl.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
@@ -66,7 +66,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
-    timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_mp", 1);
+    timing_msg_from_mp_pub = nh.advertise<mavbench_msgs::response_time_capture> ("/timing_msgs_from_mp", 1);
     motion_planning_debug_pub = nh.advertise<mavbench_msgs::motion_planning_debug>("/motion_planning_debug", 1);
 
 	// for stress testing
@@ -196,10 +196,11 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 // determine whether it's time to replan
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	bool replan;
-	std_msgs::Header msg_for_follow_traj;
-	msg_for_follow_traj.stamp = msg.header.stamp;
+	//std_msgs::Header msg_for_follow_traj;
+    mavbench_msgs::response_time_capture msg_for_follow_traj;
+	msg_for_follow_traj.header.stamp = msg.header.stamp;
 	if(!first_time_planning_succeeded) {
-		msg_for_follow_traj.frame_id = "first_time_planning";
+		msg_for_follow_traj.planning_status = "first_time_planning";
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 		replanning_reason = First_time_planning;
 		replan = true;
@@ -239,6 +240,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 
 	// for profiling
 	if (!replan) { //notify the follow trajectory to erase up to this msg
+		msg_for_follow_traj.planning_status = "no_planning_needed";
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 	}else{
 		profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
@@ -402,10 +404,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
 
     	if (notified_failure){ //so we won't fly backward multiple times
-    		std_msgs::Header msg_for_follow_traj;
-			if (!measure_time_end_to_end) { msg_for_follow_traj.stamp = ros::Time::now(); }
-			else{ msg_for_follow_traj.stamp = req.header.stamp; }
-    		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
+    		//std_msgs::Header msg_for_follow_traj;
+    		mavbench_msgs::response_time_capture msg_for_follow_traj;
+    		if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
+			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
+			msg_for_follow_traj.planning_status = "piecewise_planning_failed";
+			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
 
@@ -421,10 +425,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         	//res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.reverse = true;
         	res.multiDOFtrajectory.stop = false;
-        	res.multiDOFtrajectory.planning_status = Initial_state_failure;
+        	res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
         	ROS_INFO_STREAM("curent state, x:"<<drone->position().x<< ",  y:"<< drone->position().y<< ", z:"<< drone->position().z);
         }else if (status == 0 || status == 3){ //if couldn't find an exact path within the time frame reverse
-        	res.multiDOFtrajectory.planning_status = Short_time_failure;
+        	//res.multiDOFtrajectory.planning_status = Short_time_failure;
+        	res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
         	res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.stop = true;
         }else{
@@ -470,10 +475,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	ROS_ERROR("Path could not be smoothened successfully");
     	profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
-    		std_msgs::Header msg_for_follow_traj;
-			if (!measure_time_end_to_end) { msg_for_follow_traj.stamp = ros::Time::now(); }
-			else{ msg_for_follow_traj.stamp = req.header.stamp; }
-    		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
+    		mavbench_msgs::response_time_capture msg_for_follow_traj;
+    		//std_msgs::Header msg_for_follow_traj;
+			if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
+			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
+			msg_for_follow_traj.planning_status = "smoothening_failed";
+			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
 
@@ -486,7 +493,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.append = false;
         res.multiDOFtrajectory.reverse = false;
         res.multiDOFtrajectory.stop = true;
-        res.multiDOFtrajectory.planning_status = Short_time_failure; //profiling
+        res.multiDOFtrajectory.planning_status = "smoothening_failed"; //profiling
         notified_failure = true;
         if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
         else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
@@ -501,7 +508,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
     else{ res.multiDOFtrajectory.header.stamp = req.header.stamp;}
     res.multiDOFtrajectory.replanning_reason = replanning_reason;
-    res.multiDOFtrajectory.planning_status = Success;
+    res.multiDOFtrajectory.planning_status = "success";
     got_new_next_steps_since_last_attempted_plan = false;
 
     traj_pub.publish(res.multiDOFtrajectory);
@@ -1243,6 +1250,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     	 bool now = 1;
      }
 
+     ROS_ERROR_STREAM("smoothening_ctr"<<smoothening_ctr << " smoothening tim so far"<<smoothening_time_so_far.toSec());
     } while (col &&
             smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec());
     		//smoothening_ctr < 5);

@@ -17,7 +17,7 @@
 #include <profile_manager.h>
 #include <datacontainer.h>
 #include <cmath>
-
+#include <mavbench_msgs/response_time_capture.h>
 using namespace std;
 
 // Trajectories
@@ -73,11 +73,14 @@ int timing_msgs_channel_size = -1; //used to ensure we haven't dropped any timin
 				  // the SA end to end accurately.
 int timing_msgs_cntr = 0; //counting the number of msgs in the timing_msg topic before it's consumed
 ros::Time timing_msgs_begin_el_time;
-int replanning_reason, planning_status;
+int replanning_reason;
+string planning_status;
 int SA_response_time_capture_ctr = 0; //counting the number of response_time captures. This is used to filter out the first
     									  // planning response time, since there is a big lag from the beginning of the
     									  // game execution and first planning which will skew the results
 
+
+string this_response_time_collected_type;
 
 bool micro_benchmark_signaled_supervisor = false; //if signaled, then don't capture the velocity anymore
 //micro benchmarking
@@ -179,6 +182,7 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 	// if call back is motion planner, then erase up to msg (
 	if (it == timing_msgs_vec.end()){
 		ROS_ERROR_STREAM("couldn't find a header with the same time stamp to erase the elements before of");
+		exit(0);
 	}else{
 	    timing_msgs_begin_el_time = *(timing_msgs_vec.begin());
 		if (caller == "callback_trajectory"){ // only make sense to calculate SA metrics when there is a trajectory
@@ -206,18 +210,22 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 
 //call back function to receive timing msgs_from_mp. Using this, we reset the vector because this means
 //that we have already made a decision to not make a traj for those imgs
-void timing_msgs_from_mp_callback(const std_msgs::Header::ConstPtr& msg) {
-    erase_up_to_msg(*msg, "timing_msgs_from_mp_callback");
-    if (msg->frame_id != "first_time_planning") {
-		if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", msg->stamp, g_capture_size);
-		if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
-		//ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
-		if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
-			profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
-					(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
-		}
-		SA_response_time_capture_ctr++;
+void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::ConstPtr& msg) {
+    erase_up_to_msg(msg->header, "timing_msgs_from_mp_callback");
+    if (msg->planning_status == "first_time_planning") {
+    	return;
+    }else if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
+    	profiling_container->capture("S_A_response_time", "single",
+    			(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+    	profiling_container->capture("S_A_response_time_" + msg->planning_status, "single",
+    			(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
     }
+
+    this_response_time_collected_type = "S_A_response_time_" + msg->planning_status;
+    if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "single", (ros::Time::now() - msg->header.stamp).toSec(), g_capture_size);
+
+
+    SA_response_time_capture_ctr++;
 }
 
 /*
@@ -442,6 +450,19 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     }
     replanning_reason = msg->replanning_reason; // @suppress("Field cannot be resolved")
     planning_status = msg->planning_status;
+
+
+	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
+	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
+	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
+		profiling_container->capture("S_A_response_time", "single",
+				(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+		profiling_container->capture("S_A_response_time_" + planning_status, "single",
+				(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+		this_response_time_collected_type = "S_A_response_time_" + planning_status;
+	}
+	SA_response_time_capture_ctr++;
+
 }
 
 
@@ -605,7 +626,7 @@ int main(int argc, char **argv)
     ros::Subscriber slam_lost_sub = n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
     ros::Subscriber col_coming_sub = n.subscribe<mavbench_msgs::future_collision>("/col_coming", 1, future_collision_callback);
     ros::Subscriber timing_msg_sub = n.subscribe<std_msgs::Header> ("/timing_msgs", timing_msgs_channel_size, timing_msgs_callback);
-    ros::Subscriber timing_msg_from_mp_sub = n.subscribe<std_msgs::Header> ("/timing_msgs_from_mp", timing_msgs_channel_size, timing_msgs_from_mp_callback);
+    ros::Subscriber timing_msg_from_mp_sub = n.subscribe<mavbench_msgs::response_time_capture> ("/timing_msgs_from_mp", timing_msgs_channel_size, timing_msgs_from_mp_callback);
     //ros::Subscriber timing_msg_from_pd_sub = n.subscribe<std_msgs::Header> ("/timing_msgs_from_pd", timing_msgs_channel_size, timing_msgs_from_pd_callback);
 
     // ros::Subscriber traj_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("normal_traj", 1, callback_trajectory);
@@ -717,19 +738,40 @@ int main(int argc, char **argv)
         bool check_position = true; //always check position now
 
         // profiling
+        /*
         if (g_got_new_trajectory){
         	if(measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "start", new_traj_msg_time_stamp, g_capture_size);
         	if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) profiling_container->capture("S_A_latency", "end", ros::Time::now(), g_capture_size);
-        	//ROS_INFO_STREAM("S_A_response_time"<< (ros::Time::now() - timing_msgs_begin_el_time).toSec());
         	if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
-        		profiling_container->capture("S_A_response_time_calculated_from_imgPublisher", "single",
+        		profiling_container->capture("S_A_response_time", "single",
         				(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
+        	    		profiling_container->capture("S_A_response_time_" + planning_status, "single",
+        	    				(ros::Time::now() - timing_msgs_begin_el_time).toSec(), g_capture_size); //ignoring the first planning since it takse forever
         	}
-
         	SA_response_time_capture_ctr++;
         }
-        if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
-        if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && SA_response_time_capture_ctr>=2) debug_data.S_A_response_time = profiling_container->findDataByName("S_A_response_time_calculated_from_imgPublisher")->values.back();
+        */
+        if (DEBUG_RQT) {
+			if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor) debug_data.S_A_latency = profiling_container->findDataByName("S_A_latency")->values.back();
+			if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && profiling_container->findDataByName("S_A_response_time")) debug_data.S_A_response_time = profiling_container->findDataByName("S_A_response_time")->values.back();
+			debug_data.S_A_response_time_no_planning_needed = 0;
+			debug_data.S_A_response_time_success = 0;
+			debug_data.S_A_response_time_piecewise_planning_failed = 0;
+			debug_data.S_A_response_time_smoothening_failed = 0;
+			if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && profiling_container->findDataByName("S_A_response_time_no_planning_needed") && this_response_time_collected_type == "S_A_response_time_no_planning_needed") {
+				debug_data.S_A_response_time_no_planning_needed = profiling_container->findDataByName("S_A_response_time_no_planning_needed")->values.back();
+			}
+			if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && SA_response_time_capture_ctr>=2  && profiling_container->findDataByName("S_A_response_time_success") && this_response_time_collected_type == "S_A_response_time_success") {
+				debug_data.S_A_response_time_success = profiling_container->findDataByName("S_A_response_time_success")->values.back();
+			}
+			if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && SA_response_time_capture_ctr>=2  && profiling_container->findDataByName("S_A_response_time_piecewise_planning_failed") && this_response_time_collected_type == "S_A_response_time_piecewise_planning_failed"){
+				debug_data.S_A_response_time_piecewise_planning_failed = profiling_container->findDataByName("S_A_response_time_piecewise_planning_failed")->values.back();
+			}
+			if (measure_time_end_to_end && !micro_benchmark_signaled_supervisor && SA_response_time_capture_ctr>=2  && profiling_container->findDataByName("S_A_response_time_smoothening_failed") && this_response_time_collected_type == "S_A_response_time_smoothening_failed"){
+				debug_data.S_A_response_time_smoothening_failed = profiling_container->findDataByName("S_A_response_time_smoothening_failed")->values.back();
+			}
+        }
+
 
         // microbenchmarks
         if (micro_benchmark){
@@ -786,9 +828,9 @@ int main(int argc, char **argv)
         debug_data.stop = stop;
         debug_data.header.stamp = ros::Time::now();
         debug_data.replanning_reason = replanning_reason;
-        debug_data.planning_failure_short_time = (planning_status == 0) ;
-        debug_data.planning_failure_inital_state = (planning_status == 1);
-        debug_data.planning_success = (planning_status == 2);
+        //debug_data.planning_failure_short_time = (planning_status == 0) ;
+        //debug_data.planning_failure_inital_state = (planning_status == 1);
+        //debug_data.planning_success = (planning_status == 2);
         debug_data.vel_magnitude = profiling_container->findDataByName("velocity")->values.back();
         debug_data.entire_follow_trajectory = profiling_container->findDataByName("entire_follow_trajectory")->values.back();
 

@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="16"/> 
+  <arg name="v_max" default="4"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -181,13 +181,13 @@
 
   <!-- =========================Point Cloud  ============================ -->
   <arg name="point_cloud_shard_cnt" default="1"/>
-  <arg name="point_cloud_num_points" default="300000"/>
+  <arg name="point_cloud_num_points" default="3000000"/>
   <arg name="point_cloud_width" default="50"/>
   <arg name="point_cloud_height" default="50"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
   <arg name="perception_resolution" default=".3"/> <!-- OM voxels size-->
-  <arg name="perception_lower_resolution" default="1.2"/> <!-- OM voxels size-->
-  <arg name="point_cloud_resolution" default=".2"/> <!-- minimum the distance between pc points-->
+  <arg name="perception_lower_resolution" default=".4"/> <!-- OM voxels size-->
+  <arg name="point_cloud_resolution" default=".15"/> <!-- minimum the distance between pc points-->
   
   <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
   <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />
@@ -285,8 +285,8 @@
     ?>
 
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="piecewise_planning_budget" default=".05"/>
-  <arg name="smoothening_budget" default=".05"/>
+  <arg name="piecewise_planning_budget" default=".8"/>
+  <arg name="smoothening_budget" default=".8"/>
 
   <param name="piecewise_planning_budget" value="$(arg piecewise_planning_budget)"/>
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
@@ -314,7 +314,7 @@
     <param name="x_dist_to_sample_from__low_bound" value="-200"/>
     <param name="x_dist_to_sample_from__high_bound" value="200"/>
     <param name="y_dist_to_sample_from__low_bound" value="-100"/>
-    <param name="y_dist_to_sample_from__high_bound" value="550"/>
+    <param name="y_dist_to_sample_from__high_bound" value="600"/>
     <param name="z_dist_to_sample_from__low_bound" value="0"/>
     <param name="z_dist_to_sample_from__high_bound" value="80"/>
 
@@ -395,8 +395,8 @@
   </group>
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="reactive_runtime" default="true" />   
-  <arg name="dynamic_budgetting" default="true" />   
+  <arg name="reactive_runtime" default="false" />   
+  <arg name="dynamic_budgetting" default="false" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>

@@ -19,11 +19,15 @@ geometry_msgs/Vector3 target_acceleration
 float32 time_between_samples
 float32 S_A_latency
 float32 S_A_response_time
+float32 S_A_response_time_no_planning_needed
+float32 S_A_response_time_success
+float32 S_A_response_time_piecewise_planning_failed
+float32 S_A_response_time_smoothening_failed
 float32 vel_magnitude
 float32 entire_follow_trajectory
 
 int32 replanning_reason
-int32 planning_status
+string planning_status
 int32 planning_failure_short_time
 int32 planning_failure_inital_state
 int32 planning_success
