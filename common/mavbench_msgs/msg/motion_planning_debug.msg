@@ -10,4 +10,4 @@ float32 octomap_to_motion_planner_communication_overhead
 float32 entire_octomap_callback
 float32 collision_check_for_replanning
 float32 octomap_dynamic_casting
-
+float32 motion_planning_volume_traversed

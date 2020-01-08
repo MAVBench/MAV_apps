@@ -182,6 +182,7 @@
   <!-- =========================Point Cloud  ============================ -->
   <arg name="point_cloud_shard_cnt" default="1"/>
   <arg name="point_cloud_num_points" default="3000000"/>
+  <arg name="point_cloud_num_points_filtering_mode" default="radius"/>
   <arg name="point_cloud_width" default="50"/>
   <arg name="point_cloud_height" default="50"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
@@ -192,6 +193,7 @@
   <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
   <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />
   <param name="point_cloud_num_points" value="$(arg point_cloud_num_points)" />
+  <param name="point_cloud_num_points_filtering_mode" value="$(arg point_cloud_num_points_filtering_mode)" />
   <param name="point_cloud_width" value="$(arg point_cloud_width)"/>
   <param name="point_cloud_height" value="$(arg point_cloud_height)"/>
   <param name="point_cloud_density_reduction" value="$(arg point_cloud_density_reduction)"/>

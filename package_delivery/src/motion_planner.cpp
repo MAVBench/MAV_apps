@@ -45,7 +45,7 @@
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/segment.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/vertex.h"
 
-
+double volume_traversed_in_unit_cubes = 0;
 MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
         octree(octree_),
 		drone(drone_),
@@ -265,7 +265,8 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
-    profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
+	volume_traversed_in_unit_cubes = 0;
+	profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
 	if (octree != nullptr) {
         delete octree;
 	}
@@ -314,6 +315,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     }
 
     if (!shouldReplan(msg)){
+    	debug_data.motion_planning_volume_traversed = volume_traversed_in_unit_cubes*pow(octree->getResolution(),3);
     	return;
     }
 
@@ -321,7 +323,6 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
-
     bool planning_succeeded = this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
@@ -340,6 +341,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     debug_data.motion_planning_total_time = profiling_container.findDataByName("motion_planning_time_total")->values.back();
     debug_data.octomap_dynamic_casting = profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
     debug_data.entire_octomap_callback = profiling_container.findDataByName("entire_octomap_callback")->values.back();
+    debug_data.motion_planning_volume_traversed = volume_traversed_in_unit_cubes*pow(octree->getResolution(),3);
 }
 
 octomap::OcTree* MotionPlanner::getOctree() {
@@ -937,16 +939,18 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
         octomap::point3d start (it.getCoordinate());
         
         // std::cout << distance << " (" << start.x() << " " << start.y() << " " << start.z() << ") (" << direction.x() << " " << direction.y() << " " << direction.z() << ")" << std::endl;
+        double volume_traversed_in_unit_cubes_ = 0;
 
-        if (octree->castRay(start, direction, end, true, distance)) {
+        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_traversed_in_unit_cubes_)) {
             if (end_ptr != nullptr) {
                 end_ptr->x = end.x();
                 end_ptr->y = end.y();
                 end_ptr->z = end.z();
             }
-
+            volume_traversed_in_unit_cubes += volume_traversed_in_unit_cubes_;
             return true;
         }
+        volume_traversed_in_unit_cubes += volume_traversed_in_unit_cubes_;
     }
 
 	//LOG_ELAPSED(motion_planner);

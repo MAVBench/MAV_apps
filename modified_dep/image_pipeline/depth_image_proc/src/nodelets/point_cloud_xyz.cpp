@@ -83,6 +83,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   bool measure_time_end_to_end;
   // TODO: should num_points be the API for runtime? Seems pretty reasonable.
   int point_cloud_num_points; // budget for how many points we can send
+  string point_cloud_num_points_filtering_mode; // whether to use raidus based or height based filtering
   float point_cloud_width, point_cloud_height; //point cloud boundary
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
   double point_cloud_resolution; // specifies the minimum distance between the points
@@ -122,54 +123,71 @@ void PointCloudXyzNodelet::onInit()
   // Profiling 
   if (!ros::param::get("/DEBUG", DEBUG_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for DEBUG");
-    return;
+    exit(0);
   }
   if (!ros::param::get("/data_collection_iteration_freq_ptCld", data_collection_iteration_freq_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for data_collection_iteration_freq_ptCld");
+    exit(0);
     return;
   }
   if (!ros::param::get("/CLCT_DATA", CLCT_DATA_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for CLCT_DATA");
+    exit(0);
     return ;
   } 
   if(!ros::param::get("/supervisor_mailbox",g_supervisor_mailbox))  {
       ROS_FATAL_STREAM("Could not start mapping supervisor_mailbox not provided");
+      exit(0);
       return ;
   }
 
   if (!ros::param::get("/measure_time_end_to_end", measure_time_end_to_end)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for measure_time_end_to_end");
+      exit(0);
     return ;
   }
 
   if (!ros::param::get("/point_cloud_num_points", point_cloud_num_points)) {
     ROS_FATAL("Could not start img_proc. point_cloud_num_points Parameter missing!");
+    exit(0);
     return ;
   }
+
+ if (!ros::param::get("/point_cloud_num_points_filtering_mode", point_cloud_num_points_filtering_mode)) {
+    ROS_FATAL("Could not start img_proc. point_cloud_num_points_filtering_mode Parameter missing!");
+    exit(0);
+    return ;
+  }
+
   
   if (!ros::param::get("/point_cloud_width", point_cloud_width)) {
     ROS_FATAL("Could not start img_proc. point_cloud_width Parameter missing! Looking for measure_time_end_to_end");
+    exit(0);
     return ;
   }
   
   if (!ros::param::get("/point_cloud_height", point_cloud_height)) {
     ROS_FATAL("Could not start img_proc. point_cloud_height Parameter missing! Looking for measure_time_end_to_end");
+    exit(0);
     return ;
   }
 
   if (!ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction)) {
-    ROS_FATAL("Could not start img_proc. point_cloud_density_reduction Parameter missing!");
+    exit(0);
     return ;
   }
 
   if (!ros::param::get("/point_cloud_resolution", point_cloud_resolution)) {
     ROS_FATAL("Could not start img_proc. point_cloud_resolution Parameter missing!");
+    exit(0);
     return ;
   }
 
   if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
       ROS_FATAL_STREAM("Could not start point cloud DEBUG_RQT not provided");
+      exit(0);
       return ;
+
    }
 
   pt_cld_ctr = 0;
@@ -366,8 +384,7 @@ int xGapDiagnostic(std::vector<float> &xs, std::vector<float> &ys, std::vector<f
 }
 
 
-// gets the points that are most central
-void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
+void filterByNumOfPointsRadiusWise(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget) {
 
   // bucket points by distance from center for choosing best ones
@@ -380,12 +397,12 @@ void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::v
   for (int i = 0; i < xs.size(); i++) {
     // Add point to radius bucket
     int radius_bucket = (int) (std::pow(std::pow(xs[i], 2) + std::pow(ys[i], 2), 0.5) / bucket_width);
-    radius_counters[radius_bucket] += 1;  
+    radius_counters[radius_bucket] += 1;
   }
     /*std::cout << "[ ";
   for (int i = 0; i < num_radius_buckets; i++) {
     std::cout << radius_counters[i] << ", ";
-  } 
+  }
   std::cout << "]" << std::endl;*/
 
   // select the most central points to include
@@ -404,6 +421,55 @@ void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::v
         zs_best.push_back(zs[i]);
       }
     }
+}
+
+
+
+void filterByNumOfPointsHeightWise(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget) {
+
+  // bucket points by distance from center for choosing best ones
+  const int num_height_buckets = 100;
+  int height_counters [num_height_buckets];
+  memset(&height_counters[0], 0, sizeof(height_counters));
+  double max_height = 30;
+  double bucket_width = max_height / num_height_buckets;
+
+  for (int i = 0; i < xs.size(); i++) {
+    int height_bucket_idx = (int) (zs[i]/ bucket_width);
+    height_counters[height_bucket_idx] += 1;
+  }
+
+  // select the pionts closest to the drone (height wise)
+  int max_height_bucket_idx = 0;
+  int points_to_include = height_counters[0] + height_counters[1];
+  while (points_to_include <= points_budget && max_height_bucket_idx < num_height_buckets) {
+    max_height_bucket_idx++;
+    points_to_include += height_counters[max_height_bucket_idx + 1];
+  }
+
+  for (int i = 0; i < xs.size(); i++) {
+      int height_bucket_idx = (int) (zs[i]/ bucket_width);
+      if (height_bucket_idx <= max_height_bucket_idx) {
+        xs_best.push_back(xs[i]);
+        ys_best.push_back(ys[i]);
+        zs_best.push_back(zs[i]);
+      }
+    }
+}
+
+
+// gets the points that are most central
+void filterByNumOfPoints(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget, string mode="radius") {
+	if (mode == "radius"){
+		filterByNumOfPointsRadiusWise(xs, ys, zs, xs_best, ys_best, zs_best, points_budget);
+	} else if (mode == "height"){
+		filterByNumOfPointsHeightWise(xs, ys, zs, xs_best, ys_best, zs_best, points_budget);
+	}else{
+		ROS_ERROR_STREAM("this mode"<< mode<<" for point cloud num of points filtering is not defined");
+		exit(0);
+	}
 }
 
 
@@ -469,6 +535,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    ros::param::get("/point_cloud_width", point_cloud_width);
    ros::param::get("/point_cloud_height", point_cloud_height);
    ros::param::get("/point_cloud_num_points", point_cloud_num_points);
+   ros::param::get("/point_cloud_num_points_filtering_mode", point_cloud_num_points_filtering_mode);
    ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
 
 
@@ -590,7 +657,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   //filterNoFilter(xs, ys, zs, xs_best, ys_best, zs_best);
   //filterByWidthHeight(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_width, point_cloud_height);
-  filterByNumOfPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points);
+  filterByNumOfPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_num_points_filtering_mode);
 
 
   // reset point cloud and load in filtered in points

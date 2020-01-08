@@ -746,7 +746,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 		debug_data.octomap_avg_depth_touched= profiling_container.findDataByName("octomap_avg_depth_touched")->values.back();
 		debug_data.octomap_prune_in_octomap_server = profiling_container.findDataByName("octomap_prune_in_octomap_server")->values.back();
 		debug_data.octomap_construct_lower_res_map= profiling_container.findDataByName("construct_lower_res_map")->values.back();
-		debug_data.octomap_space_volume_congested =  free_cell_volume + occupied_cell_volume;
+		debug_data.octomap_space_volume_digested =  free_cell_volume + occupied_cell_volume;
 		//octomap_debug_pub.publish(debug_data);
   }
 
@@ -1387,7 +1387,7 @@ bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Res
 
 
 template <class OctomapT>
-static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg, double resolution =0, int depth_limit = 0){
+static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg, double &volume_communicated_in_unit_cubes, double resolution =0, int depth_limit = 0){
 	if (depth_limit == 0){
 		depth_limit =  octomap.getTreeDepth();
 	}
@@ -1399,7 +1399,7 @@ static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg,
 	msg.binary = true;
 
 	std::stringstream datastream;
-	if (!octomap.writeBinaryData(datastream, depth_limit))
+	if (!octomap.writeBinaryData(datastream, depth_limit, volume_communicated_in_unit_cubes))
 		return false;
 
 	std::string datastring = datastream.str();
@@ -1507,8 +1507,9 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   }
 
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
+  double volume_communicated_in_unit_cubes = 0;
   // serialize
-  if (binaryMapToMsgModified(*m_octree_shrunk, map, m_octree->getResolution(), lower_res_map_depth)){
+  if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_octree->getResolution(), lower_res_map_depth)){
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
@@ -1516,6 +1517,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   }
   else
     ROS_ERROR("Error serializing OctoMap");
+  debug_data.octomap_volume_communicated = volume_communicated_in_unit_cubes*pow(m_octree_shrunk->getResolution(), 3);
 }
 
 
