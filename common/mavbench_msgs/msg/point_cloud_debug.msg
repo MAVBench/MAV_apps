@@ -8,3 +8,4 @@ float32 points_avg_distance
 float32 points_max_min
 float32 point_cloud_filtering_time
 float32 entire_point_cloud_depth_callback
+float32 point_cloud_volume_to_digest

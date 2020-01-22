@@ -48,12 +48,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "boost/functional/hash.hpp"
+#include <tuple>
 using namespace std;
 #include <mavbench_msgs/point_cloud_debug.h>
+#include <string>
+
 
 namespace depth_image_proc {
 
 namespace enc = sensor_msgs::image_encodings;
+
+float sensor_max_range;
 
 class PointCloudXyzNodelet : public nodelet::Nodelet
 {
@@ -267,25 +272,39 @@ void PointCloudXyzNodelet::sigIntHandlerPrivate(int signo){
 
 
 
-unsigned long int point_hash_xyz (double x, double y, double z) {
+unsigned long int inline point_hash_xyz (double x, double y, double z) {
     return boost::hash_value(make_tuple(x, y, z));
 }
 
-unsigned long int point_hash_xy(double x, double y) {
+unsigned long int inline point_hash_xy(double x, double y) {
     return boost::hash_value(make_tuple(x, y));
 }
 
-double round_to_resolution(double v, double resolution) {
+double inline round_to_resolution(double v, double resolution) {
     // add half, then truncate to round to nearest multiple of resolution
-    v += boost::math::sign(v) * resolution / 2;
+    //v += boost::math::sign(v) * resolution / 2;
     return v - fmod(v, resolution);
 }
 
+double inline round_to_resolution_(double v, double resolution) {
+    // add half, then truncate to round to nearest multiple of resolution
+    //v += boost::math::sign(v) * resolution / 2;
+    return v + (resolution - fmod(v, resolution));
+}
 
-void filterByResolution(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+
+
+
+
+void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
     std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
   // map of whether a point has been seen (rounded by resolution)
   std::unordered_set<double> seen;
+  std::map<double, std::tuple<double,double>> min_y;
+  std::map<double, std::tuple<double, double>> max_y;
+  std::map<double, std::tuple<double,double>> min_x;
+  std::map<double, std::tuple<double, double>> max_x;
+
   seen.clear();
 
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
@@ -296,19 +315,549 @@ void filterByResolution(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor
       double rounded_y = round_to_resolution(*cloud_y, resolution);
       double rounded_z = round_to_resolution(*cloud_z, resolution);
       double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+
       // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
       // printf("ROUNDED x: %f, y: %f, z: %f\n", rounded_x, rounded_y, rounded_z);
       // add to filtered cloud only if it is not close to one already seen
       if (seen.find(hashed_point) == seen.end()) {
 
         seen.insert(hashed_point);
-        // printf("x: %f, y: %f, z: %f\n", *cloud_x, *cloud_y, *cloud_z);
+
+        // add min of y
+        auto it = min_y.find(rounded_x);
+        if (it != min_y.end()){
+        	double y = get<0>(it->second);
+        	double z = get<1>(it->second);
+        	//tie(y,z) = it->second;
+        	it->second = make_tuple(std::min(rounded_y, y),
+        		z);
+        }else{
+        	min_y[rounded_x] = make_tuple(rounded_y, rounded_z);
+        }
+
+        auto it_ = max_y.find(rounded_x);
+        if (it_ != max_y.end()){
+        	double y = get<0>(it->second);
+        	double z = get<1>(it->second);
+        	//tie(y,z) = it->second;
+        	it_->second = make_tuple(std::max(rounded_y, y),
+        		z);
+        }else{
+        	max_y[rounded_x] = make_tuple(rounded_y, rounded_z);
+        }
+
+        auto it_min_x = min_x.find(rounded_y);
+        if (it_min_x != min_x.end()){
+        	double x = get<0>(it->second);
+        	double z = get<1>(it->second);
+        	//tie(y,z) = it->second;
+        	it_min_x->second = make_tuple(std::min(rounded_x, x),
+        		z);
+        }else{
+        	min_x[rounded_y] = make_tuple(rounded_x, rounded_z);
+        }
+
+        auto it_max_x = max_x.find(rounded_y);
+        if (it_max_x != max_x.end()){
+        	double x = get<0>(it->second);
+        	double z = get<1>(it->second);
+        	//tie(y,z) = it->second;
+        	it_max_x->second = make_tuple(std::max(rounded_x, x),
+        		z);
+        }else{
+        	max_x[rounded_y] = make_tuple(rounded_x, rounded_z);
+        }
+
+      }
+  }
+
+  for (auto it = min_y.begin(); it!=min_y.end(); it++){
+		  xs.push_back(it->first);
+		  double y,z;
+          tie(y,z) = it->second;
+		  ys.push_back(y);
+		  zs.push_back(z);
+  }
+
+  for (auto it = max_y.begin(); it!=max_y.end(); it++){
+		  xs.push_back(it->first);
+		  double y,z;
+          tie(y,z) = it->second;
+		  ys.push_back(y);
+		  zs.push_back(z);
+  }
+
+    for (auto it = min_x.begin(); it!=min_x.end(); it++){
+		  ys.push_back(it->first);
+		  double x,z;
+          tie(x,z) = it->second;
+		  xs.push_back(x);
+		  zs.push_back(z);
+  }
+
+  for (auto it = max_x.begin(); it!=max_x.end(); it++){
+		  ys.push_back(it->first);
+		  double x,z;
+          tie(x,z) = it->second;
+		  xs.push_back(x);
+		  zs.push_back(z);
+  }
+
+
+
+
+}
+
+// to understand the gap size
+void run_diagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
+  int n_points, float resolution, double &volume_to_digest){
+  double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
+  bool first_itr = true;
+  vector<int> gap_ctr_per_row_vec;
+
+  bool gap_started = false;
+  bool new_row = false;
+  double gap_size = 0;
+  int gap_ctr_per_row = 0;
+  vector<float> gap_size_vec;
+  double last_rounded_x, last_rounded_y, last_rounded_z;
+  double volume_to_digest_partial = 0;
+
+  // iterate through points row by row and get gaps for each row
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+      this_x = *cloud_x;
+      this_y = *cloud_y;
+      this_z = *cloud_z;
+
+      new_row = this_x < last_x;
+      bool point_is_gap = this_z > (sensor_max_range - resolution);
+
+      //
+      if (new_row && !first_itr){
+		  if (gap_started) {
+			  gap_size_vec.push_back(gap_size);
+			  gap_started = false;
+			  gap_size = 0;
+			  gap_ctr_per_row +=1;
+		  }
+		  gap_ctr_per_row_vec.push_back(gap_ctr_per_row);
+		  gap_ctr_per_row = 0;
+      } else { //within row, or first time
+     	  if (point_is_gap) { //if gap, increase the gap size
+     		  gap_started = true;
+     		  gap_size += fabs(this_x - last_x);
+     	  }else if (gap_started){ //stop the gap
+     		  gap_size_vec.push_back(gap_size);
+			  gap_started = false;
+			  gap_ctr_per_row +=1;
+			  gap_size = 0;
+     	  }
+      }
+
+      if (!new_row && !first_itr ){
+    	  volume_to_digest_partial += pow(fabs(this_x - last_x),2)*this_z; //approximating using only x
+      }
+      last_x = this_x;
+      last_y = this_y;
+      last_z = this_z;
+      first_itr = false;
+  }
+  gap_size_vec.push_back(gap_size);
+
+  /*
+  // printing stuff out
+  if (gap_size_vec.size() != 0){
+	  float acc = 0;
+	  cout<<"gap_size:";
+	  for (auto it = gap_size_vec.begin(); it != gap_size_vec.end(); it++){
+		  cout<<*it<<",";
+		  acc+=*it;
+	  }
+	  cout<<endl;
+	  float avg =  acc/gap_size_vec.size();
+	  float std = 0;
+	  for (auto it = gap_size_vec.begin(); it != gap_size_vec.end(); it++){
+		  std += pow(*it - avg,2);
+	  }
+	  std = std/gap_size_vec.size();
+	  cout<<"avg:"<< avg<< " std:" << std<<"size"<<gap_size_vec.size()<<endl;
+  }
+
+   cout<<"gap_ctr_per_row:";
+   for (auto it = gap_ctr_per_row_vec.begin(); it != gap_ctr_per_row_vec.end(); it++){
+		  cout<<*it<<",";
+   }
+   cout<<endl;
+
+  cout<<endl<<endl;
+  */
+  //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
+  volume_to_digest = volume_to_digest_partial;
+
+}
+
+
+
+
+
+// to understand what the point cloud looks like
+void run_diagnostics_for_shape(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
+    int n_points, float resolution){
+  // map of whether a point has been seen (rounded by resolution)
+  //seen.clear();
+  int hit_ctr = 0;
+  int total_ctr = 0;
+  double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
+  bool first_itr = true;
+  int ordered_in_x_ctr = 0;
+  int ordered_in_y_ctr = 0;
+  int ordered_in_z_ctr = 0;
+  bool last_x_equal = false;
+  bool last_y_equal = false;
+  bool last_z_equal = false;
+  vector<int> ordered_in_x_ctr_vec;
+  vector<int> ordered_in_y_ctr_vec;
+  vector<int> ordered_in_z_ctr_vec;
+  vector<float> x_length;
+  vector<float> y_length;
+  vector<float> z_length;
+
+
+  double last_rounded_x, last_rounded_y, last_rounded_z;
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+	  /*
+	  double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      */
+      this_x = *cloud_x;
+      this_y = *cloud_y;
+      this_z = *cloud_z;
+
+
+
+      if (fabs(this_x -last_x)<resolution) {
+    	  ordered_in_x_ctr +=1;
+    	  last_x_equal =true;
+      }else if (fabs(this_x - last_x)>resolution && last_x_equal){
+    	  ordered_in_x_ctr_vec.push_back(ordered_in_x_ctr);
+    	  x_length.push_back(fabs(last_x - first_x));
+    	  last_x_equal = false;
+    	  ordered_in_x_ctr = 0;
+    	  first_x = this_x;
+      }else{
+    	  last_x_equal = false;
+    	  ordered_in_x_ctr = 0;
+    	  first_x = this_x;
+      }
+
+      if (fabs(this_y- last_y)<resolution) {
+    	  ordered_in_y_ctr +=1;
+    	  last_y_equal =true;
+      }else if (fabs(this_y - last_y) > resolution && last_y_equal){
+    	  ordered_in_y_ctr_vec.push_back(ordered_in_y_ctr);
+    	  y_length.push_back(fabs(last_y - first_y));
+    	  last_y_equal = false;
+    	  ordered_in_y_ctr = 0;
+    	  first_y = this_y;
+      }else{
+    	  last_y_equal = false;
+    	  ordered_in_y_ctr = 0;
+    	  first_y = this_y;
+      }
+
+      if (fabs(this_z - last_z) < resolution) {
+    	  ordered_in_z_ctr +=1;
+    	  last_z_equal =true;
+      }else if (fabs(this_z - last_z) < resolution && last_z_equal){
+    	  ordered_in_z_ctr_vec.push_back(ordered_in_z_ctr);
+
+
+    	  last_z_equal = false;
+    	  ordered_in_z_ctr = 0;
+      }else{
+    	  last_z_equal = false;
+    	  ordered_in_z_ctr = 0;
+      }
+
+      last_x = this_x;
+      last_y = this_y;
+      last_z = this_z;
+      //first_itr = false;
+  }
+
+  ordered_in_x_ctr_vec.push_back(ordered_in_x_ctr);
+  ordered_in_y_ctr_vec.push_back(ordered_in_y_ctr);
+  ordered_in_z_ctr_vec.push_back(ordered_in_z_ctr);
+
+
+  if (ordered_in_x_ctr_vec.size() != 0){
+	  float acc = 0;
+	  cout<<"ordered_in_x_ctr_vec:";
+	  for (auto it = ordered_in_x_ctr_vec.begin(); it != ordered_in_x_ctr_vec.end(); it++){
+		  cout<<*it<<",";
+		  acc+=*it;
+	  }
+	  cout<<endl;
+	  float avg =  acc/ordered_in_x_ctr_vec.size();
+	  float std = 0;
+	  for (auto it = ordered_in_x_ctr_vec.begin(); it != ordered_in_x_ctr_vec.end(); it++){
+		  std += pow(*it - avg,2);
+	  }
+	  std = std/ordered_in_x_ctr_vec.size();
+	  cout<<"avg:"<< avg<< " std:" << std<<"size"<<ordered_in_x_ctr_vec.size()<<endl;
+
+	  cout<<"x_length_vec:";
+	  for (auto it = x_length.begin(); it != x_length.end(); it++){
+		  cout<<*it<<",";
+	  }
+	  cout<<endl<<endl;
+  }
+
+
+
+  if (ordered_in_y_ctr_vec.size() != 0){
+	  float acc = 0;
+	  cout<<"ordered_in_y_ctr_vec:";
+	  for (auto it = ordered_in_y_ctr_vec.begin(); it != ordered_in_y_ctr_vec.end(); it++){
+		  cout<<*it<<",";
+		  acc+=*it;
+	  }
+	  cout<<endl;
+	  float avg =  acc/ordered_in_y_ctr_vec.size();
+	  float std = 0;
+	  for (auto it = ordered_in_y_ctr_vec.begin(); it != ordered_in_y_ctr_vec.end(); it++){
+		  std += pow(*it - avg,2);
+	  }
+
+	  std = std/ordered_in_y_ctr_vec.size();
+	  cout<<"avg:"<< avg<< " std:" << std<<"size"<<ordered_in_y_ctr_vec.size()<<endl;
+
+	  cout<<"y_length_vec:";
+	  for (auto it = y_length.begin(); it != y_length.end(); it++){
+		  cout<<*it<<",";
+	  }
+
+	  cout<<endl<<endl;
+  }
+
+}
+
+
+
+void filterByResolutionByHashing(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution, double &volume_to_digest){
+  // map of whether a point has been seen (rounded by resolution)
+  std::unordered_set<double> seen;
+  //seen.clear();
+  double last_hashed_point = 0;
+  double last_x, last_y, last_z, this_x, this_y, this_z;
+  double volume_to_digest_partial = 0; // accumulats the depth values, which is then multipled by a square of resolution side size
+
+  double last_rounded_x, last_rounded_y, last_rounded_z;
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+      double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      this_x = *cloud_x;
+      this_y = *cloud_y;
+      this_z = *cloud_z;
+
+      if (hashed_point != last_hashed_point){
+		  if (seen.find(hashed_point) == seen.end()) {
+			  seen.insert(hashed_point);
 			  xs.push_back(*cloud_x);
 			  ys.push_back(*cloud_y);
 			  zs.push_back(*cloud_z);
+			  volume_to_digest_partial += *cloud_z;
 		  }
+		  last_hashed_point = hashed_point;
+      }
+  }
+  //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
+  volume_to_digest = resolution*resolution*volume_to_digest_partial;
+}
+
+
+// the following solution is disfunctional at the moment, since it makes certain (i.e. ordering assumptions) assumption about how the point cloud is laid out
+void filterByResolutionByArray(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution, int width){
+  // map of whether a point has been seen (rounded by resolution)
+	std::unordered_set<double> seen;
+  //seen.clear();
+  double last_hashed_point = 0;
+  int hit_ctr = 0;
+  int total_ctr = 0;
+  int missed_ctr = 0;
+  double hashed_point;
+  bool moved_rows = false;
+  double first_rounded_x_in_row;
+  double first_rounded_y_in_row;
+  double first_rounded_z_in_row;
+  double last_rounded_x, last_rounded_y, last_rounded_z;
+  bool first_time = true;
+  for(size_t i=0; i< n_points - 1;){
+      double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+
+      if (first_rounded_y_in_row != rounded_y) {
+    	  moved_rows = true;
+    	  /*
+    	  if (abs(rounded_y - first_rounded_y_in_row) < resolution && abs(rounded_x - first_rounded_x_in_row) < resolution && abs(rounded_z - first_rounded_z_in_row) < resolution) {
+              ROS_INFO_STREAM("ideally this shouldn't happen");
+          }
+          else{
+            ROS_INFO_STREAM(abs(rounded_y - last_rounded_y)); 
+          }
+         */ 
+          last_hashed_point = point_hash_xyz(first_rounded_x_in_row, last_rounded_y, first_rounded_z_in_row);
+
+      }else{
+    	  moved_rows = false;
+    	  last_hashed_point = hashed_point;
+      }
+
+      hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      bool consecutive_hashes_equal =  (hashed_point == last_hashed_point) && !first_time;
+
+      if (consecutive_hashes_equal){
+    	  if (moved_rows){
+    		  ROS_INFO_STREAM("this is good");
+    		  cloud_x += (width-1); //subtract one since we add 1 regardless;
+    		  cloud_y += (width-1);
+    		  cloud_z += (width-1);
+    		  i+= (width-1);
+    	  }
+      }else{
+    	  if (moved_rows || first_time){
+    		 first_rounded_x_in_row = rounded_x;
+    		 first_rounded_y_in_row = rounded_y;
+    		 first_rounded_z_in_row = rounded_z;
+    		 first_time = false;
+    	  }
+    	  xs.push_back(*cloud_x);
+    	  ys.push_back(*cloud_y);
+    	  zs.push_back(*cloud_z);
+      }
+      last_rounded_x = rounded_x;
+      last_rounded_y = rounded_y;
+      last_rounded_z = rounded_z;
+      i+=1;
+      cloud_x+=1;
+      cloud_y+=1;
+      cloud_z+=1;
   }
 }
+
+
+
+
+
+struct Hash {
+	  size_t operator()(const double *my_tuple) const{
+		  size_t index;
+		  sscanf((to_string(my_tuple[0]) + to_string(my_tuple[1]) + to_string(my_tuple[2])).c_str(), "%zu", &index);
+		  return index;
+	  }
+};
+
+
+void filterByResolutionCustomHash(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
+  // map of whether a point has been seen (rounded by resolution)
+
+
+	std::unordered_set<double*, Hash> seen;
+  //seen.clear();
+
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+      //double distance_from_center = abs(*cloud_x); //pow(pow(*cloud_x, 2) + pow(*cloud_y, 2), 0.5);
+      double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+      //double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      double hashed_point[3] = {rounded_x, rounded_y, rounded_z};
+      if (seen.find(hashed_point) == seen.end()) {
+    	seen.insert(hashed_point);
+        xs.push_back(*cloud_x);
+        ys.push_back(*cloud_y);
+        zs.push_back(*cloud_z);
+      }
+
+  }
+}
+
+/*
+void filterByResolutionBySorting(uint8 *cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
+
+
+ // for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+
+	std::unordered_set<double*, Hash> seen;
+  //seen.clear();
+
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+      //double distance_from_center = abs(*cloud_x); //pow(pow(*cloud_x, 2) + pow(*cloud_y, 2), 0.5);
+      double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+      //double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      double hashed_point[3] = {rounded_x, rounded_y, rounded_z};
+      if (seen.find(hashed_point) == seen.end()) {
+    	seen.insert(hashed_point);
+        xs.push_back(*cloud_x);
+        ys.push_back(*cloud_y);
+        zs.push_back(*cloud_z);
+      }
+
+  }
+}
+*/
+
+/*
+void filterByResolutionByHashingAndGetVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution, double &volume_to_digest){
+  // map of whether a point has been seen (rounded by resolution)
+  std::map<double, double> seen;
+  seen.clear();
+  double last_hashed_point;
+  for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
+      // Filter by resolution
+      // I don't think variable resolution makes much sense - it leave holes and stuff
+
+	  double rounded_x = round_to_resolution(*cloud_x, resolution);
+      double rounded_y = round_to_resolution(*cloud_y, resolution);
+      double rounded_z = round_to_resolution(*cloud_z, resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+
+
+      if (hashed_point != last_hashed_point){
+    	  auto it = seen.find(hashed_point);
+    	  if (it == seen.end()) {
+    		  seen[hashed_point]  = *cloud_z;
+    		  xs.push_back(*cloud_x);
+    		  ys.push_back(*cloud_y);
+    		  zs.push_back(*cloud_z);
+    	  }else{
+    		  seen[hashed_point] = max(it->second, (double)*cloud_z);
+    	  }
+      }else{
+    	  last_hashed_point = hashed_point;
+      }
+  }
+
+  // -- calculate the volume now
+  double volume_to_digest_partial = 0;
+  for (auto it = seen.begin(); it!=seen.end(); it++){
+	  volume_to_digest_partial += it->second;
+  }
+  volume_to_digest = resolution*resolution*volume_to_digest_partial;
+}
+*/
 
 
 // populate xs,ys,zs, with the same points, so no filtering. Just used for comparison purposes with filtering
@@ -326,7 +875,7 @@ void filterByResolutionNoFilter(sensor_msgs::PointCloud2Iterator<float> &cloud_x
 
 // gets an estimate of how many points are interesting (for runtime to make budget decision)
 int getEntropyDiagnostic(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs) {
-  int sensor_max_range = 25;
+  //int sensor_max_range = 25;
   int entropy_diagnostic = 0;
   // TODO: improve
   for (int i = 0; i < xs.size(); i++) {
@@ -391,7 +940,7 @@ void filterByNumOfPointsRadiusWise(std::vector<float> &xs,  std::vector<float> &
   const int num_radius_buckets = 100;
   int radius_counters [num_radius_buckets];
   memset(&radius_counters[0], 0, sizeof(radius_counters));
-  double max_radius = 25 * std::pow(2, 0.5);
+  double max_radius = sensor_max_range * std::pow(2, 0.5);
   double bucket_width = max_radius / num_radius_buckets;
 
   for (int i = 0; i < xs.size(); i++) {
@@ -457,6 +1006,8 @@ void filterByNumOfPointsHeightWise(std::vector<float> &xs,  std::vector<float> &
       }
     }
 }
+
+
 
 
 // gets the points that are most central
@@ -530,13 +1081,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
 
    profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
-	// changing the paramer online, comment out later
+	// changing the paramer online, comment out later.
    ros::param::get("/point_cloud_resolution", point_cloud_resolution);
    ros::param::get("/point_cloud_width", point_cloud_width);
    ros::param::get("/point_cloud_height", point_cloud_height);
    ros::param::get("/point_cloud_num_points", point_cloud_num_points);
    ros::param::get("/point_cloud_num_points_filtering_mode", point_cloud_num_points_filtering_mode);
    ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
+   ros::param::get("/sensor_max_range", sensor_max_range);
 
 
   PointCloud::Ptr cloud_msg(new PointCloud);
@@ -607,28 +1159,42 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs;
 
   profiling_container->capture("filtering", "start", ros::Time::now());
+  double volume_to_digest = 0;
+  //profiling_container->capture("filtering_by_resolution", "start", ros::Time::now());
 
-  filterByResolution(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
-  //filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
+  //run_diagnostics_for_shap(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution);
+  run_diagnostics(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution, volume_to_digest);
+  profiling_container->capture("filtering", "end", ros::Time::now());
 
-  /* added by Kindell for gap diagnostics
-  {
+  double volume_to_digest_2;
+  filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, volume_to_digest_2);
+    //filterByResolutionByArray(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, cloud_msg->width);
+    //filterByResolutionBySorting(cloud_msg->data, xs, ys, zs, n_points, point_cloud_resolution);
+    //filterByResolutionCustomHash(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
+    //filterByResolutionByHashingAndGetVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, volume_to_digest);
+  // filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
+  //  filterByResolutionAndEdges(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
+//    profiling_container->capture("filtering_by_resolution", "end", ros::Time::now());
+  //double volume_to_digest = 0;
+  /*
+  //added by Kindell for gap diagnostics
+    //{
 	  // get diagnostics for runtime
 	  // (this function is good for environments with vertical obstacles, if concerned about horizontal
 	  // ones then y gap diagnostic may be useful)
-	  double max_sensor_range = 25.5; // TODO: use params?
+	  double max_sensor_range = sensor_max_range; // TODO: use params?
 	  double min_gap_size = .5; // use drone height here?
 	  double max_gap_size = 50;
 	  double y_bucket_size = 3;
 	  // could convert this to give an array of values for different max sizes, if multiple calls too expensive.
 	  // (for now just seems more confusing to do that than it's worth)
-	  double y_min = -25;
-	  double y_max = 25;
+	  double y_min = -50;
+	  double y_max = 50;
 	  int xGapCount = xGapDiagnostic(xs, ys, zs, min_gap_size, max_gap_size, y_bucket_size, y_min, y_max, max_sensor_range);
-	  printf("x gap diagnostic: %d\n", xGapCount);
-  }*/
+	  //printf("x gap diagnostic: %d\n", xGapCount);
+  //}
 
-  
+  */
   // double point_cloud_resolution_in_cubic = std::sqrt(3*point_cloud_resolution*point_cloud_resolution);
   // double avg_distance = 0;
   // double max_min = 0; // max of all the mins
@@ -655,9 +1221,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs_best;
 
 
-  //filterNoFilter(xs, ys, zs, xs_best, ys_best, zs_best);
+  filterNoFilter(xs, ys, zs, xs_best, ys_best, zs_best);
   //filterByWidthHeight(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_width, point_cloud_height);
-  filterByNumOfPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_num_points_filtering_mode);
+  //filterByNumOfPoints(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_num_points_filtering_mode);
 
 
   // reset point cloud and load in filtered in points
@@ -680,11 +1246,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
  
   //cloud_msg->header.stamp = ros::Time::now();
-  profiling_container->capture("filtering", "end", ros::Time::now());
+  //profiling_container->capture("filtering", "end", ros::Time::now());
   pub_point_cloud_.publish (cloud_msg);
 
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
-  //ROS_INFO_STREAM("point cound"<<xs_best.size());
+  //ROS_INFO_STREAM("point cloud filtering by resolution time"<< profiling_container->findDataByName("filtering_by_resolution")->values.back());
+
 
   if (DEBUG_RQT){
 	  debug_data.header.stamp = ros::Time::now();
@@ -696,6 +1263,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.point_cloud_point_cnt = xs_best.size();
 	  debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
 	  debug_data.entire_point_cloud_depth_callback= profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
+	  debug_data.point_cloud_volume_to_digest = volume_to_digest;
 	  pc_debug_pub.publish(debug_data);
   }
 

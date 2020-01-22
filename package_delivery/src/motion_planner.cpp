@@ -506,6 +506,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     create_response(res, smooth_path);
 
+
     // Publish the trajectory (for debugging purposes)
     if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
     else{ res.multiDOFtrajectory.header.stamp = req.header.stamp;}
