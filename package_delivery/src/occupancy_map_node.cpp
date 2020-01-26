@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
+#include <std_msgs/Bool.h>
 
 #include "motion_planner.h"
 
@@ -54,6 +55,9 @@ void log_data_before_shutting_down() {
 
 void sigIntHandlerPrivate(int signo) {
     if (signo == SIGINT) {
+    	std_msgs::Bool msg;
+    	msg.data = true;
+    	server_ptr->inform_pc_done_pub.publish(msg); // -- informing point cloud to publish its profiling results. This is a hack, because I can't get the nodelet to register the sigInt
     	log_data_before_shutting_down();
     	ros::shutdown();
     }

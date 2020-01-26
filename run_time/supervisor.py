@@ -18,12 +18,22 @@ def get_ros_processes(ignore_list):
     return ros_process_list_filtered
 
 def kill_processes(process_list):
+    waitlist = []
     for process in process_list:
+        if ("depth_transforms_manager" in process.split() or "__name:=depth_transforms_manager" in process.split()): # -- this is a hack to allow another process kill depth_transform manager since I can't get signint to work with it to collect data
+            waitlist.append(process) 
+            print("---------------------------- found it") 
+            continue
         print process 
         pid = process.split()[1] 
         print pid 
         subprocess.Popen("kill -2 "+ pid, shell=True)
         sleep(.01) 
+     
+    for process in waitlist:
+        print(waitlist[0]) 
+        sleep(1) 
+        subprocess.Popen("kill -2 "+ process.split()[1], shell=True); 
     sleep(3) 
 
 def action_upon_termination():

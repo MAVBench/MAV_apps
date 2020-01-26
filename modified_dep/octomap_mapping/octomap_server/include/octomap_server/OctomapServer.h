@@ -90,6 +90,7 @@ public:
  int octomap_ctr;
  bool measure_time_end_to_end;
  ros::Time rcvd_point_cld_time_stamp;
+ ros::Publisher inform_pc_done_pub;
 
  //void log_data_before_shutting_down();
  void sigIntHandlerPrivate(int);
@@ -114,6 +115,7 @@ public:
 
   mavbench_msgs::octomap_debug debug_data;
   bool DEBUG_RQT;
+  bool knob_performance_modeling;
   OctomapServer(ros::NodeHandle private_nh_ = ros::NodeHandle("~"));
   virtual ~OctomapServer();
   virtual bool octomapBinarySrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
@@ -260,6 +262,9 @@ protected:
   static std_msgs::ColorRGBA heightMapColor(double h);
   ros::NodeHandle m_nh;
   ros::Publisher  m_markerPub, m_markerLowerResPub, m_binaryMapPub, m_binaryMapLowerResPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, octomap_debug_pub, octomap_communication_proxy_msg;
+
+
+
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
 
  ros::Subscriber m_save_map_pub;

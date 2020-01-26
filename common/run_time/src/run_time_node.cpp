@@ -250,6 +250,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 //	double piecewise_planning_budget = (piecewise_planning_budget_max - piecewise_planning_budget_min)/(max_point_cloud_resolution- min_point_cloud_resolution)*point_cloud_resolution +
 //			piecewise_planning_budget_max;
 
+	//vector<double> piecewise_planning_budget_vec{.8, .3, .1, .05, .01};
 	vector<double> piecewise_planning_budget_vec{.8, .3, .1, .05, .01};
 	double piecewise_planning_budget = piecewise_planning_budget_vec[point_cloud_resolution_power_index];
 	ros::param::set("piecewise_planning_budget", piecewise_planning_budget);

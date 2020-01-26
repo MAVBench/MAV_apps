@@ -11,6 +11,83 @@ def get_value_easy_metrics(line):
     return float(value_raw.split(',')[0])
 """
 
+
+# parse and collect data
+def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_collect_hard):
+
+    # initialize the metric dictionary
+    result_dic = OrderedDict()
+    for metric in metrics_to_collect_easy + metrics_to_collect_hard:
+        result_dic[metric] = []
+
+    #  keep track of the metrics collected to avoid double counting and also
+    # data padding
+    metrics_to_collect_this_round = metrics_to_collect_hard + metrics_to_collect_easy;
+
+    # parse the file and fill out metric dict
+    with open(filepath) as fp:
+       lines = fp.readlines()
+       idx = 0
+       for line in lines:
+           # for data not comming out of the profiler
+           for metric in metrics_to_collect_easy:
+               line_split_1 = line.split()
+               line_split_2 = line.split(":")
+               word_to_look_for_1 = '"' + metric + '":'
+               word_to_look_for_2 = '"' + metric + '"'
+               if  word_to_look_for_1 in line_split_1:
+                   value  = line_split_1[1].split(",")[0]
+                   result_dic[metric].append(float(value))
+                   metrics_to_collect_this_round.remove(metric)
+               elif   word_to_look_for_2 in line_split_2:
+                   if (len(line_split_2[1].split(",")[0].split('"')) < 2):
+                       value =  line_split_2[1].split(",")[0].split('"')[0].split()[0] # last element with no comma
+
+                   else:
+                       value = line_split_2[1].split(",")[0].split('"')[1]
+                   if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))): # avoid double counting
+                       result_dic[metric].append(float(value))
+                       metrics_to_collect_this_round.remove(metric)
+                       if metric == "experiment_number":
+                           if not(len(metrics_to_collect_this_round) == 0):
+                               for metric_to_collect in metrics_to_collect_this_round:
+                                   result_dic[metric_to_collect].append(float("inf"))
+                           metrics_to_collect_this_round = metrics_to_collect_easy + metrics_to_collect_hard
+
+           # for data comming out of the profiler
+           for metric in metrics_to_collect_hard:
+               line_split_1 = line.split()
+               line_split_2 = line.split(":")
+               word_to_look_for_1 = '"' + metric
+               word_to_look_for_2 = '"' + metric + '"'
+               if  word_to_look_for_1 in line_split_1:
+                   next_line = lines[idx+1]
+                   values =[]
+                   for el in next_line.split(":")[1].split(","):
+                       if "std" in el:
+                           break
+                       else:
+                           values.append(float(el))
+                   if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))): # avoid double counting
+                       result_dic[metric]+=values
+           idx +=1
+
+    # sanity check by making sure all the data lists have the same size,
+    result_data_length_dic = {}
+    for key, val in result_dic.items():
+        result_data_length_dic[key] = len(list(val))
+    #print metric_data_length_dic
+
+    gen_length = list(result_data_length_dic.values())[0]
+    for key, val in result_data_length_dic.items():
+        if not (val == gen_length):
+            print ("key:" + str(key) + " length:" + str(val) + " is not equal the generic length:" + str(gen_length))
+
+    return result_dic
+
+
+
+
 # parse and collect data
 def parse_stat_file(filepath, metrics_to_collect_easy, metrics_to_collect_hard):
 
@@ -117,6 +194,9 @@ def filter_based_on_value(result_dict, value, mode):
             for val in result_dic.values():
                 del vel[idx]
         remove_idx = False
+
+
+
 
 
 def filter_based_on_key_value(result_dic, key_, value_, mode):

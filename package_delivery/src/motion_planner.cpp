@@ -45,7 +45,9 @@
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/segment.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/vertex.h"
 
-double volume_traversed_in_unit_cubes = 0;
+double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
+double total_collision_func = 0;
+double potential_distance_to_explore = 0; // the distance that the planner ask to expore (note that this can be bigger than the volume since the volume calculation stops after hitting a an obstacle)
 MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
         octree(octree_),
 		drone(drone_),
@@ -265,7 +267,15 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 // octomap callback
 void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 {
-	volume_traversed_in_unit_cubes = 0;
+    // reset all the profiling values
+	potential_distance_to_explore = 0;
+    volume_explored_in_unit_cubes = 0;
+    debug_data.motion_planning_collision_check_volume_explored = 0;
+    debug_data.motion_planning_piecewise_volume_explored = 0;
+    debug_data.motion_planning_smoothening_volume_explored = 0;
+    debug_data.motion_planning_piece_wise_time = 0;
+    debug_data.collision_func = 0;
+
 	profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
 	if (octree != nullptr) {
         delete octree;
@@ -293,12 +303,11 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
 
-    /*
+
     {
     	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
     	publish_dummy_octomap_vis(octree);
     }
-	*/
 
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
@@ -314,8 +323,10 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     	return;
     }
 
-    if (!shouldReplan(msg)){
-    	debug_data.motion_planning_volume_traversed = volume_traversed_in_unit_cubes*pow(octree->getResolution(),3);
+
+	if (!shouldReplan(msg)){
+    	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
+    	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
     	return;
     }
 
@@ -341,7 +352,8 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     debug_data.motion_planning_total_time = profiling_container.findDataByName("motion_planning_time_total")->values.back();
     debug_data.octomap_dynamic_casting = profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
     debug_data.entire_octomap_callback = profiling_container.findDataByName("entire_octomap_callback")->values.back();
-    debug_data.motion_planning_volume_traversed = volume_traversed_in_unit_cubes*pow(octree->getResolution(),3);
+    //debug_data.motion_planning_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
+    debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
 }
 
 octomap::OcTree* MotionPlanner::getOctree() {
@@ -350,6 +362,8 @@ octomap::OcTree* MotionPlanner::getOctree() {
 
 //*** F:DN getting the smoothened trajectory
 bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res){
+
+	volume_explored_in_unit_cubes = 0; // reset the value for piecewise planning
 	//-----------------------------------------------------------------
 	// *** F:DN variables	
 	//----------------------------------------------------------------- 
@@ -391,7 +405,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     //publish_dummy_octomap_vis(octree);
     int status;
-
+    total_collision_func =0;
     profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now(), capture_size);
     piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
     profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now(), capture_size);
@@ -400,6 +414,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		debug_data.motion_planning_piece_wise_time = profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back();
     		//motion_planning_debug_pub.publish(debug_data);
     }
+    debug_data.motion_planning_piecewise_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
+    debug_data.collision_func = total_collision_func;
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
@@ -435,6 +451,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         	res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.stop = true;
         }else{
+        	cout<<"Status is "<<status<<endl;
         	ROS_INFO_STREAM("this state shouldn't happpen"<< status);
         	exit(0);
         }
@@ -456,6 +473,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	profiling_container.capture("piecewise_path_post_process", "end", ros::Time::now(), capture_size);
     }
 
+    volume_explored_in_unit_cubes = 0;
     // Smoothen the path and build the multiDOFtrajectory response
     //ROS_INFO("Smoothenning...");
     profiling_container.capture("motion_planning_smoothening_time", "start", ros::Time::now(), capture_size);
@@ -472,6 +490,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		debug_data.motion_planning_smoothening_time = profiling_container.findDataByName("motion_planning_smoothening_time")->values.back();
     		//motion_planning_debug_pub.publish(debug_data);
 	}
+    debug_data.motion_planning_smoothening_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
 
     if (smooth_path.empty()) {
     	ROS_ERROR("Path could not be smoothened successfully");
@@ -880,7 +899,9 @@ bool MotionPlanner::out_of_bounds_lax(const graph::node& pos)
 
 bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr)
 {
-    if (motion_planning_core_str == "lawn_mower")
+	profiling_container.capture("collision_func", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+
+	if (motion_planning_core_str == "lawn_mower")
         return false;
 
     RESET_TIMER();
@@ -916,6 +937,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 	double dy = n2.y - n1.y;
 	double dz = n2.z - n1.z;
     double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+    potential_distance_to_explore += distance;
     octomap::point3d direction(dx, dy, dz);
 
     // Make sure the direction vector isn't just (0,0,0)
@@ -940,20 +962,24 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
         octomap::point3d start (it.getCoordinate());
         
         // std::cout << distance << " (" << start.x() << " " << start.y() << " " << start.z() << ") (" << direction.x() << " " << direction.y() << " " << direction.z() << ")" << std::endl;
-        double volume_traversed_in_unit_cubes_ = 0;
+        double volume_explored_in_unit_cubes_ = 0;
 
-        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_traversed_in_unit_cubes_)) {
+        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_explored_in_unit_cubes_)) {
             if (end_ptr != nullptr) {
                 end_ptr->x = end.x();
                 end_ptr->y = end.y();
                 end_ptr->z = end.z();
             }
-            volume_traversed_in_unit_cubes += volume_traversed_in_unit_cubes_;
+            volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
+            profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+            total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
             return true;
         }
-        volume_traversed_in_unit_cubes += volume_traversed_in_unit_cubes_;
+        volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
     }
 
+	profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+	total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
 	//LOG_ELAPSED(motion_planner);
 	return false;
 }
@@ -1049,6 +1075,7 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj)
             break;
         }
     }
+    //ROS_INFO_STREAM("volume"<<volume_explored_in_unit_cubes);
     return col;
 }
 

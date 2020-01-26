@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="4"/> 
+  <arg name="v_max" default="14"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -48,6 +48,10 @@
   
   <arg name="capture_size" default="600" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="capture_size" value="$(arg capture_size)"/> 
+  <arg name="knob_performance_modeling" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
+  <param name="knob_performance_modeling" value="$(arg knob_performance_modeling)"/> 
+  
+
   <!-- ===================================================================== -->
   <!-- ============================Run Time================================= -->
   <!-- ===================================================================== -->
@@ -188,7 +192,7 @@
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
   <arg name="perception_resolution" default=".3"/> <!-- OM voxels size-->
   <arg name="perception_lower_resolution" default=".4"/> <!-- OM voxels size-->
-  <arg name="point_cloud_resolution" default=".15"/> <!-- minimum the distance between pc points-->
+  <arg name="point_cloud_resolution" default=".2"/> <!-- minimum the distance between pc points-->
   
   <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
   <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />
@@ -397,8 +401,8 @@
   </group>
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="reactive_runtime" default="false" />   
-  <arg name="dynamic_budgetting" default="false" />   
+  <arg name="reactive_runtime" default="true" />   
+  <arg name="dynamic_budgetting" default="true" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
@@ -417,11 +421,11 @@
    <group if="$(arg DEBUG)">
    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
    </group>
-   
+
+    
    <group if="$(arg DEBUG_RQT)">
    <node pkg="rqt_plot" type="rqt_plot" name="rqt_plot" />
    </group>
-    
 
 
 </launch>
