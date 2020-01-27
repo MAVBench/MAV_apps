@@ -43,6 +43,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <octomap_server/OctomapServerConfig.h>
 #include <mavbench_msgs/octomap_debug.h>
+#include <mavbench_msgs/point_cloud_meta_data.h>
 #include <vector>
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
@@ -73,7 +74,7 @@
 #include <octomap/OcTreeKey.h>
 
 #include <datacontainer.h>
-
+#include <ros/callback_queue.h>
 //#define COLOR_OCTOMAP_SERVER // turned off here, turned on identical ColorOctomapServer.h - easier maintenance, only maintain OctomapServer and then copy and paste to ColorOctomapServer and change define. There are prettier ways to do this, but this works for now
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -83,6 +84,13 @@ namespace octomap_server {
 class OctomapServer {
 
 public:
+  ros::CallbackQueue callback_queue_1; // -- queues for m_nh
+  ros::CallbackQueue callback_queue_2; // -- queues for private_nh
+
+  ros::NodeHandle private_nh;//("~");
+	ros::CallbackQueue callback_queue_meta_data; // -- only meta_data
+  double exposed_volume; // -- the volume of the information coming from point cloud
+ double exposed_resolution; // -- the resolution of the information coming from point cloud
  DataContainer profiling_container;
  ProfileManager my_profile_manager;
  long long octomap_integration_acc;
@@ -117,7 +125,9 @@ public:
   bool DEBUG_RQT;
   bool knob_performance_modeling;
   OctomapServer(ros::NodeHandle private_nh_ = ros::NodeHandle("~"));
+  //ros::NodeHandle private_nh_2;
   virtual ~OctomapServer();
+  void spinOnce();
   virtual bool octomapBinarySrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   virtual bool octomapFullSrv(OctomapSrv::Request  &req, OctomapSrv::GetOctomap::Response &res);
   bool clearBBXSrv(BBXSrv::Request& req, BBXSrv::Response& resp);
@@ -127,6 +137,7 @@ public:
   //bool changeResolution(octomap::point3d bbxMin, octomap::point3d bbxMax);
   bool resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp);
   void OctomapHeaderColDetectedcb(std_msgs::Int32ConstPtr header) ;
+  void PCMetaDataCb(mavbench_msgs::point_cloud_meta_data header) ;
   bool maxRangecb(octomap_server::maxRangeSrv::Request& req, octomap_server::maxRangeSrv::Response& resp);
   virtual void insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud);
   virtual bool openFile(const std::string& filename);
@@ -273,6 +284,7 @@ protected:
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService, m_octomapResetMaxRange;
   ros::Subscriber m_octomapHeaderSub;  
+  ros::Subscriber m_pc_meta_dataSub;
 
   tf::TransformListener m_tfListener;
   boost::recursive_mutex m_config_mutex;

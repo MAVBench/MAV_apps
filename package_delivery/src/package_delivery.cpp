@@ -633,9 +633,7 @@ int main(int argc, char **argv)
         // get rid of this later, I just pulled it out for a hack
         if (dist(drone.position(), goal) < goal_s_error_margin){
         	if (reached_goal_ctr == 1) {
-        		std_msgs::Bool done_msg;
-        		done_msg.data = true;
-        		inform_point_cloud_done_pub.publish(done_msg);
+
         		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
         		ros::shutdown();
         	}

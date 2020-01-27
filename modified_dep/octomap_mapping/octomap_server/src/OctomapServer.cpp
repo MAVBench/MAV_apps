@@ -76,9 +76,10 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_initConfig(true),
   my_profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose")
 {
-    double probHit, probMiss, thresMin, thresMax;
-
-  ros::NodeHandle private_nh(private_nh_);
+  double probHit, probMiss, thresMin, thresMax;
+  private_nh = private_nh_;
+  m_nh.setCallbackQueue(&callback_queue_1);
+  private_nh.setCallbackQueue(&callback_queue_2);
   private_nh.param("frame_id", m_worldFrameId, m_worldFrameId);
   private_nh.param("base_frame_id", m_baseFrameId, m_baseFrameId);
   private_nh.param("height_map", m_useHeightMap, m_useHeightMap);
@@ -129,6 +130,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("capture_size", capture_size, 600);
   private_nh.param("DEBUG_RQT", DEBUG_RQT, false);
   private_nh.param("knob_performance_modeling", knob_performance_modeling, false);
+
+
 
   if (knob_performance_modeling){
     	capture_size = 1;
@@ -209,6 +212,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("publish_free_space", m_publishFreeSpace, m_publishFreeSpace);
   last_time_cleared = ros::Time::now();
 
+
   private_nh.param("latch", m_latchedTopics, m_latchedTopics);
   if (m_latchedTopics){
     ROS_INFO("Publishing latched (single publish will take longer, all topics are prepared)");
@@ -244,6 +248,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
   m_octomapResetMaxRange = private_nh.advertiseService("reset_max_range", &OctomapServer::maxRangecb, this);
   m_octomapHeaderSub = private_nh.subscribe("octomap_header_col_detected", 1, &OctomapServer::OctomapHeaderColDetectedcb, this);
+  m_pc_meta_dataSub = private_nh.subscribe("/pc_meta_data", 1, &OctomapServer::PCMetaDataCb, this);
   m_save_map_pub = private_nh.subscribe("save_map", 1, &OctomapServer::SaveMapCb, this);
 
 
@@ -255,7 +260,23 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   octomap_integration_acc = 0;
   pt_cld_octomap_commun_overhead_acc = 0; 
   octomap_ctr = 0;
+
+
+//  private_nh_2.setCallbackQueue(&callback_queue_meta_data);
+
+
 }
+
+
+
+void OctomapServer::spinOnce(){
+	// we need two different queues so we can make sure that we can maintain a certain order. Don't mess with the ordering
+	callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
+	callback_queue_1.callAvailable(ros::WallDuration());  // -- 2nd, get the data (point cloud)
+}
+
+
+
 
 
 OctomapServer::~OctomapServer(){
@@ -1270,6 +1291,16 @@ bool OctomapServer::maxRangecb(octomap_server::maxRangeSrv::Request& req, octoma
   ROS_INFO_STREAM("changed max_range to "<<this->m_maxRange); 
   return true;
 }
+
+
+
+void OctomapServer::PCMetaDataCb(mavbench_msgs::point_cloud_meta_data msg) {
+	exposed_volume = msg.point_cloud_volume_to_digest;
+	exposed_resolution = msg.point_cloud_resolution;
+	ROS_INFO_STREAM("exposed_volume"<<exposed_volume<<" exposed resolution"<< exposed_resolution);
+}
+
+
 
 void OctomapServer::OctomapHeaderColDetectedcb(std_msgs::Int32ConstPtr header) {
     /* 

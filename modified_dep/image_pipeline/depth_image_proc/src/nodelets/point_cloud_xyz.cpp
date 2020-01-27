@@ -53,7 +53,7 @@
 using namespace std;
 #include <mavbench_msgs/point_cloud_debug.h>
 #include <string>
-
+#include <mavbench_msgs/point_cloud_meta_data.h>
 
 namespace depth_image_proc {
 
@@ -73,6 +73,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   boost::mutex connect_mutex_;
   typedef sensor_msgs::PointCloud2 PointCloud;
   ros::Publisher pub_point_cloud_;
+  ros::Publisher point_cloud_meta_data_pub;
   ros::Publisher pc_debug_pub;
   ros::Subscriber inform_pc_done_sub;
 
@@ -227,6 +228,7 @@ void PointCloudXyzNodelet::onInit()
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     boost::lock_guard<boost::mutex> lock(connect_mutex_);
     pub_point_cloud_ = nh.advertise<PointCloud>("points", 1, connect_cb, connect_cb);
+    point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
 
@@ -327,7 +329,7 @@ double inline round_to_resolution_(double v, double resolution) {
 
 
 
-// use for redundancy removal #smart-flow
+// use for redundancy removal #smart-flow stuff not for roborun
 void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
     std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution){
   // map of whether a point has been seen (rounded by resolution)
@@ -486,8 +488,8 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
       }
 
       if (!new_row && !first_itr ){
-    	  volume_to_digest += pow(fabs(this_x - last_x),2)*this_z; //approximating using only x
-    	  area_to_digest += pow(fabs(this_x - last_x),2); //approximating using only x
+    	  volume_to_digest += (1.0/3)*pow(this_x - last_x,2)*this_z; //approximating using only x
+    	  area_to_digest += pow(this_x - last_x,2); //approximating using only x
       }
 
       last_x = this_x;
@@ -708,7 +710,7 @@ void filterByResolutionByHashing(sensor_msgs::PointCloud2Iterator<float> &cloud_
       }
   }
   //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
-  volume_to_digest = resolution*resolution*volume_to_digest_partial;
+  volume_to_digest = (1.0/3)*resolution*resolution*volume_to_digest_partial; // -- compilation of  cone volumes
 }
 
 /*
@@ -1181,6 +1183,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   }
 
   pub_point_cloud_.publish (cloud_msg);
+
+  mavbench_msgs::point_cloud_meta_data meta_data_msg;
+  meta_data_msg.header.stamp = ros::Time::now();
+  meta_data_msg.point_cloud_volume_to_digest = volume_to_digest;
+  meta_data_msg.point_cloud_resolution = point_cloud_resolution;
+  meta_data_msg.point_cloud_area_to_digest = area_to_digest;
+  point_cloud_meta_data_pub.publish(meta_data_msg);
   profiling_container->capture("filtering", "end", ros::Time::now());
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
   profiling_container->capture("point_cloud_area_to_digest", "single", area_to_digest, capture_size);

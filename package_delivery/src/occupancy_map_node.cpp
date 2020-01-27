@@ -14,35 +14,8 @@
 
 #include "motion_planner.h"
 
-/*
-void log_data_before_shutting_down()
-{
-	std::string ns = ros::this_node::getName();
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
-    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
-    server->profiling_container.setStatsAndClear();
-
-	for (auto &data: server->profiling_container.container){
-    	profiling_data_srv_inst.request.key = data.data_key_name + " last window's avg: ";
-		vector<double>* avg_stat = data.getStat("avg");
-		if (avg_stat) {
-			profiling_data_srv_inst.request.value = avg_stat->back();
-
-		}
-		else{
-			profiling_data_srv_inst.request.value = nan("");
-		}
-		profile_manager.clientCall(profiling_data_srv_inst);
-	}
-
-    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
-	profiling_data_verbose_srv_inst.request.value = "\n" + server->profiling_container.getStatsInString();
-    profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
-
-*/
-
-
 octomap_server::OctomapServer* server_ptr;
+
 
 void log_data_before_shutting_down() {
 	profile_manager::profiling_data_srv profiling_data_srv_inst;
@@ -52,6 +25,7 @@ void log_data_before_shutting_down() {
     profiling_data_verbose_srv_inst.request.value = "\n" + server_ptr->profiling_container.getStatsInString();
     server_ptr->my_profile_manager.verboseClientCall(profiling_data_verbose_srv_inst);
 }
+
 
 void sigIntHandlerPrivate(int signo) {
     if (signo == SIGINT) {
@@ -63,6 +37,8 @@ void sigIntHandlerPrivate(int signo) {
     }
     exit(0);
 }
+
+
 
 int main(int argc, char** argv)
 {
@@ -87,7 +63,7 @@ int main(int argc, char** argv)
     
     // Create an octomap server
     octomap_server::OctomapServer server;
-    octomap::OcTree * octree = server.tree_ptr();
+    //octomap::OcTree * octree = server.tree_ptr();
 
 
     if (nh.getParam("/occupancy_map_node/map_file", mapFilenameParam)) {
@@ -104,9 +80,10 @@ int main(int argc, char** argv)
         }
     }
     server_ptr = &server;
-    ros::Duration(1).sleep();
+    ros::Duration(1).sleep(); // -- need this to prevent octomap from running before imgPublisher/point cloud
     while (ros::ok()) {
-        ros::spinOnce();
+    	server.spinOnce();
+//    	ros::spinOnce();
     }
 }
 

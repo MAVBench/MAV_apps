@@ -61,6 +61,7 @@ add_message_files(
   motion_planning_debug.msg
   octomap_debug.msg
   point_cloud_debug.msg
+  point_cloud_meta_data.msg
   runtime_debug.msg
   response_time_capture.msg
   )

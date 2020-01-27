@@ -1,0 +1,5 @@
+Header header
+
+float32 point_cloud_resolution
+float32 point_cloud_volume_to_digest
+float32 point_cloud_area_to_digest
