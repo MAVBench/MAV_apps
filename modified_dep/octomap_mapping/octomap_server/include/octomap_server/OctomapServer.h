@@ -87,7 +87,7 @@ public:
   ros::CallbackQueue callback_queue_1; // -- queues for m_nh
   ros::CallbackQueue callback_queue_2; // -- queues for private_nh
 
-  ros::NodeHandle private_nh;//("~");
+//  ros::NodeHandle private_nh;//("~");
 	ros::CallbackQueue callback_queue_meta_data; // -- only meta_data
   double exposed_volume; // -- the volume of the information coming from point cloud
  double exposed_resolution; // -- the resolution of the information coming from point cloud

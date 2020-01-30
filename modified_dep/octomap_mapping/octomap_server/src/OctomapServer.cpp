@@ -46,7 +46,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 : m_nh(),
   m_pointCloudSub(NULL),
   m_tfPointCloudSub(NULL),
-  m_reconfigureServer(m_config_mutex),
+  m_reconfigureServer(m_config_mutex, private_nh_),
   m_octree(NULL),
   m_maxRange(-1.0),
   m_worldFrameId("/map"), m_baseFrameId("base_footprint"),
@@ -76,8 +76,10 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_initConfig(true),
   my_profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose")
 {
+
   double probHit, probMiss, thresMin, thresMax;
-  private_nh = private_nh_;
+  ros::NodeHandle private_nh = private_nh_;
+//  ros::NodeHandle private_nh("~");
   m_nh.setCallbackQueue(&callback_queue_1);
   private_nh.setCallbackQueue(&callback_queue_2);
   private_nh.param("frame_id", m_worldFrameId, m_worldFrameId);
@@ -93,7 +95,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("pointcloud_min_z", m_pointcloudMinZ,m_pointcloudMinZ);
   private_nh.param("pointcloud_max_z", m_pointcloudMaxZ,m_pointcloudMaxZ);
   private_nh.param("occupancy_min_z", m_occupancyMinZ,m_occupancyMinZ);
-  private_nh.param("occupancy_max_z", m_occupancyMaxZ,m_occupancyMaxZ);
+  private_nh.param("/occupancy_max_z", m_occupancyMaxZ,m_occupancyMaxZ);
   private_nh.param("min_x_size", m_minSizeX,m_minSizeX);
   private_nh.param("min_y_size", m_minSizeY,m_minSizeY);
 
@@ -129,7 +131,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("data_collection_iteration_freq_OM", data_collection_iteration_freq, 100);
   private_nh.param("capture_size", capture_size, 600);
   private_nh.param("DEBUG_RQT", DEBUG_RQT, false);
-  private_nh.param("knob_performance_modeling", knob_performance_modeling, false);
+  private_nh.param("/knob_performance_modeling", knob_performance_modeling, false);
 
 
 
@@ -256,6 +258,39 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   f = boost::bind(&OctomapServer::reconfigureCallback, this, _1, _2);
   m_reconfigureServer.setCallback(f);
 
+  //  --- repeating the parametet setting cause they get overwritern by setCallback (not sure what their code is written this way
+  //      it also seems like, since the parameters get overwritten, the values set by the launch file is not being used,
+  //      hence, you need to change the names. For example I changed, pointcloud_max_z to /point_cloud_max_z
+  private_nh.param("frame_id", m_worldFrameId, m_worldFrameId);
+  private_nh.param("base_frame_id", m_baseFrameId, m_baseFrameId);
+  private_nh.param("height_map", m_useHeightMap, m_useHeightMap);
+  private_nh.param("colored_map", m_useColoredMap, m_useColoredMap);
+  private_nh.param("color_factor", m_colorFactor, m_colorFactor);
+
+  private_nh.param("pointcloud_min_x", m_pointcloudMinX,m_pointcloudMinX);
+  private_nh.param("pointcloud_max_x", m_pointcloudMaxX,m_pointcloudMaxX);
+  private_nh.param("pointcloud_min_y", m_pointcloudMinY,m_pointcloudMinY);
+  private_nh.param("pointcloud_max_y", m_pointcloudMaxY,m_pointcloudMaxY);
+  private_nh.param("pointcloud_min_z", m_pointcloudMinZ,m_pointcloudMinZ);
+  private_nh.param("/point_cloud_max_z", m_pointcloudMaxZ,m_pointcloudMaxZ);
+  private_nh.param("occupancy_min_z", m_occupancyMinZ,m_occupancyMinZ);
+  private_nh.param("/occupancy_max_z", m_occupancyMaxZ,m_occupancyMaxZ);
+  private_nh.param("min_x_size", m_minSizeX,m_minSizeX);
+  private_nh.param("min_y_size", m_minSizeY,m_minSizeY);
+
+  private_nh.param("filter_speckles", m_filterSpeckles, m_filterSpeckles);
+  private_nh.param("filter_ground", m_filterGroundPlane, m_filterGroundPlane);
+  private_nh.param("ground_filter/distance", m_groundFilterDistance, m_groundFilterDistance);
+  private_nh.param("ground_filter/angle", m_groundFilterAngle, m_groundFilterAngle);
+  // distance of found plane from z=0 to be detected as ground (e.g. to exclude tables)
+  private_nh.param("ground_filter/plane_distance", m_groundFilterPlaneDistance, m_groundFilterPlaneDistance);
+  private_nh.param("sensor_model/max_range", m_maxRange, m_maxRange);
+  private_nh.param("sensor_model/hit", probHit, 0.7);
+  private_nh.param("sensor_model/miss", probMiss, 0.4);
+  private_nh.param("sensor_model/min", thresMin, 0.12);
+  private_nh.param("sensor_model/max", thresMax, 0.97);
+  ros::Duration(10).sleep();
+
   // Profiling
   octomap_integration_acc = 0;
   pt_cld_octomap_commun_overhead_acc = 0; 
@@ -368,8 +403,8 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	/*
 	if ((ros::Time::now() - last_time_cleared).toSec() > 5){
 		m_octree->clear();
-		last_time_cleared = ros::Time::now();
-	}
+	/	last_time_cleared = ros::Time::now();
+	/}
 	*/
 
 	if(CLCT_DATA) {
@@ -483,6 +518,9 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("octomap_exposed_volume", "single", exposed_volume, capture_size);
+  profiling_container.capture("octomap_exposed_resolution", "single", exposed_resolution, capture_size);
+
 
   profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
   if (measure_time_end_to_end){ publishAll(cloud->header.stamp);}
@@ -534,7 +572,6 @@ void OctomapServer::SaveMapCb(std_msgs::Bool msg){
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
 
    point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
-
    double temp_res;
    ros::param::get("/perception_resolution", temp_res);
    if (temp_res != m_res) { //construct a new map
@@ -580,7 +617,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
     // only clear space (ground points)
     if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){
-      free_cells.insert(m_keyRay.begin(), m_keyRay.end());
+    	free_cells.insert(m_keyRay.begin(), m_keyRay.end());
     }
 
     octomap::OcTreeKey endKey;
@@ -601,7 +638,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
       // free cells
       if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){
-        free_cells.insert(m_keyRay.begin(), m_keyRay.end());
+    	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
       }
       // occupied endpoint
       OcTreeKey key;
@@ -622,7 +659,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     } else {// ray longer than maxrange:;
       point3d new_end = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
       if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay)){
-        free_cells.insert(m_keyRay.begin(), m_keyRay.end());
+    	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
 
         octomap::OcTreeKey endKey;
         if (m_octree->coordToKeyChecked(new_end, endKey)){
@@ -649,7 +686,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   sensorOrigin_ = sensorOrigin;
   // mark free cells only if not seen occupied in this cloud
   double update_low_res_total = 0;
-
+  int free_cells_cnt = 0; // -- keep track of number of free cells (can't get this from free_cell.size() because of the overlap between occupied and free cell)
   float depth_acc_touched = 0;
   int cell_touched_cnt = 0;
   for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ++it){
@@ -664,7 +701,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     	//ros::Time low_res_start = ros::Time::now() ;
     	//update_lower_res_map(coordinate, high_res_node);
     	//update_low_res_total += (ros::Time::now() - low_res_start).toSec();
-
+    	free_cells_cnt +=1;
 	  }
   }
 
@@ -688,8 +725,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  //update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
-  auto free_cell_volume = free_cells.size()*pow(m_octree->getResolution(),3);
-  auto occupied_cell_volume = occupied_cells.size()*pow(m_octree->getResolution(),3);;
+  auto free_cell_volume = free_cells_cnt*pow(exposed_resolution, 3); // -- we use exposed_resolution instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
+  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
+  auto occupied_cell_volume = occupied_cells.size()*pow(exposed_resolution, 3);
 
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
@@ -779,8 +817,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 		debug_data.octomap_space_volume_digested =  free_cell_volume + occupied_cell_volume;
 		//octomap_debug_pub.publish(debug_data);
   }
+  ROS_INFO_STREAM("OM vol"<<free_cell_volume + occupied_cell_volume);
 
-  profiling_container.capture("octomap_exposed_volume", "single", free_cell_volume + occupied_cell_volume, capture_size);
+  //profiling_container.capture("octomap_exposed_volume", "single", free_cell_volume + occupied_cell_volume, capture_size);
 
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -1297,7 +1336,6 @@ bool OctomapServer::maxRangecb(octomap_server::maxRangeSrv::Request& req, octoma
 void OctomapServer::PCMetaDataCb(mavbench_msgs::point_cloud_meta_data msg) {
 	exposed_volume = msg.point_cloud_volume_to_digest;
 	exposed_resolution = msg.point_cloud_resolution;
-	ROS_INFO_STREAM("exposed_volume"<<exposed_volume<<" exposed resolution"<< exposed_resolution);
 }
 
 
@@ -1459,8 +1497,6 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
   ros::param::get("/perception_lower_resolution", m_lower_res);
 
-  profiling_container.capture(std::string("octomap_exposed_resolution"), "single", m_lower_res, capture_size); // @suppress("Invalid arguments")
-  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", m_lower_res, capture_size); // @suppress("Invalid arguments")
 
   assert(m_lower_res >= m_res);
   int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(m_lower_res/m_res));
@@ -1565,9 +1601,10 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   }
   else
     ROS_ERROR("Error serializing OctoMap");
-  auto total_volume = volume_communicated_in_unit_cubes*pow(pow(2, 16-lower_res_map_depth)*m_octree->getResolution(), 3);
+  auto total_volume = volume_communicated_in_unit_cubes*pow(m_lower_res, 3);
 
   debug_data.octomap_volume_communicated =    total_volume;
+  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", m_lower_res, capture_size); // @suppress("Invalid arguments")
   profiling_container.capture(std::string("octomap_potential_exploration_volume"), "single", total_volume, capture_size); // @suppress("Invalid arguments")
 }
 
@@ -1644,7 +1681,7 @@ void OctomapServer::publish_octomap_vis(octomap::OcTree *m_octree_, ros::Publish
   {
     bool inUpdateBBX = true;
 
-    if (m_octree_->isNodeOccupied(*it)){
+    if (!m_octree_->isNodeOccupied(*it)){
       double z = it.getZ();
         double size = it.getSize();
         double x = it.getX();
@@ -2025,10 +2062,10 @@ bool OctomapServer::isSpeckleNode(const OcTreeKey&nKey) const {
 }
 
 void OctomapServer::reconfigureCallback(octomap_server::OctomapServerConfig& config, uint32_t level){
-  if (m_maxTreeDepth != unsigned(config.max_depth))
+	if (m_maxTreeDepth != unsigned(config.max_depth))
     m_maxTreeDepth = unsigned(config.max_depth);
   else{
-    m_pointcloudMinZ            = config.pointcloud_min_z;
+	m_pointcloudMinZ            = config.pointcloud_min_z;
     m_pointcloudMaxZ            = config.pointcloud_max_z;
     m_occupancyMinZ             = config.occupancy_min_z;
     m_occupancyMaxZ             = config.occupancy_max_z;

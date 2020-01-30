@@ -451,6 +451,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         	res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.stop = true;
         }else{
+        	cout<<status<<endl;
         	ROS_INFO_STREAM("this state shouldn't happpen"<< status);
         	exit(0);
         }
