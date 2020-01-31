@@ -120,6 +120,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("/lower_resolution_relative_volume_width", m_lower_res_rel_vol_width, m_lower_res_rel_vol_width);
   private_nh.param("/lower_resolution_relative_volume_height", m_lower_res_rel_vol_height, m_lower_res_rel_vol_height);
   private_nh.param("/lower_resolution_relative_volume_length", m_lower_res_rel_vol_length, m_lower_res_rel_vol_length);
+  private_nh.param("/voxel_type_to_publish", voxel_type_to_publish, voxel_type_to_publish);
   private_nh.param("sensor_model/hit", probHit, 0.7);
   private_nh.param("sensor_model/miss", probMiss, 0.4);
   private_nh.param("sensor_model/min", thresMin, 0.12);
@@ -400,6 +401,7 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 using namespace std; //
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 	bool catched = false;
+	m_octree->clear();
 	/*
 	if ((ros::Time::now() - last_time_cleared).toSec() > 5){
 		m_octree->clear();
@@ -1527,7 +1529,14 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 
   auto key = m_octree->coordToKey(originalSensorOrigin);
   auto m_octree_node = m_octree->search(key);
-  m_octree_shrunk->updateNode(m_octree->coordToKey(originalSensorOrigin), m_octree->isNodeOccupied(m_octree_node));
+  bool node_occupancy;
+  if (!m_octree_node){
+	 node_occupancy = false;
+  }else{
+	  node_occupancy =  m_octree->isNodeOccupied(m_octree_node);
+  }
+
+  m_octree_shrunk->updateNode(m_octree->coordToKey(originalSensorOrigin), node_occupancy);
 
   int parentBorrowedDepth = MapToTransferBorrowedDepth - 1;
 
@@ -1681,7 +1690,8 @@ void OctomapServer::publish_octomap_vis(octomap::OcTree *m_octree_, ros::Publish
   {
     bool inUpdateBBX = true;
 
-    if (!m_octree_->isNodeOccupied(*it)){
+    bool publish_voxel = voxel_type_to_publish == "free" ? !m_octree_->isNodeOccupied(*it):  m_octree_->isNodeOccupied(*it);
+    if (publish_voxel){
       double z = it.getZ();
         double size = it.getSize();
         double x = it.getX();

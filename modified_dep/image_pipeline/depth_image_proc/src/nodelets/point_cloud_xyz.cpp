@@ -444,7 +444,7 @@ void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x
 
 // to understand the gap size and volume
 void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
-  int n_points, float resolution, double &volume_to_digest, double &area_to_digest){
+  int n_points, float resolution, double &sensor_volume_to_digest, double &area_to_digest){
   double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
   bool first_itr = true;
   vector<int> gap_ctr_per_row_vec;
@@ -462,10 +462,19 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
       this_y = *cloud_y;
       this_z = *cloud_z;
 
+      // -- if outside of the sphere with the radius of sensor_max_range, project it back
+      double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
+      if (norm > sensor_max_range){
+    	  this_x = (sensor_max_range/norm)*this_x;
+    	  this_y = (sensor_max_range/norm)*this_y;
+    	  this_z = (sensor_max_range/norm)*this_z;
+      }
+
       new_row = this_x < last_x;
       bool point_is_gap = this_z > (sensor_max_range - resolution);
 
-      //
+      // TODO: figure out whether the projection to the sphare, impact the gap calculation
+      // worse case, scenario, we can just not project for the gap diagnostics
       if (new_row && !first_itr){
 		  if (gap_started) {
 			  gap_size_vec.push_back(gap_size);
@@ -488,7 +497,7 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
       }
 
       if (!new_row && !first_itr ){
-    	  volume_to_digest += (1.0/3)*pow(this_x - last_x,2)*this_z; //approximating using only x
+    	  sensor_volume_to_digest += (1.0/3)*pow(this_x - last_x,2)*this_z; //approximating using only x
     	  area_to_digest += pow(this_x - last_x, 2); //approximating using only x
       }
 
@@ -528,9 +537,6 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
   */
   //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
 }
-
-
-
 
 
 // just for debugging purposes. to understand what the point cloud looks like
@@ -704,7 +710,6 @@ void filterByResolutionByHashing(sensor_msgs::PointCloud2Iterator<float> &cloud_
 			  xs.push_back(*cloud_x);
 			  ys.push_back(*cloud_y);
 			  zs.push_back(*cloud_z);
-			  volume_to_digest_partial += *cloud_z;
 			  num_of_points +=1;
 		  }
 		  last_hashed_point = hashed_point;
@@ -712,74 +717,8 @@ void filterByResolutionByHashing(sensor_msgs::PointCloud2Iterator<float> &cloud_
   }
   //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
 //  ROS_INFO_STREAM("num of points "<< num_of_points);
-  volume_to_digest = (1.0/3)*resolution*resolution*volume_to_digest_partial; // -- compilation of  cone volumes
+//  volume_to_digest = (1.0/3)*resolution*resolution*volume_to_digest_partial; // -- compilation of  cone volumes
 }
-
-/*
-// the following solution is disfunctional at the moment, since it makes certain (i.e. ordering assumptions) assumption about how the point cloud is laid out
-void filterByResolutionByArray(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
-    std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int n_points, float resolution, int width){
-  // map of whether a point has been seen (rounded by resolution)
-	std::unordered_set<double> seen;
-  //seen.clear();
-  double last_hashed_point = 0;
-  int hit_ctr = 0;
-  int total_ctr = 0;
-  int missed_ctr = 0;
-  double hashed_point;
-  bool moved_rows = false;
-  double first_rounded_x_in_row;
-  double first_rounded_y_in_row;
-  double first_rounded_z_in_row;
-  double last_rounded_x, last_rounded_y, last_rounded_z;
-  bool first_time = true;
-  for(size_t i=0; i< n_points - 1;){
-      double rounded_x = round_to_resolution(*cloud_x, resolution);
-      double rounded_y = round_to_resolution(*cloud_y, resolution);
-      double rounded_z = round_to_resolution(*cloud_z, resolution);
-
-      if (first_rounded_y_in_row != rounded_y) {
-    	  moved_rows = true;
-           last_hashed_point = point_hash_xyz(first_rounded_x_in_row, last_rounded_y, first_rounded_z_in_row);
-
-      }else{
-    	  moved_rows = false;
-    	  last_hashed_point = hashed_point;
-      }
-
-      hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
-      bool consecutive_hashes_equal =  (hashed_point == last_hashed_point) && !first_time;
-
-      if (consecutive_hashes_equal){
-    	  if (moved_rows){
-    		  ROS_INFO_STREAM("this is good");
-    		  cloud_x += (width-1); //subtract one since we add 1 regardless;
-    		  cloud_y += (width-1);
-    		  cloud_z += (width-1);
-    		  i+= (width-1);
-    	  }
-      }else{
-    	  if (moved_rows || first_time){
-    		 first_rounded_x_in_row = rounded_x;
-    		 first_rounded_y_in_row = rounded_y;
-    		 first_rounded_z_in_row = rounded_z;
-    		 first_time = false;
-    	  }
-    	  xs.push_back(*cloud_x);
-    	  ys.push_back(*cloud_y);
-    	  zs.push_back(*cloud_z);
-      }
-      last_rounded_x = rounded_x;
-      last_rounded_y = rounded_y;
-      last_rounded_z = rounded_z;
-      i+=1;
-      cloud_x+=1;
-      cloud_y+=1;
-      cloud_z+=1;
-  }
-}
-*/
-
 
 /*
 struct Hash {
@@ -1156,7 +1095,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   // -- start filtering
   profiling_container->capture("filtering", "start", ros::Time::now(), capture_size);
-  double volume_to_digest_2;
+  double volume_to_digest_2; // -- at the moment, we are not measuing this
   filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, volume_to_digest_2);
   //ROS_INFO_STREAM("vol Pc 1:"<<volume_to_digest_2);
   //ROS_INFO_STREAM("vol Pc 2:"<<volume_to_digest);

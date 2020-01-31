@@ -231,7 +231,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	double map_to_transfer_side_length_step_cnt = 20;
 	double point_cloud_num_points_max;  // -- depends on resolution
 	double point_cloud_num_points_min = 10;
-	double point_cloud_num_points_step_cnt = 20;
+	double point_cloud_num_points_step_cnt = 2;
 	static double static_point_cloud_resolution = point_cloud_resolution_max;
 	static double static_point_cloud_num_points = (double) get_point_count(static_point_cloud_resolution, point_cloud_resolution_point_count_vec);
 	static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
@@ -266,7 +266,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 
 	// -- knob performance modeling logic
 	if (knob_performance_modeling){
-		ros::Duration(3).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
+		ros::Duration(10).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 
 		// -- point cloud knobs (pointcloud/octomap since these knobs impact octomap)
 		if (knob_performance_modeling_for_point_cloud){
@@ -294,8 +294,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 		// -- sanity check
 		assert(knob_performance_modeling_for_point_cloud ^ knob_performance_modeling_for_om_to_pl);///, "could not have both of the knobs to be true"); // this is a hack, but we actually want to have the capability to simaltenouysly modify both of the kernels
 		point_cloud_resolution_power_index = 0;
-
-		//static_point_cloud_num_points -= static_point_cloud_num_points_step_size;
+		static_point_cloud_num_points -= static_point_cloud_num_points_step_size;
 	}
 
 	ros::param::set("point_cloud_resolution", static_point_cloud_resolution);

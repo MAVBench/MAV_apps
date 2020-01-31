@@ -91,6 +91,7 @@ public:
 	ros::CallbackQueue callback_queue_meta_data; // -- only meta_data
   double exposed_volume; // -- the volume of the information coming from point cloud
  double exposed_resolution; // -- the resolution of the information coming from point cloud
+ std::string voxel_type_to_publish;
  DataContainer profiling_container;
  ProfileManager my_profile_manager;
  long long octomap_integration_acc;
