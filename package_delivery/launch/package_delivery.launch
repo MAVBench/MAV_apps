@@ -53,7 +53,7 @@
   <!-- ===================================================================== -->
   <!-- ========================= Performance Modeling ============================ -->
   <!-- ===================================================================== -->
-  <arg name="knob_performance_modeling" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
+  <arg name="knob_performance_modeling" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling" value="$(arg knob_performance_modeling)"/> 
   <arg name="knob_performance_modeling_for_point_cloud" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling_for_point_cloud" value="$(arg knob_performance_modeling_for_point_cloud)"/> 
@@ -201,19 +201,21 @@
   <!-- =========================Point Cloud  ============================ -->
   <arg name="point_cloud_shard_cnt" default="1"/>
   <arg name="point_cloud_num_points" default="3000000"/>
+  <arg name="sensor_volume_to_keep" default="3000000"/>
   <arg name="point_cloud_num_points_filtering_mode" default="radius"/>
   <arg name="point_cloud_width" default="50"/>
   <arg name="point_cloud_height" default="50"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
-  <arg name="perception_resolution" default=".05"/> <!-- OM voxels size-->
+  <arg name="perception_resolution" default=".15"/> <!-- OM voxels size-->
   <arg name="perception_lower_resolution" default="1.6"/> <!-- OM voxels size-->
-  <arg name="point_cloud_resolution" default=".05"/> <!-- minimum the distance between pc points-->
+  <arg name="point_cloud_resolution" default=".15"/> <!-- minimum the distance between pc points-->
   <arg name="point_cloud_max_z" default="400.0" />
 
   <param name="point_cloud_max_z" value="$(arg point_cloud_max_z)" />
   <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
   <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />
   <param name="point_cloud_num_points" value="$(arg point_cloud_num_points)" />
+  <param name="sensor_volume_to_keep" value="$(arg sensor_volume_to_keep)" />
   <param name="point_cloud_num_points_filtering_mode" value="$(arg point_cloud_num_points_filtering_mode)" />
   <param name="point_cloud_width" value="$(arg point_cloud_width)"/>
   <param name="point_cloud_height" value="$(arg point_cloud_height)"/>
@@ -250,7 +252,7 @@
   <arg name="MapToTransferSideLength" default="40" /> 
   <arg name="gridSliceCountPerSide" default="8" />
   <arg name="gridMode" default="3d" />
-  <arg name="voxel_type_to_publish" default="occupied" />
+  <arg name="voxel_type_to_publish" default="free" />
  
   <param name="voxel_type_to_publish" value="$(arg voxel_type_to_publish)" />
   <param name="occupancy_max_z" value="$(arg point_cloud_max_z)" />
@@ -421,7 +423,7 @@
   </group>
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="reactive_runtime" default="false" />   
+  <arg name="reactive_runtime" default="true" />   
   <arg name="dynamic_budgetting" default="true" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
@@ -439,7 +441,7 @@
 
   <!-- rviz -->
    <group if="$(arg DEBUG)">
-   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
+   <!-- node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/-->
    </group>
 
     

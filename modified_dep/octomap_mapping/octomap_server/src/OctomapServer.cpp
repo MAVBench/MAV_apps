@@ -290,7 +290,6 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("sensor_model/miss", probMiss, 0.4);
   private_nh.param("sensor_model/min", thresMin, 0.12);
   private_nh.param("sensor_model/max", thresMax, 0.97);
-  ros::Duration(10).sleep();
 
   // Profiling
   octomap_integration_acc = 0;
@@ -519,6 +518,8 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
 
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
+
+  //ROS_INFO_STREAM("-------------- exposed volume"<<exposed_volume);
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
   profiling_container.capture("octomap_exposed_volume", "single", exposed_volume, capture_size);
   profiling_container.capture("octomap_exposed_resolution", "single", exposed_resolution, capture_size);
@@ -1338,6 +1339,7 @@ bool OctomapServer::maxRangecb(octomap_server::maxRangeSrv::Request& req, octoma
 void OctomapServer::PCMetaDataCb(mavbench_msgs::point_cloud_meta_data msg) {
 	exposed_volume = msg.point_cloud_volume_to_digest;
 	exposed_resolution = msg.point_cloud_resolution;
+  //ROS_INFO_STREAM("exposed volume"<<exposed_volume);
 }
 
 
