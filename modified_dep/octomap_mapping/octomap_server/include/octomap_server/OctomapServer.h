@@ -89,7 +89,7 @@ public:
 
 //  ros::NodeHandle private_nh;//("~");
 	ros::CallbackQueue callback_queue_meta_data; // -- only meta_data
-  double exposed_volume; // -- the volume of the information coming from point cloud
+  double point_cloud_estimated_volume; // -- the estimated volume of the information coming from point cloud
  double exposed_resolution; // -- the resolution of the information coming from point cloud
  std::string voxel_type_to_publish;
  DataContainer profiling_container;

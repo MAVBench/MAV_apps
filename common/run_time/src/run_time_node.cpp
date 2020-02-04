@@ -236,7 +236,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	static double static_point_cloud_num_points = (double) get_point_count(static_point_cloud_resolution, point_cloud_resolution_point_count_vec);
 	static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
 	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
-	double sensor_volume_to_keep_max = 5400;
+	double sensor_volume_to_keep_max = 11000;
 	double sensor_volume_to_keep_min = 100;
 	double sensor_volume_to_keep_step_cnt = 20;
 	static double  static_sensor_volume_to_keep = sensor_volume_to_keep_max;
@@ -274,7 +274,11 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 		// -- point cloud knobs (pointcloud/octomap since these knobs impact octomap)
 		if (knob_performance_modeling_for_point_cloud){
 			if (static_sensor_volume_to_keep < sensor_volume_to_keep_min){
-				static_point_cloud_resolution = min(2*static_point_cloud_resolution, point_cloud_resolution_min);
+				if (static_point_cloud_resolution == point_cloud_resolution_min){
+					static_point_cloud_resolution = point_cloud_resolution_max;
+				}else{
+					static_point_cloud_resolution = min(2*static_point_cloud_resolution, point_cloud_resolution_min);
+				}
 				//static_point_cloud_num_points_max = (double) get_point_count(static_point_cloud_resolution, point_cloud_resolution_point_count_vec); // -- get the resolution and look into the vector to find the maximum number of points for a certain resolution
 				//static_point_cloud_num_points = static_point_cloud_num_points_max;
 				//static_point_cloud_num_points_step_size = (int) (static_point_cloud_num_points_max - point_cloud_num_points_min)/point_cloud_num_points_step_cnt;
@@ -289,7 +293,12 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 			static_map_to_transfer_side_length -= map_to_transfer_side_length_step_size;
 			if (static_map_to_transfer_side_length < map_to_transfer_side_length_min){
 				static_map_to_transfer_side_length = map_to_transfer_side_length_max; // -- reset the map size
-				static_point_cloud_resolution = min(2*static_point_cloud_resolution, point_cloud_resolution_min);
+				if (static_point_cloud_resolution == point_cloud_resolution_min){
+					static_point_cloud_resolution = point_cloud_resolution_max;
+				}else{
+					static_point_cloud_resolution = min(2*static_point_cloud_resolution, point_cloud_resolution_min);
+				}
+
 			}
 			MapToTransferSideLength = static_map_to_transfer_side_length;
 			perception_lower_resolution = static_point_cloud_resolution;

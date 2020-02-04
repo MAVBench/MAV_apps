@@ -10,3 +10,4 @@ float32 point_cloud_filtering_time
 float32 entire_point_cloud_depth_callback
 float32 point_cloud_volume_to_digest
 float32 point_cloud_area_to_digest
+float32 diagnostics

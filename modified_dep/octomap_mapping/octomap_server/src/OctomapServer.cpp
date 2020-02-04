@@ -407,6 +407,8 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	/	last_time_cleared = ros::Time::now();
 	/}
 	*/
+	point_cloud_estimated_volume = cloud->fields[0].count; // -- this is a hack, sicne I have overwritten the field value with volume
+	//exposed_volume = cloud->point_step;
 
 	if(CLCT_DATA) {
 		ros::Time start_time = ros::Time::now();
@@ -429,7 +431,10 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	PCLPointCloud pc; // input cloud for filtering and ground-detection
 
 	profiling_container.capture(std::string("point_cloud_deserialization"), "start", ros::Time::now(), capture_size);
-	pcl::fromROSMsg(*cloud, pc);
+
+	sensor_msgs::PointCloud2 cloud_ = *cloud;
+	cloud_.fields[0].count = 1;
+	pcl::fromROSMsg(cloud_, pc);
 	profiling_container.capture(std::string("point_cloud_deserialization"), "end", ros::Time::now(), capture_size);
 	//ROS_INFO_STREAM(std::string("octomap deserialization time")<<this->profiling_container.findDataByName("point_cloud_deserialization")->values.back());
 
@@ -521,7 +526,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 
   //ROS_INFO_STREAM("-------------- exposed volume"<<exposed_volume);
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
-  profiling_container.capture("octomap_exposed_volume", "single", exposed_volume, capture_size);
+  profiling_container.capture("point_cloud_estimated_volume", "single", point_cloud_estimated_volume, capture_size);
   profiling_container.capture("octomap_exposed_resolution", "single", exposed_resolution, capture_size);
 
 
@@ -554,6 +559,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScan")->values.back();
 	  	debug_data.octomap_insertCloud_minus_publish_all = profiling_container.findDataByName("octomap_insertCloud_minus_publish_all")->values.back();
 	  	debug_data.octomap_publish_all = profiling_container.findDataByName("octomap_publish_all")->values.back();
+	  	debug_data.point_cloud_estimated_volume = profiling_container.findDataByName("point_cloud_estimated_volume")->values.back();
 	  	//debug_data.octomap_memory_usage =  m_octree->memoryUsage();
 	  	//debug_data.octomap_low_res_memory_usage =  m_octree_lower_res->memoryUsage();
 	  	debug_data.perceived_closest_obs_distance =  profiling_container.findDataByName("perceived_closest_obstacle")->values.back();
@@ -728,9 +734,15 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  //update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
-  auto free_cell_volume = free_cells_cnt*pow(exposed_resolution, 3); // -- we use exposed_resolution instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
+ // auto free_cell_volume = free_cells_cnt*pow(exposed_resolution, 3); // -- we use exposed_resolution instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
-  auto occupied_cell_volume = occupied_cells.size()*pow(exposed_resolution, 3);
+  //auto occupied_cell_volume = occupied_cells.size()*pow(exposed_resolution, 3);
+
+
+  auto free_cell_volume = free_cells_cnt*pow(m_octree->getResolution(), 3); // -- we use exposed_resolution instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
+  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
+  auto occupied_cell_volume = occupied_cells.size()*pow(m_octree->getResolution(), 3);
+
 
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
@@ -808,6 +820,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   }
 
   profiling_container.capture("octomap_prune_in_octomap_server", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("octomap_volume_digested", "single", free_cell_volume + occupied_cell_volume, capture_size);
+
 
   if (DEBUG_RQT) {
 	  	debug_data.header.stamp = ros::Time::now();
@@ -1337,7 +1351,7 @@ bool OctomapServer::maxRangecb(octomap_server::maxRangeSrv::Request& req, octoma
 
 
 void OctomapServer::PCMetaDataCb(mavbench_msgs::point_cloud_meta_data msg) {
-	exposed_volume = msg.point_cloud_volume_to_digest;
+	point_cloud_estimated_volume = msg.point_cloud_volume_to_digest;
 	exposed_resolution = msg.point_cloud_resolution;
   //ROS_INFO_STREAM("exposed volume"<<exposed_volume);
 }

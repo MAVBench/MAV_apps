@@ -452,8 +452,8 @@ void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x
 }
 
 // to understand the gap size and volume
-void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
-  int n_points, float resolution, double &sensor_volume_to_digest, double &area_to_digest){
+float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
+  int n_points, float resolution, const int grid_size, float resolution_to_consider, double &sensor_volume_to_digest, double &area_to_digest){
   double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
   bool first_itr = true;
   vector<int> gap_ctr_per_row_vec;
@@ -467,12 +467,23 @@ void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> 
   double this_y_no_norm, last_y_no_norm;
   int cntr= 0;
  int cntr1 = 0;
- double resolution_to_consider = .5;
+ //const float resolution_to_consider = 1;
+ //const int point_cloud_wc_side_length = 60;
+// const int grided_volume_size = (int)point_cloud_wc_side_length/resolution_to_consider;
+// const int grided_size = 60; // int)point_cloud_wc_side_length/resolution_to_consider;
+ float **gridded_volume = 0;
+ gridded_volume = new float*[grid_size];
+ //memset(gridded_volume, 0, sizeof(gridded_volume[0][0]) * grided_volume_size* grided_volume_size);
 
- int point_cloud_wc_side_length = 60;
- int grided_volume_size = (int)point_cloud_wc_side_length/resolution_to_consider;
- double gridded_volume[grided_volume_size][grided_volume_size];
- memset(gridded_volume, 0, sizeof(gridded_volume[0][0]) * grided_volume_size* grided_volume_size);
+ for (int h = 0; h < grid_size; h++)
+ {
+	 gridded_volume[h] = new float[grid_size];
+	 for (int w = 0; w < grid_size; w++)
+	 {
+		 gridded_volume[h][w] = 0;
+	 }
+ }
+
  // iterate through points row by row and get gaps for each row
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
       this_x = *cloud_x;
@@ -480,11 +491,12 @@ void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> 
       this_z = *cloud_z;
       this_y_no_norm = this_y;
 
+
       // -- if outside of the sphere with the radius of sensor_max_range, project it back
       double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
       if (norm > sensor_max_range){
-    	  this_x = (sensor_max_range/norm)*this_x;
-    	  this_y = (sensor_max_range/norm)*this_y;
+//    	  this_x = (sensor_max_range/norm)*this_x;
+//    	  this_y = (sensor_max_range/norm)*this_y;
     	  this_z = (sensor_max_range/norm)*this_z;
       }
       new_row = this_x < last_x;
@@ -522,13 +534,15 @@ void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> 
      	  }
       }
 
-      int x_index = ((int)1/resolution_to_consider)*round_to_resolution(this_x, resolution_to_consider) + (int)grided_volume_size/2;
-      int y_index = ((int)1/resolution_to_consider)*round_to_resolution(this_y, resolution_to_consider) + (int)grided_volume_size/2;
+      int x_index = ((int)1/resolution_to_consider)*round_to_resolution(this_x, resolution_to_consider) + (int)grid_size/2;
+      int y_index = ((int)1/resolution_to_consider)*round_to_resolution(this_y, resolution_to_consider) + (int)grid_size/2;
       gridded_volume[x_index][y_index] = round_to_resolution_(this_z, resolution_to_consider);
 
       if (!new_row && !first_itr ){
-    	  sensor_volume_to_digest += (1.0/3)*pow(this_x - last_x,2)*(max(this_z, last_z)); //approximating using only x
-    	  area_to_digest += pow(this_x - last_x, 2); //approximating using only x
+    	  if (fabs(last_z - this_z) < .5){
+//    		  sensor_volume_to_digest += (1.0/3)*pow(resolution_to_consider,2)*this_z; //approximating using only x
+    		  area_to_digest += pow(this_x - last_x, 2); //approximating using only x
+    	  }
       }
 
       last_x = this_x;
@@ -538,13 +552,12 @@ void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> 
       first_itr = false;
   }
   gap_size_vec.push_back(gap_size);
-  /*
-  for (int i =0; i < grided_volume_size; i++){
-	  for (int j =0; j< grided_volume_size; j++){
+
+  for (int i =0; i < grid_size; i++){
+	  for (int j =0; j< grid_size; j++){
 		 sensor_volume_to_digest+= (1.0/3)*pow(resolution_to_consider,2)*gridded_volume[i][j];
 	  }
   }
-  */
 
   /*
   // printing stuff out
@@ -576,6 +589,8 @@ void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> 
   //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
 //  ROS_INFO_STREAM("counters for outer of order"<<cntr);
  // ROS_INFO_STREAM("------------------------------");
+
+  return gridded_volume;
 }
 
 
@@ -583,6 +598,7 @@ void runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> 
 void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
   int n_points, float resolution, double &sensor_volume_to_digest, double &area_to_digest){
   double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
+  last_x = sensor_max_range; // -- to make sure, first  iteration is considered a new row
   bool first_itr = true;
   vector<int> gap_ctr_per_row_vec;
   bool gap_started = false;
@@ -594,8 +610,18 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
   double this_y_no_norm, last_y_no_norm;
   int cntr= 0;
  int cntr1 = 0;
+   double max_x = 0;
+   double max_y = 0;
+   double max_z = 0;
 
-  // -- iterate through points row by row and get gaps for each row
+   double min_x = 1000;
+   double min_y = 1000;
+   double min_z = 1000;
+   double last_row_y;
+   double delta_y_row;
+   int new_row_cntr = 0;
+   bool first_row = true;
+   // -- iterate through points row by row and get gaps for each row
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
       this_x = *cloud_x;
       this_y = *cloud_y;
@@ -610,13 +636,16 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
     	  this_z = (sensor_max_range/norm)*this_z;
       }
       new_row = this_x < last_x;
+      new_row_cntr = new_row ? new_row_cntr+1: new_row_cntr;
+      first_row = new_row_cntr <= 1 ? true : false;
+
       //bool point_is_gap = this_z > (sensor_max_range - resolution);
       bool point_is_gap = norm > sensor_max_range;
 
       // TODO: figure out whether the projection to the sphare, impact the gap calculation
       // worse case, scenario, we can just not project for the gap diagnostics
       if (new_row && !first_itr){
-		  if (gap_started) {
+    	  if (gap_started) {
 			  gap_size_vec.push_back(gap_size);
 			  gap_started = false;
 			  gap_size = 0;
@@ -636,9 +665,18 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
      	  }
       }
 
-      if (!new_row && !first_itr ){
-    	  sensor_volume_to_digest += (1.0/3)*pow(this_x - last_x,2)*(max(this_z, last_z)); //approximating using only x
+      if (!new_row && !first_row){
+    	  //sensor_volume_to_digest += (1.0/3)*pow(this_x - last_x,2)*this_z); //approximating using only x
+    	  auto blah = fabs(this_y - last_row_y);
+    	  auto blah2 = fabs(this_x - last_x);
+    	  auto blah3 = fabs(blah2 - blah);
+    	  sensor_volume_to_digest += (1.0/3)*fabs(this_x - last_x)*fabs(this_y - last_row_y)*this_z; //approximating using only x
     	  area_to_digest += pow(this_x - last_x, 2); //approximating using only x
+      }else{
+    	  //delta_y_row = last_row_y - this_y;
+    	  if (new_row){
+    		  last_row_y = this_y;
+    	  }
       }
 
       last_x = this_x;
@@ -676,6 +714,7 @@ void runDiagnostics(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs
   */
   //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
 }
+
 
 
 // just for debugging purposes. to understand what the point cloud looks like
@@ -875,7 +914,7 @@ void filterByNumOfPoints(sensor_msgs::PointCloud2Iterator<float> &cloud_x, senso
 
 // -- filter based on the desired volume to maintain
 void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
-		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points, double volume_to_keep, double &volume_kept)
+		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points, double volume_to_keep, double &volume_kept, float **gridded_volume, int grid_volume_row_size, float resolution_to_consider)
 {
 	const int num_radius_buckets = 10*sensor_max_range;
 	double radius_volume[num_radius_buckets];
@@ -883,10 +922,12 @@ void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msg
 	double max_radius = sensor_max_range* std::pow(2, 0.5);
 	double bucket_width = max_radius / num_radius_buckets;
 	double this_x, this_y, this_z, last_x, last_y, last_z;
+	double last_row_y; // y associated with the first element of last row
 	bool new_row = false;
 	bool first_itr = true;
 	double total_volume = 0;
-	for (int i = 0; i < num_points; i++){
+
+    for (int i = 0; i < num_points; i++){
 		// Add point to radius bucket
 	  this_x = *(cloud_x + i);
 	  this_y = *(cloud_y + i);
@@ -894,16 +935,24 @@ void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msg
 	  // -- project x,y,z if they are outside of the sensor range
 	  double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
 	  if (norm > sensor_max_range){
-    	  this_x = (sensor_max_range/norm)*this_x;
-    	  this_y = (sensor_max_range/norm)*this_y;
+    //	  this_x = (sensor_max_range/norm)*this_x;
+    //	  this_y = (sensor_max_range/norm)*this_y;
     	  this_z = (sensor_max_range/norm)*this_z;
       }
 	  new_row = this_x < last_x;
 	  if (!new_row && !first_itr ){
     	   int radius_bucket = (int) (std::pow(std::pow(this_x, 2) + std::pow(this_y, 2), 0.5) / bucket_width);
-    	   radius_volume[radius_bucket] += (1.0/3)*pow(this_x-last_x, 2)*this_z;
-    	   //volume_kept +=  (1.0/3)*pow(this_x-last_x, 2)*this_z;
-       }
+    	  if (fabs(last_z - this_z) < .5){
+    		  //radius_volume[radius_bucket] += (1.0/3)*fabs(this_x-last_x)*fabs(this_y - last_row_y)*this_z;
+    		  // using the gridded approach
+    		  int x_index = ((int)1/resolution_to_consider)*round_to_resolution(this_x, resolution_to_consider) + (int)grid_volume_row_size/2;
+    		  int y_index = ((int)1/resolution_to_consider)*round_to_resolution(this_y, resolution_to_consider) + (int)grid_volume_row_size/2;
+    		  radius_volume[radius_bucket] += (1.0/3)*pow(resolution_to_consider, 2)*gridded_volume[x_index][y_index];
+    		  gridded_volume[x_index][y_index] = 0;
+    	  }
+	  }else{
+		  last_row_y = this_y; // this is not applicable for gridded approach
+	  }
       first_itr = false;
       last_x = this_x;
       last_y = this_y;
@@ -916,6 +965,8 @@ void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msg
 	while (volume_included <= volume_to_keep && max_radius_bucket < num_radius_buckets) {
 		max_radius_bucket++;
 		volume_included += radius_volume[max_radius_bucket];
+
+
 	}
 
 	for (int i = 0; i < num_points; i++) {
@@ -1418,13 +1469,27 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   // -- run diagnostics
   profiling_container->capture("diagnostics", "start", ros::Time::now());
   //run_diagnostics_for_shape(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution);
-  runDiagnostics(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution, volume_to_digest, area_to_digest);
-  profiling_container->capture("diagnostics", "end", ros::Time::now());
+  //runDiagnostics(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution, volume_to_digest, area_to_digest);
+  // -- using the gridded approach
+  const int grid_size = 60;
+  float **gridded_volume;
+  float resolution_to_consider = 1;
+  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution, grid_size, resolution_to_consider, volume_to_digest, area_to_digest);
 
+  profiling_container->capture("diagnostics", "end", ros::Time::now());
   // -- start filtering
   profiling_container->capture("filtering", "start", ros::Time::now(), capture_size);
   double volume_kept = 0;
-  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, sensor_volume_to_keep, volume_kept);
+  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, sensor_volume_to_keep, volume_kept, gridded_volume, grid_size, resolution_to_consider);
+
+  // -- destroy the grid
+  for (int h = 0; h < grid_size; h++)
+  {
+	  delete [] gridded_volume[h];
+  }
+  delete gridded_volume;
+
+
   //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, sensor_volume_to_keep, n_points);
   //filterByNumOfPoints(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_num_points);
 
@@ -1434,6 +1499,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> zs_best;
   //filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, volume_to_digest_2);
   filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, point_cloud_resolution);
+
   //filterByResolutionNoFilter(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, point_cloud_resolution);
   // filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
   //filterByResolutionCustomHash(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution);
@@ -1457,6 +1523,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
       *new_y = ys_best[i];
       *new_z = zs_best[i];
   }
+  cloud_msg->fields[0].count = volume_kept; // -- This is a hack. I am abusing the field
+  	  	  	  	  	  	  	  	  	  	    //    array knowing that it's always 1. Note that  I reset it back
+  	  	  	  	  	  	  	  	  	  	  	//    to 1 in octomap
+
   profiling_container->capture("filtering", "end", ros::Time::now());
 
   pub_point_cloud_.publish (cloud_msg);
@@ -1482,6 +1552,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.entire_point_cloud_depth_callback= profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
 	  debug_data.point_cloud_volume_to_digest = volume_kept;
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
+	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
 	  pc_debug_pub.publish(debug_data);
   }
 
