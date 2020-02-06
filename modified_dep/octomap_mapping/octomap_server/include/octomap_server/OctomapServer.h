@@ -171,6 +171,9 @@ protected:
   void reconfigureCallback(octomap_server::OctomapServerConfig& config, uint32_t level);
   void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFilteredBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin);
+  void publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin);
+  void publishFilteredBinaryOctoMapTesting(const ros::Time& rostime, octomap::point3d sensorOrigin);
+
   void publishBinaryLowerResOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFullOctoMap(const ros::Time& rostime = ros::Time::now()) const;
   //virtual void publishAll(const ros::Time& rostime = ros::Time::now(), octomap::point3d = octomap::point3d(0,0,0));
@@ -309,6 +312,7 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   double dist_to_closest_obs; //distant to the closest obstacle perceived
   int depth_to_transfer;
   int MapToTransferGridSize; // how big the grid (side of the cubic grid) for sampling the octomap is
+  float VolumeToExplore;
   int MapToTransferGridCount; // Number of grids (with the side size of MapToTransferGridSize) to include in the transfered map
   int MapToTransferBorrowedDepth; // the depth that is borrowed (attached) from the main octomap
   int closest_obs_coordinate_vect_size = 20;
