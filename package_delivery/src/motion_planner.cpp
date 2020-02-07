@@ -309,7 +309,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     // -- points into the point cloud (to avoid data contamination due to the
     // -- resources being used by octomap
 	if (knob_performance_modeling){
-		ros::param::get("/knob_performance_modeling_om_to_pl", knob_performance_modeling_for_om_to_pl);
+		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
 		if (knob_performance_modeling_for_om_to_pl){
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
 					(ros::Time::now() - msg.header.stamp).toSec(), capture_size);

@@ -129,7 +129,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("DEBUG_RQT", DEBUG_RQT, false);
   private_nh.param("/knob_performance_modeling", knob_performance_modeling, false);
   private_nh.param("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl, false);
-
+  private_nh.param("/knob_performance_modeling_for_om_to_pl_no_interference", knob_performance_modeling_for_om_to_pl_no_interference, false);
 
   if (knob_performance_modeling){
 	  capture_size = 1;
@@ -223,6 +223,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   octomap_communication_proxy_msg =  m_nh.advertise<std_msgs::Header>("octomap_communication_proxy_msg", 1, m_latchedTopics);
   m_markerLowerResPub = m_nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_lower_res", 1, m_latchedTopics);
   m_binaryMapPub = m_nh.advertise<Octomap>("octomap_binary", 1, m_latchedTopics);
+
+
 
   m_binaryMapLowerResPub = m_nh.advertise<Octomap>("octomap_binary_lower_res", 1, m_latchedTopics);
   m_fullMapPub = m_nh.advertise<Octomap>("octomap_full", 1, m_latchedTopics);
@@ -399,8 +401,9 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
 	// -- communication, we simply send the map over and return, without integrating any new information
 	if (knob_performance_modeling){
-		ros::param::get("/knob_performance_modeling_om_to_pl", knob_performance_modeling_for_om_to_pl);
-		if (knob_performance_modeling_for_om_to_pl){
+		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
+		ros::param::get("/knob_performance_modeling_for_om_to_pl_no_interference", knob_performance_modeling_for_om_to_pl_no_interference);
+		if (knob_performance_modeling_for_om_to_pl_no_interference){
 			profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
 			publishAll(ros::Time::now());
 			profiling_container.capture("octomap_publish_all", "end", ros::Time::now(), capture_size);

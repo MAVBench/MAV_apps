@@ -233,7 +233,6 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	double sensor_volume_to_keep_step_cnt = 20;
 	static double  static_sensor_volume_to_keep = sensor_volume_to_keep_max;
 
-    // not used any more
 	//double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
 	double map_to_transfer_side_length_max = 500;
 	double map_to_transfer_side_length_min = 40;
@@ -248,6 +247,8 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	double map_to_explore_volume_min = 4000;
 	double map_to_explore_volume_step_cnt = 20;
 	static double  static_map_to_explore_volume = map_to_explore_volume_max;
+
+    // not used any more
 	static double static_point_cloud_num_points = (double) get_point_count(static_point_cloud_resolution, point_cloud_resolution_point_count_vec);
 	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
 
@@ -318,7 +319,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 		}
 
 		// -- sanity check
-		assert(knob_performance_modeling_for_point_cloud ^ knob_performance_modeling_for_om_to_pl);///, "could not have both of the knobs to be true"); // this is a hack, but we actually want to have the capability to simaltenouysly modify both of the kernels
+		//assert(knob_performance_modeling_for_point_cloud ^ knob_performance_modeling_for_om_to_pl);///, "could not have both of the knobs to be true"); // this is a hack, but we actually want to have the capability to simaltenouysly modify both of the kernels
 		point_cloud_resolution_power_index = 0;
 		//static_point_cloud_num_points -= static_point_cloud_num_points_step_size;
 	}
