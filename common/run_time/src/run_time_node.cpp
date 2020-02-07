@@ -226,20 +226,36 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	double point_cloud_resolution_max = .15;
 	int num_of_steps_on_y = 4;
 	double point_cloud_resolution_min = pow(2, num_of_steps_on_y)*point_cloud_resolution_max;  //this value must be a power of two
-	double map_to_transfer_side_length_max = 500;
-	double map_to_transfer_side_length_min = 40;
-	double map_to_transfer_side_length_step_cnt = 20;
-	double point_cloud_num_points_max;  // -- depends on resolution
-	double point_cloud_num_points_min = 10;
-	double point_cloud_num_points_step_cnt = 2;
 	static double static_point_cloud_resolution = point_cloud_resolution_max;
-	static double static_point_cloud_num_points = (double) get_point_count(static_point_cloud_resolution, point_cloud_resolution_point_count_vec);
-	static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
-	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
 	double sensor_volume_to_keep_max = 11000;
 	double sensor_volume_to_keep_min = 100;
 	double sensor_volume_to_keep_step_cnt = 20;
 	static double  static_sensor_volume_to_keep = sensor_volume_to_keep_max;
+
+    // not used any more
+	//double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+	double map_to_transfer_side_length_max = 500;
+	double map_to_transfer_side_length_min = 40;
+	double map_to_transfer_side_length_step_cnt = 20;
+	double point_cloud_num_points_step_cnt = 2;
+	double point_cloud_num_points_max;  // -- depends on resolution
+	double point_cloud_num_points_min = 10;
+	double perception_lower_resolution_max = point_cloud_resolution_max;
+	double perception_lower_resolution_min = pow(2, num_of_steps_on_y)*perception_lower_resolution_max;  //this value must be a power of two
+	static double static_perception_lower_resolution = perception_lower_resolution_max;
+	double map_to_explore_volume_max = 100000;
+	double map_to_explore_volume_min = 4000;
+	double map_to_explore_volume_step_cnt = 20;
+	static double  static_map_to_explore_volume = map_to_explore_volume_max;
+	static double static_point_cloud_num_points = (double) get_point_count(static_point_cloud_resolution, point_cloud_resolution_point_count_vec);
+	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+
+
+
+
+
+
 
 	// --initialize some knobs
 	//point_cloud_resolution = static_point_cloud_resolution;
@@ -285,32 +301,31 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 				static_sensor_volume_to_keep  = sensor_volume_to_keep_max;
 			}
 			perception_lower_resolution = point_cloud_resolution_max;  // -- just set it equal cause it doesn't matter
-			MapToTransferSideLength = map_to_transfer_side_length_max;
+			//MapToTransferSideLength = map_to_transfer_side_length_max;
 		}
 
 		// -- octomap to planning communication knobs
 		if (knob_performance_modeling_for_om_to_pl){
-			static_map_to_transfer_side_length -= map_to_transfer_side_length_step_size;
-			if (static_map_to_transfer_side_length < map_to_transfer_side_length_min){
-				static_map_to_transfer_side_length = map_to_transfer_side_length_max; // -- reset the map size
-				if (static_point_cloud_resolution == point_cloud_resolution_min){
-					static_point_cloud_resolution = point_cloud_resolution_max;
+			if (static_map_to_explore_volume < map_to_explore_volume_min){
+				static_map_to_explore_volume = map_to_explore_volume_max; // -- reset the map size
+				if (static_perception_lower_resolution == perception_lower_resolution_min){
+					static_perception_lower_resolution = perception_lower_resolution_max;
 				}else{
-					static_point_cloud_resolution = min(2*static_point_cloud_resolution, point_cloud_resolution_min);
+					static_perception_lower_resolution = min(2*static_perception_lower_resolution, perception_lower_resolution_min);
 				}
 
 			}
-			MapToTransferSideLength = static_map_to_transfer_side_length;
-			perception_lower_resolution = static_point_cloud_resolution;
-			static_point_cloud_resolution = point_cloud_resolution_max; // -- set this to max.
 		}
+
 		// -- sanity check
 		assert(knob_performance_modeling_for_point_cloud ^ knob_performance_modeling_for_om_to_pl);///, "could not have both of the knobs to be true"); // this is a hack, but we actually want to have the capability to simaltenouysly modify both of the kernels
 		point_cloud_resolution_power_index = 0;
 		//static_point_cloud_num_points -= static_point_cloud_num_points_step_size;
 	}
+
+
+	// -- set the parameters
 	ros::param::set("point_cloud_resolution", static_point_cloud_resolution);
-	ros::param::set("perception_lower_resolution", perception_lower_resolution);
     profiling_container->capture("point_cloud_resolution", "single", point_cloud_resolution, g_capture_size);
     profiling_container->capture("perception_lower_resolution", "single", perception_lower_resolution, g_capture_size);
 	ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
@@ -318,10 +333,13 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	profiling_container->capture("sensor_volume_to_keep", "single", static_sensor_volume_to_keep, g_capture_size);
 	profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
 // -- determine how much of the space to keep
-	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
+//	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
+	ros::param::set("VolumeToExplore", static_map_to_explore_volume);
+	ros::param::set("perception_lower_resolution", static_perception_lower_resolution);
 
 
-		// -- determine the planning budgets
+
+	// -- determine the planning budgets
 	double piecewise_planning_budget_min = .01;
 	double piecewise_planning_budget_max = .5;
 //	double piecewise_planning_budget = (piecewise_planning_budget_max - piecewise_planning_budget_min)/(point_cloud_resolution_max- min_point_cloud_resolution)*point_cloud_resolution +
@@ -336,7 +354,12 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
     profiling_container->capture("piecewise_planning_budget", "single", piecewise_planning_budget, g_capture_size);
     profiling_container->capture("smoothening_budget", "single", smoothening_budget, g_capture_size);
 
-	static_sensor_volume_to_keep -= (sensor_volume_to_keep_max - sensor_volume_to_keep_min)/sensor_volume_to_keep_step_cnt;
+    if (knob_performance_modeling_for_point_cloud){
+    	static_sensor_volume_to_keep -= (sensor_volume_to_keep_max - sensor_volume_to_keep_min)/sensor_volume_to_keep_step_cnt;
+    }
+    if (knob_performance_modeling_for_om_to_pl){
+    	static_map_to_explore_volume -= (map_to_explore_volume_max - map_to_explore_volume_min)/map_to_explore_volume_step_cnt;
+    }
 
     if (DEBUG_RQT) {
     	debug_data.header.stamp = ros::Time::now();
