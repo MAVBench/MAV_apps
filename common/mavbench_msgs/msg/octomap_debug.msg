@@ -13,6 +13,7 @@ float32 octomap_memory_usage
 float32 octomap_low_res_memory_usage
 float32 octomap_serialization_high_res_time
 float32 octomap_serialization_low_res_time
+float32 octomap_serialization_time 
 float32 octomap_prune_in_octomap_server
 float32 point_cloud_estimated_volume
 float32 octomap_construct_lower_res_map

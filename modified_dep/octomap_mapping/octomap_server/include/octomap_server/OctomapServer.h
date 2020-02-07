@@ -172,6 +172,7 @@ protected:
   void publishBinaryOctoMap(const ros::Time& rostime = ros::Time::now()) ;
   void publishFilteredBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin);
   void publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin);
+  void publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Time& rostime, octomap::point3d sensorOrigin);
   void publishFilteredBinaryOctoMapTesting(const ros::Time& rostime, octomap::point3d sensorOrigin);
 
   void publishBinaryLowerResOctoMap(const ros::Time& rostime = ros::Time::now()) ;
@@ -327,6 +328,10 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   float gridSideLength; // the bigger this is, the more of the map we keep the map
   float gridSliceCountToInclude; // How many grid slices to include (centered around the current drone's position)
 
+
+  float tree_max_x = 0;
+  float tree_max_y = 0;
+  float tree_max_z = 0;
 
   bool m_latchedTopics;
   bool m_publishFreeSpace;

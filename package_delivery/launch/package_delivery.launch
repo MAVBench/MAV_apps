@@ -207,7 +207,7 @@
   <arg name="point_cloud_height" default="50"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
   <arg name="perception_resolution" default=".15"/> <!-- OM voxels size-->
-  <arg name="perception_lower_resolution" default="1.6"/> <!-- OM voxels size-->
+  <arg name="perception_lower_resolution" default=".3"/> <!-- OM voxels size-->
   <arg name="point_cloud_resolution" default=".15"/> <!-- minimum the distance between pc points-->
   <arg name="point_cloud_max_z" default="400.0" />
 
@@ -249,10 +249,12 @@
   <arg name="octomap_lower_resolution_volume_height" default="20" />
   <arg name="octomap_lower_resolution_volume_length" default="20" />
   <arg name="filterOctoMap" default="true" /> 
-  <arg name="MapToTransferSideLength" default="40" /> 
-  <arg name="gridSliceCountPerSide" default="8" />
+  <arg name="MapToTransferSideLength" default="30" /> 
+  <arg name="VolumeToExplore" default="10000" /> 
+  
+  <arg name="gridSliceCountPerSide" default="2" />
   <arg name="gridMode" default="3d" />
-  <arg name="voxel_type_to_publish" default="free" />
+  <arg name="voxel_type_to_publish" default="occupied" />
  
   <param name="voxel_type_to_publish" value="$(arg voxel_type_to_publish)" />
   <param name="occupancy_max_z" value="$(arg point_cloud_max_z)" />
@@ -263,6 +265,7 @@
   <param name="lower_resolution_relative_volume_length" value="$(arg octomap_lower_resolution_volume_length)" /> 
   <param name="gridMode" value="$(arg gridMode)" /> 
   <param name="MapToTransferSideLength" value="$(arg MapToTransferSideLength)" /> 
+  <param name="VolumeToExplore" value="$(arg VolumeToExplore)" /> 
   <param name="filterOctoMap" value="$(arg filterOctoMap)" /> 
   <param name="gridSliceCountPerSide" value="$(arg gridSliceCountPerSide)" /> 
 
@@ -423,7 +426,7 @@
   </group>
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="reactive_runtime" default="true" />   
+  <arg name="reactive_runtime" default="false" />   
   <arg name="dynamic_budgetting" default="true" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
@@ -441,7 +444,7 @@
 
   <!-- rviz -->
    <group if="$(arg DEBUG)">
-   <!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/-->
+   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
    </group>
 
     
