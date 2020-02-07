@@ -184,6 +184,8 @@ private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
     ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub;
+    bool knob_performance_modeling = false;
+    bool knob_performance_modeling_for_om_to_pl = false;
     ros::Subscriber future_col_sub, next_steps_sub, octomap_sub, octomap_communication_proxy_msg;
     ros::ServiceServer get_trajectory_srv_server, goal_rcv_service;
     ros::Publisher traj_pub;

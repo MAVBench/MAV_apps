@@ -87,7 +87,6 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("height_map", m_useHeightMap, m_useHeightMap);
   private_nh.param("colored_map", m_useColoredMap, m_useColoredMap);
   private_nh.param("color_factor", m_colorFactor, m_colorFactor);
-
   private_nh.param("pointcloud_min_x", m_pointcloudMinX,m_pointcloudMinX);
   private_nh.param("pointcloud_max_x", m_pointcloudMaxX,m_pointcloudMaxX);
   private_nh.param("pointcloud_min_y", m_pointcloudMinY,m_pointcloudMinY);
@@ -98,7 +97,6 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("/occupancy_max_z", m_occupancyMaxZ,m_occupancyMaxZ);
   private_nh.param("min_x_size", m_minSizeX,m_minSizeX);
   private_nh.param("min_y_size", m_minSizeY,m_minSizeY);
-
   private_nh.param("filter_speckles", m_filterSpeckles, m_filterSpeckles);
   private_nh.param("filter_ground", m_filterGroundPlane, m_filterGroundPlane);
   // distance of points from plane for RANSAC
@@ -107,15 +105,12 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("ground_filter/angle", m_groundFilterAngle, m_groundFilterAngle);
   // distance of found plane from z=0 to be detected as ground (e.g. to exclude tables)
   private_nh.param("ground_filter/plane_distance", m_groundFilterPlaneDistance, m_groundFilterPlaneDistance);
-
   private_nh.param("sensor_model/max_range", m_maxRange, m_maxRange);
-
   private_nh.param("/perception_resolution", m_res, m_res);
   private_nh.param("/MapToTransferSideLength", MapToTransferSideLength, MapToTransferSideLength);
   private_nh.param("/gridSliceCountPerSide", gridSliceCountPerSide, gridSliceCountPerSide);
   private_nh.param("/filterOctoMap", filterOctoMap, filterOctoMap);
   private_nh.param("/gridMode", gridMode, gridMode);
-
   private_nh.param("/perception_lower_resolution", m_lower_res, m_lower_res);
   private_nh.param("/lower_resolution_relative_volume_width", m_lower_res_rel_vol_width, m_lower_res_rel_vol_width);
   private_nh.param("/lower_resolution_relative_volume_height", m_lower_res_rel_vol_height, m_lower_res_rel_vol_height);
@@ -133,14 +128,12 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("capture_size", capture_size, 600);
   private_nh.param("DEBUG_RQT", DEBUG_RQT, false);
   private_nh.param("/knob_performance_modeling", knob_performance_modeling, false);
-
+  private_nh.param("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl, false);
 
 
   if (knob_performance_modeling){
-    	capture_size = 1;
-    }
-
-
+	  capture_size = 1;
+  }
 
 
   dist_to_closest_obs = m_maxRange;
@@ -230,6 +223,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   octomap_communication_proxy_msg =  m_nh.advertise<std_msgs::Header>("octomap_communication_proxy_msg", 1, m_latchedTopics);
   m_markerLowerResPub = m_nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_lower_res", 1, m_latchedTopics);
   m_binaryMapPub = m_nh.advertise<Octomap>("octomap_binary", 1, m_latchedTopics);
+
   m_binaryMapLowerResPub = m_nh.advertise<Octomap>("octomap_binary_lower_res", 1, m_latchedTopics);
   m_fullMapPub = m_nh.advertise<Octomap>("octomap_full", 1, m_latchedTopics);
   m_pointCloudPub = m_nh.advertise<sensor_msgs::PointCloud2>("octomap_point_cloud_centers", 1, m_latchedTopics);
@@ -399,17 +393,23 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 
 using namespace std; //
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
-	bool catched = false;
 	//m_octree->clear();
-	/*
-	if ((ros::Time::now() - last_time_cleared).toSec() > 5){
-		m_octree->clear();
-	/	last_time_cleared = ros::Time::now();
-	/}
-	*/
-	point_cloud_estimated_volume = cloud->fields[0].count; // -- this is a hack, sicne I have overwritten the field value with volume
-	//exposed_volume = cloud->point_step;
 
+	// -- this is only for knob performance modeling,
+	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
+	// -- communication, we simply send the map over and return, without integrating any new information
+	if (knob_performance_modeling){
+		ros::param::get("/knob_performance_modeling_om_to_pl", knob_performance_modeling_for_om_to_pl);
+		if (knob_performance_modeling_for_om_to_pl){
+			profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
+			publishAll(ros::Time::now());
+			profiling_container.capture("octomap_publish_all", "end", ros::Time::now(), capture_size);
+			return;
+		}
+	}
+
+	// -- insert the point cloud into the map
+	point_cloud_estimated_volume = cloud->fields[0].count; // -- this is a hack, sicne I have overwritten the field value with volume
 	if(CLCT_DATA) {
 		ros::Time start_time = ros::Time::now();
 		pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
@@ -528,6 +528,8 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
   profiling_container.capture("point_cloud_estimated_volume", "single", point_cloud_estimated_volume, capture_size);
   profiling_container.capture("octomap_exposed_resolution", "single", exposed_resolution, capture_size);
+
+
 
 
   profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
@@ -1509,11 +1511,6 @@ static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg,
 
 	return true;
 }
-
-
-
-
-
 
 
 // filter octomap based On Volume publishing

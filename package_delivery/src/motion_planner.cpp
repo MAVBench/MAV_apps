@@ -276,7 +276,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     debug_data.motion_planning_piece_wise_time = 0;
     debug_data.collision_func = 0;
 
-	profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
+    profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
 	if (octree != nullptr) {
         delete octree;
 	}
@@ -289,19 +289,38 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
 	}
 
+
 	//if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_communication_overhead","end", ros::Time::now());
 
-    profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now(), capture_size);
+	// -- deserialize the map
+	profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now(), capture_size);
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
     profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now(), capture_size);
-
-
-
-
+    // -- cast the map
     profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now(), capture_size);
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 
+
+    // -- purelly for knob_performance_modeling;
+    // -- only collect data when the knob is set.
+    // -- We'd like to have fine grain control over the collection so
+    // -- as to only start the collection when octomap is not inserting
+    // -- points into the point cloud (to avoid data contamination due to the
+    // -- resources being used by octomap
+	if (knob_performance_modeling){
+		ros::param::get("/knob_performance_modeling_om_to_pl", knob_performance_modeling_for_om_to_pl);
+		if (knob_performance_modeling_for_om_to_pl){
+			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
+					(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
+			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
+					profiling_container.findDataByName("octomap_deserialization_time")->values.back());
+			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
+					profiling_container.findDataByName("octomap_dynamic_casting")->values.back());
+			debug_data.octomap_to_motion_planner_serialization_to_reception_knob_modeling = profiling_container.findDataByName("octomap_to_motion_planner_serialization_to_reception_knob_modeling")->values.back();
+
+		}
+	}
 
 
     {
@@ -708,6 +727,11 @@ void MotionPlanner::motion_planning_initialize_params()
     ros::param::get("/motion_planner/drone_height", drone_height__global);
     ros::param::get("/motion_planner/v_max", v_max__global);
     ros::param::get("/motion_planner/a_max", a_max__global);
+
+    ros::param::get("/knob_performance_modeling", knob_performance_modeling);
+    ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
+
+
 
     ros::param::get("/motion_planner/measure_time_end_to_end", measure_time_end_to_end);
     ros::param::get("ros_DEBUG", DEBUG__global);

@@ -55,7 +55,7 @@
   <!-- ===================================================================== -->
   <arg name="knob_performance_modeling" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling" value="$(arg knob_performance_modeling)"/> 
-  <arg name="knob_performance_modeling_for_point_cloud" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
+  <arg name="knob_performance_modeling_for_point_cloud" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling_for_point_cloud" value="$(arg knob_performance_modeling_for_point_cloud)"/> 
   <arg name="point_cloud_num_points_step_size" default="3000" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="point_cloud_num_points_step_size" value="$(arg point_cloud_num_points_step_size)"/> 
@@ -426,7 +426,7 @@
   </group>
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="reactive_runtime" default="false" />   
+  <arg name="reactive_runtime" default="true" />   
   <arg name="dynamic_budgetting" default="true" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>

@@ -125,6 +125,7 @@ public:
   mavbench_msgs::octomap_debug debug_data;
   bool DEBUG_RQT;
   bool knob_performance_modeling;
+  bool knob_performance_modeling_for_om_to_pl = false;
   OctomapServer(ros::NodeHandle private_nh_ = ros::NodeHandle("~"));
   //ros::NodeHandle private_nh_2;
   virtual ~OctomapServer();
