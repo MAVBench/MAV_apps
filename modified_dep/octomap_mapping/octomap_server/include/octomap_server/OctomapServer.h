@@ -44,6 +44,7 @@
 #include <octomap_server/OctomapServerConfig.h>
 #include <mavbench_msgs/octomap_debug.h>
 #include <mavbench_msgs/point_cloud_meta_data.h>
+#include <mavbench_msgs/octomap_aug.h>
 #include <vector>
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
@@ -123,6 +124,8 @@ public:
   OcTreeT *tree_ptr() const { return m_octree; }
 
   mavbench_msgs::octomap_debug debug_data;
+  mavbench_msgs::octomap_aug octomap_aug_data;
+
   bool DEBUG_RQT;
   bool knob_performance_modeling;
   bool knob_performance_modeling_for_om_to_pl = false;

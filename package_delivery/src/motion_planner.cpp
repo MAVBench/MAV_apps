@@ -37,6 +37,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <XmlRpcValue.h>
 #include <mavbench_msgs/motion_planning_debug.h>
+#include <mavbench_msgs/octomap_aug.h>
 #include <common.h>
 #include <mavbench_msgs/response_time_capture.h>
 #include "../../deps/mav_comm/mav_msgs/include/mav_msgs/eigen_mav_msgs.h"
@@ -66,7 +67,10 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
 	octomap_communication_proxy_msg = nh.subscribe("/octomap_communication_proxy_msg", 1, &MotionPlanner::octomap_communication_proxy_msg_cb, this);
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
-	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this); // @suppress("Invalid arguments")
+
+	//octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this);
+	octomap_sub = nh.subscribe("/octomap_binary", 1, &MotionPlanner::octomap_callback, this);
+
 	traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
     timing_msg_from_mp_pub = nh.advertise<mavbench_msgs::response_time_capture> ("/timing_msgs_from_mp", 1);
     motion_planning_debug_pub = nh.advertise<mavbench_msgs::motion_planning_debug>("/motion_planning_debug", 1);
@@ -265,7 +269,7 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 
 
 // octomap callback
-void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
+void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msg)
 {
     // reset all the profiling values
 	potential_distance_to_explore = 0;
@@ -283,10 +287,10 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
 	if (measure_time_end_to_end){
 		profiling_container.capture("sensor_to_motion_planner_time", "single",
-				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
+				(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
 	}else{
 		profiling_container.capture("octomap_to_motion_planner_communication_overhead", "single",
-				(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
+				(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
 	}
 
 
@@ -294,7 +298,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
 	// -- deserialize the map
 	profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now(), capture_size);
-    octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg);
+    octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg->oct);
     profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now(), capture_size);
     // -- cast the map
     profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now(), capture_size);
@@ -312,7 +316,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
 		if (knob_performance_modeling_for_om_to_pl){
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
-					(ros::Time::now() - msg.header.stamp).toSec(), capture_size);
+					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_deserialization_time")->values.back());
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
@@ -343,7 +347,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
     }
 
 
-	if (!shouldReplan(msg)){
+	if (!shouldReplan(msg->oct)){
     	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
     	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
     	return;
@@ -353,7 +357,7 @@ void MotionPlanner::octomap_callback(const octomap_msgs::Octomap& msg)
 
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
-    bool planning_succeeded = this->motion_plan_end_to_end(msg.header.stamp, g_goal_pos);
+    bool planning_succeeded = this->motion_plan_end_to_end(msg->header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
 

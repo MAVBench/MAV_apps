@@ -222,10 +222,9 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
   octomap_communication_proxy_msg =  m_nh.advertise<std_msgs::Header>("octomap_communication_proxy_msg", 1, m_latchedTopics);
   m_markerLowerResPub = m_nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_lower_res", 1, m_latchedTopics);
-  m_binaryMapPub = m_nh.advertise<Octomap>("octomap_binary", 1, m_latchedTopics);
-
-
-
+  //m_binaryMapPub = m_nh.advertise<Octomap>("octomap_binary", 1, m_latchedTopics);
+  m_binaryMapPub = m_nh.advertise<mavbench_msgs::octomap_aug>("octomap_binary", 1, m_latchedTopics);
+  //m_binaryMapLowerResPub = m_nh.advertise<Octomap>("octomap_binary_lower_res", 1, m_latchedTopics);
   m_binaryMapLowerResPub = m_nh.advertise<Octomap>("octomap_binary_lower_res", 1, m_latchedTopics);
   m_fullMapPub = m_nh.advertise<Octomap>("octomap_full", 1, m_latchedTopics);
   m_pointCloudPub = m_nh.advertise<sensor_msgs::PointCloud2>("octomap_point_cloud_centers", 1, m_latchedTopics);
@@ -1611,7 +1610,12 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
-	  m_binaryMapPub.publish(map);
+
+	  octomap_aug_data.header.stamp = rostime;
+	  octomap_aug_data.oct = map;
+	  octomap_aug_data.blah = -1;
+
+	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
     ROS_ERROR("Error serializing OctoMap");
@@ -1777,7 +1781,12 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
-	  m_binaryMapPub.publish(map);
+
+	  octomap_aug_data.header.stamp = rostime;
+	  octomap_aug_data.oct = map;
+	  octomap_aug_data.blah = -1;
+
+	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
     ROS_ERROR("Error serializing OctoMap");
@@ -1911,7 +1920,12 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
-	  m_binaryMapPub.publish(map);
+
+	  octomap_aug_data.header.stamp = rostime;
+	  octomap_aug_data.oct = map;
+	  octomap_aug_data.blah = -1;
+
+	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
     ROS_ERROR("Error serializing OctoMap");
@@ -1938,7 +1952,12 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 //	  ROS_INFO_STREAM("serialization length is:"<< serialization_length);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
-	  m_binaryMapPub.publish(map);
+
+	  octomap_aug_data.header.stamp = rostime;
+	  octomap_aug_data.oct = map;
+	  octomap_aug_data.blah = -1;
+
+	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
     ROS_ERROR("Error serializing OctoMap");

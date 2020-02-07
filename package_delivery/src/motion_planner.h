@@ -23,6 +23,7 @@
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
 #include <mavbench_msgs/motion_planning_debug.h>
+#include <mavbench_msgs/octomap_aug.h>
 
 // Misc messages
 #include <geometry_msgs/Point.h>
@@ -91,7 +92,7 @@ private:
 
     ros::Publisher motion_planning_debug_pub;
     // ***F:DN call back for octomap msgs
-    void octomap_callback(const octomap_msgs::Octomap& msgs);
+    void octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msgs);
 
     // generating the trajectory (including piecewise generation and smooothening)
     bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res);
