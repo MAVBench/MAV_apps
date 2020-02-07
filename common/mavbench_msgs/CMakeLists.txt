@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
   trajectory_msgs
+  octomap_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -64,6 +65,7 @@ add_message_files(
   point_cloud_meta_data.msg
   runtime_debug.msg
   response_time_capture.msg
+  octomap_non_hack.msg
   )
 
 ## Generate services in the 'srv' folder
@@ -84,6 +86,7 @@ generate_messages(
   std_msgs
   geometry_msgs
   trajectory_msgs
+  octomap_msgs
 )
 
 ################################################
