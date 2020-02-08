@@ -59,7 +59,7 @@
   <param name="knob_performance_modeling_for_point_cloud" value="$(arg knob_performance_modeling_for_point_cloud)"/> 
   <arg name="point_cloud_num_points_step_size" default="3000" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="point_cloud_num_points_step_size" value="$(arg point_cloud_num_points_step_size)"/> 
-  <arg name="knob_performance_modeling_for_om_to_pl" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
+  <arg name="knob_performance_modeling_for_om_to_pl" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling_for_om_to_pl" value="$(arg knob_performance_modeling_for_om_to_pl)"/> 
   <arg name="knob_performance_modeling_for_om_to_pl_no_interference" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling_for_om_to_pl_no_interference" value="$(arg knob_performance_modeling_for_om_to_pl_no_interference)"/> 
@@ -448,7 +448,7 @@
 
   <!-- rviz -->
    <group if="$(arg DEBUG)">
-   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
+   <!-- node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/-->
    </group>
 
     

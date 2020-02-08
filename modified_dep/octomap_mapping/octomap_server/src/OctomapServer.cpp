@@ -1599,10 +1599,6 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
 
 
-
-
-
-
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
   double volume_communicated_in_unit_cubes = 0;
   // serialize
@@ -1610,11 +1606,9 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
-
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.blah = -1;
-
+	  //octomap_aug_data.blah = -1;
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
@@ -1784,8 +1778,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.blah = -1;
-
+	  octomap_aug_data.volume_to_explore = volume_kept;
+	  octomap_aug_data.resolution_to_explore = m_lower_res;
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
@@ -1923,8 +1917,6 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.blah = -1;
-
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
@@ -1955,7 +1947,7 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.blah = -1;
+	  //octomap_aug_data.blah = -1;
 
 	  m_binaryMapPub.publish(octomap_aug_data);
   }

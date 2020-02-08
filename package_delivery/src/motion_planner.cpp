@@ -84,7 +84,9 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
     goal_rcv_service = nh.advertiseService("goal_rcv", &MotionPlanner::goal_rcv_call_back, this);
 	//re = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
-
+    if (knob_performance_modeling){
+    	capture_size = 1;
+    }
 }
 
 
@@ -281,7 +283,9 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     debug_data.collision_func = 0;
 
     profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
-	if (octree != nullptr) {
+    profiling_container.capture("volume_to_explore", "single", msg->volume_to_explore, capture_size);
+    profiling_container.capture("resolution_to_explore", "single", msg->resolution_to_explore, capture_size);
+    if (octree != nullptr) {
         delete octree;
 	}
     //ROS_INFO_STREAM("octomap communication time"<<(ros::Time::now() - msg.header.stamp).toSec());
@@ -317,6 +321,10 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 		if (knob_performance_modeling_for_om_to_pl){
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
 					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
+			profiling_container.capture("resolution_to_explore_knob_modeling", "single",
+					msg->resolution_to_explore, capture_size);
+			profiling_container.capture("volume_to_explore_knob_modeling", "single",
+					msg->volume_to_explore, capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_deserialization_time")->values.back());
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",

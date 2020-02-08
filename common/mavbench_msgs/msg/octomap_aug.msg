@@ -1,3 +1,4 @@
 Header header
 octomap_msgs/Octomap oct
-float32 blah
+float32 volume_to_explore
+float32 resolution_to_explore
