@@ -230,7 +230,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
 	double sensor_volume_to_keep_max = 11000;
 	double sensor_volume_to_keep_min = 100;
-	double sensor_volume_to_keep_step_cnt = 20;
+	double sensor_volume_to_keep_step_cnt = 30;
 	static double  static_sensor_volume_to_keep = sensor_volume_to_keep_max;
 
 	//double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
@@ -243,8 +243,9 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	double perception_lower_resolution_max = point_cloud_resolution_max;
 	double perception_lower_resolution_min = pow(2, num_of_steps_on_y)*perception_lower_resolution_max;  //this value must be a power of two
 	static double static_perception_lower_resolution = perception_lower_resolution_max;
-	double map_to_explore_volume_max = 100000;
-	double map_to_explore_volume_min = 4000;
+	double map_to_explore_volume_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+											   // -- wanna cover be, and match it to this value.
+	double map_to_explore_volume_min = 3500;
 	double map_to_explore_volume_step_cnt = 20;
 	static double  static_map_to_explore_volume = map_to_explore_volume_max;
 
@@ -516,6 +517,8 @@ int main(int argc, char **argv)
 	{
     	ros::spinOnce();
     	ros::param::get("/reactive_runtime", reactive_runtime);
+    	ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
+    	!ros::param::get("/knob_performance_modeling_for_point_cloud", knob_performance_modeling_for_point_cloud);
     	if (dynamic_budgetting){
     		if (reactive_runtime){
     			auto vel = drone.velocity();

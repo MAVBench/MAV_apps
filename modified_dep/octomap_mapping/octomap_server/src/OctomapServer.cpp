@@ -1638,18 +1638,30 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   else{grid_coeff = 3;}
 
  // -- determine teh side length to transfer
- MapToTransferSideLength  = 2*m_maxRange;
+ MapToTransferSideLength  = 1.2*m_maxRange; // -- 20  percent more
  vector<point3d> offset_vals;
  double volume_to_keep = VolumeToExplore;
  double volume_kept;
+ double last_volume_kept = 0; // -- to rewind back the volume kept to
+ 	 	 	 	 	 	 	  // -- previously held value, after exceeding the threshold
 
  vector<OcTreeNode *> octomap_block_vec;
-// ros::Duration(10).sleep();
+ double volume_increment; // -- volume to add per iteration
+
+ // ros::Duration(10).sleep();
+ // -- max_length is max of dimension and twice the sensor range. I want to have a bit more
+ // -- left over for max_length to include all the voxels (since gridifying can cause looinsg
+ // -- a chunk
+ float map_max_length = max(max(max(tree_max_x, tree_max_y), tree_max_z), (float)(1.2*m_maxRange));
+
+ bool first_itr = true;
  // -- expand MapToTransferSideLength untill you hit the volume target
- float map_max_length = max(max(max(tree_max_x, tree_max_y), tree_max_z), (float)(2*m_maxRange));
- while (MapToTransferSideLength <= max(map_max_length, (float) (2*m_maxRange))){
+ while (MapToTransferSideLength <= max(map_max_length, (float) (1.2*m_maxRange))){
 	 volume_kept = 0;
 	 octomap_block_vec.clear();
+
+	 // -- gridify the space up to MapToTransferSideLength
+	 // -- and see if we can cover up to "volume_to_keep"
 	 gridSideLength = float(MapToTransferSideLength)/gridSliceCountPerSide;
 	 gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
 	 MapToTransferBorrowedDepth = m_octree->getTreeDepth() - int(log2(gridSideLength/m_res)) - 1;
@@ -1666,19 +1678,27 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 			 if (std::find(octomap_block_vec.begin(), octomap_block_vec.end(),m_octree_block) !=octomap_block_vec.end()) {
 				 continue;
 			 }
-			 volume_kept += (m_octree_block->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
+			 volume_kept +=  (m_octree_block->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
 			 octomap_block_vec.push_back(m_octree_block);
 		 }
 	 }
+	 // -- if exceed the threshold, break
 	 if (volume_kept > volume_to_keep){
-		 MapToTransferSideLength /= 2;
+		 if (!first_itr){ // -- if first time, keep the lenght. We should set the volume to keep high enough
+			 	 	 	   // --- that the first time always is smaller or equal.
+			 volume_kept = last_volume_kept;
+			 MapToTransferSideLength /= 2;
+		 }
 		 break;
 	 }
+	 first_itr = false;
+	 last_volume_kept = volume_kept;
 	 MapToTransferSideLength *= 2;
  }
 
- MapToTransferSideLength = min(MapToTransferSideLength, map_max_length);
- gridSideLength = float(MapToTransferSideLength)/(4*gridSliceCountPerSide);
+ ROS_INFO_STREAM("volume kept" << volume_kept);
+ MapToTransferSideLength = min(MapToTransferSideLength, map_max_length); // -- incase we exceeded the threshold when doubling
+ gridSideLength = float(MapToTransferSideLength)/(4*gridSliceCountPerSide); // -- to be more accurate, we quadruple the number of slices
  gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(4*gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
  MapToTransferBorrowedDepth = m_octree->getTreeDepth() - int(log2(gridSideLength/m_res)) - 1;
 

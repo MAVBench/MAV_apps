@@ -72,7 +72,7 @@ catkin_package(
 
 if(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
     include_directories(/usr/local/cuda/include)
-    link_directories(/usr/lib/nvidia-430)
+    link_directories(/usr/lib/nvidia-384)
     add_definitions(-DUSE_INTEL -DUSE_NVML)
     # for the node running profile manager 
     add_executable(profile_manager_node src/profile_manager_node.cpp src/slam_profiler.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)

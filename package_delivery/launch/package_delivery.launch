@@ -448,7 +448,7 @@
 
   <!-- rviz -->
    <group if="$(arg DEBUG)">
-   <!-- node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/-->
+   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
    </group>
 
     
