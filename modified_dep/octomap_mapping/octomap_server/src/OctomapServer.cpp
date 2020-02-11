@@ -1523,12 +1523,13 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   Octomap map;
   map.header.frame_id = m_worldFrameId;
   profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
-  ros::param::get("/VolumeToExplore", VolumeToExplore);
+  ros::param::get("/PotentialVolumeToExploreThreshold", PotentialVolumeToExploreThreshold);
   ros::param::get("/perception_lower_resolution", m_lower_res);
+  ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
   assert(m_lower_res >= m_res);
 
 
-  float volume_to_explore = VolumeToExplore;
+//  float potential_volume_to_explore = PotentialVolumeToExplore;
   int depth_to_look_at = 16;
 
   // -- put the original sensorOrigin in the shrunk_tree
@@ -1560,7 +1561,7 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
 	  if (m_octree_node){ // node exist
 		  depth_to_look_at = depth_found_at;
 		  float block_volume = m_octree_node->getVolumeInUnitCube();
-		  if (block_volume < volume_to_explore){
+		  if (block_volume < PotentialVolumeToExploreThreshold){
 //			  depth_to_look_at --;
 			  volume_to_communicate = block_volume;
 			  m_octree_node_to_include = m_octree_node;
@@ -1627,7 +1628,9 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
   ros::param::get("/perception_lower_resolution", m_lower_res);
-  ros::param::get("/VolumeToExplore", VolumeToExplore);
+  ros::param::get("/PotentialVolumeToExploreThreshold", PotentialVolumeToExploreThreshold);
+  ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
+
 
   assert(m_lower_res >= m_res);
   unsigned int pos;
@@ -1640,7 +1643,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  // -- determine teh side length to transfer
  MapToTransferSideLength  = 1.2*m_maxRange; // -- 20  percent more
  vector<point3d> offset_vals;
- double volume_to_keep = VolumeToExplore;
+ //double potential_volume_to_keep = PotentialVolumeToExplore;
  double volume_kept;
  double last_volume_kept = 0; // -- to rewind back the volume kept to
  	 	 	 	 	 	 	  // -- previously held value, after exceeding the threshold
@@ -1683,7 +1686,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 		 }
 	 }
 	 // -- if exceed the threshold, break
-	 if (volume_kept > volume_to_keep){
+	 if (volume_kept > PotentialVolumeToExploreThreshold){
 		 if (!first_itr){ // -- if first time, keep the lenght. We should set the volume to keep high enough
 			 	 	 	   // --- that the first time always is smaller or equal.
 			 volume_kept = last_volume_kept;
@@ -1798,7 +1801,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.volume_to_explore = volume_kept;
+	  octomap_aug_data.potential_volume_to_explore_threshold = volume_kept;
+	  octomap_aug_data.volume_to_explore_threshold = VolumeToExploreThreshold;
 	  octomap_aug_data.resolution_to_explore = m_lower_res;
 	  m_binaryMapPub.publish(octomap_aug_data);
   }

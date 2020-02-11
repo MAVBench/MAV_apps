@@ -39,6 +39,7 @@ bool dynamic_budgetting, reactive_runtime;
 bool knob_performance_modeling = false;
 bool knob_performance_modeling_for_point_cloud = false;
 bool knob_performance_modeling_for_om_to_pl = false;
+bool knob_performance_modeling_for_piecewise_planner = false;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 
@@ -243,9 +244,17 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	double perception_lower_resolution_max = point_cloud_resolution_max;
 	double perception_lower_resolution_min = pow(2, num_of_steps_on_y)*perception_lower_resolution_max;  //this value must be a power of two
 	static double static_perception_lower_resolution = perception_lower_resolution_max;
-	double map_to_explore_volume_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+	double potential_map_to_explore_volume_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
 											   // -- wanna cover be, and match it to this value.
-	double map_to_explore_volume_min = 3500;
+	double potential_map_to_explore_volume_min = 3500;
+	double potential_map_to_explore_volume_step_cnt = 20;
+	static double  static_potential_map_to_explore_volume = potential_map_to_explore_volume_max;
+
+
+
+	double map_to_explore_volume_max = 400000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+											   // -- wanna cover be, and match it to this value.
+	double map_to_explore_volume_min = 100000;
 	double map_to_explore_volume_step_cnt = 20;
 	static double  static_map_to_explore_volume = map_to_explore_volume_max;
 
@@ -287,10 +296,10 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 
 	// -- knob performance modeling logic
 	if (knob_performance_modeling){
-		ros::Duration(6).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-
+		ros::Duration(1).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 		// -- point cloud knobs (pointcloud/octomap since these knobs impact octomap)
 		if (knob_performance_modeling_for_point_cloud){
+			ros::Duration(4).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 			if (static_sensor_volume_to_keep < sensor_volume_to_keep_min){
 				if (static_point_cloud_resolution == point_cloud_resolution_min){
 					static_point_cloud_resolution = point_cloud_resolution_max;
@@ -308,9 +317,24 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 
 		// -- octomap to planning communication knobs
 		if (knob_performance_modeling_for_om_to_pl){
+			ros::Duration(6).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
+			if (static_potential_map_to_explore_volume < potential_map_to_explore_volume_min){
+				static_potential_map_to_explore_volume = potential_map_to_explore_volume_max; // -- reset the map size
+				if (static_perception_lower_resolution == perception_lower_resolution_min){
+					static_perception_lower_resolution = perception_lower_resolution_max;
+				}else{
+					static_perception_lower_resolution = min(2*static_perception_lower_resolution, perception_lower_resolution_min);
+				}
+
+			}
+		}
+
+	    // -- piecewise planner
+		if (knob_performance_modeling_for_piecewise_planner){
+			ros::Duration(20).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 			if (static_map_to_explore_volume < map_to_explore_volume_min){
 				static_map_to_explore_volume = map_to_explore_volume_max; // -- reset the map size
-				if (static_perception_lower_resolution == perception_lower_resolution_min){
+				if (perception_lower_resolution == perception_lower_resolution_min){
 					static_perception_lower_resolution = perception_lower_resolution_max;
 				}else{
 					static_perception_lower_resolution = min(2*static_perception_lower_resolution, perception_lower_resolution_min);
@@ -336,7 +360,8 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
 	profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
 // -- determine how much of the space to keep
 //	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
-	ros::param::set("VolumeToExplore", static_map_to_explore_volume);
+	ros::param::set("PotentialVolumeToExploreThreshold", static_potential_map_to_explore_volume);
+	ros::param::set("VolumeToExploreThreshold", static_map_to_explore_volume);
 	ros::param::set("perception_lower_resolution", static_perception_lower_resolution);
 
 
@@ -360,8 +385,14 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& point_c
     	static_sensor_volume_to_keep -= (sensor_volume_to_keep_max - sensor_volume_to_keep_min)/sensor_volume_to_keep_step_cnt;
     }
     if (knob_performance_modeling_for_om_to_pl){
+    	static_potential_map_to_explore_volume -= (potential_map_to_explore_volume_max - potential_map_to_explore_volume_min)/potential_map_to_explore_volume_step_cnt;
+    }
+    if (knob_performance_modeling_for_piecewise_planner){
     	static_map_to_explore_volume -= (map_to_explore_volume_max - map_to_explore_volume_min)/map_to_explore_volume_step_cnt;
     }
+
+
+
 
     if (DEBUG_RQT) {
     	debug_data.header.stamp = ros::Time::now();
@@ -495,9 +526,16 @@ int main(int argc, char **argv)
     */
 
     if(!ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl)){
-			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_forr_point_cloud not provided");
+			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_forr_om_to_pl not provided");
 			exit(0);
     }
+
+   if(!ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner)){
+			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_for_piecewise_planner not provided");
+			exit(0);
+    }
+
+
 
     /*
     if(!ros::param::get("/map_to_transfer_side_length_step_size", map_to_transfer_side_length_step_size)){
@@ -518,7 +556,8 @@ int main(int argc, char **argv)
     	ros::spinOnce();
     	ros::param::get("/reactive_runtime", reactive_runtime);
     	ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
-    	!ros::param::get("/knob_performance_modeling_for_point_cloud", knob_performance_modeling_for_point_cloud);
+    	ros::param::get("/knob_performance_modeling_for_point_cloud", knob_performance_modeling_for_point_cloud);
+    	ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
     	if (dynamic_budgetting){
     		if (reactive_runtime){
     			auto vel = drone.velocity();

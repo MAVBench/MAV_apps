@@ -319,7 +319,8 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   double dist_to_closest_obs; //distant to the closest obstacle perceived
   int depth_to_transfer;
   int MapToTransferGridSize; // how big the grid (side of the cubic grid) for sampling the octomap is
-  float VolumeToExplore;
+  float PotentialVolumeToExploreThreshold; // -- size of the map that is sent to the planner (hence, the map size potentially to explore)
+  float VolumeToExploreThreshold;  // -- size of the map that the planner is allowed to plan through. todo: we shouldn't need this. we simply need to pass this from point cloud.
   int MapToTransferGridCount; // Number of grids (with the side size of MapToTransferGridSize) to include in the transfered map
   int MapToTransferBorrowedDepth; // the depth that is borrowed (attached) from the main octomap
   int closest_obs_coordinate_vect_size = 20;

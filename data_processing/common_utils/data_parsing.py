@@ -183,6 +183,17 @@ def write_results_to_csv(result_dic, file_path):
     fp.close()
 
 
+
+
+def filter_based_on_keys(result_dic, keys):
+    gen_length = len(list(result_dic.values())[0])
+    filtered_result_dic = OrderedDict()
+    for key in result_dic.keys():
+        if key in keys:
+            filtered_result_dic[key] = result_dic[key]
+    return filtered_result_dic
+
+
 def filter_based_on_value(result_dict, value, mode):
     gen_length = len(list(result_dic.values())[0])
     for idx in range(gen_length):

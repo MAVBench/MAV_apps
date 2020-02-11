@@ -46,9 +46,143 @@
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/segment.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/vertex.h"
 
-double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
+
 double total_collision_func = 0;
 double potential_distance_to_explore = 0; // the distance that the planner ask to expore (note that this can be bigger than the volume since the volume calculation stops after hitting a an obstacle)
+double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
+double VolumeToExploreThresholdInUnitCube;
+ros::Time g_planning_start_time;
+/*
+void planner_termination_func(double &volume_explored_so_far, double &volume_explored_threshold){
+	bool res = volume_explored_so_far > volume_explored_threshold;
+	return res;
+}
+*/
+
+bool planner_termination_func(){
+	bool taking_to_long = (ros::Time::now() - g_planning_start_time).toSec() > 20; // -- this is just to make sure the volume is not gonna be too big
+																				   // -- so that we will return
+	return (volume_explored_in_unit_cubes > VolumeToExploreThresholdInUnitCube) || taking_to_long;
+
+}
+
+template<class PlannerType>
+MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int& status)
+{
+
+	//publish_dummy_octomap_vis(octree);
+	namespace ob = ompl::base;
+    namespace og = ompl::geometric;
+
+    piecewise_trajectory result;
+
+    auto space(std::make_shared<ob::RealVectorStateSpace>(3));
+
+    // Set bounds
+    ob::RealVectorBounds bounds(3);
+    bounds.setLow(0, std::min(x__low_bound__global, g_start_pos.x));
+    bounds.setHigh(0, std::max(x__high_bound__global, g_start_pos.x));
+    bounds.setLow(1, std::min(y__low_bound__global, g_start_pos.y));
+    bounds.setHigh(1, std::max(y__high_bound__global, g_start_pos.y));
+    bounds.setLow(2, std::min(z__low_bound__global, g_start_pos.z));
+    bounds.setHigh(2, std::max(z__high_bound__global, g_start_pos.z));
+
+    space->setBounds(bounds);
+
+    og::SimpleSetup ss(space);
+
+    // Setup collision checker
+    ob::SpaceInformationPtr si = ss.getSpaceInformation();
+    si->setStateValidityChecker([this] (const ompl::base::State * state) {
+        return this->OMPLStateValidityChecker(state);
+    });
+    si->setMotionValidator(std::make_shared<OMPLMotionValidator>(this, si));
+    si->setup();
+
+    // Set planner
+    ob::PlannerPtr planner(new PlannerType(si));
+    ss.setPlanner(planner);
+
+    ob::ScopedState<> start_state(space);
+    start_state[0] = start.x;
+    start_state[1] = start.y;
+    start_state[2] = start.z;
+
+    ob::ScopedState<> goal_state(space);
+    goal_state[0] = goal.x;
+    goal_state[1] = goal.y;
+    goal_state[2] = goal.z;
+
+    ss.setStartAndGoalStates(start_state, goal_state);
+
+    ss.setup();
+
+
+	profiling_container.capture("OMPL_planning_time", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    // Solve for path
+   // ob::PlannerStatus solved = ss.solve(g_piecewise_planning_budget);
+	auto planner_termination_obj = ompl::base::PlannerTerminationCondition(planner_termination_func);
+
+	ob::PlannerStatus solved;
+    //if (knob_performance_modeling_for_piecewise_planner){
+    solved = ss.solve(planner_termination_obj);
+    //}else
+	//ob::PlannerStatus solved = ss.solve(planner_termination_func(volume_explored_in_unit_cubes, VolumeToExploreThresholdInUnitCube));
+    if (solved == ob::PlannerStatus::INVALID_START) {
+    	status = 2;
+    }else if (solved == ob::PlannerStatus::APPROXIMATE_SOLUTION){
+    	status = 3;
+    }
+    else if (solved == ob::PlannerStatus::EXACT_SOLUTION){
+    	status = 1;
+    } else {
+    	status = 0;
+    }
+
+    // profiling, debugging
+    profiling_container.capture("OMPL_planning_time", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+	if (DEBUG_RQT) {
+		debug_data.header.stamp = ros::Time::now();
+		debug_data.OMPL_planning_time = profiling_container.findDataByName("OMPL_planning_time")->values.back();
+		motion_planning_debug_pub.publish(debug_data);
+	}
+
+	if (status == 1) //only take exact solution
+    {
+
+    	profiling_container.capture("OMPL_simplification_time", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    	ROS_INFO("Solution found!");
+        ss.simplifySolution();
+
+        for (auto state : ss.getSolutionPath().getStates()) {
+            const auto *pos = state->as<ob::RealVectorStateSpace::StateType>();
+
+            double x = pos->values[0];
+            double y = pos->values[1];
+            double z = pos->values[2];
+
+            result.push_back({x, y, z});
+        }
+
+        //profiling/debugging
+        profiling_container.capture("OMPL_simplification_time", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    	if (DEBUG_RQT) {
+    		debug_data.header.stamp  = ros::Time::now();
+    		debug_data.OMPL_simplification_time = profiling_container.findDataByName("OMPL_simplification_time")->values.back();
+    		motion_planning_debug_pub.publish(debug_data);
+		}
+    }
+    else
+        ROS_ERROR("Path not found!");
+
+    return result;
+}
+
+
+
+
+
+
 MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
         octree(octree_),
 		drone(drone_),
@@ -282,9 +416,14 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     debug_data.motion_planning_piece_wise_time = 0;
     debug_data.collision_func = 0;
 
+
+    VolumeToExploreThreshold = msg->volume_to_explore_threshold;
+    VolumeToExploreThresholdInUnitCube = VolumeToExploreThreshold/(pow(msg->resolution_to_explore, 3));
     profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
-    profiling_container.capture("volume_to_explore", "single", msg->volume_to_explore, capture_size);
+    profiling_container.capture("volume_to_explore_threshold", "single", msg->volume_to_explore_threshold, capture_size);
+    profiling_container.capture("potential_volume_to_explore_threshold", "single", msg->potential_volume_to_explore_threshold, capture_size);
     profiling_container.capture("resolution_to_explore", "single", msg->resolution_to_explore, capture_size);
+
     if (octree != nullptr) {
         delete octree;
 	}
@@ -318,19 +457,31 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     // -- resources being used by octomap
 	if (knob_performance_modeling){
 		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
-		if (knob_performance_modeling_for_om_to_pl){
+		ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
+		// -- om to pl
+		if (knob_performance_modeling_for_om_to_pl){ // -- start collecting data when this is set
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
 					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
 			profiling_container.capture("resolution_to_explore_knob_modeling", "single",
 					msg->resolution_to_explore, capture_size);
-			profiling_container.capture("volume_to_explore_knob_modeling", "single",
-					msg->volume_to_explore, capture_size);
+			profiling_container.capture("potential_volume_to_explore_knob_modeling", "single",
+					msg->potential_volume_to_explore_threshold, capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_deserialization_time")->values.back());
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_dynamic_casting")->values.back());
+			double octomap_to_planner_com_overhead_knob_modeling = profiling_container.findDataByName("octomap_dynamic_casting_knob_modeling")->values.back() +
+					profiling_container.findDataByName("octomap_deserialization_time_knob_modeling")->values.back() +
+					profiling_container.findDataByName("octomap_to_motion_planner_serialization_to_reception_knob_modeling")->values.back();
+			profiling_container.capture("octomap_to_planner_com_overhead_knob_modeling", "single",
+					octomap_to_planner_com_overhead_knob_modeling);
 			debug_data.octomap_to_motion_planner_serialization_to_reception_knob_modeling = profiling_container.findDataByName("octomap_to_motion_planner_serialization_to_reception_knob_modeling")->values.back();
 
+		}
+		// -- piecewise planner
+		else if (knob_performance_modeling_for_piecewise_planner){
+				profiling_container.capture("resolution_to_explore_knob_modeling", "single",
+					msg->resolution_to_explore, capture_size);
 		}
 	}
 
@@ -354,20 +505,30 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     	return;
     }
 
-
-	if (!shouldReplan(msg->oct)){
+    auto blah = octree->getResolution();
+	if (!shouldReplan(msg->oct) && !knob_performance_modeling_for_piecewise_planner){
     	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
     	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
     	return;
     }
 
     this->last_planning_time = ros::Time::now();
-
+    g_planning_start_time = this->last_planning_time;
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     bool planning_succeeded = this->motion_plan_end_to_end(msg->header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
+
+    if (knob_performance_modeling_for_piecewise_planner){
+    	auto resolution = profiling_container.findDataByName("resolution_to_explore_knob_modeling")->values.back();
+    	profiling_container.capture("piecewise_planner_resolution_knob_modeling", "single", resolution,
+    			capture_size);
+    	profiling_container.capture("piecewise_planner_time_knob_modeling", "single", profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back(),
+    			capture_size);
+    	profiling_container.capture("piecewise_planner_volume_explored_knob_modeling", "single", piecewise_planner_volume_explored_in_unit_cubes*pow(resolution, 3), capture_size);
+    }
+
 
     if (!planning_succeeded) {
 		profiling_container.capture("planning_failure_count", "counter", 0);
@@ -383,7 +544,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     debug_data.motion_planning_total_time = profiling_container.findDataByName("motion_planning_time_total")->values.back();
     debug_data.octomap_dynamic_casting = profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
     debug_data.entire_octomap_callback = profiling_container.findDataByName("entire_octomap_callback")->values.back();
-    //debug_data.motion_planning_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
+    //debug_data.motion_planning_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);N
     debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
 }
 
@@ -415,7 +576,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
 
     //hard code values for now
-    if (g_always_randomize_end_point){
+    if (g_always_randomize_end_point || knob_performance_modeling_for_piecewise_planner){
     	g_goal_pos.x = rand() % int(x__high_bound__global);
     	g_goal_pos.y = rand() % int(y__high_bound__global);
     	g_goal_pos.z = rand() % int(z__high_bound__global);
@@ -445,8 +606,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		debug_data.motion_planning_piece_wise_time = profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back();
     		//motion_planning_debug_pub.publish(debug_data);
     }
+
+
     debug_data.motion_planning_piecewise_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
     debug_data.collision_func = total_collision_func;
+    piecewise_planner_volume_explored_in_unit_cubes = volume_explored_in_unit_cubes;
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
@@ -742,7 +906,7 @@ void MotionPlanner::motion_planning_initialize_params()
 
     ros::param::get("/knob_performance_modeling", knob_performance_modeling);
     ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
-
+    ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
 
 
     ros::param::get("/motion_planner/measure_time_end_to_end", measure_time_end_to_end);
@@ -1185,6 +1349,8 @@ int MotionPlanner::get_num_of_optimums(piecewise_trajectory& piecewise, mav_traj
 	}
 	return accumulated_num_of_optimums;
 }
+
+
 
 
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)

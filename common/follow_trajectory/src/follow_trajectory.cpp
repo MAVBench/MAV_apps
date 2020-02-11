@@ -650,12 +650,24 @@ int main(int argc, char **argv)
            i++;
     };
 	*/
-
+    bool modeling_first_itr = true;
+    bool knob_performance_modeling_for_piecewise_planner = false;
     mavbench_msgs::follow_traj_debug debug_data = {};
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
     ros::Time last_time_following = ros::Time::now();
     while (ros::ok()) {
     	profiling_container->capture("entire_follow_trajectory", "start", ros::Time::now(), g_capture_size);
+    	ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
+
+    	if (knob_performance_modeling_for_piecewise_planner){
+    		if (modeling_first_itr){ //  --- the following command causes the drone to dip, so to avoid this, we just stop the drone once
+    			drone.fly_velocity(0, 0, 0,3);
+    		}
+    		ros::Duration(5).sleep();
+    		modeling_first_itr = false;
+    		continue;
+    	}
+
     	ros::spinOnce();
 
         if ((ros::Time::now() - last_time_following).toSec() < g_fly_trajectory_time_out && !g_got_new_trajectory) {
