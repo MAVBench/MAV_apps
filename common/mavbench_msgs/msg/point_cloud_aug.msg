@@ -1,0 +1,4 @@
+Header header
+sensor_msgs/PointCloud2 pcl
+float32 volume_to_explore
+float32 resolution_to_explore

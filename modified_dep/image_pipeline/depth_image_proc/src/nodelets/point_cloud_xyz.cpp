@@ -54,6 +54,7 @@ using namespace std;
 #include <mavbench_msgs/point_cloud_debug.h>
 #include <string>
 #include <mavbench_msgs/point_cloud_meta_data.h>
+#include <mavbench_msgs/point_cloud_aug.h>
 
 namespace depth_image_proc {
 
@@ -237,7 +238,8 @@ void PointCloudXyzNodelet::onInit()
 
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     boost::lock_guard<boost::mutex> lock(connect_mutex_);
-    pub_point_cloud_ = nh.advertise<PointCloud>("points", 1, connect_cb, connect_cb);
+    //pub_point_cloud_ = nh.advertise<PointCloud>("points", 1, connect_cb, connect_cb);
+    pub_point_cloud_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points", 1, connect_cb, connect_cb);
     point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
@@ -1529,7 +1531,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   profiling_container->capture("filtering", "end", ros::Time::now());
 
-  pub_point_cloud_.publish (cloud_msg);
+  mavbench_msgs::point_cloud_aug pcl_aug_data;
+  pcl_aug_data.pcl = *cloud_msg;
+  pcl_aug_data.volume_to_explore = -1;
+  pcl_aug_data.resolution_to_explore = -1;
+
+  pub_point_cloud_.publish (pcl_aug_data);
+
   mavbench_msgs::point_cloud_meta_data meta_data_msg;
   meta_data_msg.header.stamp = ros::Time::now();
   meta_data_msg.point_cloud_volume_to_digest = volume_kept;

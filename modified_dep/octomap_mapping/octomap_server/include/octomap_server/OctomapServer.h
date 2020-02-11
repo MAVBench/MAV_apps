@@ -45,6 +45,7 @@
 #include <mavbench_msgs/octomap_debug.h>
 #include <mavbench_msgs/point_cloud_meta_data.h>
 #include <mavbench_msgs/octomap_aug.h>
+#include <mavbench_msgs/point_cloud_aug.h>
 #include <vector>
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
@@ -146,7 +147,7 @@ public:
   void OctomapHeaderColDetectedcb(std_msgs::Int32ConstPtr header) ;
   void PCMetaDataCb(mavbench_msgs::point_cloud_meta_data header) ;
   bool maxRangecb(octomap_server::maxRangeSrv::Request& req, octomap_server::maxRangeSrv::Response& resp);
-  virtual void insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud);
+  virtual void insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data);
   virtual bool openFile(const std::string& filename);
   void log_data_before_shutting_down();
 
@@ -287,12 +288,12 @@ protected:
 
 
 
-  message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
+  message_filters::Subscriber<mavbench_msgs::point_cloud_aug>* m_pointCloudSub;
 
  ros::Subscriber m_save_map_pub;
  bool m_save_map = false;
 
-  tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
+  tf::MessageFilter<mavbench_msgs::point_cloud_aug>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService, m_octomapResetMaxRange;
   ros::Subscriber m_octomapHeaderSub;  
   ros::Subscriber m_pc_meta_dataSub;
