@@ -75,6 +75,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   boost::mutex connect_mutex_;
   typedef sensor_msgs::PointCloud2 PointCloud;
   ros::Publisher pub_point_cloud_;
+  ros::Publisher pub_point_cloud_aug_;
   ros::Publisher point_cloud_meta_data_pub;
   ros::Publisher pc_debug_pub;
   ros::Subscriber inform_pc_done_sub;
@@ -238,8 +239,8 @@ void PointCloudXyzNodelet::onInit()
 
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     boost::lock_guard<boost::mutex> lock(connect_mutex_);
-    //pub_point_cloud_ = nh.advertise<PointCloud>("points", 1, connect_cb, connect_cb);
-    pub_point_cloud_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points", 1, connect_cb, connect_cb);
+    pub_point_cloud_aug_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points_aug", 1);
+    pub_point_cloud_ = nh.advertise<PointCloud>("points", 1, connect_cb, connect_cb);
     point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
@@ -1389,9 +1390,6 @@ void calc_avg_worse_point_distance(std::vector<float> &xs,  std::vector<float> &
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
-
-
-
    profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
 	// changing the paramer online, comment out later.
    ros::param::get("/point_cloud_resolution", point_cloud_resolution);
@@ -1532,11 +1530,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   profiling_container->capture("filtering", "end", ros::Time::now());
 
   mavbench_msgs::point_cloud_aug pcl_aug_data;
+  pcl_aug_data.header = cloud_msg->header;
   pcl_aug_data.pcl = *cloud_msg;
   pcl_aug_data.volume_to_explore = -1;
   pcl_aug_data.resolution_to_explore = -1;
 
-  pub_point_cloud_.publish (pcl_aug_data);
+  pub_point_cloud_.publish (*cloud_msg);
+  pub_point_cloud_aug_.publish (pcl_aug_data);
 
   mavbench_msgs::point_cloud_meta_data meta_data_msg;
   meta_data_msg.header.stamp = ros::Time::now();

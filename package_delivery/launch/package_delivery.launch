@@ -294,7 +294,7 @@
         <param name="data_collection_iteration_freq_OM" value="$(arg data_collection_iteration_freq)"/>
         
         <!-- data source to integrate (PointCloud2) -->
-		<remap from="cloud_in" to="/points" />
+		<remap from="cloud_in" to="/points_aug" />
 
 		<!-- Filter ground for binary occupancy map -->
 		<param name="base_frame_id" value="world" />
@@ -450,7 +450,7 @@
 
   <!-- rviz -->
    <group if="$(arg DEBUG)">
-   <!-- node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/-->
+   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
    </group>
 
     
