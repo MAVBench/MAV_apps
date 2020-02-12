@@ -28,13 +28,13 @@ def kill_processes(process_list):
         pid = process.split()[1] 
         print pid 
         subprocess.Popen("kill -2 "+ pid, shell=True)
-        sleep(.01) 
+        sleep(.5) 
      
     for process in waitlist:
         print(waitlist[0]) 
         sleep(1) 
         subprocess.Popen("kill -2 "+ process.split()[1], shell=True); 
-    sleep(3) 
+    sleep(5) 
 
 def action_upon_termination():
     ros_node_pid_list = []

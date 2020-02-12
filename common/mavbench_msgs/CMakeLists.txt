@@ -18,7 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   trajectory_msgs
   octomap_msgs
-)
+  sensor_msgs
+  )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -66,6 +67,7 @@ add_message_files(
   runtime_debug.msg
   response_time_capture.msg
   octomap_aug.msg
+  point_cloud_aug.msg
   )
 
 ## Generate services in the 'srv' folder
@@ -87,6 +89,8 @@ generate_messages(
   geometry_msgs
   trajectory_msgs
   octomap_msgs
+  sensor_msgs
+
 )
 
 ################################################

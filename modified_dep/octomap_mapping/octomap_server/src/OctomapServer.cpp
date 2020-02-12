@@ -234,8 +234,10 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   octomap_debug_pub = m_nh.advertise<mavbench_msgs::octomap_debug>("octomap_debug", 1);
 
 
-  m_pointCloudSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_in", 1);
-  m_tfPointCloudSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 1);
+  m_pointCloudSub = new message_filters::Subscriber<mavbench_msgs::point_cloud_aug> (m_nh, "cloud_in", 1);
+  m_tfPointCloudSub = new tf::MessageFilter<mavbench_msgs::point_cloud_aug> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 1);
+  //m_pointCloudSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_in", 1);
+  //m_tfPointCloudSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 1);
   m_tfPointCloudSub->registerCallback(boost::bind(&OctomapServer::insertCloudCallback, this, _1));
 
   m_octomapBinaryService = m_nh.advertiseService("octomap_binary", &OctomapServer::octomapBinarySrv, this);
@@ -393,10 +395,10 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 
 
 using namespace std; //
-void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+//void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
 	//m_octree->clear();
-
-	// -- this is only for knob performance modeling,
+    // -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
 	// -- communication, we simply send the map over and return, without integrating any new information
 	if (knob_performance_modeling){
@@ -410,6 +412,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 		}
 	}
 
+	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
 	point_cloud_estimated_volume = cloud->fields[0].count; // -- this is a hack, sicne I have overwritten the field value with volume
 	if(CLCT_DATA) {

@@ -467,16 +467,15 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 			profiling_container.capture("potential_volume_to_explore_knob_modeling", "single",
 					msg->potential_volume_to_explore_threshold, capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
-					profiling_container.findDataByName("octomap_deserialization_time")->values.back());
+					profiling_container.findDataByName("octomap_deserialization_time")->values.back(), capture_size);
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
-					profiling_container.findDataByName("octomap_dynamic_casting")->values.back());
+					profiling_container.findDataByName("octomap_dynamic_casting")->values.back(), capture_size);
 			double octomap_to_planner_com_overhead_knob_modeling = profiling_container.findDataByName("octomap_dynamic_casting_knob_modeling")->values.back() +
 					profiling_container.findDataByName("octomap_deserialization_time_knob_modeling")->values.back() +
 					profiling_container.findDataByName("octomap_to_motion_planner_serialization_to_reception_knob_modeling")->values.back();
 			profiling_container.capture("octomap_to_planner_com_overhead_knob_modeling", "single",
-					octomap_to_planner_com_overhead_knob_modeling);
+					octomap_to_planner_com_overhead_knob_modeling, capture_size);
 			debug_data.octomap_to_motion_planner_serialization_to_reception_knob_modeling = profiling_container.findDataByName("octomap_to_motion_planner_serialization_to_reception_knob_modeling")->values.back();
-
 		}
 		// -- piecewise planner
 		else if (knob_performance_modeling_for_piecewise_planner){
