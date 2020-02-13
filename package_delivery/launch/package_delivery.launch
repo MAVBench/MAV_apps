@@ -438,7 +438,10 @@
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
 
-
+  <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen">
+    <param name="dummy_val" value="2.0" />
+    <param name="rate" value="5" />
+  </node>
   
   <!-- ========================= Profiler (Profiling)  ============================ -->
   <!-- node pkg="control_drone" type="probe_thread" name="probe_thread" output="screen"/-->

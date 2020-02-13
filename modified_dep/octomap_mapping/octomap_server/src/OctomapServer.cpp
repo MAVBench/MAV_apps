@@ -412,6 +412,13 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 		}
 	}
 
+    // python dummy value get-set
+	float dummy_val;
+	ros::param::get("optimizer_node/dummy_val", dummy_val);
+	dummy_val++;
+	ros::param::set("optimizer_node/dummy_val", dummy_val);
+
+
 	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
 	point_cloud_estimated_volume = cloud->fields[0].count; // -- this is a hack, sicne I have overwritten the field value with volume

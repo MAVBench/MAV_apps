@@ -1,3 +1,4 @@
 data/*
 minkindr/*
 deps/glog_catkin
+*.pyc

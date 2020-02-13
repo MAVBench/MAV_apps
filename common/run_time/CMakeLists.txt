@@ -9,6 +9,7 @@ add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
 set (common_utility_include $ENV{mavbench_apps_base_dir}/common)
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -237,3 +238,4 @@ target_link_libraries(run_time_thread ${catkin_LIBRARIES} AirLib MavLinkCom rpc 
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
