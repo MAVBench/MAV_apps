@@ -252,20 +252,15 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 
 
 
-	double map_to_explore_volume_max = 400000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+	double ppl_vol_ideal_max = 400000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
 											   // -- wanna cover be, and match it to this value.
-	double map_to_explore_volume_min = 100000;
-	double map_to_explore_volume_step_cnt = 20;
-	static double  static_map_to_explore_volume = map_to_explore_volume_max;
+	double ppl_vol_ideal_min = 100000;
+	double ppl_vol_ideal_step_cnt = 20;
+	static double  static_ppl_vol_ideal = ppl_vol_ideal_max;
 
     // not used any more
 	static double static_point_cloud_num_points = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
 	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
-
-
-
-
-
 
 
 	// --initialize some knobs
@@ -332,8 +327,8 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	    // -- piecewise planner
 		if (knob_performance_modeling_for_piecewise_planner){
 			ros::Duration(20).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-			if (static_map_to_explore_volume < map_to_explore_volume_min){
-				static_map_to_explore_volume = map_to_explore_volume_max; // -- reset the map size
+			if (static_ppl_vol_ideal < ppl_vol_ideal_min){
+				static_ppl_vol_ideal = ppl_vol_ideal_max; // -- reset the map size
 				if (om_to_pl_res == om_to_pl_res_min){
 					static_om_to_pl_res = om_to_pl_res_max;
 				}else{
@@ -361,7 +356,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 // -- determine how much of the space to keep
 //	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
 	ros::param::set("om_to_pl_vol_ideal", static_om_to_pl_vol_ideal);
-	ros::param::set("VolumeToExploreThreshold", static_map_to_explore_volume);
+	ros::param::set("ppl_vol_ideal", static_ppl_vol_ideal);
 	ros::param::set("om_to_pl_res", static_om_to_pl_res);
 
 
@@ -388,7 +383,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
     	static_om_to_pl_vol_ideal -= (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/om_to_pl_vol_ideal_step_cnt;
     }
     if (knob_performance_modeling_for_piecewise_planner){
-    	static_map_to_explore_volume -= (map_to_explore_volume_max - map_to_explore_volume_min)/map_to_explore_volume_step_cnt;
+    	static_ppl_vol_ideal -= (ppl_vol_ideal_max - ppl_vol_ideal_min)/ppl_vol_ideal_step_cnt;
     }
 
 

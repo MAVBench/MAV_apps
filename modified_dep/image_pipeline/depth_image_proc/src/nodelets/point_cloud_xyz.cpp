@@ -101,6 +101,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double pc_vol_ideal;
   double om_to_pl_vol_ideal;
   double om_to_pl_res;
+  double ppl_vol_ideal;
   bool first_time = true;
   mavbench_msgs::point_cloud_debug debug_data = {};
   bool DEBUG_RQT = false;
@@ -1412,7 +1413,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
 
    // -- piecewise planner
-   //ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
+   ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
 
 
   PointCloud::Ptr cloud_msg(new PointCloud);
@@ -1547,6 +1548,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.pc_vol_actual= pc_vol_actual;
   pcl_aug_data.om_to_pl_vol_ideal = om_to_pl_vol_ideal;
   pcl_aug_data.om_to_pl_res = om_to_pl_res;
+  pcl_aug_data.ppl_vol_ideal = ppl_vol_ideal;
 
   pub_point_cloud_.publish (*cloud_msg);
   pub_point_cloud_aug_.publish (pcl_aug_data);

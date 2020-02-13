@@ -254,7 +254,7 @@
   <arg name="octomap_lower_resolution_volume_length" default="20" />
   <arg name="filterOctoMap" default="true" /> 
   <arg name="MapToTransferSideLength" default="30" /> 
-  <arg name="VolumeToExploreThreshold" default="600000" /> 
+  <arg name="ppl_vol_ideal" default="600000" /> 
   <arg name="om_to_pl_vol_ideal" default="100000" /> 
 
   <arg name="gridSliceCountPerSide" default="2" />
@@ -270,7 +270,7 @@
   <param name="lower_resolution_relative_volume_length" value="$(arg octomap_lower_resolution_volume_length)" /> 
   <param name="gridMode" value="$(arg gridMode)" /> 
   <param name="MapToTransferSideLength" value="$(arg MapToTransferSideLength)" /> 
-  <param name="VolumeToExploreThreshold" value="$(arg VolumeToExploreThreshold)" /> 
+  <param name="ppl_vol_ideal" value="$(arg ppl_vol_ideal)" /> 
   <param name="om_to_pl_vol_ideal" value="$(arg om_to_pl_vol_ideal)" /> 
   <param name="filterOctoMap" value="$(arg filterOctoMap)" /> 
   <param name="gridSliceCountPerSide" value="$(arg gridSliceCountPerSide)" /> 

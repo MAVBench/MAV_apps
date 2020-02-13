@@ -50,7 +50,7 @@
 double total_collision_func = 0;
 double potential_distance_to_explore = 0; // the distance that the planner ask to expore (note that this can be bigger than the volume since the volume calculation stops after hitting a an obstacle)
 double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
-double VolumeToExploreThresholdInUnitCube;
+double ppl_vol_idealInUnitCube;
 ros::Time g_planning_start_time;
 /*
 void planner_termination_func(double &volume_explored_so_far, double &volume_explored_threshold){
@@ -62,7 +62,7 @@ void planner_termination_func(double &volume_explored_so_far, double &volume_exp
 bool planner_termination_func(){
 	bool taking_to_long = (ros::Time::now() - g_planning_start_time).toSec() > 20; // -- this is just to make sure the volume is not gonna be too big
 																				   // -- so that we will return
-	return (volume_explored_in_unit_cubes > VolumeToExploreThresholdInUnitCube) || taking_to_long;
+	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube) || taking_to_long;
 
 }
 
@@ -127,7 +127,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     //if (knob_performance_modeling_for_piecewise_planner){
     solved = ss.solve(planner_termination_obj);
     //}else
-	//ob::PlannerStatus solved = ss.solve(planner_termination_func(volume_explored_in_unit_cubes, VolumeToExploreThresholdInUnitCube));
+	//ob::PlannerStatus solved = ss.solve(planner_termination_func(volume_explored_in_unit_cubes, ppl_vol_idealInUnitCube));
     if (solved == ob::PlannerStatus::INVALID_START) {
     	status = 2;
     }else if (solved == ob::PlannerStatus::APPROXIMATE_SOLUTION){
@@ -417,10 +417,10 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     debug_data.collision_func = 0;
 
 
-    VolumeToExploreThreshold = msg->volume_to_explore_threshold;
-    VolumeToExploreThresholdInUnitCube = VolumeToExploreThreshold/(pow(msg->om_to_pl_res, 3));
+    auto ppl_vol_ideal = msg->ppl_vol_ideal;
+    ppl_vol_idealInUnitCube = ppl_vol_ideal/(pow(msg->om_to_pl_res, 3));
     profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
-    profiling_container.capture("volume_to_explore_threshold", "single", msg->volume_to_explore_threshold, capture_size);
+    profiling_container.capture("ppl_vol_ideal", "single", msg->ppl_vol_ideal, capture_size);
     profiling_container.capture("om_to_pl_vol_actual", "single", msg->om_to_pl_vol_actual, capture_size);
     profiling_container.capture("om_to_pl_res", "single", msg->om_to_pl_res, capture_size);
 
@@ -521,11 +521,11 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
     if (knob_performance_modeling_for_piecewise_planner){
     	auto resolution = profiling_container.findDataByName("om_to_pl_res_knob_modeling")->values.back();
-    	profiling_container.capture("piecewise_planner_resolution_knob_modeling", "single", resolution,
+    	profiling_container.capture("ppl_res_knob_modeling", "single", resolution,
     			capture_size);
     	profiling_container.capture("piecewise_planner_time_knob_modeling", "single", profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back(),
     			capture_size);
-    	profiling_container.capture("piecewise_planner_volume_explored_knob_modeling", "single", piecewise_planner_volume_explored_in_unit_cubes*pow(resolution, 3), capture_size);
+    	profiling_container.capture("ppl_vol_actual_knob_modeling", "single", ppl_vol_actual*pow(resolution, 3), capture_size);
     }
 
 
@@ -609,7 +609,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     debug_data.motion_planning_piecewise_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
     debug_data.collision_func = total_collision_func;
-    piecewise_planner_volume_explored_in_unit_cubes = volume_explored_in_unit_cubes;
+    ppl_vol_actual = volume_explored_in_unit_cubes;
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {

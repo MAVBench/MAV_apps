@@ -227,7 +227,7 @@ private:
     double v_max__global, a_max__global;
     bool notified_failure = false;
     int max_roadmap_size__global;
-    double piecewise_planner_volume_explored_in_unit_cubes;
+    double ppl_vol_actual;
     std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *, int &status)> motion_planning_core;
     long long g_planning_without_OM_PULL_time_acc = 0;
     int g_number_of_planning = 0 ;

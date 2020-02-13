@@ -408,6 +408,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	pc_res =  pcl_aug_data->pc_res;
 	om_to_pl_res = pcl_aug_data->om_to_pl_res;
 	om_to_pl_vol_ideal = pcl_aug_data->om_to_pl_vol_ideal;
+	ppl_vol_ideal = pcl_aug_data->ppl_vol_ideal;
 
 
 	// -- this is only for knob performance modeling,
@@ -1536,7 +1537,7 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
  // ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
 //  ros::param::get("/om_to_pl_res", om_to_pl_res);
-  ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
+  //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
   assert(om_to_pl_res >= m_res);
 
 
@@ -1640,7 +1641,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
  // ros::param::get("/om_to_pl_res", om_to_pl_res);
 //  ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
-  ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
+  //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
 
 
   assert(om_to_pl_res >= m_res);
@@ -1813,7 +1814,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
 	  octomap_aug_data.om_to_pl_vol_actual = om_to_pl_vol_actual;
-	  octomap_aug_data.volume_to_explore_threshold = VolumeToExploreThreshold;
+	  octomap_aug_data.ppl_vol_ideal = ppl_vol_ideal;
 	  octomap_aug_data.om_to_pl_res = om_to_pl_res;
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
