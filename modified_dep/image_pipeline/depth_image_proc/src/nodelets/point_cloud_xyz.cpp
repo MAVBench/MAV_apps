@@ -97,8 +97,8 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   string point_cloud_num_points_filtering_mode; // whether to use raidus based or height based filtering
   float point_cloud_width, point_cloud_height; //point cloud boundary
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
-  double point_cloud_resolution; // specifies the minimum distance between the points
-  double sensor_volume_to_keep;
+  double pc_res; // specifies the minimum distance between the points
+  double pc_vol_ideal;
   bool first_time = true;
   mavbench_msgs::point_cloud_debug debug_data = {};
   bool DEBUG_RQT = false;
@@ -168,8 +168,8 @@ void PointCloudXyzNodelet::onInit()
     return ;
   }
 
-  if (!ros::param::get("/sensor_volume_to_keep", sensor_volume_to_keep)) {
-    ROS_FATAL("Could not start point_Cloud . sensor_volume_to_keep Parameter missing!");
+  if (!ros::param::get("/pc_vol_ideal", pc_vol_ideal)) {
+    ROS_FATAL("Could not start point_Cloud . pc_vol_ideal Parameter missing!");
     exit(0);
     return ;
   }
@@ -200,8 +200,8 @@ void PointCloudXyzNodelet::onInit()
     return ;
   }
 
-  if (!ros::param::get("/point_cloud_resolution", point_cloud_resolution)) {
-    ROS_FATAL("Could not start img_proc. point_cloud_resolution Parameter missing!");
+  if (!ros::param::get("/pc_res", pc_res)) {
+    ROS_FATAL("Could not start img_proc. pc_res Parameter missing!");
     exit(0);
     return ;
   }
@@ -217,7 +217,6 @@ void PointCloudXyzNodelet::onInit()
       ROS_FATAL_STREAM("Could not start point cloud capture_size not provided");
       exit(0);
       return ;
-
    }
 
     if(!ros::param::get("/knob_performance_modeling", knob_performance_modeling)){
@@ -1393,16 +1392,26 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
    profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
-	// changing the paramer online, comment out later.
-   ros::param::get("/point_cloud_resolution", point_cloud_resolution);
-   ros::param::get("/point_cloud_width", point_cloud_width);
-   ros::param::get("/point_cloud_height", point_cloud_height);
-   ros::param::get("/point_cloud_num_points", point_cloud_num_points);
-   ros::param::get("/sensor_volume_to_keep", sensor_volume_to_keep);
-   ros::param::get("/point_cloud_num_points_filtering_mode", point_cloud_num_points_filtering_mode);
-   ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
    ros::param::get("/sensor_max_range", sensor_max_range);
-   ros::param::get("/point_cloud_max_z", point_cloud_max_z);
+   //ros::param::get("/point_cloud_width", point_cloud_width);
+   //ros::param::get("/point_cloud_height", point_cloud_height);
+   //ros::param::get("/point_cloud_num_points", point_cloud_num_points);
+   //ros::param::get("/point_cloud_num_points_filtering_mode", point_cloud_num_points_filtering_mode);
+   //ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
+   //ros::param::get("/point_cloud_max_z", point_cloud_max_z);
+
+
+   // -- point cloud to octomap knobs
+   ros::param::get("/pc_res", pc_res);
+   ros::param::get("/pc_vol_ideal", pc_vol_ideal);
+
+   // -- octomap to planner
+   //ros::param::get("/perception_lower_resolution", m_lower_res);
+   //ros::param::get("/PotentialVolumeToExploreThreshold", PotentialVolumeToExploreThreshold);
+
+   // -- piecewise planner
+   //ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
+
 
   PointCloud::Ptr cloud_msg(new PointCloud);
 
@@ -1476,13 +1485,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   const int grid_size = 60;
   float **gridded_volume;
   float resolution_to_consider = 1;
-  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution, grid_size, resolution_to_consider, volume_to_digest, area_to_digest);
+  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, pc_res, grid_size, resolution_to_consider, volume_to_digest, area_to_digest);
 
   profiling_container->capture("diagnostics", "end", ros::Time::now());
   // -- start filtering
   profiling_container->capture("filtering", "start", ros::Time::now(), capture_size);
-  double volume_kept = 0;
-  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, sensor_volume_to_keep, volume_kept, gridded_volume, grid_size, resolution_to_consider);
+  double pc_vol_actual= 0;
+  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal, pc_vol_actual, gridded_volume, grid_size, resolution_to_consider);
 
   // -- destroy the grid
   for (int h = 0; h < grid_size; h++)
@@ -1492,7 +1501,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   delete gridded_volume;
 
 
-  //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, sensor_volume_to_keep, n_points);
+  //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, pc_vol_ideal, n_points);
   //filterByNumOfPoints(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_num_points);
 
   // Pick best points
@@ -1500,7 +1509,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   std::vector<float> ys_best;
   std::vector<float> zs_best;
   //filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, volume_to_digest_2);
-  filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, point_cloud_resolution);
+  filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res);
 
   //filterByResolutionNoFilter(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, point_cloud_resolution);
   // filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
@@ -1525,42 +1534,41 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
       *new_y = ys_best[i];
       *new_z = zs_best[i];
   }
-  cloud_msg->fields[0].count = volume_kept; // -- This is a hack. I am abusing the field
-  	  	  	  	  	  	  	  	  	  	    //    array knowing that it's always 1. Note that  I reset it back
-  	  	  	  	  	  	  	  	  	  	  	//    to 1 in octomap
 
   profiling_container->capture("filtering", "end", ros::Time::now());
 
   mavbench_msgs::point_cloud_aug pcl_aug_data;
   pcl_aug_data.header = cloud_msg->header;
   pcl_aug_data.pcl = *cloud_msg;
-  pcl_aug_data.volume_to_explore = -1;
-  pcl_aug_data.resolution_to_explore = -1;
+  pcl_aug_data.pc_res = pc_res;
+  pcl_aug_data.pc_vol_ideal = pc_vol_ideal;
+  pcl_aug_data.pc_vol_actual= pc_vol_actual;
+
 
   pub_point_cloud_.publish (*cloud_msg);
   pub_point_cloud_aug_.publish (pcl_aug_data);
 
-  mavbench_msgs::point_cloud_meta_data meta_data_msg;
-  meta_data_msg.header.stamp = ros::Time::now();
-  meta_data_msg.point_cloud_volume_to_digest = volume_kept;
-  meta_data_msg.point_cloud_resolution = point_cloud_resolution;
-  meta_data_msg.point_cloud_area_to_digest = area_to_digest;
-  point_cloud_meta_data_pub.publish(meta_data_msg);
+  //mavbench_msgs::point_cloud_meta_data meta_data_msg;
+  //meta_data_msg.header.stamp = ros::Time::now();
+  //meta_data_msg.point_cloud_volume_to_digest = pc_vol_actual;
+  //meta_data_msg.point_cloud_resolution = point_cloud_resolution;
+  //meta_data_msg.point_cloud_area_to_digest = area_to_digest;
+  //point_cloud_meta_data_pub.publish(meta_data_msg);
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
   profiling_container->capture("point_cloud_area_to_digest", "single", area_to_digest, capture_size);
   profiling_container->capture("point_cloud_volume_to_digest", "single", volume_to_digest, capture_size);
-  profiling_container->capture("point_cloud_resolution", "single", point_cloud_resolution, capture_size);
+  profiling_container->capture("point_cloud_resolution", "single", pc_res, capture_size);
 
 
   if (DEBUG_RQT){
 	  debug_data.header.stamp = ros::Time::now();
 	  debug_data.point_cloud_width = point_cloud_width;
 	  debug_data.point_cloud_height = point_cloud_height;
-	  debug_data.point_cloud_resolution = point_cloud_resolution;
+	  debug_data.point_cloud_resolution = pc_res;
 	  debug_data.point_cloud_point_cnt = xs_best.size();
 	  debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
 	  debug_data.entire_point_cloud_depth_callback= profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
-	  debug_data.point_cloud_volume_to_digest = volume_kept;
+	  debug_data.point_cloud_volume_to_digest = pc_vol_actual;
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
 	  pc_debug_pub.publish(debug_data);

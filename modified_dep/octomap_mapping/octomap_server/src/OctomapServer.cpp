@@ -80,8 +80,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   double probHit, probMiss, thresMin, thresMax;
   ros::NodeHandle private_nh = private_nh_;
 //  ros::NodeHandle private_nh("~");
-  m_nh.setCallbackQueue(&callback_queue_1);
-  private_nh.setCallbackQueue(&callback_queue_2);
+  //m_nh.setCallbackQueue(&callback_queue_1);
+  //private_nh.setCallbackQueue(&callback_queue_2);
   private_nh.param("frame_id", m_worldFrameId, m_worldFrameId);
   private_nh.param("base_frame_id", m_baseFrameId, m_baseFrameId);
   private_nh.param("height_map", m_useHeightMap, m_useHeightMap);
@@ -106,7 +106,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   // distance of found plane from z=0 to be detected as ground (e.g. to exclude tables)
   private_nh.param("ground_filter/plane_distance", m_groundFilterPlaneDistance, m_groundFilterPlaneDistance);
   private_nh.param("sensor_model/max_range", m_maxRange, m_maxRange);
-  private_nh.param("/perception_resolution", m_res, m_res);
+  private_nh.param("/om_res", m_res, m_res);
   private_nh.param("/MapToTransferSideLength", MapToTransferSideLength, MapToTransferSideLength);
   private_nh.param("/gridSliceCountPerSide", gridSliceCountPerSide, gridSliceCountPerSide);
   private_nh.param("/filterOctoMap", filterOctoMap, filterOctoMap);
@@ -248,7 +248,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
   m_octomapResetMaxRange = private_nh.advertiseService("reset_max_range", &OctomapServer::maxRangecb, this);
   m_octomapHeaderSub = private_nh.subscribe("octomap_header_col_detected", 1, &OctomapServer::OctomapHeaderColDetectedcb, this);
-  m_pc_meta_dataSub = private_nh.subscribe("/pc_meta_data", 1, &OctomapServer::PCMetaDataCb, this);
+  //m_pc_meta_dataSub = private_nh.subscribe("/pc_meta_data", 1, &OctomapServer::PCMetaDataCb, this);
   m_save_map_pub = private_nh.subscribe("save_map", 1, &OctomapServer::SaveMapCb, this);
 
 
@@ -303,8 +303,9 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
 void OctomapServer::spinOnce(){
 	// we need two different queues so we can make sure that we can maintain a certain order. Don't mess with the ordering
-	callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
-	callback_queue_1.callAvailable(ros::WallDuration());  // -- 2nd, get the data (point cloud)
+	ros::spinOnce();
+//	callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
+//	callback_queue_1.callAvailable(ros::WallDuration());  // -- 2nd, get the data (point cloud)
 }
 
 
@@ -397,7 +398,7 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 using namespace std; //
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
-	//m_octree->clear();
+	m_octree->clear();
     // -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
 	// -- communication, we simply send the map over and return, without integrating any new information
@@ -414,7 +415,9 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
 	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
-	point_cloud_estimated_volume = cloud->fields[0].count; // -- this is a hack, sicne I have overwritten the field value with volume
+	pc_vol_actual = pcl_aug_data->pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
+	pc_res =  pcl_aug_data->pc_res;
+
 	if(CLCT_DATA) {
 		ros::Time start_time = ros::Time::now();
 		pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
@@ -531,8 +534,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   //ROS_INFO_STREAM("-------------- exposed volume"<<exposed_volume);
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
-  profiling_container.capture("point_cloud_estimated_volume", "single", point_cloud_estimated_volume, capture_size);
-  profiling_container.capture("octomap_exposed_resolution", "single", exposed_resolution, capture_size);
+  profiling_container.capture("pc_vol_actual", "single", pc_vol_actual, capture_size);
+  profiling_container.capture("pc_res", "single", pc_res, capture_size);
 
 
 
@@ -566,7 +569,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScan")->values.back();
 	  	debug_data.octomap_insertCloud_minus_publish_all = profiling_container.findDataByName("octomap_insertCloud_minus_publish_all")->values.back();
 	  	debug_data.octomap_publish_all = profiling_container.findDataByName("octomap_publish_all")->values.back();
-	  	debug_data.point_cloud_estimated_volume = profiling_container.findDataByName("point_cloud_estimated_volume")->values.back();
+	  	debug_data.pc_vol_actual = profiling_container.findDataByName("pc_vol_actual")->values.back();
 	  	//debug_data.octomap_memory_usage =  m_octree->memoryUsage();
 	  	//debug_data.octomap_low_res_memory_usage =  m_octree_lower_res->memoryUsage();
 	  	debug_data.perceived_closest_obs_distance =  profiling_container.findDataByName("perceived_closest_obstacle")->values.back();
@@ -589,7 +592,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
    point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
    double temp_res;
-   ros::param::get("/perception_resolution", temp_res);
+   ros::param::get("/om_res", temp_res);
    if (temp_res != m_res) { //construct a new map
 	   ROS_INFO_STREAM("--- request was placed to change resolution. This is costly, so avoid overusing it!");
 	   profiling_container.capture("construct_diff_res_map_latency", "start", ros::Time::now(), capture_size);
@@ -745,12 +748,12 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  //update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
- // auto free_cell_volume = free_cells_cnt*pow(exposed_resolution, 3); // -- we use exposed_resolution instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
+ // auto free_cell_volume = free_cells_cnt*pow(pc_res, 3); // -- we use pc_res instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
-  //auto occupied_cell_volume = occupied_cells.size()*pow(exposed_resolution, 3);
+  //auto occupied_cell_volume = occupied_cells.size()*pow(pc_res, 3);
 
 
-  auto free_cell_volume = free_cells_cnt*pow(m_octree->getResolution(), 3); // -- we use exposed_resolution instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
+  auto free_cell_volume = free_cells_cnt*pow(m_octree->getResolution(), 3); // -- we use pc_res instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
   auto occupied_cell_volume = occupied_cells.size()*pow(m_octree->getResolution(), 3);
 
@@ -1359,12 +1362,13 @@ bool OctomapServer::maxRangecb(octomap_server::maxRangeSrv::Request& req, octoma
 
 
 
+/*
 void OctomapServer::PCMetaDataCb(mavbench_msgs::point_cloud_meta_data msg) {
 	point_cloud_estimated_volume = msg.point_cloud_volume_to_digest;
-	exposed_resolution = msg.point_cloud_resolution;
+	pc_res = msg.point_cloud_resolution;
   //ROS_INFO_STREAM("exposed volume"<<exposed_volume);
 }
-
+*/
 
 
 void OctomapServer::OctomapHeaderColDetectedcb(std_msgs::Int32ConstPtr header) {
