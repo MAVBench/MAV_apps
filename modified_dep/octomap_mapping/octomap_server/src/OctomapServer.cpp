@@ -111,10 +111,10 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("/gridSliceCountPerSide", gridSliceCountPerSide, gridSliceCountPerSide);
   private_nh.param("/filterOctoMap", filterOctoMap, filterOctoMap);
   private_nh.param("/gridMode", gridMode, gridMode);
-  private_nh.param("/perception_lower_resolution", m_lower_res, m_lower_res);
-  private_nh.param("/lower_resolution_relative_volume_width", m_lower_res_rel_vol_width, m_lower_res_rel_vol_width);
-  private_nh.param("/lower_resolution_relative_volume_height", m_lower_res_rel_vol_height, m_lower_res_rel_vol_height);
-  private_nh.param("/lower_resolution_relative_volume_length", m_lower_res_rel_vol_length, m_lower_res_rel_vol_length);
+  private_nh.param("/om_to_pl_res", om_to_pl_res, om_to_pl_res);
+  private_nh.param("/lower_resolution_relative_volume_width", om_to_pl_res_rel_vol_width, om_to_pl_res_rel_vol_width);
+  private_nh.param("/lower_resolution_relative_volume_height", om_to_pl_res_rel_vol_height, om_to_pl_res_rel_vol_height);
+  private_nh.param("/lower_resolution_relative_volume_length", om_to_pl_res_rel_vol_length, om_to_pl_res_rel_vol_length);
   private_nh.param("/voxel_type_to_publish", voxel_type_to_publish, voxel_type_to_publish);
   private_nh.param("sensor_model/hit", probHit, 0.7);
   private_nh.param("sensor_model/miss", probMiss, 0.4);
@@ -176,7 +176,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_gridmap.info.resolution = m_res;
 
 
-  m_octree_lower_res = new OcTreeT(m_lower_res);
+  m_octree_lower_res = new OcTreeT(om_to_pl_res);
   m_octree_lower_res->setProbHit(probHit);
   m_octree_lower_res->setProbMiss(probMiss);
   m_octree_lower_res->setClampingThresMin(thresMin);
@@ -287,6 +287,9 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("sensor_model/miss", probMiss, 0.4);
   private_nh.param("sensor_model/min", thresMin, 0.12);
   private_nh.param("sensor_model/max", thresMax, 0.97);
+  private_nh.param("/om_to_pl_vol_ideal", om_to_pl_vol_ideal, om_to_pl_vol_ideal);
+  private_nh.param("/om_to_pl_res", om_to_pl_res, om_to_pl_res);
+
 
   // Profiling
   octomap_integration_acc = 0;
@@ -398,8 +401,16 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 using namespace std; //
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
-	m_octree->clear();
-    // -- this is only for knob performance modeling,
+//	m_octree->clear();
+	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
+	// -- insert the point cloud into the map
+	pc_vol_actual = pcl_aug_data->pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
+	pc_res =  pcl_aug_data->pc_res;
+	om_to_pl_res = pcl_aug_data->om_to_pl_res;
+	om_to_pl_vol_ideal = pcl_aug_data->om_to_pl_vol_ideal;
+
+
+	// -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
 	// -- communication, we simply send the map over and return, without integrating any new information
 	if (knob_performance_modeling){
@@ -412,11 +423,6 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 			return;
 		}
 	}
-
-	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
-	// -- insert the point cloud into the map
-	pc_vol_actual = pcl_aug_data->pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
-	pc_res =  pcl_aug_data->pc_res;
 
 	if(CLCT_DATA) {
 		ros::Time start_time = ros::Time::now();
@@ -536,8 +542,6 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
   profiling_container.capture("pc_vol_actual", "single", pc_vol_actual, capture_size);
   profiling_container.capture("pc_res", "single", pc_res, capture_size);
-
-
 
 
   profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
@@ -790,7 +794,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   profiling_container.capture("octomap_prune_in_octomap_server", "start", ros::Time::now(), capture_size);
 
   profiling_container.capture(std::string("construct_lower_res_map"), "start", ros::Time::now());
-  //construct_lower_res_map(m_lower_res, point3d(0,0,0));//, sensorToWorldTf.getOrigin()));
+  //construct_lower_res_map(om_to_pl_res, point3d(0,0,0));//, sensorToWorldTf.getOrigin()));
   profiling_container.capture(std::string("construct_lower_res_map"), "end", ros::Time::now());
 
    //attempt to limite the map size
@@ -802,12 +806,12 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
    m_octree->getMetricMin(high_res_min_x, high_res_min_y, high_res_min_z);
    double low_res_max_x, low_res_max_y, low_res_max_z;
    double low_res_min_x, low_res_min_y, low_res_min_z;
-   low_res_max_x = drone_cur_pos.x() + m_lower_res_rel_vol_width;
-   low_res_max_y = drone_cur_pos.y() + m_lower_res_rel_vol_length; //into the screen
-   low_res_max_z = drone_cur_pos.z() + m_lower_res_rel_vol_height;
-   low_res_min_x = drone_cur_pos.x() - m_lower_res_rel_vol_width;
-   low_res_min_y = drone_cur_pos.y() - m_lower_res_rel_vol_length; //into the screen
-   low_res_min_z = drone_cur_pos.z() - m_lower_res_rel_vol_height;
+   low_res_max_x = drone_cur_pos.x() + om_to_pl_res_rel_vol_width;
+   low_res_max_y = drone_cur_pos.y() + om_to_pl_res_rel_vol_length; //into the screen
+   low_res_max_z = drone_cur_pos.z() + om_to_pl_res_rel_vol_height;
+   low_res_min_x = drone_cur_pos.x() - om_to_pl_res_rel_vol_width;
+   low_res_min_y = drone_cur_pos.y() - om_to_pl_res_rel_vol_length; //into the screen
+   low_res_min_z = drone_cur_pos.z() - om_to_pl_res_rel_vol_height;
 
    auto bbxMin = octomap::point3d(std::max(low_res_min_x, high_res_min_x), std::max(low_res_min_y, high_res_min_y), std::max(low_res_min_z, high_res_min_z));
    auto bbxMax = octomap::point3d(std::min(low_res_max_x, high_res_max_x), std::min(low_res_max_y, high_res_max_y), std::min(low_res_max_z, high_res_max_z));
@@ -1000,13 +1004,13 @@ void OctomapServer::construct_diff_res_non_multiple_of_two_map(double diff_res, 
 	// logic to filter in a cerat volume around drone's current position
 	double low_res_max_x, low_res_max_y, low_res_max_z;
 	double low_res_min_x, low_res_min_y, low_res_min_z;
-	low_res_max_x = drone_cur_pos.x() + m_lower_res_rel_vol_width;
-	low_res_max_y = drone_cur_pos.y() + m_lower_res_rel_vol_length; //into the screen
-	low_res_max_z = drone_cur_pos.z() + m_lower_res_rel_vol_height;
+	low_res_max_x = drone_cur_pos.x() + om_to_pl_res_rel_vol_width;
+	low_res_max_y = drone_cur_pos.y() + om_to_pl_res_rel_vol_length; //into the screen
+	low_res_max_z = drone_cur_pos.z() + om_to_pl_res_rel_vol_height;
 
-	low_res_min_x = drone_cur_pos.x() - m_lower_res_rel_vol_width;
-	low_res_min_y = drone_cur_pos.y() - m_lower_res_rel_vol_length; //into the screen
-	low_res_min_z = drone_cur_pos.z() - m_lower_res_rel_vol_height;
+	low_res_min_x = drone_cur_pos.x() - om_to_pl_res_rel_vol_width;
+	low_res_min_y = drone_cur_pos.y() - om_to_pl_res_rel_vol_length; //into the screen
+	low_res_min_z = drone_cur_pos.z() - om_to_pl_res_rel_vol_height;
 
 	//	auto bbxMin = octomap::point3d(std::max(low_res_min_x, cur_res_min_x), std::max(low_res_min_y, cur_res_min_y), std::max(low_res_min_z, cur_res_min_z));
 	//	auto bbxMax = octomap::point3d(std::min(low_res_max_x, cur_res_max_x), std::min(low_res_max_y, cur_res_max_y), std::min(low_res_max_z, cur_res_max_z));
@@ -1525,15 +1529,15 @@ static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg,
 // filter octomap based On Volume publishing
 void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
-  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(m_lower_res/m_res));
+  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(om_to_pl_res/m_res));
   float volume_to_communicate = 0;
   Octomap map;
   map.header.frame_id = m_worldFrameId;
   profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
-  ros::param::get("/PotentialVolumeToExploreThreshold", PotentialVolumeToExploreThreshold);
-  ros::param::get("/perception_lower_resolution", m_lower_res);
+ // ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
+//  ros::param::get("/om_to_pl_res", om_to_pl_res);
   ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
-  assert(m_lower_res >= m_res);
+  assert(om_to_pl_res >= m_res);
 
 
 //  float potential_volume_to_explore = PotentialVolumeToExplore;
@@ -1568,7 +1572,7 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
 	  if (m_octree_node){ // node exist
 		  depth_to_look_at = depth_found_at;
 		  float block_volume = m_octree_node->getVolumeInUnitCube();
-		  if (block_volume < PotentialVolumeToExploreThreshold){
+		  if (block_volume < om_to_pl_vol_ideal){
 //			  depth_to_look_at --;
 			  volume_to_communicate = block_volume;
 			  m_octree_node_to_include = m_octree_node;
@@ -1621,10 +1625,10 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   }
   else
     ROS_ERROR("Error serializing OctoMap");
-  auto total_volume = volume_communicated_in_unit_cubes*pow(m_lower_res, 3);
+  auto total_volume = volume_communicated_in_unit_cubes*pow(om_to_pl_res, 3);
 
   debug_data.octomap_volume_communicated =    total_volume;
-  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", m_lower_res, capture_size); // @suppress("Invalid arguments")
+  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", om_to_pl_res, capture_size); // @suppress("Invalid arguments")
   profiling_container.capture(std::string("octomap_potential_exploration_volume"), "single", total_volume, capture_size); // @suppress("Invalid arguments")
 }
 
@@ -1634,12 +1638,12 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
 void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
-  ros::param::get("/perception_lower_resolution", m_lower_res);
-  ros::param::get("/PotentialVolumeToExploreThreshold", PotentialVolumeToExploreThreshold);
+ // ros::param::get("/om_to_pl_res", om_to_pl_res);
+//  ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
   ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
 
 
-  assert(m_lower_res >= m_res);
+  assert(om_to_pl_res >= m_res);
   unsigned int pos;
   int depth_found_at;
   // take care of space gridding for filtering octomap
@@ -1651,8 +1655,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  MapToTransferSideLength  = 1.2*m_maxRange; // -- 20  percent more
  vector<point3d> offset_vals;
  //double potential_volume_to_keep = PotentialVolumeToExplore;
- double volume_kept;
- double last_volume_kept = 0; // -- to rewind back the volume kept to
+ double om_to_pl_vol_actual;
+ double last_om_to_pl_vol_actual = 0; // -- to rewind back the volume kept to
  	 	 	 	 	 	 	  // -- previously held value, after exceeding the threshold
 
  vector<OcTreeNode *> octomap_block_vec;
@@ -1667,7 +1671,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  bool first_itr = true;
  // -- expand MapToTransferSideLength untill you hit the volume target
  while (MapToTransferSideLength <= max(map_max_length, (float) (1.2*m_maxRange))){
-	 volume_kept = 0;
+	 om_to_pl_vol_actual = 0;
 	 octomap_block_vec.clear();
 
 	 // -- gridify the space up to MapToTransferSideLength
@@ -1688,25 +1692,25 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 			 if (std::find(octomap_block_vec.begin(), octomap_block_vec.end(),m_octree_block) !=octomap_block_vec.end()) {
 				 continue;
 			 }
-			 volume_kept +=  (m_octree_block->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
+			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
 			 octomap_block_vec.push_back(m_octree_block);
 		 }
 	 }
 	 // -- if exceed the threshold, break
-	 if (volume_kept > PotentialVolumeToExploreThreshold){
+	 if (om_to_pl_vol_actual > om_to_pl_vol_ideal){
 		 if (!first_itr){ // -- if first time, keep the lenght. We should set the volume to keep high enough
 			 	 	 	   // --- that the first time always is smaller or equal.
-			 volume_kept = last_volume_kept;
+			 om_to_pl_vol_actual = last_om_to_pl_vol_actual;
 			 MapToTransferSideLength /= 2;
 		 }
 		 break;
 	 }
 	 first_itr = false;
-	 last_volume_kept = volume_kept;
+	 last_om_to_pl_vol_actual = om_to_pl_vol_actual;
 	 MapToTransferSideLength *= 2;
  }
 
- ROS_INFO_STREAM("volume kept" << volume_kept);
+ ROS_INFO_STREAM("volume kept" << om_to_pl_vol_actual);
  MapToTransferSideLength = min(MapToTransferSideLength, map_max_length); // -- incase we exceeded the threshold when doubling
  gridSideLength = float(MapToTransferSideLength)/(4*gridSliceCountPerSide); // -- to be more accurate, we quadruple the number of slices
  gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(4*gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
@@ -1714,7 +1718,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
   // -- now that we found the MapToTrasnferSideLength associated with the volume target
   // --  sample and add to the shrunk tree
-  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(m_lower_res/m_res));
+  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(om_to_pl_res/m_res));
   Octomap map;
   map.header.frame_id = m_worldFrameId;
   //map.header.stamp = rostime;
@@ -1808,19 +1812,19 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.potential_volume_to_explore_threshold = volume_kept;
+	  octomap_aug_data.om_to_pl_vol_actual = om_to_pl_vol_actual;
 	  octomap_aug_data.volume_to_explore_threshold = VolumeToExploreThreshold;
-	  octomap_aug_data.resolution_to_explore = m_lower_res;
+	  octomap_aug_data.om_to_pl_res = om_to_pl_res;
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
     ROS_ERROR("Error serializing OctoMap");
-  auto total_volume = volume_communicated_in_unit_cubes*pow(m_lower_res, 3);
+  auto total_volume = volume_communicated_in_unit_cubes*pow(om_to_pl_res, 3);
   profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
 
   debug_data.octomap_volume_communicated =    total_volume;
   debug_data.octomap_serialization_time =  profiling_container.findDataByName("octomap_serialization_time")->values.back();
-  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", m_lower_res, capture_size); // @suppress("Invalid arguments")
+  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", om_to_pl_res, capture_size); // @suppress("Invalid arguments")
   profiling_container.capture(std::string("octomap_potential_exploration_volume"), "single", total_volume, capture_size); // @suppress("Invalid arguments")
 }
 
@@ -1831,11 +1835,11 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
-  ros::param::get("/perception_lower_resolution", m_lower_res);
+  ros::param::get("/om_to_pl_res", om_to_pl_res);
 
 
-  assert(m_lower_res >= m_res);
-  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(m_lower_res/m_res));
+  assert(om_to_pl_res >= m_res);
+  int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(om_to_pl_res/m_res));
 
 
   // take care of space gridding for filtering octomap
@@ -1952,10 +1956,10 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   }
   else
     ROS_ERROR("Error serializing OctoMap");
-  auto total_volume = volume_communicated_in_unit_cubes*pow(m_lower_res, 3);
+  auto total_volume = volume_communicated_in_unit_cubes*pow(om_to_pl_res, 3);
 
   debug_data.octomap_volume_communicated =    total_volume;
-  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", m_lower_res, capture_size); // @suppress("Invalid arguments")
+  profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", om_to_pl_res, capture_size); // @suppress("Invalid arguments")
   profiling_container.capture(std::string("octomap_potential_exploration_volume"), "single", total_volume, capture_size); // @suppress("Invalid arguments")
 }
 

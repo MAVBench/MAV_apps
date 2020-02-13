@@ -418,11 +418,11 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
 
     VolumeToExploreThreshold = msg->volume_to_explore_threshold;
-    VolumeToExploreThresholdInUnitCube = VolumeToExploreThreshold/(pow(msg->resolution_to_explore, 3));
+    VolumeToExploreThresholdInUnitCube = VolumeToExploreThreshold/(pow(msg->om_to_pl_res, 3));
     profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
     profiling_container.capture("volume_to_explore_threshold", "single", msg->volume_to_explore_threshold, capture_size);
-    profiling_container.capture("potential_volume_to_explore_threshold", "single", msg->potential_volume_to_explore_threshold, capture_size);
-    profiling_container.capture("resolution_to_explore", "single", msg->resolution_to_explore, capture_size);
+    profiling_container.capture("om_to_pl_vol_actual", "single", msg->om_to_pl_vol_actual, capture_size);
+    profiling_container.capture("om_to_pl_res", "single", msg->om_to_pl_res, capture_size);
 
     if (octree != nullptr) {
         delete octree;
@@ -462,10 +462,10 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 		if (knob_performance_modeling_for_om_to_pl){ // -- start collecting data when this is set
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
 					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
-			profiling_container.capture("resolution_to_explore_knob_modeling", "single",
-					msg->resolution_to_explore, capture_size);
-			profiling_container.capture("potential_volume_to_explore_knob_modeling", "single",
-					msg->potential_volume_to_explore_threshold, capture_size);
+			profiling_container.capture("om_to_pl_res_knob_modeling", "single",
+					msg->om_to_pl_res, capture_size);
+			profiling_container.capture("om_to_pl_vol_actual", "single",
+					msg->om_to_pl_vol_actual, capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_deserialization_time")->values.back(), capture_size);
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
@@ -479,8 +479,8 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 		}
 		// -- piecewise planner
 		else if (knob_performance_modeling_for_piecewise_planner){
-				profiling_container.capture("resolution_to_explore_knob_modeling", "single",
-					msg->resolution_to_explore, capture_size);
+				profiling_container.capture("om_to_pl_res_knob_modeling", "single",
+					msg->om_to_pl_res, capture_size);
 		}
 	}
 
@@ -520,7 +520,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
 
     if (knob_performance_modeling_for_piecewise_planner){
-    	auto resolution = profiling_container.findDataByName("resolution_to_explore_knob_modeling")->values.back();
+    	auto resolution = profiling_container.findDataByName("om_to_pl_res_knob_modeling")->values.back();
     	profiling_container.capture("piecewise_planner_resolution_knob_modeling", "single", resolution,
     			capture_size);
     	profiling_container.capture("piecewise_planner_time_knob_modeling", "single", profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back(),

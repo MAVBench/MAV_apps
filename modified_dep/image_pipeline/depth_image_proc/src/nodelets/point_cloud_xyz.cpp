@@ -99,6 +99,8 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   int point_cloud_density_reduction; // How much to de-densify the point cloud by
   double pc_res; // specifies the minimum distance between the points
   double pc_vol_ideal;
+  double om_to_pl_vol_ideal;
+  double om_to_pl_res;
   bool first_time = true;
   mavbench_msgs::point_cloud_debug debug_data = {};
   bool DEBUG_RQT = false;
@@ -1406,8 +1408,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    ros::param::get("/pc_vol_ideal", pc_vol_ideal);
 
    // -- octomap to planner
-   //ros::param::get("/perception_lower_resolution", m_lower_res);
-   //ros::param::get("/PotentialVolumeToExploreThreshold", PotentialVolumeToExploreThreshold);
+   ros::param::get("/om_to_pl_res", om_to_pl_res);
+   ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
 
    // -- piecewise planner
    //ros::param::get("/VolumeToExploreThreshold", VolumeToExploreThreshold);
@@ -1543,7 +1545,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.pc_res = pc_res;
   pcl_aug_data.pc_vol_ideal = pc_vol_ideal;
   pcl_aug_data.pc_vol_actual= pc_vol_actual;
-
+  pcl_aug_data.om_to_pl_vol_ideal = om_to_pl_vol_ideal;
+  pcl_aug_data.om_to_pl_res = om_to_pl_res;
 
   pub_point_cloud_.publish (*cloud_msg);
   pub_point_cloud_aug_.publish (pcl_aug_data);

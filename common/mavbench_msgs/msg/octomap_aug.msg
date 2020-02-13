@@ -1,5 +1,5 @@
 Header header
 octomap_msgs/Octomap oct
 float32 volume_to_explore_threshold
-float32 potential_volume_to_explore_threshold
-float32 resolution_to_explore
+float32 om_to_pl_vol_actual
+float32 om_to_pl_res

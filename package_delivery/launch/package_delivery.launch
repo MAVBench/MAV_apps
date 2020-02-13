@@ -212,7 +212,7 @@
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
   <arg name="pc_res" default=".15"/> <!-- minimum the distance between pc points-->
   <arg name="om_res" default=".15"/> <!-- OM voxels size-->
-  <arg name="perception_lower_resolution" default="1.2"/> <!-- OM voxels size-->
+  <arg name="om_to_pl_res" default="1.2"/> <!-- OM voxels size-->
   <arg name="point_cloud_max_z" default="400.0" />
 
   <param name="point_cloud_max_z" value="$(arg point_cloud_max_z)" />
@@ -255,7 +255,7 @@
   <arg name="filterOctoMap" default="true" /> 
   <arg name="MapToTransferSideLength" default="30" /> 
   <arg name="VolumeToExploreThreshold" default="600000" /> 
-  <arg name="PotentialVolumeToExploreThreshold" default="100000" /> 
+  <arg name="om_to_pl_vol_ideal" default="100000" /> 
 
   <arg name="gridSliceCountPerSide" default="2" />
   <arg name="gridMode" default="3d" />
@@ -263,7 +263,7 @@
  
   <param name="voxel_type_to_publish" value="$(arg voxel_type_to_publish)" />
   <param name="occupancy_max_z" value="$(arg point_cloud_max_z)" />
-  <param name="perception_lower_resolution" value="$(arg perception_lower_resolution)" />
+  <param name="om_to_pl_res" value="$(arg om_to_pl_res)" />
   <param name="om_res" value="$(arg om_res)" />
   <param name="lower_resolution_relative_volume_width" value="$(arg octomap_lower_resolution_volume_width)" />
   <param name="lower_resolution_relative_volume_height" value="$(arg octomap_lower_resolution_volume_height)" />
@@ -271,7 +271,7 @@
   <param name="gridMode" value="$(arg gridMode)" /> 
   <param name="MapToTransferSideLength" value="$(arg MapToTransferSideLength)" /> 
   <param name="VolumeToExploreThreshold" value="$(arg VolumeToExploreThreshold)" /> 
-  <param name="PotentialVolumeToExploreThreshold" value="$(arg PotentialVolumeToExploreThreshold)" /> 
+  <param name="om_to_pl_vol_ideal" value="$(arg om_to_pl_vol_ideal)" /> 
   <param name="filterOctoMap" value="$(arg filterOctoMap)" /> 
   <param name="gridSliceCountPerSide" value="$(arg gridSliceCountPerSide)" /> 
 

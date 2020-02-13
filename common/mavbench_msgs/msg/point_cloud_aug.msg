@@ -3,3 +3,7 @@ sensor_msgs/PointCloud2 pcl
 float32 pc_res
 float32 pc_vol_ideal
 float32 pc_vol_actual
+float32 om_to_pl_res
+float32 om_to_pl_vol_ideal
+
+

@@ -104,9 +104,9 @@ vector<ParamVal> perf_model(NodeBudget node_budget) {
 		}
 	} else if (node_budget.node_type == "octomap"){
 		if (node_budget.budget > .5) {
-			results.push_back(ParamVal{"perception_lower_resolution", .8});
+			results.push_back(ParamVal{"om_to_pl_res", .8});
 		}else{
-			results.push_back(ParamVal{"perception_lower_resolution", .8});
+			results.push_back(ParamVal{"om_to_pl_res", .8});
 		}
 	}else if (node_budget.node_type == "planning"){
 		results.push_back(ParamVal{"piecewise_planning_budget", node_budget.budget/2});
@@ -220,7 +220,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	double point_cloud_num_points;
 	float MapToTransferSideLength;
 	double pc_res;
-	double perception_lower_resolution;
+	double om_to_pl_res;
 	int pc_res_power_index; // -- temp
 
 	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
@@ -241,14 +241,14 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	double point_cloud_num_points_step_cnt = 2;
 	double point_cloud_num_points_max;  // -- depends on resolution
 	double point_cloud_num_points_min = 10;
-	double perception_lower_resolution_max = pc_res_max;
-	double perception_lower_resolution_min = pow(2, num_of_steps_on_y)*perception_lower_resolution_max;  //this value must be a power of two
-	static double static_perception_lower_resolution = perception_lower_resolution_max;
-	double potential_map_to_explore_volume_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+	double om_to_pl_res_max = pc_res_max;
+	double om_to_pl_res_min = pow(2, num_of_steps_on_y)*om_to_pl_res_max;  //this value must be a power of two
+	static double static_om_to_pl_res = om_to_pl_res_max;
+	double om_to_pl_vol_ideal_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
 											   // -- wanna cover be, and match it to this value.
-	double potential_map_to_explore_volume_min = 3500;
-	double potential_map_to_explore_volume_step_cnt = 20;
-	static double  static_potential_map_to_explore_volume = potential_map_to_explore_volume_max;
+	double om_to_pl_vol_ideal_min = 3500;
+	double om_to_pl_vol_ideal_step_cnt = 20;
+	static double  static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max;
 
 
 
@@ -280,7 +280,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 		double pc_res_temp =  (pc_res_max - pc_res_min)/(0 - (g_v_max-offset_v_max)) * vel_mag + pc_res_max;
 		pc_res_power_index = int(log2(pc_res_temp/pc_res_max));
 		static_pc_res =  pow(2, pc_res_power_index)*pc_res_max;
-		perception_lower_resolution = static_pc_res*2;
+		om_to_pl_res = static_pc_res*2;
 
 		// -- determine the number of points within point cloud
 		double max_point_cloud_point_count_max_resolution = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
@@ -311,19 +311,19 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 				//static_point_cloud_num_points_step_size = (int) (static_point_cloud_num_points_max - point_cloud_num_points_min)/point_cloud_num_points_step_cnt;
 				static_pc_vol_ideal  = pc_vol_ideal_max;
 			}
-			perception_lower_resolution = pc_res_max;  // -- just set it equal cause it doesn't matter
+			om_to_pl_res = pc_res_max;  // -- just set it equal cause it doesn't matter
 			//MapToTransferSideLength = map_to_transfer_side_length_max;
 		}
 
 		// -- octomap to planning communication knobs
 		if (knob_performance_modeling_for_om_to_pl){
 			ros::Duration(6).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-			if (static_potential_map_to_explore_volume < potential_map_to_explore_volume_min){
-				static_potential_map_to_explore_volume = potential_map_to_explore_volume_max; // -- reset the map size
-				if (static_perception_lower_resolution == perception_lower_resolution_min){
-					static_perception_lower_resolution = perception_lower_resolution_max;
+			if (static_om_to_pl_vol_ideal < om_to_pl_vol_ideal_min){
+				static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max; // -- reset the map size
+				if (static_om_to_pl_res == om_to_pl_res_min){
+					static_om_to_pl_res = om_to_pl_res_max;
 				}else{
-					static_perception_lower_resolution = min(2*static_perception_lower_resolution, perception_lower_resolution_min);
+					static_om_to_pl_res = min(2*static_om_to_pl_res, om_to_pl_res_min);
 				}
 
 			}
@@ -334,10 +334,10 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 			ros::Duration(20).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 			if (static_map_to_explore_volume < map_to_explore_volume_min){
 				static_map_to_explore_volume = map_to_explore_volume_max; // -- reset the map size
-				if (perception_lower_resolution == perception_lower_resolution_min){
-					static_perception_lower_resolution = perception_lower_resolution_max;
+				if (om_to_pl_res == om_to_pl_res_min){
+					static_om_to_pl_res = om_to_pl_res_max;
 				}else{
-					static_perception_lower_resolution = min(2*static_perception_lower_resolution, perception_lower_resolution_min);
+					static_om_to_pl_res = min(2*static_om_to_pl_res, om_to_pl_res_min);
 				}
 
 			}
@@ -353,16 +353,16 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	// -- set the parameters
 	ros::param::set("pc_res", static_pc_res);
     profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
-    profiling_container->capture("perception_lower_resolution", "single", perception_lower_resolution, g_capture_size);
+    profiling_container->capture("om_to_pl_res", "single", om_to_pl_res, g_capture_size);
 	ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
 	ros::param::set("pc_vol_ideal", static_pc_vol_ideal);
 	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
 	profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
 // -- determine how much of the space to keep
 //	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
-	ros::param::set("PotentialVolumeToExploreThreshold", static_potential_map_to_explore_volume);
+	ros::param::set("om_to_pl_vol_ideal", static_om_to_pl_vol_ideal);
 	ros::param::set("VolumeToExploreThreshold", static_map_to_explore_volume);
-	ros::param::set("perception_lower_resolution", static_perception_lower_resolution);
+	ros::param::set("om_to_pl_res", static_om_to_pl_res);
 
 
 
@@ -385,7 +385,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
     	static_pc_vol_ideal -= (pc_vol_ideal_max - pc_vol_ideal_min)/pc_vol_ideal_step_cnt;
     }
     if (knob_performance_modeling_for_om_to_pl){
-    	static_potential_map_to_explore_volume -= (potential_map_to_explore_volume_max - potential_map_to_explore_volume_min)/potential_map_to_explore_volume_step_cnt;
+    	static_om_to_pl_vol_ideal -= (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/om_to_pl_vol_ideal_step_cnt;
     }
     if (knob_performance_modeling_for_piecewise_planner){
     	static_map_to_explore_volume -= (map_to_explore_volume_max - map_to_explore_volume_min)/map_to_explore_volume_step_cnt;
@@ -397,7 +397,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
     if (DEBUG_RQT) {
     	debug_data.header.stamp = ros::Time::now();
     	debug_data.pc_res = profiling_container->findDataByName("pc_res")->values.back();
-    	debug_data.perception_lower_resolution = profiling_container->findDataByName("perception_lower_resolution")->values.back();
+    	debug_data.om_to_pl_res = profiling_container->findDataByName("om_to_pl_res")->values.back();
     	debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
     	debug_data.piecewise_planning_budget =  profiling_container->findDataByName("piecewise_planning_budget")->values.back();
     	debug_data.smoothening_budget =  profiling_container->findDataByName("smoothening_budget")->values.back();
