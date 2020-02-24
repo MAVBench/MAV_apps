@@ -45,6 +45,7 @@
 #include <mavbench_msgs/octomap_debug.h>
 #include <mavbench_msgs/point_cloud_meta_data.h>
 #include <mavbench_msgs/octomap_aug.h>
+#include <mavbench_msgs/point_cloud_aug.h>
 #include <vector>
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>

@@ -6,5 +6,3 @@ float32 pc_vol_actual
 float32 om_to_pl_res
 float32 om_to_pl_vol_ideal
 float32 ppl_vol_ideal
-
-

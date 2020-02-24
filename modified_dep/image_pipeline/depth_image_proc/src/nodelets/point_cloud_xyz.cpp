@@ -245,6 +245,7 @@ void PointCloudXyzNodelet::onInit()
     sub_depth_ = it_->subscribeCamera("image_rect", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
     pub_point_cloud_aug_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points_aug", 1);//, connect_cb, connect_cb);
     pub_point_cloud_ = nh.advertise<PointCloud>("points", 1);//, connect_cb, connect_cb);
+
     point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
@@ -1415,7 +1416,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    // -- piecewise planner
    ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
 
-
   PointCloud::Ptr cloud_msg(new PointCloud);
 
   ros::Time start_hook_t = ros::Time::now();
@@ -1559,6 +1559,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   //meta_data_msg.point_cloud_resolution = point_cloud_resolution;
   //meta_data_msg.point_cloud_area_to_digest = area_to_digest;
   //point_cloud_meta_data_pub.publish(meta_data_msg);
+
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
   profiling_container->capture("point_cloud_area_to_digest", "single", area_to_digest, capture_size);
   profiling_container->capture("point_cloud_volume_to_digest", "single", volume_to_digest, capture_size);

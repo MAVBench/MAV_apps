@@ -233,9 +233,9 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 
   octomap_debug_pub = m_nh.advertise<mavbench_msgs::octomap_debug>("octomap_debug", 1);
 
-
   m_pointCloudSub = new message_filters::Subscriber<mavbench_msgs::point_cloud_aug> (m_nh, "cloud_in", 1);
   m_tfPointCloudSub = new tf::MessageFilter<mavbench_msgs::point_cloud_aug> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 1);
+  
   //m_pointCloudSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_in", 1);
   //m_tfPointCloudSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 1);
   m_tfPointCloudSub->registerCallback(boost::bind(&OctomapServer::insertCloudCallback, this, _1));
@@ -409,7 +409,6 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	om_to_pl_res = pcl_aug_data->om_to_pl_res;
 	om_to_pl_vol_ideal = pcl_aug_data->om_to_pl_vol_ideal;
 	ppl_vol_ideal = pcl_aug_data->ppl_vol_ideal;
-
 
 	// -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning

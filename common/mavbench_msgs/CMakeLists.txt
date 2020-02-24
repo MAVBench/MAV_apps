@@ -90,7 +90,6 @@ generate_messages(
   trajectory_msgs
   octomap_msgs
   sensor_msgs
-
 )
 
 ################################################
