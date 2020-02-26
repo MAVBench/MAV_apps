@@ -229,7 +229,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
 	static double static_pc_res = pc_res_max;
 	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
-	double pc_vol_ideal_max = 11000;
+	double pc_vol_ideal_max = 8000;
 	double pc_vol_ideal_min = 100;
 	double pc_vol_ideal_step_cnt = 30;
 	static double  static_pc_vol_ideal = pc_vol_ideal_max;

@@ -9,6 +9,7 @@ add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
 set (common_utility_include $ENV{mavbench_apps_base_dir}/common)
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -19,6 +20,8 @@ find_package(catkin REQUIRED COMPONENTS
   data_collection
   profile_manager
   tf
+  # for python packages
+  rospy
 )
 
 set (CMAKE_CXX_STANDARD 11)
@@ -28,7 +31,7 @@ set (CMAKE_CXX_STANDARD 11)
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -119,8 +122,8 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES run_time
-  CATKIN_DEPENDS roscpp std_msgs
-  DEPENDS system_lib
+  CATKIN_DEPENDS roscpp std_msgs rospy
+##  DEPENDS system_lib
 )
 
 ###########
@@ -194,10 +197,10 @@ target_link_libraries(run_time ${catkin_LIBRARIES})
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(PROGRAMS
+  scripts/optimizer_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables and/or libraries for installation
 install(TARGETS run_time
@@ -235,3 +238,4 @@ target_link_libraries(run_time_thread ${catkin_LIBRARIES} AirLib MavLinkCom rpc 
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+

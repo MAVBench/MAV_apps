@@ -424,7 +424,13 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 		}
 	}
 
-	if(CLCT_DATA) {
+    // python dummy value get-set
+	float dummy_val;
+	ros::param::get("optimizer_node/dummy_val", dummy_val);
+	dummy_val++;
+	ros::param::set("optimizer_node/dummy_val", dummy_val);
+
+    if(CLCT_DATA) {
 		ros::Time start_time = ros::Time::now();
 		pt_cld_octomap_commun_overhead_acc +=  (start_time - cloud->header.stamp).toSec()*1e9;
 		octomap_ctr++;
@@ -530,6 +536,9 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
   }
   profiling_container.capture("octomap_filter", "end", ros::Time::now(), capture_size);
   //ROS_INFO_STREAM("octomap filter time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
+
+
+  profiling_container.capture("sensor_volume_to_digest_estimated", "single", pcl_aug_data->sensor_volume_to_digest_estimated, capture_size);
 
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
@@ -849,6 +858,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 		debug_data.octomap_prune_in_octomap_server = profiling_container.findDataByName("octomap_prune_in_octomap_server")->values.back();
 		debug_data.octomap_construct_lower_res_map= profiling_container.findDataByName("construct_lower_res_map")->values.back();
 		debug_data.octomap_space_volume_digested =  free_cell_volume + occupied_cell_volume;
+		debug_data.integrated_volume_tracking_error =  (free_cell_volume + occupied_cell_volume) - profiling_container.findDataByName("sensor_volume_to_digest_estimated")->values.back();
+
 		//octomap_debug_pub.publish(debug_data);
   }
   ROS_INFO_STREAM("OM vol"<<free_cell_volume + occupied_cell_volume);

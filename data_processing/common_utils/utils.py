@@ -40,3 +40,10 @@ def fit_func(x, y, deg):
     return m,b
 
 
+def fit_func_2(x, y, deg):
+    a, b, c = np.polyfit(x, y, deg)
+    return a,b,c
+
+
+
+

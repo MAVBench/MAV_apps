@@ -464,7 +464,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
 			profiling_container.capture("om_to_pl_res_knob_modeling", "single",
 					msg->om_to_pl_res, capture_size);
-			profiling_container.capture("om_to_pl_vol_actual", "single",
+			profiling_container.capture("om_to_pl_vol_actual_knob_modeling", "single",
 					msg->om_to_pl_vol_actual, capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_deserialization_time")->values.back(), capture_size);
