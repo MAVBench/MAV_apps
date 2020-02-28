@@ -8,3 +8,4 @@ float32 om_to_pl_vol_ideal
 float32 ppl_vol_ideal
 float32 sensor_volume_to_digest_estimated
 float32 sensor_to_actuation_time_budget
+float32 velocity_to_budget_on

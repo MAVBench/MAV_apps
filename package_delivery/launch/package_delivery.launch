@@ -80,6 +80,8 @@
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
   <arg name="sensor_to_actuation_time_budget" default="3"/> 
   <param name="sensor_to_actuation_time_budget" value="$(arg sensor_to_actuation_time_budget)"/>
+  <arg name="velocity_to_budget_on" default=".1"/> 
+  <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
   <arg name="planner_min_freq" default=".01"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
   

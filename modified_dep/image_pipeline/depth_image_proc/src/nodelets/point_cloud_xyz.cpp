@@ -109,6 +109,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   bool knob_performance_modeling = false;
   virtual void onInit();
   double sensor_to_actuation_time_budget;
+  double velocity_to_budget_on;
 
   void connectCb();
 
@@ -236,6 +237,12 @@ void PointCloudXyzNodelet::onInit()
 
     }
 
+    if(!ros::param::get("/velocity_to_budget_on", velocity_to_budget_on)){
+    	ROS_FATAL_STREAM("Could not start point cloud velocity_to_budget_on not provided");
+    	exit(0);
+    	return ;
+
+    }
 
 
     if (knob_performance_modeling){
@@ -484,6 +491,8 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
   double this_y_no_norm, last_y_no_norm;
   int cntr= 0;
  int cntr1 = 0;
+ bool first_point = true; // first point in the first gap
+ float closest_obstacle = sensor_max_range;
  //const float resolution_to_consider = 1;
  //const int point_cloud_wc_side_length = 60;
 // const int grided_volume_size = (int)point_cloud_wc_side_length/resolution_to_consider;
@@ -516,9 +525,17 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
     	  this_y = (sensor_max_range/norm)*this_y;
     	  this_z = (sensor_max_range/norm)*this_z;
       }
+      double new_norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
+
+      if (new_norm < closest_obstacle){ // -- we might wanna use this to determine the resolution
+    	  	  	  	  	  	  	  	    // -- i.e., make sure resolution is bigger than closest_obstacle
+    	  closest_obstacle = new_norm;
+      }
+
       new_row = this_x < last_x;
       //bool point_is_gap = this_z > (sensor_max_range - resolution);
-      bool point_is_gap = norm > sensor_max_range;
+      float gap_error_margin = .05;
+      bool point_is_gap = norm >= sensor_max_range - gap_error_margin*(sensor_max_range);
 
      /*
       if (!first_itr && this_y_no_norm < last_y_no_norm){
@@ -542,7 +559,10 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
       } else { //within row, or first time
      	  if (point_is_gap) { //if gap, increase the gap size
      		  gap_started = true;
-     		  gap_size += fabs(this_x - last_x);
+     		  if (!first_point){
+     			  gap_size += fabs(this_x - last_x);
+     		  }
+     		  first_point = false;
      	  }else if (gap_started){ //stop the gap
      		  gap_size_vec.push_back(gap_size);
 			  gap_started = false;
@@ -576,33 +596,38 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
 	  }
   }
 
-  /*
+
+  float max_gap = 0;
   // printing stuff out
   if (gap_size_vec.size() != 0){
 	  float acc = 0;
-	  cout<<"gap_size:";
+//	  cout<<"gap_size:";
 	  for (auto it = gap_size_vec.begin(); it != gap_size_vec.end(); it++){
-		  cout<<*it<<",";
+//		  cout<<*it<<",";
 		  acc+=*it;
+		  if (*it > max_gap){
+			  max_gap = *it;
+		  }
 	  }
-	  cout<<endl;
+	  //cout<<endl;
 	  float avg =  acc/gap_size_vec.size();
 	  float std = 0;
 	  for (auto it = gap_size_vec.begin(); it != gap_size_vec.end(); it++){
 		  std += pow(*it - avg,2);
 	  }
 	  std = std/gap_size_vec.size();
-	  cout<<"avg:"<< avg<< " std:" << std<<"size"<<gap_size_vec.size()<<endl;
+	  //cout<<"avg:"<< avg<< " std:" << std<<"size"<<gap_size_vec.size()<<endl;
+	  //cout<<"max_gap:"<< max_gap<<endl;
   }
 
-   cout<<"gap_ctr_per_row:";
+  /*
+  cout<<"gap_ctr_per_row:";
    for (auto it = gap_ctr_per_row_vec.begin(); it != gap_ctr_per_row_vec.end(); it++){
 		  cout<<*it<<",";
    }
    cout<<endl;
-
-  cout<<endl<<endl;
-  */
+*/
+  //cout<<endl<<endl;
   //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
 //  ROS_INFO_STREAM("counters for outer of order"<<cntr);
  // ROS_INFO_STREAM("------------------------------");
@@ -1416,6 +1441,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
    // -- time budget
    ros::param::get("/sensor_to_actuation_time_budget", sensor_to_actuation_time_budget);
+   ros::param::get("/velocity_to_budget_on", velocity_to_budget_on);
 
    // -- point cloud to octomap knobs
    ros::param::get("/pc_res", pc_res);
@@ -1565,6 +1591,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.ppl_vol_ideal = ppl_vol_ideal;
   pcl_aug_data.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
   pcl_aug_data.sensor_to_actuation_time_budget = sensor_to_actuation_time_budget;
+  pcl_aug_data.velocity_to_budget_on = velocity_to_budget_on;
+
 
 
   pub_point_cloud_.publish (*cloud_msg);
@@ -1596,7 +1624,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
 	  debug_data.sensor_to_actuation_time_budget = sensor_to_actuation_time_budget;
+	  debug_data.velocity_to_budget_on = velocity_to_budget_on;
+
 	  pc_debug_pub.publish(debug_data);
+
 
   }
 

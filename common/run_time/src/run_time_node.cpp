@@ -557,6 +557,10 @@ int main(int argc, char **argv)
 	ros::Duration(10).sleep();
     while (ros::ok())
 	{
+    	auto vel = drone.velocity();
+    	auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+    	ros::param::set("velocity_to_budget_on", vel_mag);
+
     	ros::spinOnce();
     	ros::param::get("/reactive_runtime", reactive_runtime);
     	ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
@@ -564,8 +568,6 @@ int main(int argc, char **argv)
     	ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
     	if (dynamic_budgetting){
     		if (reactive_runtime){
-    			auto vel = drone.velocity();
-    			auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
     			reactive_budgetting(vel_mag, pc_res_point_count);
     		}
     	}
