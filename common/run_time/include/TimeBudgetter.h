@@ -13,7 +13,7 @@ public:
 
 	double calcSamplingTimeFixV(double velocityMag , double sensorRange, std::vector<double> acceleartionCoeffs, double latency);
 	double calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency);
-	double calcSamplingTimeFixV(double velocityMag, double latency);
+	double calcSamplingTimeFixV(double velocityMag, double latency, string mode);
 
 	void calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin,
 			std::deque<multiDOFpoint>::iterator trajEnd , std::deque<multiDOFpoint>::iterator &trajItr,

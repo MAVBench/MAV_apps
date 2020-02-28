@@ -29,8 +29,15 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRang
 }
 
 
-double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency){
-	return this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, this->sensorActuatorModel_.maxSensorRange(), this->sensorActuatorModel_.accelerationCoeffs()) - latency;
+double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, string mode="no_pipelining"){
+	double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, this->sensorActuatorModel_.maxSensorRange(), this->sensorActuatorModel_.accelerationCoeffs());
+	double next_sampling_time;
+	if (mode == "no_pipelining"){ // this assumes that latency is equal to 1/throughput
+		next_sampling_time = response_time/2;
+	}else{
+		next_sampling_time = response_time - latency;
+	}
+	return next_sampling_time;
 }
 
 

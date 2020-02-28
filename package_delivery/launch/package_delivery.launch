@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="3"/> 
+  <arg name="v_max" default="13"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -53,7 +53,7 @@
   <!-- ===================================================================== -->
   <!-- ========================= Performance Modeling ============================ -->
   <!-- ===================================================================== -->
-  <arg name="knob_performance_modeling" default="true" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
+  <arg name="knob_performance_modeling" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling" value="$(arg knob_performance_modeling)"/> 
   <arg name="knob_performance_modeling_for_pc_om" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="knob_performance_modeling_for_pc_om" value="$(arg knob_performance_modeling_for_pc_om)"/> 
@@ -78,6 +78,8 @@
   
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
+  <arg name="sensor_to_actuation_time_budget" default="3"/> 
+  <param name="sensor_to_actuation_time_budget" value="$(arg sensor_to_actuation_time_budget)"/>
   <arg name="planner_min_freq" default=".01"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
   

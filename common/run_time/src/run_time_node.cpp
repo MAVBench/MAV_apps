@@ -156,8 +156,10 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
-
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency);
+	ros::param::set("sensor_to_actuation_time_budget", macro_time_budgets[1]);
+
+	/*
 	auto node_budget_vec = calc_micro_budget(macro_time_budgets[0]);
 
 	// calculate each node's params
@@ -174,7 +176,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	}
 
 	MacroBudgets.pop_front();
-
+	*/
 
 	return;
 }
@@ -274,19 +276,26 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 		float offset_v_max = g_v_max/num_of_steps_on_y; // this is used to offsset the g_v_max; this is necessary otherwise, the step function basically never reacehs the min_pc_res
 		double pc_res_temp =  (pc_res_max - pc_res_min)/(0 - (g_v_max-offset_v_max)) * vel_mag + pc_res_max;
 		pc_res_power_index = int(log2(pc_res_temp/pc_res_max));
+
 		static_pc_res =  pow(2, pc_res_power_index)*pc_res_max;
-		om_to_pl_res = static_pc_res*2;
+		static_pc_vol_ideal  = (pc_vol_ideal_max - pc_vol_ideal_min)/(0 - g_v_max)*vel_mag + pc_vol_ideal_max;
+		static_om_to_pl_res = static_pc_res;
+		static_om_to_pl_vol_ideal = (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/(0 - g_v_max)*vel_mag + om_to_pl_vol_ideal_max;
+		static_ppl_vol_ideal = (ppl_vol_ideal_max - ppl_vol_ideal_min)/(0 - g_v_max)*vel_mag + ppl_vol_ideal_max;
 
 		// -- determine the number of points within point cloud
+		/*
 		double max_point_cloud_point_count_max_resolution = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
 		double max_point_cloud_point_count_min_resolution = max_point_cloud_point_count_max_resolution/15;
 		double min_point_cloud_point_count = max_point_cloud_point_count_min_resolution;
-
 		//--  calculate the maximum number of points in an unfiltered point cloud as a function of resolution
 		//    double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(pc_res_max - min_pc_res)*(pc_res - pc_res_max) + max_point_cloud_point_count_max_resolution;
 		//    calucate num of points as function of velocity
-		static_point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + max_point_cloud_point_count_max_resolution;
-		MapToTransferSideLength = 500 + (500 -40)/(0-g_v_max)*vel_mag;
+		//static_point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + max_point_cloud_point_count_max_resolution;
+		//MapToTransferSideLength = 500 + (500 -40)/(0-g_v_max)*vel_mag;
+		 */
+
+
 	}
 
 	// -- knob performance modeling logic
@@ -415,7 +424,7 @@ int main(int argc, char **argv)
 
 
     std::string ns = ros::this_node::getName();
-    //ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
+    ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
 
     profiling_container = new DataContainer();

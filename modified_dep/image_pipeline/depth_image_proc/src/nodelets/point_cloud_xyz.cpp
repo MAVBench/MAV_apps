@@ -108,7 +108,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double capture_size = 600;
   bool knob_performance_modeling = false;
   virtual void onInit();
-
+  double sensor_to_actuation_time_budget;
 
   void connectCb();
 
@@ -228,6 +228,15 @@ void PointCloudXyzNodelet::onInit()
     	return ;
 
     }
+
+    if(!ros::param::get("/sensor_to_actuation_time_budget", sensor_to_actuation_time_budget)){
+    	ROS_FATAL_STREAM("Could not start point cloud sensor_to_actuation_time_budget not provided");
+    	exit(0);
+    	return ;
+
+    }
+
+
 
     if (knob_performance_modeling){
     	capture_size = 1;
@@ -1405,6 +1414,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    //ros::param::get("/point_cloud_max_z", point_cloud_max_z);
 
 
+   // -- time budget
+   ros::param::get("/sensor_to_actuation_time_budget", sensor_to_actuation_time_budget);
+
    // -- point cloud to octomap knobs
    ros::param::get("/pc_res", pc_res);
    ros::param::get("/pc_vol_ideal", pc_vol_ideal);
@@ -1412,6 +1424,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    // -- octomap to planner
    ros::param::get("/om_to_pl_res", om_to_pl_res);
    ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
+
 
    // -- piecewise planner
    ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
@@ -1551,6 +1564,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.om_to_pl_res = om_to_pl_res;
   pcl_aug_data.ppl_vol_ideal = ppl_vol_ideal;
   pcl_aug_data.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  pcl_aug_data.sensor_to_actuation_time_budget = sensor_to_actuation_time_budget;
+
 
   pub_point_cloud_.publish (*cloud_msg);
   pub_point_cloud_aug_.publish (pcl_aug_data);
@@ -1580,7 +1595,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.pc_vol_actual = pc_vol_actual;
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
+	  debug_data.sensor_to_actuation_time_budget = sensor_to_actuation_time_budget;
 	  pc_debug_pub.publish(debug_data);
+
   }
 
 }

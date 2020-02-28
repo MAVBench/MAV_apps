@@ -12,3 +12,4 @@ float32 point_cloud_area_to_digest
 float32 diagnostics
 float32 point_cloud_sensor_volume_to_digest_estimated
 float32 pc_vol_actual
+float32 sensor_to_actuation_time_budget
