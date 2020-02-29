@@ -440,7 +440,7 @@
 
   <!-- ========================= Run Time ()  ============================ -->
   <arg name="reactive_runtime" default="true" />   
-  <arg name="dynamic_budgetting" default="true" />   
+  <arg name="dynamic_budgetting" default="false" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
   <arg name="gap_statistic_mode" default="avg" />   

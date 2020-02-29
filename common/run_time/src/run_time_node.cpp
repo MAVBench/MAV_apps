@@ -30,6 +30,7 @@
 #include <datacontainer.h>
 #include <profile_manager.h>
 #include <mavbench_msgs/runtime_debug.h>
+#include <mavbench_msgs/control_input.h>
 
 using namespace std;
 std::string ip_addr__global;
@@ -139,6 +140,12 @@ void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, m
     	copy_to.x = copy_from.x;
     	copy_to.y = copy_from.y;
     	copy_to.z = copy_from.z;
+}
+
+
+void control_inputs_callback(const mavbench_msgs::control_input::ConstPtr& msg){
+
+
 }
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
@@ -513,6 +520,7 @@ int main(int argc, char **argv)
     std::string ns = ros::this_node::getName();
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
+    ros::Subscriber control_inputs = n.subscribe<mavbench_msgs::control_input>("/control_inputs", 1, control_inputs_callback);
 
     profiling_container = new DataContainer();
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);

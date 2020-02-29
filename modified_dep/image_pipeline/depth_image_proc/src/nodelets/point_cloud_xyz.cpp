@@ -55,6 +55,7 @@ using namespace std;
 #include <string>
 #include <mavbench_msgs/point_cloud_meta_data.h>
 #include <mavbench_msgs/point_cloud_aug.h>
+#include <mavbench_msgs/control_input.h>
 
 namespace depth_image_proc {
 
@@ -78,6 +79,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::Publisher pub_point_cloud_aug_;
   ros::Publisher point_cloud_meta_data_pub;
   ros::Publisher pc_debug_pub;
+  ros::Publisher control_inputs_pub;
   ros::Subscriber inform_pc_done_sub;
 
   image_geometry::PinholeCameraModel model_;
@@ -112,6 +114,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double sensor_to_actuation_time_budget;
   double velocity_to_budget_on;
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
+  bool  new_control_data = false;
 
   void connectCb();
 
@@ -281,6 +284,7 @@ void PointCloudXyzNodelet::onInit()
 
     //point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
+    control_inputs_pub = nh.advertise<mavbench_msgs::control_input>("/control_inputs", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
 
     profile_manager_client =
@@ -1545,6 +1549,21 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   float diagnostic_resolution = 1; // -- point cloud resolution to use for diagnostic purposes
   double gap_statistic;
   gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistic);
+
+
+  mavbench_msgs::control_input control_inputs;
+  control_inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  control_inputs.gap_statistics = gap_statistic;
+  control_inputs_pub.publish(control_inputs);
+  ros::param::get("/new_control_data", new_control_data);
+  while(new_control_data){
+	  ros::param::get("/new_control_data", new_control_data);
+	  ros::Duration(.05).sleep();
+  }
+  new_control_data = false;
+  ros::param::set("new_control_data", new_control_data);
+
+
   //sensor_volume_to_digest_estimated -= volume_correction_coeff;
 
   profiling_container->capture("diagnostics", "end", ros::Time::now());
