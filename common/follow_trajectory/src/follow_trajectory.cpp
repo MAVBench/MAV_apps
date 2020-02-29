@@ -230,8 +230,8 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 
     debug_data.controls = msg->controls;
 	debug_data.ee_profiles = msg->ee_profiles;
-	debug_data.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
-	debug_data.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
+	debug_data.ee_profiles.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
+	debug_data.ee_profiles.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
 }
 
 /*
@@ -471,8 +471,8 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 	debug_data.controls = msg->controls;
 	debug_data.ee_profiles = msg->ee_profiles;
-	debug_data.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
-	debug_data.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
+	debug_data.ee_profiles.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
+	debug_data.ee_profiles.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
 }
 
 

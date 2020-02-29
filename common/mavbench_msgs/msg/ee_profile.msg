@@ -11,4 +11,5 @@ float32 pl_latency
 time pl_pre_pub_time_stamp
 duration pl_to_ft_ros_oh
 
+float32 ee_latency
 

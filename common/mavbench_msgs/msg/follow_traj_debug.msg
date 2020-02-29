@@ -37,5 +37,3 @@ int32 stop
 
 mavbench_msgs/control controls
 mavbench_msgs/ee_profile ee_profiles
-duration pl_to_ft_ros_oh
-float32 ee_latency
