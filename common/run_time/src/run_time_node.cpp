@@ -217,6 +217,93 @@ int get_point_count(double resolution, vector<std::pair<double, int>>& pc_res_po
 }
 
 
+void static_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
+	// -- knobs to set (and some temp values)
+	double point_cloud_num_points;
+	float MapToTransferSideLength;
+	double pc_res;
+	double om_to_pl_res;
+	int pc_res_power_index; // -- temp
+
+	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
+	double pc_res_max = .15;
+	int num_of_steps_on_y = 4;
+	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
+	static double static_pc_res = pc_res_max;
+	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
+	double pc_vol_ideal_max = 8000;
+	double pc_vol_ideal_min = 100;
+	double pc_vol_ideal_step_cnt = 30;
+	static double  static_pc_vol_ideal = pc_vol_ideal_max;
+
+	//double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+	double map_to_transfer_side_length_max = 500;
+	double map_to_transfer_side_length_min = 40;
+	double map_to_transfer_side_length_step_cnt = 20;
+	double point_cloud_num_points_step_cnt = 2;
+	double point_cloud_num_points_max;  // -- depends on resolution
+	double point_cloud_num_points_min = 10;
+	double om_to_pl_res_max = pc_res_max;
+	double om_to_pl_res_min = pow(2, num_of_steps_on_y)*om_to_pl_res_max;  //this value must be a power of two
+	static double static_om_to_pl_res = om_to_pl_res_max;
+	double om_to_pl_vol_ideal_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+											   // -- wanna cover be, and match it to this value.
+	double om_to_pl_vol_ideal_min = 3500;
+	double om_to_pl_vol_ideal_step_cnt = 20;
+	static double  static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max;
+
+
+
+	double ppl_vol_ideal_max = 400000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+											   // -- wanna cover be, and match it to this value.
+	double ppl_vol_ideal_min = 100000;
+	double ppl_vol_ideal_step_cnt = 20;
+	static double  static_ppl_vol_ideal = ppl_vol_ideal_max;
+
+    // not used any more
+	static double static_point_cloud_num_points = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
+	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+
+
+	// --initialize some knobs
+	//pc_res = static_pc_res;
+	static double static_point_cloud_num_points_max = (double) get_point_count(static_pc_res, pc_res_point_count_vec); // -- get the resolution and look into the vector to find the maximum number of points for a certain resolution
+	static double static_point_cloud_num_points_step_size = (int) (static_point_cloud_num_points_max - point_cloud_num_points_min)/point_cloud_num_points_step_cnt;
+
+
+	// -- feed forward (simple)
+	static_pc_res =  pc_res_max;
+	static_pc_vol_ideal  = pc_vol_ideal_max;
+	static_om_to_pl_res = static_pc_res;
+	static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max;
+	static_ppl_vol_ideal = ppl_vol_ideal_max;// - ppl_vol_ideal_min)/(0 - g_v_max)*vel_mag + ppl_vol_ideal_max;
+
+
+	// -- set the parameters
+	ros::param::set("pc_res", static_pc_res);
+    profiling_container->capture("pc_res", "single", static_pc_res, g_capture_size);
+    profiling_container->capture("om_to_pl_res", "single", static_om_to_pl_res, g_capture_size);
+	ros::param::set("pc_vol_ideal", static_pc_vol_ideal);
+	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
+	profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
+// -- determine how much of the space to keep
+//	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
+	ros::param::set("om_to_pl_vol_ideal", static_om_to_pl_vol_ideal);
+	ros::param::set("ppl_vol_ideal", static_ppl_vol_ideal);
+	ros::param::set("om_to_pl_res", static_om_to_pl_res);
+
+    if (DEBUG_RQT) {
+    	debug_data.header.stamp = ros::Time::now();
+    	debug_data.pc_res = profiling_container->findDataByName("pc_res")->values.back();
+    	debug_data.om_to_pl_res = profiling_container->findDataByName("om_to_pl_res")->values.back();
+    }
+    //
+}
+
+
+
+
+
 void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
 	// -- knobs to set (and some temp values)
 	double point_cloud_num_points;
@@ -570,6 +657,8 @@ int main(int argc, char **argv)
     		if (reactive_runtime){
     			reactive_budgetting(vel_mag, pc_res_point_count);
     		}
+    	}else{
+    		   static_budgetting(vel_mag, pc_res_point_count);
     	}
         if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	pub_rate.sleep();
