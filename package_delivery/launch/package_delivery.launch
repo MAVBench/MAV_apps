@@ -98,6 +98,9 @@
   <arg name="DEBUG_RQT" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 
+  <arg name="DEBUG_VIS" default="true" /> <!-- determines whether to use RQT for debugging or not -->
+  <param name="DEBUG_VIS" value="$(arg DEBUG_VIS)"/> 
+
   <arg name="measure_time_end_to_end" default="true" />
   <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/> 
 
@@ -440,8 +443,10 @@
   <arg name="dynamic_budgetting" default="true" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
+  <arg name="gap_statistic_mode" default="avg" />   
+  <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
+  
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
-
   <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen">
     <param name="dummy_val" value="2.0" />
     <param name="rate" value="5" />

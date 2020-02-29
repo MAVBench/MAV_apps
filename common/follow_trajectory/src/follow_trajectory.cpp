@@ -87,6 +87,7 @@ bool micro_benchmark_signaled_supervisor = false; //if signaled, then don't capt
 bool micro_benchmark;
 int micro_benchmark_number;
 
+mavbench_msgs::follow_traj_debug debug_data = {};
 
 template <class P1, class P2>
 double distance(const P1& p1, const P2& p2) {
@@ -226,6 +227,11 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 
 
     SA_response_time_capture_ctr++;
+
+    debug_data.controls = msg->controls;
+	debug_data.ee_profiles = msg->ee_profiles;
+	debug_data.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
+	debug_data.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
 }
 
 /*
@@ -463,6 +469,10 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	}
 	SA_response_time_capture_ctr++;
 
+	debug_data.controls = msg->controls;
+	debug_data.ee_profiles = msg->ee_profiles;
+	debug_data.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
+	debug_data.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
 }
 
 
@@ -652,7 +662,6 @@ int main(int argc, char **argv)
 	*/
     bool modeling_first_itr = true;
     bool knob_performance_modeling_for_piecewise_planner = false;
-    mavbench_msgs::follow_traj_debug debug_data = {};
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
     ros::Time last_time_following = ros::Time::now();
     while (ros::ok()) {
@@ -845,6 +854,9 @@ int main(int argc, char **argv)
         //debug_data.planning_success = (planning_status == 2);
         debug_data.vel_magnitude = profiling_container->findDataByName("velocity")->values.back();
         debug_data.entire_follow_trajectory = profiling_container->findDataByName("entire_follow_trajectory")->values.back();
+
+
+
 
         if (DEBUG_RQT) {follow_traj_debug_pub.publish(debug_data);}
         replanning_reason = 0; //zero it out for the next round

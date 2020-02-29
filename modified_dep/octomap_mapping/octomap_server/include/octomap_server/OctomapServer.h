@@ -93,6 +93,7 @@ public:
 	ros::CallbackQueue callback_queue_meta_data; // -- only meta_data
   double pc_vol_actual; // -- the estimated volume of the information coming from point cloud
  double pc_res; // -- the resolution of the information coming from point cloud
+ ros::Time pc_capture_time; // -- time insertCloud was called
  std::string voxel_type_to_publish;
  DataContainer profiling_container;
  ProfileManager my_profile_manager;
@@ -102,6 +103,8 @@ public:
  bool measure_time_end_to_end;
  ros::Time rcvd_point_cld_time_stamp;
  ros::Publisher inform_pc_done_pub;
+
+ double om_to_pl_vol_actual = 0;
 
  //void log_data_before_shutting_down();
  void sigIntHandlerPrivate(int);

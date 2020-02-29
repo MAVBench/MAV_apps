@@ -7,7 +7,6 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
-#include <mavbench_msgs/multiDOFpoint.h>
 #include <octomap/AbstractOccupancyOcTree.h>
 #include <octomap/math/Vector3.h>
 #include <octomap/octomap_types.h>
@@ -339,10 +338,13 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	bool replan;
 	//std_msgs::Header msg_for_follow_traj;
-    mavbench_msgs::response_time_capture msg_for_follow_traj;
+    //mavbench_msgs::response_time_capture msg_for_follow_traj;
 	msg_for_follow_traj.header.stamp = msg.header.stamp;
 	if(!first_time_planning_succeeded) {
 		msg_for_follow_traj.planning_status = "first_time_planning";
+		msg_for_follow_traj.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+		msg_for_follow_traj.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+		msg_for_follow_traj.controls.achieved.ppl_vol_actual = ppl_vol_actual;
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 		replanning_reason = First_time_planning;
 		replan = true;
@@ -383,6 +385,10 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	// for profiling
 	if (!replan) { //notify the follow trajectory to erase up to this msg
 		msg_for_follow_traj.planning_status = "no_planning_needed";
+		ppl_vol_actual = volume_explored_in_unit_cubes*pow(octree->getResolution(), 3);
+		msg_for_follow_traj.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+		msg_for_follow_traj.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+		msg_for_follow_traj.controls.achieved.ppl_vol_actual = ppl_vol_actual;
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 	}else{
 		profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
@@ -407,7 +413,13 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 // octomap callback
 void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msg)
 {
-    // reset all the profiling values
+
+	msg_for_follow_traj.controls = msg->controls;
+	msg_for_follow_traj.ee_profiles = msg->ee_profiles;
+	msg_for_follow_traj.ee_profiles.om_to_pl_ros_oh = (ros::Time::now() - msg->ee_profiles.om_pre_pub_time_stamp);
+	planning_start_time_stamp = ros::Time::now();
+
+	// reset all the profiling values
 	potential_distance_to_explore = 0;
     volume_explored_in_unit_cubes = 0;
     debug_data.motion_planning_collision_check_volume_explored = 0;
@@ -416,13 +428,14 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     debug_data.motion_planning_piece_wise_time = 0;
     debug_data.collision_func = 0;
 
+    auto ppl_vol_ideal = msg->controls.cmds.ppl_vol_ideal;
 
-    auto ppl_vol_ideal = msg->ppl_vol_ideal;
-    ppl_vol_idealInUnitCube = ppl_vol_ideal/(pow(msg->om_to_pl_res, 3));
+
+    ppl_vol_idealInUnitCube = ppl_vol_ideal/(pow(msg->controls.cmds.om_to_pl_res, 3));
     profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
-    profiling_container.capture("ppl_vol_ideal", "single", msg->ppl_vol_ideal, capture_size);
-    profiling_container.capture("om_to_pl_vol_actual", "single", msg->om_to_pl_vol_actual, capture_size);
-    profiling_container.capture("om_to_pl_res", "single", msg->om_to_pl_res, capture_size);
+    profiling_container.capture("ppl_vol_ideal", "single", msg->controls.cmds.ppl_vol_ideal, capture_size);
+    profiling_container.capture("om_to_pl_vol_actual", "single", msg->controls.achieved.om_to_pl_vol_actual, capture_size);
+    profiling_container.capture("om_to_pl_res", "single", msg->controls.cmds.om_to_pl_res, capture_size);
 
     if (octree != nullptr) {
         delete octree;
@@ -463,9 +476,9 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
 					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
 			profiling_container.capture("om_to_pl_res_knob_modeling", "single",
-					msg->om_to_pl_res, capture_size);
+					msg->controls.cmds.om_to_pl_res, capture_size);
 			profiling_container.capture("om_to_pl_vol_actual_knob_modeling", "single",
-					msg->om_to_pl_vol_actual, capture_size);
+					msg->controls.achieved.om_to_pl_vol_actual, capture_size);
 			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_deserialization_time")->values.back(), capture_size);
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
@@ -480,12 +493,12 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 		// -- piecewise planner
 		else if (knob_performance_modeling_for_piecewise_planner){
 				profiling_container.capture("om_to_pl_res_knob_modeling", "single",
-					msg->om_to_pl_res, capture_size);
+					msg->controls.cmds.om_to_pl_res, capture_size);
 		}
 	}
 
 
-    {
+	if (DEBUG_VIS){
     	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
     	publish_dummy_octomap_vis(octree);
     }
@@ -525,7 +538,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     			capture_size);
     	profiling_container.capture("piecewise_planner_time_knob_modeling", "single", profiling_container.findDataByName("motion_planning_piece_wise_time")->values.back(),
     			capture_size);
-    	profiling_container.capture("ppl_vol_actual_knob_modeling", "single", ppl_vol_actual*pow(resolution, 3), capture_size);
+    	profiling_container.capture("ppl_vol_actual_knob_modeling", "single", ppl_vol_actual, capture_size);
     }
 
 
@@ -609,18 +622,19 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     debug_data.motion_planning_piecewise_volume_explored = volume_explored_in_unit_cubes*pow(octree->getResolution(),3);
     debug_data.collision_func = total_collision_func;
-    ppl_vol_actual = volume_explored_in_unit_cubes;
+    ppl_vol_actual = volume_explored_in_unit_cubes*pow(octree->getResolution(), 3);
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
-
     	if (notified_failure){ //so we won't fly backward multiple times
     		//std_msgs::Header msg_for_follow_traj;
-    		mavbench_msgs::response_time_capture msg_for_follow_traj;
     		if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
 			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
 			msg_for_follow_traj.planning_status = "piecewise_planning_failed";
+			msg_for_follow_traj.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+			msg_for_follow_traj.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+			msg_for_follow_traj.controls.achieved.ppl_vol_actual = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
@@ -653,6 +667,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         notified_failure = true;
         if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
         else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
+        res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
+        res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
+        res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
+        res.multiDOFtrajectory.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+        res.multiDOFtrajectory.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+        res.multiDOFtrajectory.controls.achieved.ppl_vol_actual = ppl_vol_actual;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -690,11 +710,14 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	ROS_ERROR("Path could not be smoothened successfully");
     	profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
-    		mavbench_msgs::response_time_capture msg_for_follow_traj;
+    		//mavbench_msgs::response_time_capture msg_for_follow_traj;
     		//std_msgs::Header msg_for_follow_traj;
 			if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
 			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
 			msg_for_follow_traj.planning_status = "smoothening_failed";
+			msg_for_follow_traj.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+			msg_for_follow_traj.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+			msg_for_follow_traj.controls.achieved.ppl_vol_actual = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
@@ -712,6 +735,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         notified_failure = true;
         if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
         else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
+        res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
+        res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
+        res.multiDOFtrajectory.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+        res.multiDOFtrajectory.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+        res.multiDOFtrajectory.controls.achieved.ppl_vol_actual = ppl_vol_actual;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -726,7 +754,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     res.multiDOFtrajectory.replanning_reason = replanning_reason;
     res.multiDOFtrajectory.planning_status = "success";
     got_new_next_steps_since_last_attempted_plan = false;
-
+    res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
+    res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
+    res.multiDOFtrajectory.ee_profiles.pl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+    res.multiDOFtrajectory.ee_profiles.pl_pre_pub_time_stamp =  ros::Time::now();
+    res.multiDOFtrajectory.controls.achieved.ppl_vol_actual = ppl_vol_actual;
     traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
@@ -867,6 +899,14 @@ void MotionPlanner::motion_planning_initialize_params()
       ROS_FATAL_STREAM("Could not start motion_planning DEBUG_RQT not provided");
       return ;
     }
+
+	if(!ros::param::get("/DEBUG_VIS", DEBUG_VIS)){
+      ROS_FATAL_STREAM("Could not start motion_planning DEBUG_VIS not provided");
+      return ;
+    }
+
+
+
 
 	if(!ros::param::get("/piecewise_planning_budget", g_piecewise_planning_budget)){
       ROS_FATAL_STREAM("Could not start pkg delivery piecewise_planning_budget not provided");

@@ -1,6 +1,5 @@
 Header header
 octomap_msgs/Octomap oct
-float32 volume_to_explore_threshold
-float32 om_to_pl_vol_actual
-float32 om_to_pl_res
-float32 ppl_vol_ideal
+mavbench_msgs/control controls
+mavbench_msgs/ee_profile ee_profiles
+

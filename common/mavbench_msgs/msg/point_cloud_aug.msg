@@ -1,11 +1,4 @@
 Header header
 sensor_msgs/PointCloud2 pcl
-float32 pc_res
-float32 pc_vol_ideal
-float32 pc_vol_actual
-float32 om_to_pl_res
-float32 om_to_pl_vol_ideal
-float32 ppl_vol_ideal
-float32 sensor_volume_to_digest_estimated
-float32 sensor_to_actuation_time_budget
-float32 velocity_to_budget_on
+mavbench_msgs/control controls
+mavbench_msgs/ee_profile ee_profiles

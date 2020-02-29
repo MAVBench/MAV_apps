@@ -65,6 +65,12 @@ add_message_files(
   point_cloud_debug.msg
   point_cloud_meta_data.msg
   runtime_debug.msg
+  control_cmd.msg
+  control_input.msg
+  control_internal_states.msg
+  control_achieved.msg
+  control.msg
+  ee_profile.msg
   response_time_capture.msg
   octomap_aug.msg
   point_cloud_aug.msg

@@ -402,13 +402,19 @@ using namespace std; //
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
 //	m_octree->clear();
+	pc_capture_time = ros::Time::now();
 	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
-	pc_vol_actual = pcl_aug_data->pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
-	pc_res =  pcl_aug_data->pc_res;
-	om_to_pl_res = pcl_aug_data->om_to_pl_res;
-	om_to_pl_vol_ideal = pcl_aug_data->om_to_pl_vol_ideal;
-	ppl_vol_ideal = pcl_aug_data->ppl_vol_ideal;
+	pc_vol_actual = pcl_aug_data->controls.achieved.pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
+	pc_res =  pcl_aug_data->controls.cmds.pc_res;
+	om_to_pl_res = pcl_aug_data->controls.cmds.om_to_pl_res;
+	om_to_pl_vol_ideal = pcl_aug_data->controls.cmds.om_to_pl_vol_ideal;
+	ppl_vol_ideal = pcl_aug_data->controls.cmds.ppl_vol_ideal;
+
+	// -- for profiling
+	octomap_aug_data.controls = pcl_aug_data->controls;
+	octomap_aug_data.ee_profiles = pcl_aug_data->ee_profiles;
+	octomap_aug_data.ee_profiles.om_to_pc_ros_oh =  ros::Time::now() - pcl_aug_data->ee_profiles.pc_pre_pub_time_stamp;
 
 	// -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
@@ -436,6 +442,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 		octomap_ctr++;
 	}
 	rcvd_point_cld_time_stamp = cloud->header.stamp;
+
 
 	if (measure_time_end_to_end){
 		profiling_container.capture("sensor_to_octomap_time", "start", cloud->header.stamp, capture_size);
@@ -538,7 +545,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
   //ROS_INFO_STREAM("octomap filter time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
 
 
-  profiling_container.capture("sensor_volume_to_digest_estimated", "single", pcl_aug_data->sensor_volume_to_digest_estimated, capture_size);
+  profiling_container.capture("sensor_volume_to_digest_estimated", "single", pcl_aug_data->controls.inputs.sensor_volume_to_digest_estimated, capture_size);
 
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
@@ -1666,7 +1673,6 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  MapToTransferSideLength  = 1.2*m_maxRange; // -- 20  percent more
  vector<point3d> offset_vals;
  //double potential_volume_to_keep = PotentialVolumeToExplore;
- double om_to_pl_vol_actual;
  double last_om_to_pl_vol_actual = 0; // -- to rewind back the volume kept to
  	 	 	 	 	 	 	  // -- previously held value, after exceeding the threshold
 
@@ -1823,9 +1829,9 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.om_to_pl_vol_actual = om_to_pl_vol_actual;
-	  octomap_aug_data.ppl_vol_ideal = ppl_vol_ideal;
-	  octomap_aug_data.om_to_pl_res = om_to_pl_res;
+	  octomap_aug_data.controls.achieved.om_to_pl_vol_actual = om_to_pl_vol_actual;
+	  octomap_aug_data.ee_profiles.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
+	  octomap_aug_data.ee_profiles.om_pre_pub_time_stamp =  ros::Time::now();
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
@@ -1963,6 +1969,9 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
+	  octomap_aug_data.controls.achieved.om_to_pl_vol_actual = om_to_pl_vol_actual;
+	  octomap_aug_data.ee_profiles.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
+	  octomap_aug_data.ee_profiles.om_pre_pub_time_stamp =  ros::Time::now();
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
@@ -1993,6 +2002,9 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
+	  octomap_aug_data.controls.achieved.om_to_pl_vol_actual = om_to_pl_vol_actual;
+	  octomap_aug_data.ee_profiles.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
+	  octomap_aug_data.ee_profiles.om_pre_pub_time_stamp =  ros::Time::now();
 	  //octomap_aug_data.blah = -1;
 
 	  m_binaryMapPub.publish(octomap_aug_data);

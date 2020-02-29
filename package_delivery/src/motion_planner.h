@@ -24,7 +24,8 @@
 #include <mavbench_msgs/future_collision.h>
 #include <mavbench_msgs/motion_planning_debug.h>
 #include <mavbench_msgs/octomap_aug.h>
-
+#include <mavbench_msgs/multiDOFpoint.h>
+#include<mavbench_msgs/response_time_capture.h>
 // Misc messages
 #include <geometry_msgs/Point.h>
 
@@ -200,6 +201,11 @@ private:
     bool first_time_planning = true;
     bool first_time_planning_succeeded = false;
     bool DEBUG_RQT;
+    bool DEBUG_VIS;
+
+    ros::Time planning_start_time_stamp;
+
+    mavbench_msgs::response_time_capture msg_for_follow_traj;
 
     geometry_msgs::Point g_start_pos;
     geometry_msgs::Point g_goal_pos;

@@ -34,3 +34,8 @@ int32 planning_success
 int32 new_plan
 int32 fly_backward
 int32 stop
+
+mavbench_msgs/control controls
+mavbench_msgs/ee_profile ee_profiles
+duration pl_to_ft_ros_oh
+float32 ee_latency
