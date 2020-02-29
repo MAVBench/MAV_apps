@@ -44,6 +44,8 @@ bool knob_performance_modeling_for_piecewise_planner = false;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 
+mavbench_msgs::control_input control_inputs;
+bool got_new_input = false;
 
 
 typedef struct node_budget_t {
@@ -144,8 +146,8 @@ void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, m
 
 
 void control_inputs_callback(const mavbench_msgs::control_input::ConstPtr& msg){
-
-
+	control_inputs = *msg;
+	got_new_input = true;
 }
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
@@ -520,7 +522,7 @@ int main(int argc, char **argv)
     std::string ns = ros::this_node::getName();
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
-    ros::Subscriber control_inputs = n.subscribe<mavbench_msgs::control_input>("/control_inputs", 1, control_inputs_callback);
+    ros::Subscriber control_inputs = n.subscribe<mavbench_msgs::control_input>("/control_inputs_to_crun", 1, control_inputs_callback);
 
     profiling_container = new DataContainer();
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);
@@ -652,11 +654,16 @@ int main(int argc, char **argv)
 	ros::Duration(10).sleep();
     while (ros::ok())
 	{
+
+    	ros::spinOnce();
+    	if (!got_new_input){
+    		pub_rate.sleep();
+    	}
+    	got_new_input = false;
     	auto vel = drone.velocity();
     	auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
     	ros::param::set("velocity_to_budget_on", vel_mag);
 
-    	ros::spinOnce();
     	ros::param::get("/reactive_runtime", reactive_runtime);
     	ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
     	ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
@@ -669,7 +676,6 @@ int main(int argc, char **argv)
     		   static_budgetting(vel_mag, pc_res_point_count);
     	}
         if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
-    	pub_rate.sleep();
 	}
 
 }

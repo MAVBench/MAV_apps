@@ -284,7 +284,7 @@ void PointCloudXyzNodelet::onInit()
 
     //point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
-    control_inputs_pub = nh.advertise<mavbench_msgs::control_input>("/control_inputs", 1);
+    control_inputs_pub = nh.advertise<mavbench_msgs::control_input>("/control_inputs_to_crun", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
 
     profile_manager_client =
