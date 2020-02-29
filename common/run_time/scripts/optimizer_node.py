@@ -4,9 +4,11 @@ import roslib
 import rospy
 import sys
 
-from optimizer import bleh
+#from optimizer import Opt
 
 if __name__ == '__main__':
+    #op_obj = Opt()
+    #opt_obj.opt()
     while not rospy.is_shutdown():
         rate = float(rospy.get_param("optimizer_node/rate", '-1.0'))
         dummy_val = float(rospy.get_param("optimizer_node/dummy_val", '-1.0'))
