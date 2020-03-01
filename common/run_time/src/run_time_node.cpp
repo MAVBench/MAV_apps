@@ -166,7 +166,10 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency);
-	ros::param::set("sensor_to_actuation_time_budget", macro_time_budgets[1]);
+
+	control_inputs.sensor_to_actuation_time_budget = macro_time_budgets[1];
+
+//	ros::param::set("sensor_to_actuation_time_budget", macro_time_budgets[1]);
 
 	/*
 	auto node_budget_vec = calc_micro_budget(macro_time_budgets[0]);
@@ -518,7 +521,6 @@ int main(int argc, char **argv)
     node_types.push_back("octomap");
     node_types.push_back("planning");
 
-
     std::string ns = ros::this_node::getName();
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
@@ -526,7 +528,7 @@ int main(int argc, char **argv)
 
     profiling_container = new DataContainer();
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);
-
+    bool use_py_run = false;
 
 
     vector<std::pair<double,int>>pc_res_point_count;
@@ -636,6 +638,12 @@ int main(int argc, char **argv)
 			exit(0);
     }
 
+   if(!ros::param::get("/use_py_run", use_py_run)){
+			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_for_piecewise_planner not provided");
+			exit(0);
+    }
+
+
 
 
     /*
@@ -660,22 +668,31 @@ int main(int argc, char **argv)
     		pub_rate.sleep();
     	}
     	got_new_input = false;
-    	auto vel = drone.velocity();
-    	auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
-    	ros::param::set("velocity_to_budget_on", vel_mag);
 
-    	ros::param::get("/reactive_runtime", reactive_runtime);
-    	ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
-    	ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
-    	ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
-    	if (dynamic_budgetting){
-    		if (reactive_runtime){
-    			reactive_budgetting(vel_mag, pc_res_point_count);
+    	if (!use_py_run) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
+    		auto vel = drone.velocity();
+    		auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+    		ros::param::set("velocity_to_budget_on", vel_mag);
+    		ros::param::get("/reactive_runtime", reactive_runtime);
+    		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
+    		ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
+    		ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
+    		assert (use_py_run ^ reactive_runtime);
+    		assert (use_py_run ^ knob_performance_modeling_for_om_to_pl);
+    		assert (use_py_run ^ knob_performance_modeling_for_pc_om);
+    		assert (use_py_run ^ knob_performance_modeling_for_piecewise_planner);
+
+    		if (dynamic_budgetting){
+    			if (reactive_runtime){
+    				reactive_budgetting(vel_mag, pc_res_point_count);
+    			}
+    			ros::param::set("new_control_data", true);
+    		}else{
+    			static_budgetting(vel_mag, pc_res_point_count);
+    			ros::param::set("new_control_data", true);
     		}
-    	}else{
-    		   static_budgetting(vel_mag, pc_res_point_count);
+    		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}
-        if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
 	}
 
 }
