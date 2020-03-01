@@ -146,22 +146,37 @@ void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, m
 
 
 void control_inputs_callback(const mavbench_msgs::control_input::ConstPtr& msg){
-	control_inputs = *msg;
+	// -- note that we need to set the values one by one
+	// -- since we don't know the order
+	// -- with which the callbacks are called,
+	// -- and if we set the control_inputs to msg, we can overwrite
+	// -- the nex_steps_callback sensor_to_acuation_time_budget
+	control_inputs.sensor_volume_to_digest_estimated = msg->sensor_volume_to_digest_estimated;
+	control_inputs.gap_statistics = msg->gap_statistics;
+
 	got_new_input = true;
 }
 
+
+std::deque<multiDOFpoint> traj;
+vector<double> accelerationCoeffs = {.1439,.8016};
+double maxSensorRange;
+double TimeIncr;
+double maxVelocity;
+
+double calc_sensor_to_actuation_time_budget_based_on_current_velocity(double velocityMag){
+	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
+	return time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining");
+}
+
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
-    std::deque<multiDOFpoint> traj;
-    for (auto point_: msg->points){
+	traj.clear();
+	for (auto point_: msg->points){
     	multiDOFpoint point__;
     	convertMavBenchMultiDOFtoMultiDOF(point_, point__);
     	traj.push_back(point__);
     }
 
-	vector<double> accelerationCoeffs = {.1439,.8016};
-	double maxSensorRange = g_sensor_max_range;
-	double TimeIncr = g_sampling_interval;
-	double maxVelocity = g_v_max;
 
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
@@ -214,6 +229,14 @@ void initialize_global_params() {
 		ROS_FATAL_STREAM("Could not start run_time_node ip_addr not provided");
         exit(-1);
 	}
+
+
+	maxSensorRange = g_sensor_max_range;
+	TimeIncr = g_sampling_interval;
+	maxVelocity = g_v_max;
+
+
+
 }
 
 
@@ -514,8 +537,13 @@ int main(int argc, char **argv)
 {
     // ROS node initialization
     ros::init(argc, argv, "run_time_node", ros::init_options::NoSigintHandler);
-    ros::NodeHandle n;
-    ros::NodeHandle n2;
+    ros::NodeHandle n;//("~");
+    //ros::NodeHandle n2("~");
+   // ros::CallbackQueue callback_queue_1; // -- queues for next steps
+    //ros::CallbackQueue callback_queue_2; // -- queues for control_inputs
+    //n.setCallbackQueue(&callback_queue_1);
+    //n2.setCallbackQueue(&callback_queue_2);
+
     //signal(SIGINT, sigIntHandler);
 
     node_types.push_back("point_cloud");
@@ -523,7 +551,7 @@ int main(int argc, char **argv)
     node_types.push_back("planning");
 
     std::string ns = ros::this_node::getName();
-    ros::Subscriber next_steps_sub = n2.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
+    ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
     ros::Subscriber control_inputs_sub = n.subscribe<mavbench_msgs::control_input>("/control_inputs_to_crun", 1, control_inputs_callback);
     ros::Publisher control_input_to_pyrun = n.advertise<mavbench_msgs::control_input>("control_inputs_to_pyrun", 1);//, connect_cb, connect_cb);
@@ -655,32 +683,30 @@ int main(int argc, char **argv)
     	exit(0);
     }
      */
-    ros::CallbackQueue callback_queue_1; // -- queues for next steps
-    ros::CallbackQueue callback_queue_2; // -- queues for control_inputs
-    n.setCallbackQueue(&callback_queue_1);
-    n2.setCallbackQueue(&callback_queue_2);
-
     ros::Publisher runtime_debug_pub = n.advertise<mavbench_msgs::runtime_debug>("/runtime_debug", 1);
 
     Drone drone(ip_addr.c_str(), port, localization_method);
     //Drone drone(ip_addr__global.c_str(), port);
 	ros::Rate pub_rate(50);
-	ros::Duration(10).sleep();
     while (ros::ok())
 	{
 
-    	//ros::spinOnce();
-    	callback_queue_1.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
-    	callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
+    	ros::spinOnce();
+    	//bool is_empty = callback_queue_1.empty();
+    	//bool is_empty_2 = callback_queue_2.empty();
+    	//callback_queue_1.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
+    	//callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
 
-    	if (!got_new_input){
+
+    	if(!got_new_input){
     		pub_rate.sleep();
+    		continue;
     	}
     	got_new_input = false;
+    	auto vel = drone.velocity();
+    	auto vel_mag = (double) calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
-    		auto vel = drone.velocity();
-    		auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
     		ros::param::set("velocity_to_budget_on", vel_mag);
     		ros::param::get("/reactive_runtime", reactive_runtime);
     		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
@@ -702,6 +728,9 @@ int main(int argc, char **argv)
     		}
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
+    		if (traj.size() == 0) { // -- if we haven't started the initla planning or there is not trajectory
+    			control_inputs.sensor_to_actuation_time_budget = calc_sensor_to_actuation_time_budget_based_on_current_velocity(vel_mag);
+    		}
     		control_input_to_pyrun.publish(control_inputs);
     	}
 	}
