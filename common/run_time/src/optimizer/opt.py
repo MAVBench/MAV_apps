@@ -55,9 +55,11 @@ class Opt:
 			t1 = time.time()
 			elapsed = t1 - t0
 
-		# extend OptimizeResult object with two more attributes
+		# extend OptimizeResult object with more attributes
 		result.elapsed = elapsed
 		result.rt_err = self.optimizer.obj(result.x)
+		result.exp_task_times = self.optimizer.model(result.x)
+
 		return result
 
 
