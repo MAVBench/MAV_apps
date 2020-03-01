@@ -3,7 +3,7 @@ from scipy.optimize import Bounds, LinearConstraint, NonlinearConstraint, curve_
 
 
 
-class opt_base:
+class opt_base(object):
 
     # Constraints defined as such:
     # Gx <= d
@@ -26,13 +26,13 @@ class opt_base:
         self.ineq_cons = None
         if (G is not None and d is not None):
             self.ineq_cons = {'type': 'ineq',
-                              'fun' : lambda x: -G @ x + d,
+                              'fun' : lambda x: np.matmul(-G, x) + d,
                               'jac' : lambda x: -G}
 
         self.eq_cons = None
         if (A is not None and b is not None):
             self.eq_cons = {'type' : 'eq',
-                            'fun'  : lambda x: A @ x + b,
+                            'fun'  : lambda x: np.matmul(A, x) + b,
                             'jac'  : lambda x: A}
 
         self.cons = list(filter(None, [self.ineq_cons, self.eq_cons]))
@@ -107,7 +107,7 @@ class opt_base:
 
     def obj_norm_H(self, x, v=None):
         J_g = self.obj_J(x).reshape((1,-1))
-        return 2 * (J_g.T @ J_g + self.obj(x) * self.obj_H(x))
+        return 2 * (np.matmul(J_g.T, J_g) + self.obj(x) * self.obj_H(x))
 
 
     def _partial_r(self, res, vol, q):

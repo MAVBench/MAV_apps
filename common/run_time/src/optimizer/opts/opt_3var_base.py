@@ -8,15 +8,15 @@ class opt_3var_base(opt_base):
 
 	def __init__(self, r0, r1, Q, r_min, r_max, v_min, v_max,
                     G=None, d=None, A=None, b=None):
-		super().__init__(Q=Q, 
-						 r_min=r_min, 
-						 r_max=r_max, 
-						 v_min=v_min, 
-						 v_max=v_max,
-						 G=G, 
-						 d=d, 
-						 A=A, 
-						 b=b)
+		super(opt_3var_base, self).__init__(Q=Q, 
+											r_min=r_min, 
+											r_max=r_max, 
+											v_min=v_min, 
+											v_max=v_max,
+											G=G, 
+											d=d, 
+											A=A, 
+											b=b)
 		self._r0 = r0
 		self._r1 = r1
 
