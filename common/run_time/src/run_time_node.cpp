@@ -677,10 +677,10 @@ int main(int argc, char **argv)
     		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
     		ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
     		ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
-    		assert (use_py_run ^ reactive_runtime);
-    		assert (use_py_run ^ knob_performance_modeling_for_om_to_pl);
-    		assert (use_py_run ^ knob_performance_modeling_for_pc_om);
-    		assert (use_py_run ^ knob_performance_modeling_for_piecewise_planner);
+    		assert (!(use_py_run && reactive_runtime));
+    		assert (!(use_py_run && knob_performance_modeling_for_om_to_pl));
+    		assert (!(use_py_run && knob_performance_modeling_for_pc_om));
+    		assert (!(use_py_run && knob_performance_modeling_for_piecewise_planner));
 
     		if (dynamic_budgetting){
     			if (reactive_runtime){

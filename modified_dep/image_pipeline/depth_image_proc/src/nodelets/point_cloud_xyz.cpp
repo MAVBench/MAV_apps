@@ -1556,7 +1556,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   control_inputs.gap_statistics = gap_statistic;
   control_inputs_pub.publish(control_inputs);
   ros::param::get("/new_control_data", new_control_data);
-  while(new_control_data){
+  while(!new_control_data){
 	  ros::param::get("/new_control_data", new_control_data);
 	  ros::Duration(.05).sleep();
   }
