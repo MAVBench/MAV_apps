@@ -3,20 +3,24 @@
 import roslib
 import rospy
 import sys
-
+from mavbench_msgs.msg import control_input
 #from optimizer import Opt
+import time
+
+def control_input_callback(control_input_):
+    #control_inputs = control_input_        
+    rospy.set_param("pc_res", .15)
+    rospy.set_param("pc_vol_ideal", 8000)
+    rospy.set_param("om_to_pl_res", .15)
+    rospy.set_param("om_to_pl_vol_ideal", 200000)
+    rospy.set_param("ppl_vol_ideal", 40001)
+    rospy.set_param("new_control_data", True)
 
 if __name__ == '__main__':
     #op_obj = Opt()
     #opt_obj.opt()
+    rospy.init_node('runtime_thread_python', anonymous=True)
+    rospy.Subscriber("control_inputs_to_pyrun", control_input, control_input_callback) 
+    rate = rospy.Rate(20) # 10hz
     while not rospy.is_shutdown():
-        rate = float(rospy.get_param("optimizer_node/rate", '-1.0'))
-        dummy_val = float(rospy.get_param("optimizer_node/dummy_val", '-1.0'))
-#        if dummy_val > 0:
-#            print dummy_val
-#        else:
-#            print "can't receive param!"
-        if rate:
-            rospy.sleep(1/rate)
-        else:
-            rospy.sleep(1.0)
+	rate.sleep()

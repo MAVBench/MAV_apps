@@ -444,8 +444,8 @@
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
   <arg name="gap_statistic_mode" default="avg" />   
-  <arg name="use_py_run" default="false" />   
-  <param name="use_py_run" value="$(arg use_py_run)"/>
+  <arg name="use_pyrun" default="true" />   
+  <param name="use_pyrun" value="$(arg use_pyrun)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
   
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>

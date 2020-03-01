@@ -515,6 +515,7 @@ int main(int argc, char **argv)
     // ROS node initialization
     ros::init(argc, argv, "run_time_node", ros::init_options::NoSigintHandler);
     ros::NodeHandle n;
+    ros::NodeHandle n2;
     //signal(SIGINT, sigIntHandler);
 
     node_types.push_back("point_cloud");
@@ -522,13 +523,15 @@ int main(int argc, char **argv)
     node_types.push_back("planning");
 
     std::string ns = ros::this_node::getName();
-    ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
+    ros::Subscriber next_steps_sub = n2.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
-    ros::Subscriber control_inputs = n.subscribe<mavbench_msgs::control_input>("/control_inputs_to_crun", 1, control_inputs_callback);
+    ros::Subscriber control_inputs_sub = n.subscribe<mavbench_msgs::control_input>("/control_inputs_to_crun", 1, control_inputs_callback);
+    ros::Publisher control_input_to_pyrun = n.advertise<mavbench_msgs::control_input>("control_inputs_to_pyrun", 1);//, connect_cb, connect_cb);
+
 
     profiling_container = new DataContainer();
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);
-    bool use_py_run = false;
+    bool use_pyrun = false;
 
 
     vector<std::pair<double,int>>pc_res_point_count;
@@ -638,7 +641,7 @@ int main(int argc, char **argv)
 			exit(0);
     }
 
-   if(!ros::param::get("/use_py_run", use_py_run)){
+   if(!ros::param::get("/use_pyrun", use_pyrun)){
 			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_for_piecewise_planner not provided");
 			exit(0);
     }
@@ -652,7 +655,10 @@ int main(int argc, char **argv)
     	exit(0);
     }
      */
-
+    ros::CallbackQueue callback_queue_1; // -- queues for next steps
+    ros::CallbackQueue callback_queue_2; // -- queues for control_inputs
+    n.setCallbackQueue(&callback_queue_1);
+    n2.setCallbackQueue(&callback_queue_2);
 
     ros::Publisher runtime_debug_pub = n.advertise<mavbench_msgs::runtime_debug>("/runtime_debug", 1);
 
@@ -663,13 +669,16 @@ int main(int argc, char **argv)
     while (ros::ok())
 	{
 
-    	ros::spinOnce();
+    	//ros::spinOnce();
+    	callback_queue_1.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
+    	callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
+
     	if (!got_new_input){
     		pub_rate.sleep();
     	}
     	got_new_input = false;
 
-    	if (!use_py_run) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
+    	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
     		auto vel = drone.velocity();
     		auto vel_mag = calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
     		ros::param::set("velocity_to_budget_on", vel_mag);
@@ -677,10 +686,10 @@ int main(int argc, char **argv)
     		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
     		ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
     		ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
-    		assert (!(use_py_run && reactive_runtime));
-    		assert (!(use_py_run && knob_performance_modeling_for_om_to_pl));
-    		assert (!(use_py_run && knob_performance_modeling_for_pc_om));
-    		assert (!(use_py_run && knob_performance_modeling_for_piecewise_planner));
+    		assert (!(use_pyrun && reactive_runtime));
+    		assert (!(use_pyrun && knob_performance_modeling_for_om_to_pl));
+    		assert (!(use_pyrun && knob_performance_modeling_for_pc_om));
+    		assert (!(use_pyrun && knob_performance_modeling_for_piecewise_planner));
 
     		if (dynamic_budgetting){
     			if (reactive_runtime){
@@ -692,6 +701,8 @@ int main(int argc, char **argv)
     			ros::param::set("new_control_data", true);
     		}
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
+    	}else{
+    		control_input_to_pyrun.publish(control_inputs);
     	}
 	}
 
