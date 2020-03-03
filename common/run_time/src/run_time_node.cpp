@@ -30,7 +30,7 @@
 #include <datacontainer.h>
 #include <profile_manager.h>
 #include <mavbench_msgs/runtime_debug.h>
-#include <mavbench_msgs/control_input.h>
+#include <mavbench_msgs/control.h>
 
 using namespace std;
 std::string ip_addr__global;
@@ -44,7 +44,7 @@ bool knob_performance_modeling_for_piecewise_planner = false;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 
-mavbench_msgs::control_input control_inputs;
+mavbench_msgs::control control;
 bool got_new_input = false;
 
 
@@ -112,7 +112,7 @@ vector<ParamVal> perf_model(NodeBudget node_budget) {
 			results.push_back(ParamVal{"om_to_pl_res", .8});
 		}
 	}else if (node_budget.node_type == "planning"){
-		results.push_back(ParamVal{"piecewise_planning_budget", node_budget.budget/2});
+		results.push_back(ParamVal{"ppl_time_budget", node_budget.budget/2});
 		results.push_back(ParamVal{"smoothening_budget", node_budget.budget/2});
 	}else{
 		ROS_ERROR_STREAM("node:" << node_budget.node_type << " is not defined for runtime");
@@ -145,14 +145,14 @@ void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, m
 }
 
 
-void control_inputs_callback(const mavbench_msgs::control_input::ConstPtr& msg){
+void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	// -- note that we need to set the values one by one
 	// -- since we don't know the order
 	// -- with which the callbacks are called,
 	// -- and if we set the control_inputs to msg, we can overwrite
 	// -- the nex_steps_callback sensor_to_acuation_time_budget
-	control_inputs.sensor_volume_to_digest_estimated = msg->sensor_volume_to_digest_estimated;
-	control_inputs.gap_statistics = msg->gap_statistics;
+	control.inputs.sensor_volume_to_digest_estimated = msg->inputs.sensor_volume_to_digest_estimated;
+	control.inputs.gap_statistics = msg->inputs.gap_statistics;
 
 	got_new_input = true;
 }
@@ -164,9 +164,12 @@ double maxSensorRange;
 double TimeIncr;
 double maxVelocity;
 
-double calc_sensor_to_actuation_time_budget_based_on_current_velocity(double velocityMag){
+double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag){
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
-	return time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining");
+
+	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining");
+//	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
+	return time_budget;
 }
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
@@ -182,9 +185,9 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency);
 
-	control_inputs.sensor_to_actuation_time_budget = macro_time_budgets[1];
-
-//	ros::param::set("sensor_to_actuation_time_budget", macro_time_budgets[1]);
+	control.internal_states.sensor_to_actuation_time_budget_to_enforce = macro_time_budgets[1];
+//	ROS_INFO_STREAM("---- next step"<< control_inputs.sensor_to_actuation_time_budget_to_enforce);
+//	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
 
 	/*
 	auto node_budget_vec = calc_micro_budget(macro_time_budgets[0]);
@@ -493,18 +496,18 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 
 
 	// -- determine the planning budgets
-	double piecewise_planning_budget_min = .01;
-	double piecewise_planning_budget_max = .5;
-//	double piecewise_planning_budget = (piecewise_planning_budget_max - piecewise_planning_budget_min)/(pc_res_max- min_pc_res)*pc_res +
-//			piecewise_planning_budget_max;
+	double ppl_time_budget_min = .01;
+	double ppl_time_budget_max = .5;
+//	double ppl_time_budget = (ppl_time_budget_max - ppl_time_budget_min)/(pc_res_max- min_pc_res)*pc_res +
+//			ppl_time_budget_max;
 
-	//vector<double> piecewise_planning_budget_vec{.8, .3, .1, .05, .01};
-	vector<double> piecewise_planning_budget_vec{.8, .3, .1, .05, .01};
-	double piecewise_planning_budget = piecewise_planning_budget_vec[pc_res_power_index];
-	ros::param::set("piecewise_planning_budget", piecewise_planning_budget);
-	double smoothening_budget = piecewise_planning_budget;
+	//vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
+	vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
+	double ppl_time_budget = ppl_time_budget_vec[pc_res_power_index];
+	ros::param::set("ppl_time_budget", ppl_time_budget);
+	double smoothening_budget = ppl_time_budget;
 	ros::param::set("smoothening_budget", smoothening_budget);
-    profiling_container->capture("piecewise_planning_budget", "single", piecewise_planning_budget, g_capture_size);
+    profiling_container->capture("ppl_time_budget", "single", ppl_time_budget, g_capture_size);
     profiling_container->capture("smoothening_budget", "single", smoothening_budget, g_capture_size);
 
     if (knob_performance_modeling_for_pc_om){
@@ -525,7 +528,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
     	debug_data.pc_res = profiling_container->findDataByName("pc_res")->values.back();
     	debug_data.om_to_pl_res = profiling_container->findDataByName("om_to_pl_res")->values.back();
     	debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
-    	debug_data.piecewise_planning_budget =  profiling_container->findDataByName("piecewise_planning_budget")->values.back();
+    	debug_data.ppl_time_budget =  profiling_container->findDataByName("ppl_time_budget")->values.back();
     	debug_data.smoothening_budget =  profiling_container->findDataByName("smoothening_budget")->values.back();
     }
     //
@@ -553,8 +556,8 @@ int main(int argc, char **argv)
     std::string ns = ros::this_node::getName();
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
-    ros::Subscriber control_inputs_sub = n.subscribe<mavbench_msgs::control_input>("/control_inputs_to_crun", 1, control_inputs_callback);
-    ros::Publisher control_input_to_pyrun = n.advertise<mavbench_msgs::control_input>("control_inputs_to_pyrun", 1);//, connect_cb, connect_cb);
+    ros::Subscriber control_sub = n.subscribe<mavbench_msgs::control>("/control_to_crun", 1, control_callback);
+    ros::Publisher control_to_pyrun = n.advertise<mavbench_msgs::control>("control_to_pyrun", 1);//, connect_cb, connect_cb);
 
 
     profiling_container = new DataContainer();
@@ -729,9 +732,9 @@ int main(int argc, char **argv)
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
     		if (traj.size() == 0) { // -- if we haven't started the initla planning or there is not trajectory
-    			control_inputs.sensor_to_actuation_time_budget = calc_sensor_to_actuation_time_budget_based_on_current_velocity(vel_mag);
+    			control.internal_states.sensor_to_actuation_time_budget_to_enforce = calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(vel_mag);
     		}
-    		control_input_to_pyrun.publish(control_inputs);
+    		control_to_pyrun.publish(control);
     	}
 	}
 

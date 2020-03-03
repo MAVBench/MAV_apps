@@ -55,7 +55,7 @@ using namespace std;
 #include <string>
 #include <mavbench_msgs/point_cloud_meta_data.h>
 #include <mavbench_msgs/point_cloud_aug.h>
-#include <mavbench_msgs/control_input.h>
+#include <mavbench_msgs/control.h>
 
 namespace depth_image_proc {
 
@@ -79,7 +79,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::Publisher pub_point_cloud_aug_;
   ros::Publisher point_cloud_meta_data_pub;
   ros::Publisher pc_debug_pub;
-  ros::Publisher control_inputs_pub;
+  ros::Publisher control_pub;
   ros::Subscriber inform_pc_done_sub;
 
   image_geometry::PinholeCameraModel model_;
@@ -111,8 +111,12 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double capture_size = 600;
   bool knob_performance_modeling = false;
   virtual void onInit();
-  double sensor_to_actuation_time_budget;
+  double sensor_to_actuation_time_budget_to_enforce;
+  double om_latency_expected;
+  double om_to_pl_latency_expected;
+  double ppl_latency_expected;
   double velocity_to_budget_on;
+  double ee_latency_expected;
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
   bool  new_control_data = false;
 
@@ -154,6 +158,14 @@ void PointCloudXyzNodelet::onInit()
     exit(0);
     return;
   }
+
+
+   if(!ros::param::get("/ppl_latency_expected", ppl_latency_expected)){
+	    ROS_FATAL("Could not start img_proc. Parameter missing! Looking for ppl_latency_expected");
+	    exit(0);
+	    return;
+   }
+
   if (!ros::param::get("/CLCT_DATA", CLCT_DATA_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for CLCT_DATA");
     exit(0);
@@ -250,8 +262,8 @@ void PointCloudXyzNodelet::onInit()
 
     }
 
-    if(!ros::param::get("/sensor_to_actuation_time_budget", sensor_to_actuation_time_budget)){
-    	ROS_FATAL_STREAM("Could not start point cloud sensor_to_actuation_time_budget not provided");
+    if(!ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce)){
+    	ROS_FATAL_STREAM("Could not start point cloud sensor_to_actuation_time_budget_to_enforce not provided");
     	exit(0);
     	return ;
 
@@ -284,7 +296,7 @@ void PointCloudXyzNodelet::onInit()
 
     //point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
-    control_inputs_pub = nh.advertise<mavbench_msgs::control_input>("control_inputs_to_crun", 1);
+    control_pub = nh.advertise<mavbench_msgs::control>("control_to_crun", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
 
     profile_manager_client =
@@ -1480,7 +1492,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   
   img_to_pt_cloud_acc += (start_hook_t - depth_msg->header.stamp).toSec()*1e9;
 
-  img_capture_time_stamp = depth_msg->header.stamp;
+  //img_capture_time_stamp = depth_msg->header.stamp;
+  img_capture_time_stamp = ros::Time::now();
+
   if (measure_time_end_to_end){ 
     cloud_msg->header = depth_msg->header;
   }else{
@@ -1551,14 +1565,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistic);
 
 
-  mavbench_msgs::control_input control_inputs;
-  control_inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
-  control_inputs.gap_statistics = gap_statistic;
-  control_inputs_pub.publish(control_inputs);
+  mavbench_msgs::control control;
+  control.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  control.inputs.gap_statistics = gap_statistic;
+  control_pub.publish(control);
   ros::param::get("/new_control_data", new_control_data);
   while(!new_control_data){
 	  ros::param::get("/new_control_data", new_control_data);
-	  ros::Duration(.05).sleep();
+	  ros::Duration(.01).sleep();
   }
   new_control_data = false;
   ros::param::set("new_control_data", new_control_data);
@@ -1568,8 +1582,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   profiling_container->capture("diagnostics", "end", ros::Time::now());
   // -- time budget
-   ros::param::get("/sensor_to_actuation_time_budget", sensor_to_actuation_time_budget);
+   ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce);
+   ros::param::get("/om_latency_expected", om_latency_expected);
+   ros::param::get("/om_to_pl_latency_expected", om_to_pl_latency_expected);
+   ros::param::get("/ppl_latency_expected", ppl_latency_expected);
    ros::param::get("/velocity_to_budget_on", velocity_to_budget_on);
+   ros::param::get("/ee_latency_expected", ee_latency_expected);
 
    // -- point cloud to octomap knobs
    ros::param::get("/pc_res", pc_res);
@@ -1638,20 +1656,26 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.pcl = *cloud_msg;
 
   pcl_aug_data.controls.cmds.pc_res = pc_res;
-  pcl_aug_data.controls.cmds.pc_vol_ideal = pc_vol_ideal;
-  pcl_aug_data.controls.cmds.om_to_pl_vol_ideal = om_to_pl_vol_ideal;
+  pcl_aug_data.controls.cmds.pc_vol = pc_vol_ideal;
+  pcl_aug_data.controls.cmds.om_to_pl_vol = om_to_pl_vol_ideal;
   pcl_aug_data.controls.cmds.om_to_pl_res = om_to_pl_res;
-  pcl_aug_data.controls.cmds.ppl_vol_ideal = ppl_vol_ideal;
+  pcl_aug_data.controls.cmds.ppl_vol = ppl_vol_ideal;
+  pcl_aug_data.ee_profiles.expected_time.ppl_latency = ppl_latency_expected;
+  pcl_aug_data.ee_profiles.expected_time.om_latency = om_latency_expected;
+  pcl_aug_data.ee_profiles.expected_time.om_to_pl_latency = om_to_pl_latency_expected;
+  double smoothening_latency_expected = ppl_latency_expected;
+  pcl_aug_data.ee_profiles.expected_time.smoothening_latency = smoothening_latency_expected;
+  pcl_aug_data.ee_profiles.expected_time.ee_latency = ee_latency_expected;
 
   // -- for profiling purposes
-  pcl_aug_data.controls.achieved.pc_vol_actual= pc_vol_actual;
+  pcl_aug_data.ee_profiles.actual_cmds = pcl_aug_data.controls.cmds;
   pcl_aug_data.controls.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
-  pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget = sensor_to_actuation_time_budget;
+  pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
   pcl_aug_data.controls.inputs.velocity_to_budget_on = velocity_to_budget_on;
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
-  pcl_aug_data.ee_profiles.pc_latency =  profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
-  pcl_aug_data.ee_profiles.pc_pre_pub_time_stamp = ros::Time::now();
-  pcl_aug_data.ee_profiles.img_capture_time_stamp = img_capture_time_stamp;
+  pcl_aug_data.ee_profiles.actual_time.pc_latency =  profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
+  pcl_aug_data.ee_profiles.actual_time.pc_pre_pub_time_stamp = ros::Time::now();
+  pcl_aug_data.ee_profiles.actual_time.img_capture_time_stamp = img_capture_time_stamp;
 
   if (DEBUG_VIS){
 	  pub_point_cloud_.publish (*cloud_msg);
@@ -1682,7 +1706,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.pc_vol_actual = pc_vol_actual;
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
-	  debug_data.sensor_to_actuation_time_budget = sensor_to_actuation_time_budget;
+	  debug_data.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
 	  debug_data.velocity_to_budget_on = velocity_to_budget_on;
 
 	  pc_debug_pub.publish(debug_data);

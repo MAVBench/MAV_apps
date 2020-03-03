@@ -3,6 +3,6 @@ Header header
 float32 pc_res
 float32 om_to_pl_res
 float32 point_cloud_num_points
-float32 piecewise_planning_budget
+float32 ppl_time_budget
 float32 smoothening_budget
 

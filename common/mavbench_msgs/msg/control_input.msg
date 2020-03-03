@@ -1,4 +1,3 @@
 float32 sensor_volume_to_digest_estimated
 float32 gap_statistics
 float32 velocity_to_budget_on
-float32 sensor_to_actuation_time_budget

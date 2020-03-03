@@ -237,7 +237,7 @@ private:
     std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *, int &status)> motion_planning_core;
     long long g_planning_without_OM_PULL_time_acc = 0;
     int g_number_of_planning = 0 ;
-    float g_piecewise_planning_budget;
+    float g_ppl_time_budget;
     float g_smoothening_budget;
     float g_out_of_bounds_allowance = 5;
     int replanning_reason;

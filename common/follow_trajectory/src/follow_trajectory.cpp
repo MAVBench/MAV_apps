@@ -229,9 +229,14 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
     SA_response_time_capture_ctr++;
 
     debug_data.controls = msg->controls;
-	debug_data.ee_profiles = msg->ee_profiles;
-	debug_data.ee_profiles.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
-	debug_data.ee_profiles.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
+    debug_data.ee_profiles = msg->ee_profiles;
+	debug_data.ee_profiles.actual_time.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
+	debug_data.ee_profiles.actual_time.ee_latency = (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec();
+	// calculate the error
+	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.ee_latency -  msg->ee_profiles.expected_time.ee_latency);
+	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.ppl_latency -  msg->ee_profiles.expected_time.ppl_latency);
+	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.om_to_pl_latency-  msg->ee_profiles.expected_time.om_to_pl_latency);
+	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.om_latency -  msg->ee_profiles.expected_time.om_latency);
 }
 
 /*
@@ -471,8 +476,8 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 	debug_data.controls = msg->controls;
 	debug_data.ee_profiles = msg->ee_profiles;
-	debug_data.ee_profiles.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.pl_pre_pub_time_stamp);
-	debug_data.ee_profiles.ee_latency = (ros::Time::now() - msg->ee_profiles.img_capture_time_stamp).toSec();
+	debug_data.ee_profiles.actual_time.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
+	debug_data.ee_profiles.actual_time.ee_latency = (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec();
 }
 
 

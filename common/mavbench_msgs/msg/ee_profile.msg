@@ -1,15 +1,5 @@
-time img_capture_time_stamp
-float32 pc_latency
-time pc_pre_pub_time_stamp
-duration om_to_pc_ros_oh
+mavbench_msgs/ee_time_profile actual_time
+mavbench_msgs/ee_time_profile expected_time
 
-float32 om_latency
-time om_pre_pub_time_stamp
-duration om_to_pl_ros_oh
-
-float32 pl_latency
-time pl_pre_pub_time_stamp
-duration pl_to_ft_ros_oh
-
-float32 ee_latency
-
+mavbench_msgs/control_cmd actual_cmds
+mavbench_msgs/control_cmd expected_cmds
