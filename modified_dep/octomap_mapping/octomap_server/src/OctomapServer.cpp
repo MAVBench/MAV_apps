@@ -1833,13 +1833,12 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
+	  profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
     ROS_ERROR("Error serializing OctoMap");
   auto total_volume = volume_communicated_in_unit_cubes*pow(om_to_pl_res, 3);
-  profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
-  octomap_aug_data.ee_profiles.actual_time.om_serialization_time =  profiling_container.findDataByName("octomap_serialization_time")->values.back();
 
   debug_data.octomap_volume_communicated =    total_volume;
   debug_data.octomap_serialization_time =  profiling_container.findDataByName("octomap_serialization_time")->values.back();
@@ -1974,10 +1973,14 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
+	  profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
+	  octomap_aug_data.ee_profiles.actual_time.om_serialization_time =  profiling_container.findDataByName("octomap_serialization_time")->values.back();
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
-  else
+  else{
     ROS_ERROR("Error serializing OctoMap");
+	profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
+  }
   auto total_volume = volume_communicated_in_unit_cubes*pow(om_to_pl_res, 3);
 
   debug_data.octomap_volume_communicated =    total_volume;
@@ -2011,8 +2014,10 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
-  else
+  else{
     ROS_ERROR("Error serializing OctoMap");
+	profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
+  }
 }
 
 void OctomapServer::publishBinaryLowerResOctoMap(const ros::Time& rostime) {

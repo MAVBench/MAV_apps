@@ -47,6 +47,10 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency){
 	multiDOFpoint point = *(trajBegin);
 	double velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
+
+	if (isnan(velocity_magnitude)){
+		ROS_INFO_STREAM("fucked up");
+	}
 	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency);
 	double potentialBudgetTillNextSample;  // a place holder that gets updated
 	std::deque<multiDOFpoint>::iterator trajItrTemp =  trajBegin;  //pointing to the sample point we are considering at the moment

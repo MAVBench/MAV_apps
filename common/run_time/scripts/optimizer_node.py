@@ -50,6 +50,7 @@ def run_optimizer(control):
     results = opt.opt(profile=profile, rt_d=rt_d, x0=x0, tol=tol, verbose=False)
     return results
     
+
 def control_callback(control):
     results = run_optimizer(control)
 
@@ -58,7 +59,7 @@ def control_callback(control):
     pc_vol_ideal = 10000
     om_to_pl_res = om_to_pl_res_min
     om_to_pl_vol_ideal = 200000
-    ppl_vol_ideal = 40001
+    ppl_vol_ideal = 200001
 
     om_latency_expected = .05
     om_to_pl_latency_expected = .05
@@ -83,12 +84,16 @@ def control_callback(control):
         om_to_pl_vol_ideal = min(results.x[3], om_to_pl_vol_ideal)
         ppl_vol_ideal = min(results.x[4], ppl_vol_ideal)
         # expected time budgets
-        om_latency_expected =  results.exp_task_times[0]
+        om_latency_expected = results.exp_task_times[0]
         om_to_pl_latency_expected = results.exp_task_times[1]
         ppl_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
         smoothening_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
+    else:
+        rospy.set_param("optimizer_succeeded", False)
+        return
 
-    ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + ppl_latency_expected + misc_latency
+    rospy.set_param("optimizer_succeeded", True)
+    ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + misc_latency
     # set the knobs
     rospy.set_param("pc_res", float(pc_res))
     rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))

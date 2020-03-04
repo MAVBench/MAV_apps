@@ -817,11 +817,17 @@ void MotionPlanner::get_start_in_future(Drone& drone,
     // Shift the drone's planned position at time "g_ppl_time_budget" seconds
     // by its current position
     auto current_pos = drone.position();
-    auto planned_pos = g_next_steps_msg.points[0];
-
-    mdofp.x += current_pos.x - planned_pos.x;
-    mdofp.y += current_pos.y - planned_pos.y;
-    mdofp.z += current_pos.z - planned_pos.z;
+    auto planned_point = g_next_steps_msg.points[0];
+    if (planned_point.vx == 0 && planned_point.vy == 0 && planned_point.vz == 0){
+    	mdofp.x = current_pos.x;
+    	mdofp.y = current_pos.y;
+    	mdofp.z = current_pos.z;
+    	ROS_INFO_STREAM("----------------_RIGHT HERRE");
+    }else{
+    	mdofp.x += current_pos.x - planned_point.x;
+    	mdofp.y += current_pos.y - planned_point.y;
+    	mdofp.z += current_pos.z - planned_point.z;
+    }
 
     start.x = mdofp.x; start.y = mdofp.y; start.z = mdofp.z; 
 

@@ -174,6 +174,7 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
 	traj.clear();
+	ROS_INFO_STREAM("---------------got in next calb back. point size"<<msg->points.size());
 	for (auto point_: msg->points){
     	multiDOFpoint point__;
     	convertMavBenchMultiDOFtoMultiDOF(point_, point__);
@@ -185,7 +186,11 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency);
 
-	control.internal_states.sensor_to_actuation_time_budget_to_enforce = macro_time_budgets[1];
+	if (macro_time_budgets.size() == 1){
+		control.internal_states.sensor_to_actuation_time_budget_to_enforce = macro_time_budgets[1];
+	}else{
+		control.internal_states.sensor_to_actuation_time_budget_to_enforce = macro_time_budgets[0];
+	}
 //	ROS_INFO_STREAM("---- next step"<< control_inputs.sensor_to_actuation_time_budget_to_enforce);
 //	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
 

@@ -1576,7 +1576,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   }
   new_control_data = false;
   ros::param::set("new_control_data", new_control_data);
-
+  bool optimizer_succeeded;
+  ros::param::get("/optimizer_succeeded", optimizer_succeeded);
+  if (!optimizer_succeeded){
+	  ROS_INFO_STREAM("----------------------------- OPTIMIZER FAILD<<<<<<<<<<<<<<<<<<<<<");
+	  return;
+  }
 
   //sensor_volume_to_digest_estimated -= volume_correction_coeff;
 

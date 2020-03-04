@@ -329,8 +329,8 @@
     ?>
 
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="ppl_latency_expected" default="4"/>
-  <arg name="smoothening_latency_expected" default="4"/>
+  <arg name="ppl_latency_expected" default="7"/>
+  <arg name="smoothening_latency_expected" default="7"/>
 
   <param name="ppl_latency_expected" value="$(arg ppl_latency_expected)"/>
   <param name="smoothening_latency_expected" value="$(arg smoothening_latency_expected)"/>

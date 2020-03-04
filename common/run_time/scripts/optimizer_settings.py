@@ -15,8 +15,8 @@ om_to_pl_res_min = .15
 r_steps = 5
 r_min = .9 * pc_res_min  # minimal octomap res
 r_max = (2 ** r_steps) * r_min
-v_min = 0
+v_min = 1000
 v_max = np.inf
-rt_max = 60
+rt_max = 30
 
 
