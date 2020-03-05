@@ -37,3 +37,9 @@ int32 stop
 
 mavbench_msgs/control controls
 mavbench_msgs/ee_profile ee_profiles
+
+float32 ee_latency_tracking_error
+float32 ppl_latency_latency_tracking_error
+float32 om_to_pl_latency_tracking_error
+float32 om_latency_tracking_error
+

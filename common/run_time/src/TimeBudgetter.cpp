@@ -7,9 +7,10 @@
 
 #include "TimeBudgetter.h"
 
-TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr)
+TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget)
 			:sensorActuatorModel_(maxSensorRange, maxVelocity, accelerationCoeffs),
-			timeIncr_(timeIncr){}
+			timeIncr_(timeIncr),
+			max_time_budget(max_time_budget){}
 
 
 
@@ -21,11 +22,19 @@ double TimeBudgetter::calc_magnitude(double x, double y, double z) {
 
 // for a fixed V (i.e., if the drone's v doesn't change), how much budget
 double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRange, std::vector<double> acceleartionCoeffs, double latency){
-	return this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensorRange, acceleartionCoeffs )- latency;
+	double budget = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensorRange, acceleartionCoeffs )- latency;
+	if (isnan(budget) || isinf(budget))  { // occurs when velocity is 0
+		budget = max_time_budget;
+	}
+	return budget;
 }
 
 double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency){
-	return this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensorRange , this->sensorActuatorModel_.accelerationCoeffs()) - latency;
+	double budget = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensorRange , this->sensorActuatorModel_.accelerationCoeffs()) - latency;
+	if (isnan(budget) || isinf(budget))  { // occurs when velocity is 0
+		budget = max_time_budget;
+	}
+
 }
 
 
@@ -37,6 +46,11 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 	}else{
 		next_sampling_time = response_time - latency;
 	}
+
+	if (isnan(next_sampling_time) || isinf(next_sampling_time))  { // occurs when velocity is 0
+		next_sampling_time= max_time_budget;
+	}
+
 	return next_sampling_time;
 }
 
@@ -47,6 +61,10 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency){
 	multiDOFpoint point = *(trajBegin);
 	double velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
+
+	if (isnan(velocity_magnitude)){
+		ROS_INFO_STREAM("fucked up");
+	}
 	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency);
 	double potentialBudgetTillNextSample;  // a place holder that gets updated
 	std::deque<multiDOFpoint>::iterator trajItrTemp =  trajBegin;  //pointing to the sample point we are considering at the moment
@@ -77,7 +95,11 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		trajItrTemp +=1;
 	}
 	trajItr = trajItrTemp;
-	nextSamplingTime = nextSamplingTimeTemp;
+	if (trajItrTemp == trajEnd){ // add the left overs
+		nextSamplingTime = nextSamplingTimeTemp + BudgetTillNextSample;
+	}else{
+		nextSamplingTime = nextSamplingTimeTemp;
+	}
 }
 
 

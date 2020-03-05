@@ -78,8 +78,8 @@
   
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
-  <arg name="sensor_to_actuation_time_budget" default="3"/> 
-  <param name="sensor_to_actuation_time_budget" value="$(arg sensor_to_actuation_time_budget)"/>
+  <arg name="sensor_to_actuation_time_budget_to_enforce" default="3"/> 
+  <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg sensor_to_actuation_time_budget_to_enforce)"/>
   <arg name="velocity_to_budget_on" default=".1"/> 
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
   <arg name="planner_min_freq" default=".01"/> 
@@ -329,11 +329,11 @@
     ?>
 
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="piecewise_planning_budget" default=".8"/>
-  <arg name="smoothening_budget" default=".8"/>
+  <arg name="ppl_latency_expected" default="7"/>
+  <arg name="smoothening_latency_expected" default="7"/>
 
-  <param name="piecewise_planning_budget" value="$(arg piecewise_planning_budget)"/>
-  <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
+  <param name="ppl_latency_expected" value="$(arg ppl_latency_expected)"/>
+  <param name="smoothening_latency_expected" value="$(arg smoothening_latency_expected)"/>
   <!--group ns="motion_planner"-->
   <node pkg="package_delivery" type="motion_planner_node" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)">
     <param name="trav_dis_before_replanning" value="1"/>
@@ -440,12 +440,26 @@
 
   <!-- ========================= Run Time ()  ============================ -->
   <arg name="reactive_runtime" default="true" />   
-  <arg name="dynamic_budgetting" default="false" />   
+  <arg name="dynamic_budgetting" default="true" />   
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="dynamic_budgetting" value="$(arg dynamic_budgetting)"/>
   <arg name="gap_statistic_mode" default="avg" />   
+  <arg name="use_pyrun" default="true" />   
+  <param name="use_pyrun" value="$(arg use_pyrun)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
-  
+  <arg name="max_time_budget" default="20" />   
+  <param name="max_time_budget" value="$(arg max_time_budget)"/>
+  <arg name="cur_tree_total_volume" default="8000" />   
+  <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
+
+
+
+  <arg name="expected_latency" default=".05" />   
+  <param name="om_latency_expected" value="$(arg expected_latency)"/>
+  <param name="om_to_pl_latency_expected" value="$(arg expected_latency)"/>
+  <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
+  <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
+
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
   <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen">
     <param name="dummy_val" value="2.0" />

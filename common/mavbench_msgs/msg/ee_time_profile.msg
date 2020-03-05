@@ -1,0 +1,20 @@
+time img_capture_time_stamp
+float32 pc_latency
+time pc_pre_pub_time_stamp
+float32 pc_to_om_ros_oh
+
+float32 om_latency
+time om_pre_pub_time_stamp
+float32 om_to_pl_ros_oh
+
+float32 om_to_pl_latency
+float32 om_serialization_time
+
+
+float32 ppl_latency
+float32 smoothening_latency
+time pl_pre_pub_time_stamp
+float32 pl_to_ft_ros_oh
+
+float32 ee_latency
+

@@ -669,6 +669,13 @@ void modify_backward_traj(trajectory_t *traj, float backup_duration, float stay_
 	// and then stop
 	multiDOFpoint last_point, cur_point;
 	for (auto &point: *traj){
+
+		if (isnan(point.vx) || isnan(point.vy) || isnan(point.vz) ){
+			point.vx = 0;
+			point.vy = 0;
+			point.vz = 0;
+		}
+
 		auto cur_point = point;
 		if(time < backup_duration) {
 			last_point = cur_point;
@@ -686,6 +693,7 @@ void modify_backward_traj(trajectory_t *traj, float backup_duration, float stay_
 			point.z = last_point.z + sign*.75;
 			sign *= -1;
 		}
+		time += point.duration;
 	}
 
 	// stop before reversing, so zero out the velocities
@@ -817,8 +825,8 @@ multiDOFpoint trajectory_at_time(const mavbench_msgs::multiDOFtrajectory& traj, 
     }
 
 
-    ROS_INFO_STREAM("this should not happen");
-    exit(0);
+    //ROS_INFO_STREAM("this should not happen");
+    //exit(0);
     return {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0};
 }
 

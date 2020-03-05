@@ -1,1 +1,6 @@
-float32 sensor_to_actuation_time_budget
+float32 sensor_to_actuation_time_budget_to_enforce
+float32 om_time_budget_expected
+float32 ppl_time_budget_expected
+float32 om_to_pl_time_budget_expected
+float32 smoothening_time_budget_expected
+float32 ee_time_budget_expected
