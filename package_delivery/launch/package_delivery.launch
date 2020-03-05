@@ -449,7 +449,8 @@
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
   <arg name="max_time_budget" default="20" />   
   <param name="max_time_budget" value="$(arg max_time_budget)"/>
- 
+  <arg name="cur_tree_total_volume" default="8000" />   
+  <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
 
 
 

@@ -155,7 +155,7 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	// -- the nex_steps_callback sensor_to_acuation_time_budget
 	control.inputs.sensor_volume_to_digest_estimated = msg->inputs.sensor_volume_to_digest_estimated;
 	control.inputs.gap_statistics = msg->inputs.gap_statistics;
-
+	control.inputs.cur_tree_total_volume = msg->inputs.cur_tree_total_volume;
 	got_new_input = true;
 }
 

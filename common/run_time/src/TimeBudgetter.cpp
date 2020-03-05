@@ -34,7 +34,6 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRang
 	if (isnan(budget) || isinf(budget))  { // occurs when velocity is 0
 		budget = max_time_budget;
 	}
-	return budget;
 
 }
 
@@ -49,11 +48,7 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 	}
 
 	if (isnan(next_sampling_time) || isinf(next_sampling_time))  { // occurs when velocity is 0
-		if (mode == "no_pipelining"){
-			next_sampling_time= max_time_budget/2;
-		}else{
-			next_sampling_time= max_time_budget;
-		}
+		next_sampling_time= max_time_budget;
 	}
 
 	return next_sampling_time;

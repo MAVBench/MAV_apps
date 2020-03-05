@@ -549,6 +549,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
+  ros::param::set("cur_tree_total_volume", m_octree->getRoot()->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
+
   profiling_container.capture("insertScan", "end", ros::Time::now(), capture_size);
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
 

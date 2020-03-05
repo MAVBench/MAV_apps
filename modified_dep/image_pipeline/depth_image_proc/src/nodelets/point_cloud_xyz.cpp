@@ -1567,6 +1567,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   mavbench_msgs::control control;
   control.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  double cur_tree_total_volume;
+  ros::param::get("cur_tree_total_volume", cur_tree_total_volume);
+  control.inputs.cur_tree_total_volume = float(cur_tree_total_volume);
   control.inputs.gap_statistics = gap_statistic;
   control_pub.publish(control);
   ros::param::get("/new_control_data", new_control_data);

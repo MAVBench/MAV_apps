@@ -16,6 +16,7 @@ def run_optimizer(control):
     rt_d = min(time_budget_left_to_distribute, rt_max)
     r_gap = max(control.inputs.gap_statistics, r_min)  # can't really see smaller than r_min anyways
     v_sensor_max = control.inputs.sensor_volume_to_digest_estimated
+    v_tree_max = max(control.inputs.cur_tree_total_volume, v_min)
 
     r_gap_hat = 1 / r_gap
     r_max_hat = 1 / r_min
@@ -24,7 +25,7 @@ def run_optimizer(control):
     r_min_list = [r_min_hat] * 2
     r_max_list = [r_max_hat] * 2
     v_min_list = [v_min] * 3
-    v_max_list = [v_max] * 3
+    v_max_list = [v_sensor_max, v_tree_max, v_max] * 3
 
 
     Q = np.array([[-2.16196038e-05, -2.78515364e-03,  2.86859999e-05],
