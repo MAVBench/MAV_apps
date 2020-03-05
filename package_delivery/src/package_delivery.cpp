@@ -440,6 +440,10 @@ int main(int argc, char **argv)
 
     ros::ServiceClient goal_transmit_client =
       nh.serviceClient<package_delivery::point> ("goal_rcv");
+    ros::ServiceClient goal_transmit_client_2 =
+      nh.serviceClient<package_delivery::point> ("goal_rcv_2");
+
+
 
 
     //profile_manager::start_profiling_srv start_profiling_srv_inst;
@@ -505,6 +509,7 @@ int main(int argc, char **argv)
             package_delivery::point goal_srv_inst;
             goal_srv_inst.request.goal = goal;
             goal_transmit_client.call(goal_srv_inst);
+            goal_transmit_client_2.call(goal_srv_inst);
             //std_msgs::Header my_header;
             //my_header.stamp = ros::Time::now();
             //timing_msg_from_mp_pub.publish(my_header);
@@ -644,7 +649,8 @@ int main(int argc, char **argv)
     	    	goal.z = start.z;
     	    	goal_srv_inst.request.goal = goal;
     	    	goal_transmit_client.call(goal_srv_inst);
-  //  	    	std_msgs::Header my_header;
+    	    	goal_transmit_client_2.call(goal_srv_inst);
+    	    	//  	    	std_msgs::Header my_header;
  //   	    	my_header.stamp = ros::Time::now();
 //    	    	timing_msg_from_mp_pub.publish(my_header);
     	    	reached_goal_ctr +=1;

@@ -510,7 +510,7 @@ void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x
 
 // to understand the gap size and volume
 float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
-  int n_points, const int grid_size, float diagnostic_resolution, double &sensor_volume_to_digest_estimated, double &area_to_digest, double &gap_statistic){
+  int n_points, const int grid_size, float diagnostic_resolution, double &sensor_volume_to_digest_estimated, double &area_to_digest, double &gap_statistics_min, double& gap_statistics_avg, double& gap_statistics_max){
   double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
   bool first_itr = true;
   vector<int> gap_ctr_per_row_vec;
@@ -672,11 +672,12 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
  // ROS_INFO_STREAM("------------------------------");
 
 
-  if (gap_statistic_mode == "min"){
-	  gap_statistic = min_gap;
-  }else if (gap_statistic_mode == "avg"){
-	 gap_statistic = avg_gap;
-  }
+  //if (gap_statistic_mode == "min"){
+  gap_statistics_min= min_gap;
+//  }else if (gap_statistic_mode == "avg"){
+  gap_statistics_avg = avg_gap;
+  gap_statistics_max= max_gap;
+ // }
 
   return gridded_volume;
 }
@@ -1561,8 +1562,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   const int grid_size = 60;
   float **gridded_volume;
   float diagnostic_resolution = 1; // -- point cloud resolution to use for diagnostic purposes
-  double gap_statistic;
-  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistic);
+  double gap_statistics_avg, gap_statistics_min, gap_statistics_max;
+
+  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistics_min, gap_statistics_max, gap_statistics_avg);
 
 
   mavbench_msgs::control control;
@@ -1570,7 +1572,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   double cur_tree_total_volume;
   ros::param::get("cur_tree_total_volume", cur_tree_total_volume);
   control.inputs.cur_tree_total_volume = float(cur_tree_total_volume);
-  control.inputs.gap_statistics = gap_statistic;
+  control.inputs.gap_statistics_min = gap_statistics_min;
+  control.inputs.gap_statistics_max = gap_statistics_max;
+  control.inputs.gap_statistics_avg = gap_statistics_avg;
   control_pub.publish(control);
   ros::param::get("/new_control_data", new_control_data);
   while(!new_control_data){
@@ -1677,7 +1681,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.ee_profiles.expected_time.ee_latency = ee_latency_expected;
 
   // -- for profiling purposes
-  pcl_aug_data.ee_profiles.actual_cmds = pcl_aug_data.controls.cmds;
+  pcl_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual;
+  pcl_aug_data.ee_profiles.expected_cmds = pcl_aug_data.controls.cmds;
   pcl_aug_data.controls.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
   pcl_aug_data.controls.inputs.cur_tree_total_volume = cur_tree_total_volume;
   pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;

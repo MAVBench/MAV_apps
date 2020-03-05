@@ -337,6 +337,7 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   int gridSliceCountPerSide = 2; // how many gridslice per Map to transfer Side lenght (in other words, how many time should we slice the Side lenght). This is necessary since the space is gridded, so we
   	  	  	  	  	  	  	  	 // we can never exactly maintain the map side length, but rather we need to include some extra. Note that if we increase
   	  	  	  	  	  	  	     // this value, we can reduce the extra space overhead we need to carry over
+  bool DEBUG_VIS = true;
   float MapToTransferSideLength;
   std::string gridMode; // 2d or 3d
   bool filterOctoMap = true; // if true, we grid the space and filter how much of the map to be communicated over to planner

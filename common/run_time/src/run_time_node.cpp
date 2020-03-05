@@ -31,6 +31,8 @@
 #include <profile_manager.h>
 #include <mavbench_msgs/runtime_debug.h>
 #include <mavbench_msgs/control.h>
+#include "package_delivery/point.h"
+#include <common.h>
 
 using namespace std;
 std::string ip_addr__global;
@@ -42,6 +44,8 @@ bool knob_performance_modeling = false;
 bool knob_performance_modeling_for_pc_om = false;
 bool knob_performance_modeling_for_om_to_pl = false;
 bool knob_performance_modeling_for_piecewise_planner = false;
+double ppl_vol_min_coeff;
+double planner_drone_radius;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 bool time_budgetting_failed = false;
@@ -154,7 +158,9 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	// -- and if we set the control_inputs to msg, we can overwrite
 	// -- the nex_steps_callback sensor_to_acuation_time_budget
 	control.inputs.sensor_volume_to_digest_estimated = msg->inputs.sensor_volume_to_digest_estimated;
-	control.inputs.gap_statistics = msg->inputs.gap_statistics;
+	control.inputs.gap_statistics_avg = msg->inputs.gap_statistics_avg;
+	control.inputs.gap_statistics_min = msg->inputs.gap_statistics_min;
+	control.inputs.gap_statistics_max = msg->inputs.gap_statistics_max;
 	control.inputs.cur_tree_total_volume = msg->inputs.cur_tree_total_volume;
 	got_new_input = true;
 }
@@ -165,6 +171,10 @@ vector<double> accelerationCoeffs = {.1439,.8016};
 double maxSensorRange;
 double TimeIncr;
 double maxVelocity;
+geometry_msgs::Point g_goal_pos;
+bool goal_known = false;
+
+
 
 double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag){
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
@@ -176,7 +186,7 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
 	traj.clear();
-	ROS_INFO_STREAM("---------------got in next calb back. point size"<<msg->points.size());
+	//ROS_INFO_STREAM("---------------got in next calb back. point size"<<msg->points.size());
 	for (auto point_: msg->points){
     	multiDOFpoint point__;
     	convertMavBenchMultiDOFtoMultiDOF(point_, point__);
@@ -197,7 +207,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	else if (macro_time_budgets.size() >= 1){
 		time_budgetting_failed = false;
 		time_budget = min (max_time_budget, macro_time_budgets[1]);
-		ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
+		//ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
 	}
 
 //	else{
@@ -553,6 +563,11 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
     //
 }
 
+bool goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res){
+	g_goal_pos = req.goal;
+	goal_known = true;
+}
+
 
 // *** F:DN main function
 int main(int argc, char **argv)
@@ -576,6 +591,8 @@ int main(int argc, char **argv)
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
     initialize_global_params();
     ros::Subscriber control_sub = n.subscribe<mavbench_msgs::control>("/control_to_crun", 1, control_callback);
+    ros::ServiceServer goal_rcv_service = n.advertiseService("goal_rcv_2", goal_rcv_call_back);
+
     ros::Publisher control_to_pyrun = n.advertise<mavbench_msgs::control>("control_to_pyrun", 1);//, connect_cb, connect_cb);
 
 
@@ -691,6 +708,18 @@ int main(int argc, char **argv)
 			exit(0);
     }
 
+   if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
+			ROS_FATAL_STREAM("Could not start runtime; ppl_vol_min_coeff not provided");
+			exit(0);
+    }
+
+   if(!ros::param::get("/planner_drone_radius", planner_drone_radius)){
+			ROS_FATAL_STREAM("Could not start runtime; planner_drone_radius not provided");
+			exit(0);
+    }
+
+
+
    if(!ros::param::get("/use_pyrun", use_pyrun)){
 			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_for_piecewise_planner not provided");
 			exit(0);
@@ -735,6 +764,7 @@ int main(int argc, char **argv)
     		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
     		ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
     		ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
+    		ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff);
     		assert (!(use_pyrun && reactive_runtime));
     		assert (!(use_pyrun && knob_performance_modeling_for_om_to_pl));
     		assert (!(use_pyrun && knob_performance_modeling_for_pc_om));
@@ -754,7 +784,14 @@ int main(int argc, char **argv)
     		if (traj.size() == 0 || time_budgetting_failed) { // -- if we haven't started the initla planning or there is not trajectory
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(vel_mag));
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
-    			ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  vel_mag:"<<vel_mag);
+    			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  vel_mag:"<<vel_mag);
+    		}
+    		if (goal_known){
+    			double direct_length = calc_vec_magnitude(drone.position().x - g_goal_pos.x, drone.position().y - g_goal_pos.y, drone.position().z - g_goal_pos.z);
+    			double volume_of_direct_distance_to_goal = 3.4*pow(planner_drone_radius, 2)*direct_length;
+    			control.inputs.ppl_vol_min = float(ppl_vol_min_coeff*volume_of_direct_distance_to_goal);
+    		}else{
+    			control.inputs.ppl_vol_min = 0;
     		}
     		control_to_pyrun.publish(control);
     		time_budgetting_failed  = false;

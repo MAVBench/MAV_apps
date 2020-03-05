@@ -35,6 +35,8 @@
   <param name="a_max" value="$(arg a_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
+  <param name="planner_drone_radius" value="$(arg planner_drone_radius)"/>
+
 
   <!-- sensor information --> 
   <arg name="all_front" default="true"/>	
@@ -447,10 +449,14 @@
   <arg name="use_pyrun" default="true" />   
   <param name="use_pyrun" value="$(arg use_pyrun)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
-  <arg name="max_time_budget" default="20" />   
+  <arg name="max_time_budget" default="10" />   
   <param name="max_time_budget" value="$(arg max_time_budget)"/>
   <arg name="cur_tree_total_volume" default="8000" />   
   <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
+  <arg name="ppl_vol_min_coeff" default="200" />   
+  <param name="ppl_vol_min_coeff" value="$(arg ppl_vol_min_coeff)"/>
+
+
 
 
 

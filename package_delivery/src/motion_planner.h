@@ -181,7 +181,9 @@ private:
     ros::Time last_planning_time;
     bool failed_to_plan_last_time = false;
     bool planned_optimally = true; // if smoothener spits out suboptimal paths, use this to replan
+    double map_res;
     Drone * drone = nullptr;
+    double ppl_vol_ideal;
     int capture_size = 600; //set this to 1 if you want to see every data captured separately
 private:
     ros::NodeHandle nh;

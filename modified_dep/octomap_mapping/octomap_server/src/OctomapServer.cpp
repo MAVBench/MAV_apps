@@ -289,6 +289,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("sensor_model/max", thresMax, 0.97);
   private_nh.param("/om_to_pl_vol_ideal", om_to_pl_vol_ideal, om_to_pl_vol_ideal);
   private_nh.param("/om_to_pl_res", om_to_pl_res, om_to_pl_res);
+  private_nh.param("/DEBUG_VIS", DEBUG_VIS);
 
 
   // Profiling
@@ -871,7 +872,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
 		//octomap_debug_pub.publish(debug_data);
   }
-  ROS_INFO_STREAM("OM vol"<<free_cell_volume + occupied_cell_volume);
+  //ROS_INFO_STREAM("OM vol"<<free_cell_volume + occupied_cell_volume);
 
   //profiling_container.capture("octomap_exposed_volume", "single", free_cell_volume + occupied_cell_volume, capture_size);
 
@@ -1330,11 +1331,11 @@ void OctomapServer::publishAll(const ros::Time& rostime){
   profiling_container.capture("octomap_serialization_low_res_time", "end", ros::Time::now(), capture_size);
 
 
-   if (publishMarkerArray){
+   if (publishMarkerArray && DEBUG_VIS){
 	publish_octomap_vis(m_octree, m_markerPub);
    }
 
-  if (publishMarkerArrayLowerRes){
+  if (publishMarkerArrayLowerRes && DEBUG_VIS){
 	publish_octomap_vis(m_octree_lower_res, m_markerLowerResPub);
   }
 
@@ -1729,7 +1730,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	 MapToTransferSideLength *= 2;
  }
 
- ROS_INFO_STREAM("volume kept" << om_to_pl_vol_actual);
+ //ROS_INFO_STREAM("volume kept" << om_to_pl_vol_actual);
 
  MapToTransferSideLength = min(MapToTransferSideLength, map_max_length); // -- incase we exceeded the threshold when doubling
  gridSideLength = float(MapToTransferSideLength)/(4*gridSliceCountPerSide); // -- to be more accurate, we quadruple the number of slices
