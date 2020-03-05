@@ -1679,6 +1679,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   // -- for profiling purposes
   pcl_aug_data.ee_profiles.actual_cmds = pcl_aug_data.controls.cmds;
   pcl_aug_data.controls.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  pcl_aug_data.controls.inputs.cur_tree_total_volume = cur_tree_total_volume;
   pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
   pcl_aug_data.controls.inputs.velocity_to_budget_on = velocity_to_budget_on;
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
