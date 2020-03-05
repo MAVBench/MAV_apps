@@ -405,14 +405,14 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
     trajectory_t new_trajectory = create_trajectory_from_msg(*msg);
 
-    bool optimizer_succeeded;
-    ros::param::get("/optimizer_succeeded", optimizer_succeeded);
+//    bool optimizer_succeeded;
+ //   ros::param::get("/optimizer_succeeded", optimizer_succeeded);
 
     if (msg->reverse) {
     	ROS_INFO_STREAM("reversing now");
     	fly_backward = true;
     	stop = false;
-    } else if (msg->stop || !optimizer_succeeded){
+    } else if (msg->stop ) {// !optimizer_succeeded){
     	fly_backward = false;
     	stop = true;
     }

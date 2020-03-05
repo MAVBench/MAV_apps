@@ -37,12 +37,14 @@ std::string ip_addr__global;
 double g_sensor_max_range, g_sampling_interval, g_v_max;
 std::deque<double> MacroBudgets;
 bool dynamic_budgetting, reactive_runtime;
+double max_time_budget;
 bool knob_performance_modeling = false;
 bool knob_performance_modeling_for_pc_om = false;
 bool knob_performance_modeling_for_om_to_pl = false;
 bool knob_performance_modeling_for_piecewise_planner = false;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
+bool time_budgetting_failed = false;
 
 mavbench_msgs::control control;
 bool got_new_input = false;
@@ -165,7 +167,7 @@ double TimeIncr;
 double maxVelocity;
 
 double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag){
-	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
+	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
 
 	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining");
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
@@ -183,16 +185,28 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 
 
 	double latency = 1.55; //TODO: get this from follow trajectory
-	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr);
+	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency);
 
-	if (macro_time_budgets.size() == 1){
-		control.internal_states.sensor_to_actuation_time_budget_to_enforce = macro_time_budgets[1];
-	}else{
-		control.internal_states.sensor_to_actuation_time_budget_to_enforce = macro_time_budgets[0];
+	double time_budget;
+	if (msg->points.size() < 2 || macro_time_budgets.size() < 2){
+		time_budgetting_failed = true;
+		ROS_INFO_STREAM("failed to time budgget");
+		return;
 	}
+	else if (macro_time_budgets.size() >= 1){
+		time_budgetting_failed = false;
+		time_budget = min (max_time_budget, macro_time_budgets[1]);
+		ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
+	}
+
+//	else{
+//		time_budget = min(max_time_budget, macro_time_budgets[0]);
+//	}
 //	ROS_INFO_STREAM("---- next step"<< control_inputs.sensor_to_actuation_time_budget_to_enforce);
-//	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
+
+	control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
+	//	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
 
 	/*
 	auto node_budget_vec = calc_micro_budget(macro_time_budgets[0]);
@@ -692,6 +706,7 @@ int main(int argc, char **argv)
     }
      */
     ros::Publisher runtime_debug_pub = n.advertise<mavbench_msgs::runtime_debug>("/runtime_debug", 1);
+    ros::param::get("/max_time_budget", max_time_budget);
 
     Drone drone(ip_addr.c_str(), port, localization_method);
     //Drone drone(ip_addr__global.c_str(), port);
@@ -736,10 +751,13 @@ int main(int argc, char **argv)
     		}
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
-    		if (traj.size() == 0) { // -- if we haven't started the initla planning or there is not trajectory
-    			control.internal_states.sensor_to_actuation_time_budget_to_enforce = calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(vel_mag);
+    		if (traj.size() == 0 || time_budgetting_failed) { // -- if we haven't started the initla planning or there is not trajectory
+    			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(vel_mag));
+    			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
+    			ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  vel_mag:"<<vel_mag);
     		}
     		control_to_pyrun.publish(control);
+    		time_budgetting_failed  = false;
     	}
 	}
 

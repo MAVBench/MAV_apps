@@ -342,9 +342,9 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	msg_for_follow_traj.header.stamp = msg.header.stamp;
 	if(!first_time_planning_succeeded) {
 		msg_for_follow_traj.planning_status = "first_time_planning";
-		msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
-		msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
-		msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+		//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+		//msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
+		//msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 		replanning_reason = First_time_planning;
 		replan = true;
@@ -696,6 +696,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	profiling_container.capture("piecewise_path_post_process", "end", ros::Time::now(), capture_size);
     }
 
+
+    res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
     volume_explored_in_unit_cubes = 0;
     // Smoothen the path and build the multiDOFtrajectory response
     //ROS_INFO("Smoothenning...");
@@ -724,7 +726,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
 			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
 			msg_for_follow_traj.planning_status = "smoothening_failed";
-			msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+			//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
@@ -746,7 +748,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
         res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
         res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
-        res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+        //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
         traj_pub.publish(res.multiDOFtrajectory);
@@ -766,7 +768,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
     res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
     res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
-    res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
+    //res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
     res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
@@ -822,7 +824,6 @@ void MotionPlanner::get_start_in_future(Drone& drone,
     	mdofp.x = current_pos.x;
     	mdofp.y = current_pos.y;
     	mdofp.z = current_pos.z;
-    	ROS_INFO_STREAM("----------------_RIGHT HERRE");
     }else{
     	mdofp.x += current_pos.x - planned_point.x;
     	mdofp.y += current_pos.y - planned_point.y;

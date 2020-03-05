@@ -9,6 +9,7 @@ import time
 import numpy as np
 import math
 from optimizer_settings import *
+rt_max = 30
 
 def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency
@@ -30,7 +31,6 @@ def run_optimizer(control):
         [ 2.00720436e-04,  4.60333360e-02, -1.05093373e-05],
         [ 1.34399197e-04,  4.64316885e-02,  1.24233987e-05],
         [ pl_to_ppl_ratio*1.00483609e-01,  pl_to_ppl_ratio*1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
-
     # Constraint matrices #
     G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0], [-1,0,0,0,0]])
     d = np.array([0, 0, v_sensor_max, -r_gap_hat])
@@ -90,6 +90,7 @@ def control_callback(control):
         smoothening_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
     else:
         rospy.set_param("optimizer_succeeded", False)
+        rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
         return
 
     rospy.set_param("optimizer_succeeded", True)
@@ -127,5 +128,6 @@ if __name__ == '__main__':
     rospy.init_node('runtime_thread_python', anonymous=True)
     rospy.Subscriber("control_to_pyrun", control, control_callback)
     rate = rospy.Rate(20) # 10hz
+    rt_max = rospy.get_param("max_time_budget")
     while not rospy.is_shutdown():
         rate.sleep()

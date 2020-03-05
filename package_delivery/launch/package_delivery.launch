@@ -447,7 +447,12 @@
   <arg name="use_pyrun" default="true" />   
   <param name="use_pyrun" value="$(arg use_pyrun)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
-  
+  <arg name="max_time_budget" default="20" />   
+  <param name="max_time_budget" value="$(arg max_time_budget)"/>
+ 
+
+
+
   <arg name="expected_latency" default=".05" />   
   <param name="om_latency_expected" value="$(arg expected_latency)"/>
   <param name="om_to_pl_latency_expected" value="$(arg expected_latency)"/>

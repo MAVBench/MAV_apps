@@ -9,7 +9,7 @@
 
 class TimeBudgetter {
 public:
-	TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr);
+	TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget);
 
 	double calcSamplingTimeFixV(double velocityMag , double sensorRange, std::vector<double> acceleartionCoeffs, double latency);
 	double calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency);
@@ -27,6 +27,7 @@ private:
 	SensorActuatorModel sensorActuatorModel_;
 	std::vector<double> SamplingTimes_;
 	double timeIncr_;
+	double max_time_budget;
 };
 
 #endif /* TIMEBUDGETTER_H_ */

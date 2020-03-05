@@ -10,13 +10,13 @@ om_to_pc_oh = .15
 misc_latency = pc_latency + om_to_pc_oh  # time of the stages not included in the controller
 
 # constraints
-pc_res_min = .15
-om_to_pl_res_min = .15
-r_steps = 5
+pc_res_min = .3
+om_to_pl_res_min = .3
+r_steps = 4
 r_min = .9 * pc_res_min  # minimal octomap res
 r_max = (2 ** r_steps) * r_min
 v_min = 1000
 v_max = np.inf
-rt_max = 30
+#rt_max = 30
 
 
