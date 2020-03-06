@@ -99,6 +99,8 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     si->setup();
 
     // Set planner
+    //auto blah =  new PlannerType(si) ;
+    //blah->setApproximate(10.0);
     ob::PlannerPtr planner(new PlannerType(si));
     ss.setPlanner(planner);
 
@@ -112,7 +114,8 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     goal_state[1] = goal.y;
     goal_state[2] = goal.z;
 
-    ss.setStartAndGoalStates(start_state, goal_state);
+    ss.setStartAndGoalStates(start_state, goal_state, 50);
+
 
     ss.setup();
 
@@ -334,7 +337,11 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 	//publish_dummy_octomap_vis(m_octree);
 }
 
-
+double dist(coord t, geometry_msgs::Point m)
+{
+    // We must convert between the two coordinate systems
+    return std::sqrt((t.x-m.x)*(t.x-m.x) + (t.y-m.y)*(t.y-m.y) + (t.z-m.z)*(t.z-m.z));
+}
 // determine whether it's time to replan
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	bool replan;
@@ -365,7 +372,10 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			replanning_reason = Min_freq_passed;
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
 			replan = true;
-		} else {
+		} else if (next_steps_msg_size == 0 && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
+			replan = true;
+		}
+		else {
 			profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 			bool collision_coming = this->traj_colliding(&g_next_steps_msg);
 			profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
@@ -908,6 +918,10 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 {
 	got_new_next_steps_since_last_attempted_plan = true;
 	g_next_steps_msg = *msg;
+	next_steps_msg_size  = msg->points.size();
+	if (!next_steps_msg_size){
+		ROS_INFO_STREAM("msg sizees are 00000000000000000000");
+	}
 }
 
 void MotionPlanner::motion_planning_initialize_params()
@@ -921,6 +935,7 @@ void MotionPlanner::motion_planning_initialize_params()
       ROS_FATAL_STREAM("Could not start motion_planning DEBUG_VIS not provided");
       return ;
     }
+
 
 
 
@@ -939,6 +954,13 @@ void MotionPlanner::motion_planning_initialize_params()
       ROS_FATAL_STREAM("Could not start pkg delivery smoothening_budget not provided");
       return ;
     }
+
+    if(!ros::param::get("/distance_to_goal_margin",distance_to_goal_margin))  {
+      ROS_FATAL_STREAM("Could not start mapping goal_distance_margin not provided");
+      return ;
+    }
+
+
 
     ros::param::get("/motion_planner/max_roadmap_size", max_roadmap_size__global);
     ros::param::get("/sampling_interval", sampling_interval__global);

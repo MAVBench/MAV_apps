@@ -198,14 +198,20 @@ void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
     slam_lost = msg->data;
 }
 
-
+double distance_to_goal_margin;
 void package_delivery_initialize_params()
 {
     if(!ros::param::get("/supervisor_mailbox",g_supervisor_mailbox))  {
       ROS_FATAL_STREAM("Could not start mapping supervisor_mailbox not provided");
       return ;
     }
-   
+
+    if(!ros::param::get("/distance_to_goal_margin",distance_to_goal_margin))  {
+      ROS_FATAL_STREAM("Could not start mapping distance_to_goal_margin not provided");
+      return ;
+    }
+
+
     if(!ros::param::get("/DEBUG",DEBUG))  {
       ROS_FATAL_STREAM("Could not start pkg delivery DEBUG not provided");
       return ;
@@ -456,7 +462,7 @@ int main(int argc, char **argv)
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
 	//----------------------------------------------------------------- 
-    const float goal_s_error_margin = 6.0; //ok distance to be away from the goal.
+    float distance_to_goal_margin;// = 6.0; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
                                            //flight controler to land exactly
@@ -636,7 +642,7 @@ int main(int argc, char **argv)
         }
     	*/
         // get rid of this later, I just pulled it out for a hack
-        if (dist(drone.position(), goal) < goal_s_error_margin){
+        if (dist(drone.position(), goal) < distance_to_goal_margin){
         	if (reached_goal_ctr == 1) {
 
         		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
