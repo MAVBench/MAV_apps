@@ -2,6 +2,9 @@ float32 sensor_volume_to_digest_estimated
 float32 gap_statistics_min
 float32 gap_statistics_max
 float32 gap_statistics_avg
+float32 obs_dist_statistics_min
+float32 obs_dist_statistics_max
+float32 obs_dist_statistics_avg
 float32 velocity_to_budget_on
 float32 cur_tree_total_volume
 float32 ppl_vol_min

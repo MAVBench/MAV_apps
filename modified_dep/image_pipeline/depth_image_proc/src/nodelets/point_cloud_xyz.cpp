@@ -510,7 +510,9 @@ void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x
 
 // to understand the gap size and volume
 float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
-  int n_points, const int grid_size, float diagnostic_resolution, double &sensor_volume_to_digest_estimated, double &area_to_digest, double &gap_statistics_min, double& gap_statistics_avg, double& gap_statistics_max){
+  int n_points, const int grid_size, float diagnostic_resolution, double &sensor_volume_to_digest_estimated, double &area_to_digest,
+  double &gap_statistics_min, double& gap_statistics_max, double& gap_statistics_avg, double &obs_dist_statistics_min, double  &obs_dist_statistics_avg
+  ){
   double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
   bool first_itr = true;
   vector<int> gap_ctr_per_row_vec;
@@ -525,11 +527,13 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
   int cntr= 0;
  int cntr1 = 0;
  bool first_point = true; // first point in the first gap
- float closest_obstacle = sensor_max_range;
+ obs_dist_statistics_avg = 0;
+ obs_dist_statistics_min = sensor_max_range;
+
  //const float diagnostic_resolution = 1;
  //const int point_cloud_wc_side_length = 60;
-// const int grided_volume_size = (int)point_cloud_wc_side_length/diagnostic_resolution;
-// const int grided_size = 60; // int)point_cloud_wc_side_length/diagnostic_resolution;
+ // const int grided_volume_size = (int)point_cloud_wc_side_length/diagnostic_resolution;
+ // const int grided_size = 60; // int)point_cloud_wc_side_length/diagnostic_resolution;
  float **gridded_volume = 0;
  gridded_volume = new float*[grid_size];
  //memset(gridded_volume, 0, sizeof(gridded_volume[0][0]) * grided_volume_size* grided_volume_size);
@@ -560,10 +564,11 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
       }
       double new_norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
 
-      if (new_norm < closest_obstacle){ // -- we might wanna use this to determine the resolution
+      if (new_norm < obs_dist_statistics_min){ // -- we might wanna use this to determine the resolution
     	  	  	  	  	  	  	  	    // -- i.e., make sure resolution is bigger than closest_obstacle
-    	  closest_obstacle = new_norm;
+    	  obs_dist_statistics_min = new_norm;
       }
+      obs_dist_statistics_avg += new_norm;
 
       new_row = this_x < last_x;
       //bool point_is_gap = this_z > (sensor_max_range - resolution);
@@ -679,6 +684,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
   gap_statistics_max= max_gap;
  // }
 
+  obs_dist_statistics_avg /= float(n_points);
   return gridded_volume;
 }
 
@@ -1562,9 +1568,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   const int grid_size = 60;
   float **gridded_volume;
   float diagnostic_resolution = 1; // -- point cloud resolution to use for diagnostic purposes
-  double gap_statistics_avg, gap_statistics_min, gap_statistics_max;
+  double gap_statistics_avg, gap_statistics_min, gap_statistics_max, obs_dist_statistics_min, obs_dist_statistics_avg;
 
-  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistics_min, gap_statistics_max, gap_statistics_avg);
+  gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistics_min,
+		  gap_statistics_max, gap_statistics_avg, obs_dist_statistics_min, obs_dist_statistics_avg);
 
 
   mavbench_msgs::control control;
@@ -1575,6 +1582,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   control.inputs.gap_statistics_min = gap_statistics_min;
   control.inputs.gap_statistics_max = gap_statistics_max;
   control.inputs.gap_statistics_avg = gap_statistics_avg;
+  control.inputs.obs_dist_statistics_avg = obs_dist_statistics_avg;
+  control.inputs.obs_dist_statistics_min = obs_dist_statistics_min;
+
   control_pub.publish(control);
   ros::param::get("/new_control_data", new_control_data);
   while(!new_control_data){

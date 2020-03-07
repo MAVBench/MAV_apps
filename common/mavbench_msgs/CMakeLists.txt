@@ -65,6 +65,7 @@ add_message_files(
   ee_time_profile.msg
   ee_profile.msg
   error.msg
+  slack_data.msg 
   slack.msg 
   follow_traj_debug.msg
   motion_planning_debug.msg

@@ -239,10 +239,16 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	debug_data.error.time.smoothening_latency = -1;
 	debug_data.error.time.ee_latency = -1;
 	debug_data.error.space.ppl_vol = -1;
-	debug_data.slack.control_flow =  -1;
-	debug_data.slack.failure = -1;
-	debug_data.slack.data_flow =  -1;
-	debug_data.slack.total = -1;
+	debug_data.slack.expected.failure = -1;
+	debug_data.slack.expected.data_flow =  -1;
+	debug_data.slack.expected.control_flow =  -1;
+	debug_data.slack.actual.failure = -1;
+	debug_data.slack.expected.total = -1;
+	debug_data.slack.actual.data_flow =  -1;
+	debug_data.slack.actual.control_flow =  -1;
+	debug_data.slack.actual.total = -1;
+
+
 
 	// calculate the error
 	// time error is caused by a combination of models(governer) and enforcement(operators)
@@ -272,19 +278,27 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	// slack
 	// forced is caused by dataflow control
 	if (msg->ee_profiles.control_flow_path == .5) { // if no collision
-		double total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
-		debug_data.slack.total = total_slack;
-		debug_data.slack.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;
-		debug_data.slack.data_flow = max(total_slack -  debug_data.slack.control_flow, 0); // can't allow it to be less than zero
-	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
-		debug_data.slack.failure =  1;
-	}else{
-		double total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
-		debug_data.slack.total = total_slack;
-		debug_data.slack.data_flow = total_slack;
-		debug_data.slack.control_flow = 0;
-	}
+		double expected_total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.expected.total = expected_total_slack;
+		debug_data.slack.expected.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;
+		debug_data.slack.expected.data_flow = max(expected_total_slack -  debug_data.slack.expected.control_flow, 0.0); // can't allow it to be less than zero
 
+		double actual_total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.actual_time.ee_latency);
+		debug_data.slack.actual.total = actual_total_slack;
+		debug_data.slack.actual.control_flow = msg->ee_profiles.actual_time.ppl_latency + msg->ee_profiles.actual_time.smoothening_latency;
+		debug_data.slack.actual.data_flow = max(actual_total_slack -  debug_data.slack.actual.control_flow, 0.0); // can't allow it to be less than zero
+	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
+		debug_data.slack.actual.failure =  1;
+	}else{
+		double expected_total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.expected.total = expected_total_slack;
+		debug_data.slack.expected.data_flow = expected_total_slack;
+		debug_data.slack.expected.control_flow = 0;
+		double actual_total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.actual_time.ee_latency);
+		debug_data.slack.actual.total = actual_total_slack;
+		debug_data.slack.actual.data_flow = actual_total_slack;
+		debug_data.slack.actual.control_flow = 0;
+	}
 
 
 
@@ -540,10 +554,16 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	debug_data.error.time.smoothening_latency = -1;
 	debug_data.error.time.ee_latency = -1;
 	debug_data.error.space.ppl_vol = -1;
-	debug_data.slack.control_flow =  -1;
-	debug_data.slack.failure = -1;
-	debug_data.slack.data_flow =  -1;
-	debug_data.slack.total = -1;
+	debug_data.slack.expected.failure = -1;
+	debug_data.slack.expected.data_flow =  -1;
+	debug_data.slack.expected.control_flow =  -1;
+	debug_data.slack.expected.total = -1;
+	debug_data.slack.actual.failure = -1;
+	debug_data.slack.actual.data_flow =  -1;
+	debug_data.slack.actual.control_flow =  -1;
+	debug_data.slack.actual.total = -1;
+
+
 
 	// calculate the error
 	// time error is caused by a combination of models(governer) and enforcement(operators)
@@ -573,17 +593,26 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	// slack
 	// forced is caused by dataflow control
 	if (msg->ee_profiles.control_flow_path == .5) { // if no collision
-		double total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
-		debug_data.slack.total = total_slack;
-		debug_data.slack.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;
-		debug_data.slack.data_flow = max(total_slack -  debug_data.slack.control_flow, 0); // can't allow it to be less than zero
+		double expected_total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.expected.total = expected_total_slack;
+		debug_data.slack.expected.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;
+		debug_data.slack.expected.data_flow = max(expected_total_slack -  debug_data.slack.expected.control_flow, 0.0); // can't allow it to be less than zero
+
+		double actual_total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.actual_time.ee_latency);
+		debug_data.slack.actual.total = actual_total_slack;
+		debug_data.slack.actual.control_flow = msg->ee_profiles.actual_time.ppl_latency + msg->ee_profiles.actual_time.smoothening_latency;
+		debug_data.slack.actual.data_flow = max(actual_total_slack -  debug_data.slack.actual.control_flow, 0.0); // can't allow it to be less than zero
 	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
-		debug_data.slack.failure =  1;
+		debug_data.slack.actual.failure =  1;
 	}else{
-		double total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
-		debug_data.slack.total = total_slack;
-		debug_data.slack.data_flow = total_slack;
-		debug_data.slack.control_flow = 0;
+		double expected_total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.expected.total = expected_total_slack;
+		debug_data.slack.expected.data_flow = expected_total_slack;
+		debug_data.slack.expected.control_flow = 0;
+		double actual_total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.actual_time.ee_latency);
+		debug_data.slack.actual.total = actual_total_slack;
+		debug_data.slack.actual.data_flow = actual_total_slack;
+		debug_data.slack.actual.control_flow = 0;
 	}
 }
 

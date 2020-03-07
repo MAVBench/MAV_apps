@@ -162,6 +162,8 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	control.inputs.gap_statistics_min = msg->inputs.gap_statistics_min;
 	control.inputs.gap_statistics_max = msg->inputs.gap_statistics_max;
 	control.inputs.cur_tree_total_volume = msg->inputs.cur_tree_total_volume;
+	control.inputs.obs_dist_statistics_avg = msg->inputs.obs_dist_statistics_avg;
+	control.inputs.obs_dist_statistics_min = msg->inputs.obs_dist_statistics_min;
 	got_new_input = true;
 }
 

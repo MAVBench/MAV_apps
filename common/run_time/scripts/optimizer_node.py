@@ -10,7 +10,8 @@ import numpy as np
 import math
 from optimizer_settings import *
 rt_max = 10  # this is actually set in the roslaunch file
-
+drone_radius = 3
+import time
 def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency
     if (time_budget_left_to_distribute < 0):
@@ -19,19 +20,36 @@ def run_optimizer(control):
 #        print("budget in python"+ str(control.internal_states.sensor_to_actuation_time_budget_to_enforce))
     rt_d = min(time_budget_left_to_distribute, rt_max)
     rt_d = max(rt_d, .2)
+#    time.sleep(10)
 #    r_gap_max = max(control.inputs.gap_statistics_max, r_min)  # can't really see smaller than r_min anyways
     r_gap_max = control.inputs.gap_statistics_max  # can't really see smaller than r_min anyways
     r_gap_avg = control.inputs.gap_statistics_avg
+    obs_dist_avg = control.inputs.obs_dist_statistics_avg
+    obs_dist_min = control.inputs.obs_dist_statistics_min
+
     v_sensor_max = control.inputs.sensor_volume_to_digest_estimated
     v_tree_max = max(control.inputs.cur_tree_total_volume, v_min, v_sensor_max)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, 2*v_sensor_max)
 
     #
-    r_min_ = max(r_min, min(r_gap_avg, r_max))
-#    r_max_ = min(r_gap_max, r_max)
-    r_max_ = r_max
+    r_min_temp =  max(max(r_gap_avg, obs_dist_avg) - drone_radius, r_min)  # get the minium between the average gap
+                                                               # and average obstacle distance
+    r_min_ = max(r_min, min(r_min_temp , r_max))  # the outer max term makes sure the resolution is not 0
+                                                           # the inner min, is for not exceeding r_max
 
+
+
+    r_max_temp = max(min(r_gap_max, obs_dist_min) - drone_radius, r_min) # get the tigher bound of the two:
+                                                                                 # aka, maximum gap and closest obstacle
+                                                                                 # the intuition is that if
+                                                                                 # our resolution is bigger than either
+                                                                                 # we can't see the gaps/distance properly
+    r_max_ = min(r_max_temp, r_max)
+    if r_max_ < r_min_:
+        print("-------------------------------------------- bounds inverted -----------------------------------")
+        r_min_ = r_max_
+#    r_max_ = r_max - drone_radius
     #r_gap_hat = 1 / r_gap
     r_max_hat = 1 / r_min_
     r_min_hat = 1 / r_max_
@@ -150,5 +168,6 @@ if __name__ == '__main__':
     rospy.Subscriber("control_to_pyrun", control, control_callback)
     rate = rospy.Rate(20) # 10hz
     rt_max = rospy.get_param("max_time_budget")
+    drone_radius = rospy.get_param("planner_drone_radius")
     while not rospy.is_shutdown():
         rate.sleep()
