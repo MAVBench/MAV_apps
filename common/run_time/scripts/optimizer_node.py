@@ -48,10 +48,11 @@ def run_optimizer(control):
         [ 1.34399197e-04,  4.64316885e-02,  1.24233987e-05],
         [ pl_to_ppl_ratio*1.00483609e-01,  pl_to_ppl_ratio*1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
     # Constraint matrices #
-    #  -- with r_gap  as constraint
+
+    #  --  w/ r_gap  as constraint
     #G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0], [-1,0,0,0,0]])
     #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
-    # -- withough r_gap as the constraint (PS: moved to the boundary conditions)
+    # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
     G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0]])
     d = np.array([0, 0, v_sensor_max])
 

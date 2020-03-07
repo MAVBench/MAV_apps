@@ -228,15 +228,66 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 
     SA_response_time_capture_ctr++;
 
+	debug_data.header.stamp = ros::Time::now();
     debug_data.controls = msg->controls;
     debug_data.ee_profiles = msg->ee_profiles;
 	debug_data.ee_profiles.actual_time.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 	debug_data.ee_profiles.actual_time.ee_latency = (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec();
+	debug_data.ee_profiles.control_flow_path =  msg->ee_profiles.control_flow_path;
+
+	debug_data.error.time.ppl_latency = -1;
+	debug_data.error.time.smoothening_latency = -1;
+	debug_data.error.time.ee_latency = -1;
+	debug_data.error.space.ppl_vol = -1;
+	debug_data.slack.control_flow =  -1;
+	debug_data.slack.failure = -1;
+	debug_data.slack.data_flow =  -1;
+	debug_data.slack.total = -1;
+
 	// calculate the error
-	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.ee_latency -  msg->ee_profiles.expected_time.ee_latency);
-	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.ppl_latency -  msg->ee_profiles.expected_time.ppl_latency);
-	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.om_to_pl_latency-  msg->ee_profiles.expected_time.om_to_pl_latency);
-	debug_data.ee_latency_tracking_error = fabs(msg->ee_profiles.actual_time.om_latency -  msg->ee_profiles.expected_time.om_latency);
+	// time error is caused by a combination of models(governer) and enforcement(operators)
+	if (msg->ee_profiles.control_flow_path >= 1) { // made it up to end of planning
+		debug_data.error.time.ppl_latency = fabs(msg->ee_profiles.actual_time.ppl_latency -  msg->ee_profiles.expected_time.ppl_latency);
+	}
+	if (msg->ee_profiles.control_flow_path >= 1.5) { // made it up to end of  smootheing
+		debug_data.error.time.smoothening_latency = fabs(msg->ee_profiles.actual_time.smoothening_latency -  msg->ee_profiles.expected_time.smoothening_latency);
+	}
+	if (msg->ee_profiles.control_flow_path == 2) { // if sucess all the way
+		debug_data.error.time.ee_latency = fabs(msg->ee_profiles.actual_time.ee_latency -  msg->ee_profiles.expected_time.ee_latency);
+	}
+	// the next two always run
+	debug_data.error.time.om_to_pl_latency = fabs(msg->ee_profiles.actual_time.om_to_pl_latency-  msg->ee_profiles.expected_time.om_to_pl_latency);
+	debug_data.error.time.om_latency= fabs(msg->ee_profiles.actual_time.om_latency -  msg->ee_profiles.expected_time.om_latency);
+
+	// space
+	// space error is caused by the enforcement (operators)
+	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res);
+	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol);
+	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res);
+	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol);
+
+	if (msg->ee_profiles.control_flow_path >= 1) { // up to  smootheing planning success
+		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol);
+	}
+	// slack
+	// forced is caused by dataflow control
+	if (msg->ee_profiles.control_flow_path == .5) { // if no collision
+		double total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.total = total_slack;
+		debug_data.slack.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;
+		debug_data.slack.data_flow = max(total_slack -  debug_data.slack.control_flow, 0); // can't allow it to be less than zero
+	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
+		debug_data.slack.failure =  1;
+	}else{
+		double total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.total = total_slack;
+		debug_data.slack.data_flow = total_slack;
+		debug_data.slack.control_flow = 0;
+	}
+
+
+
+
 }
 
 /*
@@ -476,10 +527,64 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	}
 	SA_response_time_capture_ctr++;
 
+	debug_data.header.stamp = ros::Time::now();
 	debug_data.controls = msg->controls;
 	debug_data.ee_profiles = msg->ee_profiles;
 	debug_data.ee_profiles.actual_time.pl_to_ft_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 	debug_data.ee_profiles.actual_time.ee_latency = (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec();
+	debug_data.ee_profiles.control_flow_path =  msg->ee_profiles.control_flow_path;
+
+
+
+	debug_data.error.time.ppl_latency = -1;
+	debug_data.error.time.smoothening_latency = -1;
+	debug_data.error.time.ee_latency = -1;
+	debug_data.error.space.ppl_vol = -1;
+	debug_data.slack.control_flow =  -1;
+	debug_data.slack.failure = -1;
+	debug_data.slack.data_flow =  -1;
+	debug_data.slack.total = -1;
+
+	// calculate the error
+	// time error is caused by a combination of models(governer) and enforcement(operators)
+	if (msg->ee_profiles.control_flow_path >= 1) { // made it up to end of planning
+		debug_data.error.time.ppl_latency = fabs(msg->ee_profiles.actual_time.ppl_latency -  msg->ee_profiles.expected_time.ppl_latency);
+	}
+	if (msg->ee_profiles.control_flow_path >= 1.5) { // made it up to end of  smootheing
+		debug_data.error.time.smoothening_latency = fabs(msg->ee_profiles.actual_time.smoothening_latency -  msg->ee_profiles.expected_time.smoothening_latency);
+	}
+	if (msg->ee_profiles.control_flow_path == 2) { // if sucess all the way
+		debug_data.error.time.ee_latency = fabs(msg->ee_profiles.actual_time.ee_latency -  msg->ee_profiles.expected_time.ee_latency);
+	}
+	// the next two always run
+	debug_data.error.time.om_to_pl_latency = fabs(msg->ee_profiles.actual_time.om_to_pl_latency-  msg->ee_profiles.expected_time.om_to_pl_latency);
+	debug_data.error.time.om_latency= fabs(msg->ee_profiles.actual_time.om_latency -  msg->ee_profiles.expected_time.om_latency);
+
+	// space
+	// space error is caused by the enforcement (operators)
+	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res);
+	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol);
+	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res);
+	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol);
+
+	if (msg->ee_profiles.control_flow_path >= 1) { // up to  smootheing planning success
+		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol);
+	}
+	// slack
+	// forced is caused by dataflow control
+	if (msg->ee_profiles.control_flow_path == .5) { // if no collision
+		double total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.total = total_slack;
+		debug_data.slack.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;
+		debug_data.slack.data_flow = max(total_slack -  debug_data.slack.control_flow, 0); // can't allow it to be less than zero
+	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
+		debug_data.slack.failure =  1;
+	}else{
+		double total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
+		debug_data.slack.total = total_slack;
+		debug_data.slack.data_flow = total_slack;
+		debug_data.slack.control_flow = 0;
+	}
 }
 
 

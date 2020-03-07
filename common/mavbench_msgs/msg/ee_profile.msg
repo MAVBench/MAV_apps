@@ -3,3 +3,4 @@ mavbench_msgs/ee_time_profile expected_time
 
 mavbench_msgs/control_cmd actual_cmds
 mavbench_msgs/control_cmd expected_cmds
+float32 control_flow_path

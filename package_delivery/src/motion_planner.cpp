@@ -400,6 +400,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 		msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 		msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+		msg_for_follow_traj.ee_profiles.control_flow_path = .5;
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 	}else{
 		profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
@@ -646,6 +647,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty()) {
+		msg_for_follow_traj.ee_profiles.control_flow_path = 1;
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
     		//std_msgs::Header msg_for_follow_traj;
@@ -693,6 +695,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+        res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -729,6 +732,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     debug_data.motion_planning_smoothening_volume_explored = volume_explored_in_unit_cubes*pow(map_res,3);
 
     if (smooth_path.empty()) {
+		msg_for_follow_traj.ee_profiles.control_flow_path = 1.5;
     	ROS_ERROR("Path could not be smoothened successfully");
     	profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
@@ -762,6 +766,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+        res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -781,6 +786,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
     //res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
     res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+	res.multiDOFtrajectory.ee_profiles.control_flow_path = 2;
     traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);

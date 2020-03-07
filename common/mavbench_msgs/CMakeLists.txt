@@ -64,6 +64,8 @@ add_message_files(
   control.msg
   ee_time_profile.msg
   ee_profile.msg
+  error.msg
+  slack.msg 
   follow_traj_debug.msg
   motion_planning_debug.msg
   octomap_debug.msg
