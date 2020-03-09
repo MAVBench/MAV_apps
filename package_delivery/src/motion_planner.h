@@ -168,6 +168,8 @@ private:
     // *** F:DN Check the validity of states for OMPL planners
     bool OMPLStateValidityChecker(const ompl::base::State * state);
 
+    void draw_piecewise(piecewise_trajectory& piecewise_path, int status);
+
     // *** F:DN A flexible wrapper for OMPL planners
     template<class PlannerType>
     piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int &status);
@@ -187,6 +189,7 @@ private:
     double distance_to_goal_margin;
     int capture_size = 600; //set this to 1 if you want to see every data captured separately
     int next_steps_msg_size  = 0;
+    bool piecewise_planning = false;
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;

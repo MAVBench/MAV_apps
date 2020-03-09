@@ -1586,7 +1586,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   control.inputs.obs_dist_statistics_min = obs_dist_statistics_min;
 
   control_pub.publish(control);
+//  ROS_INFO_STREAM("publishing control now");
   ros::param::get("/new_control_data", new_control_data);
+
   while(!new_control_data){
 	  ros::param::get("/new_control_data", new_control_data);
 	  ros::Duration(.01).sleep();

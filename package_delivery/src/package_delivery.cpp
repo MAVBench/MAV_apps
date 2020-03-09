@@ -260,10 +260,12 @@ void package_delivery_initialize_params()
         return; 
     }
 
+    /*
     if(!ros::param::get("/ppl_time_budget", g_ppl_time_budget)) {
         ROS_FATAL_STREAM("Could not start pkg delivery planning_budget not provided");
         return;
     }
+    */
 }
 
 
@@ -293,6 +295,7 @@ geometry_msgs::Point get_goal() {
 
 // This function will return a starting position for our motion planner that
 // begins "g_planning_budget" seconds into the current trajectory of the drone
+/*
 void get_start_in_future(Drone& drone, geometry_msgs::Point& start,
         geometry_msgs::Twist& twist, geometry_msgs::Twist& acceleration)
 {
@@ -324,7 +327,7 @@ void get_start_in_future(Drone& drone, geometry_msgs::Point& start,
     acceleration.linear.y = mdofp.ay;
     acceleration.linear.z = mdofp.az;
 }
-
+*/
 
 mavbench_msgs::multiDOFtrajectory request_trajectory(ros::ServiceClient& client, const geometry_msgs::Point& start, const geometry_msgs::Point& goal, const geometry_msgs::Twist& twist, const geometry_msgs::Twist& acceleration)
 {
@@ -462,7 +465,7 @@ int main(int argc, char **argv)
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
 	//----------------------------------------------------------------- 
-    float distance_to_goal_margin;// = 6.0; //ok distance to be away from the goal.
+    //float distance_to_goal_margin;// = 6.0; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
                                            //flight controler to land exactly
@@ -509,7 +512,6 @@ int main(int argc, char **argv)
             profiling_data_srv_inst.request.key = "start_profiling";
             profiling_data_srv_inst.request.value = 0;
             profile_manager.clientCall(profiling_data_srv_inst);
-
             spin_around(drone);
             next_state = waiting;
             package_delivery::point goal_srv_inst;
@@ -648,8 +650,9 @@ int main(int argc, char **argv)
         		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
         		ros::shutdown();
         	}
-    	    else{
-    	    	package_delivery::point goal_srv_inst;
+        	else{
+        		ROS_INFO_STREAM("~~~~~~~~~~~~ got close enough");
+        		package_delivery::point goal_srv_inst;
     	    	goal.x = start.x;
     	    	goal.y = start.y;
     	    	goal.z = start.z;

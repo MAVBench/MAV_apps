@@ -183,7 +183,7 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 	// if call back is motion planner, then erase up to msg (
 	if (it == timing_msgs_vec.end()){
 		ROS_ERROR_STREAM("couldn't find a header with the same time stamp to erase the elements before of");
-		exit(0);
+		//exit(0);
 	}else{
 	    timing_msgs_begin_el_time = *(timing_msgs_vec.begin());
 		if (caller == "callback_trajectory"){ // only make sense to calculate SA metrics when there is a trajectory
@@ -285,10 +285,12 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 
 		double actual_total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.actual_time.ee_latency);
 		debug_data.slack.actual.total = actual_total_slack;
-		debug_data.slack.actual.control_flow = msg->ee_profiles.actual_time.ppl_latency + msg->ee_profiles.actual_time.smoothening_latency;
+		debug_data.slack.actual.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;  // have to use expected time, cause we
+																																				 // the actual is zero
 		debug_data.slack.actual.data_flow = max(actual_total_slack -  debug_data.slack.actual.control_flow, 0.0); // can't allow it to be less than zero
 	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
 		debug_data.slack.actual.failure =  1;
+		debug_data.slack.expected.failure =  1;
 	}else{
 		double expected_total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
 		debug_data.slack.expected.total = expected_total_slack;
@@ -600,10 +602,12 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 		double actual_total_slack = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.actual_time.ee_latency);
 		debug_data.slack.actual.total = actual_total_slack;
-		debug_data.slack.actual.control_flow = msg->ee_profiles.actual_time.ppl_latency + msg->ee_profiles.actual_time.smoothening_latency;
+		debug_data.slack.actual.control_flow = msg->ee_profiles.expected_time.ppl_latency + msg->ee_profiles.expected_time.smoothening_latency;  // have to use expected time, cause we
+																																				 // the actual is zero
 		debug_data.slack.actual.data_flow = max(actual_total_slack -  debug_data.slack.actual.control_flow, 0.0); // can't allow it to be less than zero
 	}else if(msg->ee_profiles.control_flow_path != 2) { // if failure
 		debug_data.slack.actual.failure =  1;
+		debug_data.slack.expected.failure =  1;
 	}else{
 		double expected_total_slack  = fabs(msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce - msg->ee_profiles.expected_time.ee_latency);
 		debug_data.slack.expected.total = expected_total_slack;
@@ -618,7 +622,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 
 bool trajectory_done(const trajectory_t& trajectory) {
-    trajectory.size() == 0;
+//    trajectory.size() == 0;
     g_trajectory_done = (trajectory.size() == 0);
     return g_trajectory_done;
 }
@@ -896,6 +900,11 @@ int main(int argc, char **argv)
         	}
         }
 
+         if (trajectory_done(*forward_traj)){
+            loop_rate.sleep();
+            continue;
+        }
+
         //bool check_position = (ros::Time::now() - last_new_trajectory_time).toSec() < PID_correction_time;
         bool check_position = true; //always check position now
 
@@ -981,7 +990,9 @@ int main(int argc, char **argv)
         trajectory_msg.stop = stop;
 
 
-        next_steps_pub.publish(trajectory_msg);
+//        if (trajectory_msg.points.size() != 0){
+        	next_steps_pub.publish(trajectory_msg);
+ //       }
 
     	profiling_container->capture("entire_follow_trajectory", "end", ros::Time::now(), g_capture_size);
         // debugging
@@ -1014,10 +1025,7 @@ int main(int argc, char **argv)
             drone.fly_velocity(0, 0, 0);
             trajectory.clear();
             future_collision_time = ros::Time(0);
-        } else if (trajectory_done(*forward_traj)){
-            loop_rate.sleep();
         }
-
         g_got_new_trajectory = false;
     }
 

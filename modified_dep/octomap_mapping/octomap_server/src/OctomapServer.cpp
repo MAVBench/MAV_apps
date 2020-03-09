@@ -1521,6 +1521,27 @@ bool OctomapServer::resetSrv(std_srvs::Empty::Request& req, std_srvs::Empty::Res
   return true;
 }
 
+/*
+template <class OctomapT>
+static inline octomap::AbstractOcTree* binaryMsgToMapModified(const Octomap& msg, int depth){
+    if (!msg.binary)
+      return NULL;
+
+    octomap::AbstractOcTree* tree;
+    if (msg.id == "ColorOcTree"){
+      octomap::ColorOcTree* octree = new octomap::ColorOcTree(msg.resolution);
+      readTree(octree, msg);
+      tree = octree;
+    } else {
+      octomap::OcTree* octree = new octomap::OcTree(msg.resolution);
+      readTree(octree, msg);
+      tree = octree;
+    }
+    return tree;
+  }
+
+*/
+
 
 template <class OctomapT>
 static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg, double &volume_communicated_in_unit_cubes, double resolution =0, int depth_limit = 0){
@@ -1635,8 +1656,9 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
   double volume_communicated_in_unit_cubes = 0;
   // serialize
-  if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_octree->getResolution(), lower_res_map_depth)){
-	  int serialization_length = ros::serialization::serializationLength(map);
+//  if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_resm_octree->getResolution(), lower_res_map_depth)){
+   if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_res, lower_res_map_depth)){
+  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;
 	  octomap_aug_data.header.stamp = rostime;
@@ -1826,7 +1848,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   double volume_communicated_in_unit_cubes = 0;
   // serialize
   profiling_container.capture("octomap_serialization_time", "start", ros::Time::now(), capture_size);
-  if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_octree->getResolution(), lower_res_map_depth)){
+  if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes,m_res, lower_res_map_depth)){
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  map.header.stamp = rostime;

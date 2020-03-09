@@ -86,7 +86,7 @@
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
   <arg name="planner_min_freq" default=".01"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
-  <arg name="distance_to_goal_margin" default="6"/> 
+  <arg name="distance_to_goal_margin" default="15"/> 
   <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>
 
   
@@ -457,6 +457,12 @@
   <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
   <arg name="ppl_vol_min_coeff" default="1000" />   
   <param name="ppl_vol_min_coeff" value="$(arg ppl_vol_min_coeff)"/>
+  <arg name="ppl_time_budget" default="5" />   
+  <param name="ppl_time_budget" value="$(arg ppl_time_budget)"/>
+ <arg name="smoothening_budget" default="5" />   
+  <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
+
+
 
 
 

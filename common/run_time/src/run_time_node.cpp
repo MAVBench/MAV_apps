@@ -164,6 +164,7 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	control.inputs.cur_tree_total_volume = msg->inputs.cur_tree_total_volume;
 	control.inputs.obs_dist_statistics_avg = msg->inputs.obs_dist_statistics_avg;
 	control.inputs.obs_dist_statistics_min = msg->inputs.obs_dist_statistics_min;
+	//ROS_INFO_STREAM("got a new input in control_callback crun");
 	got_new_input = true;
 }
 

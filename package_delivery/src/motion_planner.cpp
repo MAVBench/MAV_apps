@@ -44,6 +44,10 @@
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/segment.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/vertex.h"
+#include "../../deps/mav_trajectory_generation/mav_trajectory_generation_ros/include/mav_trajectory_generation_ros/ros_visualization.h"
+#include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
+#include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
+
 
 
 double total_collision_func = 0;
@@ -61,6 +65,7 @@ void planner_termination_func(double &volume_explored_so_far, double &volume_exp
 bool planner_termination_func(){
 	bool taking_to_long = (ros::Time::now() - g_planning_start_time).toSec() > 20; // -- this is just to make sure the volume is not gonna be too big
 																				   // -- so that we will return
+	//ROS_INFO_STREAM("===== in termination with volume of "<< volume_explored_in_unit_cubes);
 	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube) || taking_to_long;
 
 }
@@ -124,6 +129,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     // Solve for path
     //ob::PlannerStatus solved = ss.solve(g_ppl_time_budget);
 
+	piecewise_planning = true;
 	auto planner_termination_obj = ompl::base::PlannerTerminationCondition(planner_termination_func);
 	ob::PlannerStatus solved;
     solved = ss.solve(planner_termination_obj);
@@ -141,6 +147,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     } else {
     	status = 0;
     }
+    piecewise_planning = false;
 
     // profiling, debugging
     profiling_container.capture("OMPL_planning_time", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
@@ -150,11 +157,15 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 		motion_planning_debug_pub.publish(debug_data);
 	}
 
-	if (status == 1) //only take exact solution
+	if (status == 1 || status == 3) //only take exact solution
     {
 
     	profiling_container.capture("OMPL_simplification_time", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
-    	ROS_INFO("Solution found!");
+    	if (status ==1) {
+    		ROS_INFO("Solution found Exactly!");
+    	}else if (status == 3){
+    		ROS_INFO("Solution found Approximately!");
+    	}
         ss.simplifySolution();
 
         for (auto state : ss.getSolutionPath().getStates()) {
@@ -233,7 +244,8 @@ Drone* MotionPlanner::get_drone() {
 }
 
 bool MotionPlanner::goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res){
-    first_time_planning_succeeded = false;
+	ROS_INFO_STREAM("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ first planning false");
+	first_time_planning_succeeded = false;
 	g_goal_pos = req.goal;
 	goal_known = true;
 }
@@ -372,7 +384,12 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			replanning_reason = Min_freq_passed;
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
 			replan = true;
-		} else if (next_steps_msg_size == 0 && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
+		}
+		else if (next_steps_msg_size == 0 && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
+			ROS_INFO_STREAM("==============================================================         now it's zero----------------------------=================================");
+			ROS_INFO_STREAM("==============================================================         now it's zero----------------------------================================="<< dist(drone->position(), g_goal_pos));
+			ROS_INFO_STREAM("==============================================================         now ----------------------------=================================");
+			ROS_INFO_STREAM("==============================================================         DONE ----------------------------=================================");
 			replan = true;
 		}
 		else {
@@ -392,7 +409,6 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			}
 		}
 	}
-
 	// for profiling
 	if (!replan) { //notify the follow trajectory to erase up to this msg
 		msg_for_follow_traj.planning_status = "no_planning_needed";
@@ -475,6 +491,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now(), capture_size);
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
+//    octree->setResolution(msg->controls.cmds.om_to_pl_res):
 
     msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_latency =  msg->ee_profiles.actual_time.om_serialization_time +
     		msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh +
@@ -646,7 +663,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     ROS_INFO_STREAM("actuall volume"<< ppl_vol_actual << " volume explored in unit cubes"<< volume_explored_in_unit_cubes<<  "volume expected in unit cube"<<ppl_vol_idealInUnitCube << " volume expected"<< ppl_vol_ideal<< "octree res"<< map_res);
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
-    if (piecewise_path.empty()) {
+    if (piecewise_path.empty() || status == 3) {
 		msg_for_follow_traj.ee_profiles.control_flow_path = 1;
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
@@ -675,12 +692,21 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         	res.multiDOFtrajectory.stop = false;
         	res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
         	ROS_INFO_STREAM("curent state, x:"<<drone->position().x<< ",  y:"<< drone->position().y<< ", z:"<< drone->position().z);
-        }else if (status == 0 || status == 3){ //if couldn't find an exact path within the time frame reverse
+        }else if (status == 0 ){ //if couldn't find an exact path within the time frame reverse
         	//res.multiDOFtrajectory.planning_status = Short_time_failure;
         	res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
         	res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.stop = true;
-        }else{
+        }
+        else if ( status == 3){ //if couldn't find an exact path within the time frame reverse
+        	//res.multiDOFtrajectory.planning_status = Short_time_failure;
+        	res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
+        	res.multiDOFtrajectory.reverse = false;
+        	res.multiDOFtrajectory.stop = true;
+        	draw_piecewise(piecewise_path, status);
+        	piecewise_traj_vis_pub.publish(piecewise_traj_markers);
+        }
+        else{
         	cout<<status<<endl;
         	ROS_INFO_STREAM("this state shouldn't happpen"<< status);
         	exit(0);
@@ -711,8 +737,15 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
 
 
+    res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+	msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     volume_explored_in_unit_cubes = 0;
+
+
+    draw_piecewise(piecewise_path, status);
+    piecewise_traj_vis_pub.publish(piecewise_traj_markers);
+
     // Smoothen the path and build the multiDOFtrajectory response
     //ROS_INFO("Smoothenning...");
     profiling_container.capture("motion_planning_smoothening_time", "start", ros::Time::now(), capture_size);
@@ -730,6 +763,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		//motion_planning_debug_pub.publish(debug_data);
 	}
     debug_data.motion_planning_smoothening_volume_explored = volume_explored_in_unit_cubes*pow(map_res,3);
+    piecewise_traj_vis_pub.publish(piecewise_traj_markers);
+
 
     if (smooth_path.empty()) {
 		msg_for_follow_traj.ee_profiles.control_flow_path = 1.5;
@@ -743,7 +778,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.planning_status = "smoothening_failed";
 			//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
-			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+//			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
@@ -765,7 +800,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
         //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
-        res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+        //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
@@ -785,11 +820,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
     res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
     //res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
-    res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+    //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 	res.multiDOFtrajectory.ee_profiles.control_flow_path = 2;
     traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
-    piecewise_traj_vis_pub.publish(piecewise_traj_markers);
 
     g_number_of_planning++; 
     res.path_found = true;
@@ -841,7 +875,14 @@ void MotionPlanner::get_start_in_future(Drone& drone,
     	mdofp.x = current_pos.x;
     	mdofp.y = current_pos.y;
     	mdofp.z = current_pos.z;
-    }else{
+    }else if (next_steps_msg_size == 0){
+    	ROS_INFO_STREAM("101010-----------10101010   using current position");
+    	mdofp.x = current_pos.x;
+    	mdofp.y = current_pos.y;
+    	mdofp.z = current_pos.z;
+    	mdofp.vx =  mdofp.vy = mdofp.vz = 0;
+    }
+    else{
     	mdofp.x += current_pos.x - planned_point.x;
     	mdofp.y += current_pos.y - planned_point.y;
     	mdofp.z += current_pos.z - planned_point.z;
@@ -1188,6 +1229,10 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 	if (motion_planning_core_str == "lawn_mower")
         return false;
 
+	if (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube && piecewise_planning){
+		return true;
+	}
+
     RESET_TIMER();
 
     // First, check if anything goes too close to the ground
@@ -1256,10 +1301,12 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
             }
             volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
             profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+            //ROS_INFO_STREAM("direction"<<direction<< " Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
             total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
             return true;
         }
         volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
+//        ROS_INFO_STREAM("Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
     }
 
 	profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
@@ -1435,6 +1482,70 @@ int MotionPlanner::get_num_of_optimums(piecewise_trajectory& piecewise, mav_traj
 }
 
 
+void setMarkerProperties(const std_msgs::Header& header, double life_time,
+                         const visualization_msgs::Marker::_action_type& action,
+                         visualization_msgs::MarkerArray* markers) {
+  CHECK_NOTNULL(markers);
+  int count = 0;
+  for (visualization_msgs::Marker& marker : markers->markers) {
+    marker.header = header;
+    marker.action = action;
+    marker.id = count;
+    marker.lifetime = ros::Duration(life_time);
+    ++count;
+  }
+}
+
+void drawVerticesModified(const mav_trajectory_generation::Vertex::Vector& vertices, const std::string& frame_id,
+                  visualization_msgs::MarkerArray* marker_array, int status) {
+  CHECK_NOTNULL(marker_array);
+  marker_array->markers.resize(1);
+  visualization_msgs::Marker& marker = marker_array->markers.front();
+
+  marker.type = visualization_msgs::Marker::LINE_STRIP;
+  if (status == 3 ){
+	  marker.color = mav_visualization::Color::Orange();
+  }else{
+	  marker.color = mav_visualization::Color::Green();
+  }
+  marker.scale.x = 0.1;
+  marker.ns = "straight_path";
+
+  for (const mav_trajectory_generation::Vertex& vertex : vertices) {
+    if (vertex.D() != 3) {
+      ROS_ERROR("Vertex has dimension %d but should have dimension 3.",
+                vertex.D());
+      return;
+    }
+
+    if (vertex.hasConstraint(mav_trajectory_generation::derivative_order::POSITION)) {
+      Eigen::VectorXd position = Eigen::Vector3d::Zero();
+      vertex.getConstraint(mav_trajectory_generation::derivative_order::POSITION, &position);
+      geometry_msgs::Point constraint_msg;
+      tf::pointEigenToMsg(position, constraint_msg);
+      marker.points.push_back(constraint_msg);
+    } else
+      ROS_WARN("Vertex does not have a position constraint, skipping.");
+  }
+
+  std_msgs::Header header;
+  header.frame_id = frame_id;
+  header.stamp = ros::Time::now();
+  setMarkerProperties(header, 0.0, visualization_msgs::Marker::ADD,
+                                marker_array);
+}
+
+void MotionPlanner::draw_piecewise(piecewise_trajectory& piecewise_path, int status ){
+	mav_trajectory_generation::Vertex::Vector vertices;
+	const int dimension = 3;
+	std::string frame_id = "world";
+	for (auto it = piecewise_path.begin(); it+1 != piecewise_path.end(); ++it) {
+		mav_trajectory_generation::Vertex v(dimension);
+		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
+		vertices.push_back(v);
+	}
+	drawVerticesModified(vertices, frame_id, &piecewise_traj_markers, status);
+}
 
 
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
