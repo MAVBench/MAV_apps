@@ -580,7 +580,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
   }
 */
 
-
+  //ROS_INFO_STREAM("closest obst"<<dist_to_closest_obs);
+  ros::param::set("dist_to_closest_obs_calc_from_octomap", dist_to_closest_obs);
   if (m_save_map){ // for micro benchmarking purposes
 	  m_octree->write("high_res_map.ot");
 	  m_octree_lower_res->write("low_res_map.ot");
@@ -645,7 +646,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   }
 
   //update the closest obstacle
-  dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
+  dist_to_closest_obs = min(calc_dist(closest_obs_coord, sensorOrigin), this->m_maxRange);
 
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
@@ -904,6 +905,7 @@ void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensorOr
 		dist_to_closest_obs = dist_to_this_obs;
 		closest_obs_coord = coordinate;
 	}
+	dist_to_closest_obs = min(dist_to_this_obs, this->m_maxRange);
 }
 
 

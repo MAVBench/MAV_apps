@@ -166,7 +166,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     	}else if (status == 3){
     		ROS_INFO("Solution found Approximately!");
     	}
-        ss.simplifySolution();
+        //ss.simplifySolution();
 
         for (auto state : ss.getSolutionPath().getStates()) {
             const auto *pos = state->as<ob::RealVectorStateSpace::StateType>();
@@ -413,9 +413,11 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	if (!replan) { //notify the follow trajectory to erase up to this msg
 		msg_for_follow_traj.planning_status = "no_planning_needed";
 		ppl_vol_actual = volume_explored_in_unit_cubes*pow(map_res, 3);
+		ppl_vol_unit_cube_actual = volume_explored_in_unit_cubes;
 		msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 		msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 		msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube =  ppl_vol_unit_cube_actual;
 		msg_for_follow_traj.ee_profiles.control_flow_path = .5;
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 	}else{
@@ -463,6 +465,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
     map_res = msg->controls.cmds.om_to_pl_res;
     ppl_vol_idealInUnitCube = ppl_vol_ideal/(pow(msg->controls.cmds.om_to_pl_res, 3));
+    //ppl_vol_idealInUnitCube = 4000;
     profiling_container.capture("entire_octomap_callback", "start", ros::Time::now(), capture_size);
     profiling_container.capture("ppl_vol_ideal", "single", msg->ee_profiles.actual_cmds.ppl_vol, capture_size);
     profiling_container.capture("om_to_pl_vol_actual", "single", msg->ee_profiles.actual_cmds.om_to_pl_vol, capture_size);
@@ -660,7 +663,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     debug_data.motion_planning_piecewise_volume_explored = volume_explored_in_unit_cubes*pow(map_res,3);
     debug_data.collision_func = total_collision_func;
     ppl_vol_actual = volume_explored_in_unit_cubes*pow(map_res, 3);
-    ROS_INFO_STREAM("actuall volume"<< ppl_vol_actual << " volume explored in unit cubes"<< volume_explored_in_unit_cubes<<  "volume expected in unit cube"<<ppl_vol_idealInUnitCube << " volume expected"<< ppl_vol_ideal<< "octree res"<< map_res);
+    ppl_vol_unit_cube_actual = volume_explored_in_unit_cubes;
+    ROS_INFO_STREAM("actuall volume explored"<< ppl_vol_actual << " volume explored in unit cubes"<< volume_explored_in_unit_cubes<<  "volume expected in unit cube"<<ppl_vol_idealInUnitCube << " volume expected"<< ppl_vol_ideal<< "octree res"<< map_res);
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty() || status == 3) {
@@ -674,6 +678,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+			msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
@@ -721,6 +726,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+		res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
@@ -738,8 +744,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
 
     res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+	res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
     res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
-	msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+	msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
+    msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     volume_explored_in_unit_cubes = 0;
 
 
@@ -1217,9 +1225,112 @@ bool MotionPlanner::out_of_bounds_lax(const graph::node& pos)
     bool x_correct = is_between(pos.x, x_low, x_high);
     bool y_correct = is_between(pos.y, y_low, y_high);
     bool z_correct = is_between(pos.z, z_low, z_high);
+    if (!x_correct || !y_correct || !z_correct){
+    	ROS_INFO_STREAM("fuuuuuuuuuuuuuuuuuck");
+    }
 
     return !x_correct || !y_correct || !z_correct;
 }
+
+
+bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, string mode, graph::node * end_ptr)
+{
+	profiling_container.capture("collision_func", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+
+	if (motion_planning_core_str == "lawn_mower")
+        return false;
+
+	if (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube && piecewise_planning){
+		return true;
+	}
+
+    RESET_TIMER();
+
+    // First, check if anything goes too close to the ground
+    if (n1.z <= drone_height__global || n2.z <= drone_height__global)
+        return true;
+
+    // Next, check if it goes out-of-bounds
+    bool z_out_of_bounds = !is_between(n1.z, z__low_bound__global, z__high_bound__global)
+        || !is_between(n2.z, z__low_bound__global, z__high_bound__global);
+    if (z_out_of_bounds) {
+        if (!is_between(n1.x, n2.x - g_out_of_bounds_allowance, n2.x + g_out_of_bounds_allowance)
+                || !is_between(n1.y, n2.y - g_out_of_bounds_allowance, n2.y + g_out_of_bounds_allowance)) {
+            if (end_ptr != nullptr) {
+                end_ptr->x = n1.x;
+                end_ptr->y = n1.y;
+                end_ptr->z = n1.z;
+            }
+            return true;
+        }
+    }
+
+    // Create a bounding box representing the drone
+    double height = drone_height__global;
+    double radius = drone_radius__global;
+
+    octomap::point3d min(n1.x-radius, n1.y-radius, n1.z-height/2);
+    octomap::point3d max(n1.x+radius, n1.y+radius, n1.z+height/2);
+
+    // Create a direction vector over which to check for collisions
+	double dx = n2.x - n1.x;
+	double dy = n2.y - n1.y;
+	double dz = n2.z - n1.z;
+    double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+    potential_distance_to_explore += distance;
+    octomap::point3d direction(dx, dy, dz);
+
+    // Make sure the direction vector isn't just (0,0,0)
+    // Otherwise, we'll get a bunch of really annoying error messages
+    // if (distance == 0) {
+    //     if (occupied(octree, n1.x, n1.y, n1.z)) {
+    //         if (end_ptr != nullptr) {
+    //             end_ptr->x = n1.x;
+    //             end_ptr->y = n1.y;
+    //             end_ptr->z = n1.z;
+    //         }
+    //         return true;
+    //     } else
+    //         return false;
+    // }
+
+    // Finally, loop over the drone's bounding box to search for collisions
+    octomap::point3d end;
+    for (auto it = octree->begin_leafs_bbx(min, max),
+            end_it = octree->end_leafs_bbx(); it != end_it; ++it)
+    {
+        octomap::point3d start (it.getCoordinate());
+
+        // std::cout << distance << " (" << start.x() << " " << start.y() << " " << start.z() << ") (" << direction.x() << " " << direction.y() << " " << direction.z() << ")" << std::endl;
+        double volume_explored_in_unit_cubes_ = 0;
+        //int resolution_ratio = (int)(map_res/octree->getResolution());
+        //int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+
+        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_explored_in_unit_cubes_, 1)) {
+            if (end_ptr != nullptr) {
+                end_ptr->x = end.x();
+                end_ptr->y = end.y();
+                end_ptr->z = end.z();
+            }
+            volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
+            //ROS_INFO_STREAM("right here"<< volume_explored_in_unit_cubes);
+            profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+            //ROS_INFO_STREAM("direction"<<direction<< " Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
+            total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
+            return true;
+        }
+        volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
+        //ROS_INFO_STREAM("right here outside"<< volume_explored_in_unit_cubes);
+//        ROS_INFO_STREAM("Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
+    }
+
+	profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+	total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
+	//LOG_ELAPSED(motion_planner);
+	return false;
+}
+
+
 
 
 bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr)
@@ -1292,8 +1403,10 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
         
         // std::cout << distance << " (" << start.x() << " " << start.y() << " " << start.z() << ") (" << direction.x() << " " << direction.y() << " " << direction.z() << ")" << std::endl;
         double volume_explored_in_unit_cubes_ = 0;
+        int resolution_ratio = (int)(map_res/octree->getResolution());
+        int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
 
-        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_explored_in_unit_cubes_)) {
+        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_explored_in_unit_cubes_, resolution_ratio, depth_to_look_at)) {
             if (end_ptr != nullptr) {
                 end_ptr->x = end.x();
                 end_ptr->y = end.y();
@@ -1302,11 +1415,18 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
             volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
             profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
             //ROS_INFO_STREAM("direction"<<direction<< " Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
+          //  if (piecewise_planning){
+            //ROS_INFO_STREAM("right here"<< volume_explored_in_unit_cubes);
+         //   }
+//        ROS_INFO_STREAM("Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
             total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
             return true;
         }
         volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
-//        ROS_INFO_STREAM("Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
+        //if (piecewise_planning){
+        //ROS_INFO_STREAM("right here outside"<< volume_explored_in_unit_cubes);
+        //}
+        //        ROS_INFO_STREAM("Addded volume this round"<< volume_explored_in_unit_cubes_<< "total volume so far"<< volume_explored_in_unit_cubes);
     }
 
 	profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
@@ -1636,8 +1756,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				// Check for a collision between two near points on the segment
 
                 //if (motion_planning_core_str != "lawn_mower") {
+                //if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, "smoothener")) {
                 if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2)) {
-
                 	/*
                 	if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2)){
                 		ROS_INFO_STREAM("out of bound n1");

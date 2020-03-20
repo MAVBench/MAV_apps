@@ -135,6 +135,8 @@ private:
     // *** F:DN Checks whether there is a collision between two nodes in the occupancy grid.
     bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr = nullptr);
 
+    bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2,string mode, graph::node * end_ptr = nullptr);
+
     // whether the drone is already following a trajectory
     bool haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj);
 
@@ -184,6 +186,7 @@ private:
     bool failed_to_plan_last_time = false;
     bool planned_optimally = true; // if smoothener spits out suboptimal paths, use this to replan
     double map_res;
+    double map_lower_res;
     Drone * drone = nullptr;
     double ppl_vol_ideal;
     double distance_to_goal_margin;
@@ -240,7 +243,7 @@ private:
     double v_max__global, a_max__global;
     bool notified_failure = false;
     int max_roadmap_size__global;
-    double ppl_vol_actual;
+    double ppl_vol_actual, ppl_vol_unit_cube_actual;
     std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *, int &status)> motion_planning_core;
     long long g_planning_without_OM_PULL_time_acc = 0;
     int g_number_of_planning = 0 ;

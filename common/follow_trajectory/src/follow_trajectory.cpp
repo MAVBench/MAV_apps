@@ -248,6 +248,9 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	debug_data.slack.actual.control_flow =  -1;
 	debug_data.slack.actual.total = -1;
 
+	if (!debug_data.controls.cmds.optimizer_succeeded){
+		return;
+	}
 
 
 	// calculate the error
@@ -267,13 +270,13 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 
 	// space
 	// space error is caused by the enforcement (operators)
-	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res);
-	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol);
-	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res);
-	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol);
+	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res)/msg->ee_profiles.expected_cmds.pc_res;
+	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
+	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
+	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
 
 	if (msg->ee_profiles.control_flow_path >= 1) { // up to  smootheing planning success
-		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol);
+		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol)/msg->ee_profiles.expected_cmds.ppl_vol;
 	}
 	// slack
 	// forced is caused by dataflow control
@@ -552,6 +555,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 
 
+
 	debug_data.error.time.ppl_latency = -1;
 	debug_data.error.time.smoothening_latency = -1;
 	debug_data.error.time.ee_latency = -1;
@@ -564,6 +568,11 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	debug_data.slack.actual.data_flow =  -1;
 	debug_data.slack.actual.control_flow =  -1;
 	debug_data.slack.actual.total = -1;
+
+
+	if (!debug_data.controls.cmds.optimizer_succeeded){
+		return;
+	}
 
 
 
@@ -584,13 +593,15 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 	// space
 	// space error is caused by the enforcement (operators)
-	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res);
-	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol);
-	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res);
-	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol);
+	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res)/msg->ee_profiles.expected_cmds.pc_res;
+	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
+	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
+	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
+
+
 
 	if (msg->ee_profiles.control_flow_path >= 1) { // up to  smootheing planning success
-		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol);
+		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol)/msg->ee_profiles.expected_cmds.ppl_vol;
 	}
 	// slack
 	// forced is caused by dataflow control

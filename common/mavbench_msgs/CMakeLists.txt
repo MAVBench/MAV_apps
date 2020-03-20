@@ -63,6 +63,7 @@ add_message_files(
   control_internal_states.msg
   control.msg
   ee_time_profile.msg
+  ee_space_profile.msg
   ee_profile.msg
   error.msg
   slack_data.msg 

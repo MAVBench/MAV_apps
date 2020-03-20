@@ -141,7 +141,7 @@ void PointCloudXyzNodelet::onInit()
   it_.reset(new image_transport::ImageTransport(nh));
   //profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
   //signal(SIGINT, sigIntHandlerPrivate);
-  
+  ros::Duration(1).sleep();
   // Read parameters
   private_nh.param("queue_size", queue_size_, 1);
 
@@ -1586,18 +1586,20 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   control.inputs.obs_dist_statistics_min = obs_dist_statistics_min;
 
   control_pub.publish(control);
-//  ROS_INFO_STREAM("publishing control now");
+  //ROS_INFO_STREAM("publishing control now");
   ros::param::get("/new_control_data", new_control_data);
 
   while(!new_control_data){
 	  ros::param::get("/new_control_data", new_control_data);
 	  ros::Duration(.01).sleep();
+	  control_pub.publish(control);
   }
   new_control_data = false;
   ros::param::set("new_control_data", new_control_data);
-  /*
+
   bool optimizer_succeeded;
   ros::param::get("/optimizer_succeeded", optimizer_succeeded);
+  /*
   if (!optimizer_succeeded){
 	  ROS_INFO_STREAM("----------------------------- OPTIMIZER FAILD<<<<<<<<<<<<<<<<<<<<<");
 	  return;
@@ -1680,6 +1682,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.header = cloud_msg->header;
   pcl_aug_data.pcl = *cloud_msg;
 
+  pcl_aug_data.controls.cmds.optimizer_succeeded = optimizer_succeeded;
   pcl_aug_data.controls.cmds.pc_res = pc_res;
   pcl_aug_data.controls.cmds.pc_vol = pc_vol_ideal;
   pcl_aug_data.controls.cmds.om_to_pl_vol = om_to_pl_vol_ideal;

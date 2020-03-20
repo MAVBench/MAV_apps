@@ -12,6 +12,8 @@ from optimizer_settings import *
 rt_max = 10  # this is actually set in the roslaunch file
 drone_radius = 3
 import time
+dist_to_closest_obs_calc_from_octomap = 100
+
 def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency
     if (time_budget_left_to_distribute < 0):
@@ -25,12 +27,12 @@ def run_optimizer(control):
     r_gap_max = control.inputs.gap_statistics_max  # can't really see smaller than r_min anyways
     r_gap_avg = control.inputs.gap_statistics_avg
     obs_dist_avg = control.inputs.obs_dist_statistics_avg
-    obs_dist_min = control.inputs.obs_dist_statistics_min
+    obs_dist_min = min(control.inputs.obs_dist_statistics_min, dist_to_closest_obs_calc_from_octomap)
 
     v_sensor_max = control.inputs.sensor_volume_to_digest_estimated
     v_tree_max = max(control.inputs.cur_tree_total_volume, v_min, v_sensor_max)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
-    ppl_vol_min = max(control.inputs.ppl_vol_min, 2*v_sensor_max)
+    ppl_vol_min = max(control.inputs.ppl_vol_min, 10*v_sensor_max)
 
     #
     r_min_temp =  max(max(r_gap_avg, obs_dist_avg) - drone_radius, r_min)  # get the minium between the average gap
@@ -58,7 +60,7 @@ def run_optimizer(control):
     r_max_list = [r_max_hat] * 2
     v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]
     #print("fufufufufufuf" +str(ppl_vol_min))
-    v_max_list = [v_sensor_max, v_tree_max, v_max]
+    v_max_list = [v_sensor_max, v_tree_max, max(v_max, ppl_vol_min)]
 
 
     Q = np.array([[-2.16196038e-05, -2.78515364e-03,  2.86859999e-05],
@@ -170,4 +172,5 @@ if __name__ == '__main__':
     rt_max = rospy.get_param("max_time_budget")
     drone_radius = rospy.get_param("planner_drone_radius")
     while not rospy.is_shutdown():
+        dist_to_closest_obs_calc_from_octomap = rospy.get_param("dist_to_closest_obs_calc_from_octomap")
         rate.sleep()
