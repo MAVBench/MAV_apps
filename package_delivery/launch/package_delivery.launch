@@ -85,7 +85,7 @@
   <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg sensor_to_actuation_time_budget_to_enforce)"/>
   <arg name="velocity_to_budget_on" default=".1"/> 
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
-  <arg name="planner_min_freq" default=".01"/> 
+  <arg name="planner_min_freq" default=".1"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
   <arg name="distance_to_goal_margin" default="15"/> 
   <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>

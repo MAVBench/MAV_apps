@@ -733,6 +733,11 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   float depth_acc_touched = 0;
   int cell_touched_cnt = 0;
   for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ++it){
+	  auto coordinate = m_octree->keyToCoord(*it);
+	  tree_max_x = max(tree_max_x, coordinate.x());
+	  tree_max_y = max(tree_max_y, coordinate.y());
+	  tree_max_z = max(tree_max_z, coordinate.z());
+
 	  if (occupied_cells.find(*it) == occupied_cells.end()){
     	const OcTreeKey my_key = *it;
     	//auto my_key_ = m_octree->adjustKeyAtDepth(my_key,10);
@@ -1714,7 +1719,13 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
  bool first_itr = true;
  // -- expand MapToTransferSideLength untill you hit the volume target
- while (MapToTransferSideLength <= max(map_max_length, (float) (1.2*m_maxRange))){
+ int upper_bound_MapToTransferSideLength  = int(max(map_max_length, (float) (1.2*m_maxRange))) + 1; // adding one, because later, when converting from float to int, we are essentially rounding down
+ int lower_bound_MapToTransferSideLength  = 5;
+ int binary_search_cntr_threshold = 30;
+ int binary_search_cntr= 0;
+ double error = INFINITY;
+ MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
+ while (true){
 	 om_to_pl_vol_actual = 0;
 	 octomap_block_vec.clear();
 
@@ -1741,21 +1752,25 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 		 }
 	 }
 	 // -- if exceed the threshold, break
-	 if (om_to_pl_vol_actual > om_to_pl_vol_ideal){
-		 if (!first_itr){ // -- if first time, keep the lenght. We should set the volume to keep high enough
-			 	 	 	   // --- that the first time always is smaller or equal.
-			 om_to_pl_vol_actual = last_om_to_pl_vol_actual;
-			 MapToTransferSideLength /= 2;
-		 }
+	 error = fabs(om_to_pl_vol_ideal - om_to_pl_vol_actual)/om_to_pl_vol_ideal;
+	 if (error < .05 || binary_search_cntr > binary_search_cntr_threshold) {
 		 break;
+	 }else{
+		 if (om_to_pl_vol_actual > om_to_pl_vol_ideal){
+			 upper_bound_MapToTransferSideLength  = MapToTransferSideLength;
+		 }else{
+			 lower_bound_MapToTransferSideLength  = MapToTransferSideLength;
+		 }
+		 MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
 	 }
-	 first_itr = false;
-	 last_om_to_pl_vol_actual = om_to_pl_vol_actual;
-	 MapToTransferSideLength *= 2;
- }
+	 binary_search_cntr++;
+}
 
- //ROS_INFO_STREAM("volume kept" << om_to_pl_vol_actual);
-
+  /*
+  if (error > .1){
+  	  ROS_INFO_STREAM("expected volume kept"<< om_to_pl_vol_ideal<<"actual volume kept" << om_to_pl_vol_actual<<"error"<<error<<"first_iter"<<first_itr<< "total volume"<<(m_octree->getRoot())->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
+  }
+ */
  MapToTransferSideLength = min(MapToTransferSideLength, map_max_length); // -- incase we exceeded the threshold when doubling
  gridSideLength = float(MapToTransferSideLength)/(4*gridSliceCountPerSide); // -- to be more accurate, we quadruple the number of slices
  gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(4*gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
