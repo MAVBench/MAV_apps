@@ -193,6 +193,7 @@ private:
     int capture_size = 600; //set this to 1 if you want to see every data captured separately
     int next_steps_msg_size  = 0;
     bool piecewise_planning = false;
+    string voxel_type_to_publish;
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;

@@ -1,4 +1,4 @@
-float32 sensor_volume_to_digest_estimated
+float32 sensor_volume_to_digest
 float32 gap_statistics_min
 float32 gap_statistics_max
 float32 gap_statistics_avg

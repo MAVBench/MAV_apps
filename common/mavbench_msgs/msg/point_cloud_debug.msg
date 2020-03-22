@@ -10,7 +10,8 @@ float32 point_cloud_filtering_time
 float32 entire_point_cloud_depth_callback
 float32 point_cloud_area_to_digest
 float32 diagnostics
-float32 point_cloud_sensor_volume_to_digest_estimated
+float32 sensor_volume_to_digest
 float32 pc_vol_actual
 float32 sensor_to_actuation_time_budget_to_enforce
 float32 velocity_to_budget_on
+float32 pc_vol_estimated

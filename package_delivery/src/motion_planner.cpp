@@ -279,7 +279,8 @@ void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
   {
     bool inUpdateBBX = true;
 
-    if (m_octree->isNodeOccupied(*it)){
+    bool publish_voxel = voxel_type_to_publish == "free" ? !m_octree->isNodeOccupied(*it):  m_octree->isNodeOccupied(*it);
+    if (publish_voxel){
       double z = it.getZ();
         double size = it.getSize();
         double x = it.getX();
@@ -985,6 +986,12 @@ void MotionPlanner::motion_planning_initialize_params()
       ROS_FATAL_STREAM("Could not start motion_planning DEBUG_RQT not provided");
       return ;
     }
+
+	if(!ros::param::get("/voxel_type_to_publish", voxel_type_to_publish)){
+      ROS_FATAL_STREAM("Could not start motion_planner voxel_type_to_publish not provided");
+      return ;
+    }
+
 
 	if(!ros::param::get("/DEBUG_VIS", DEBUG_VIS)){
       ROS_FATAL_STREAM("Could not start motion_planning DEBUG_VIS not provided");

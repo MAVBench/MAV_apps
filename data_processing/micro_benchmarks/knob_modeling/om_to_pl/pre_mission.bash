@@ -5,6 +5,8 @@ cd ${MAVApps_folder}"/run_time/"
 python supervisor.py&
 cd $cur_dir
 sleep 10
+rosparam set budgetting_mode "performance_modeling"
+rosparam set use_pyrun false
 rosparam set knob_performance_modeling true
 echo f 0 0 3 5
 sleep 10

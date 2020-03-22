@@ -29,8 +29,8 @@ def run_optimizer(control):
     obs_dist_avg = control.inputs.obs_dist_statistics_avg
     obs_dist_min = min(control.inputs.obs_dist_statistics_min, dist_to_closest_obs_calc_from_octomap)
 
-    v_sensor_max = control.inputs.sensor_volume_to_digest_estimated
-    v_tree_max = max(control.inputs.cur_tree_total_volume, v_min, v_sensor_max)
+    v_sensor_max = control.inputs.sensor_volume_to_digest
+    v_tree_max = max(control.inputs.cur_tree_total_volume, v_min)#, v_sensor_max)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, 10*v_sensor_max)
 

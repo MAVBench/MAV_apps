@@ -38,7 +38,8 @@ using namespace std;
 std::string ip_addr__global;
 double g_sensor_max_range, g_sampling_interval, g_v_max;
 std::deque<double> MacroBudgets;
-bool dynamic_budgetting, reactive_runtime;
+bool reactive_runtime;
+string budgetting_mode;
 double max_time_budget;
 bool knob_performance_modeling = false;
 bool knob_performance_modeling_for_pc_om = false;
@@ -51,8 +52,17 @@ int g_capture_size = 600; //set this to 1, if you want to see every data collect
 bool time_budgetting_failed = false;
 
 mavbench_msgs::control control;
-bool got_new_input = false;
 
+bool got_new_input = false;
+ros::Time last_modification_time;
+bool last_modification(double time_passed){
+	bool result = false;
+	if ((ros::Time::now() - last_modification_time).toSec() > time_passed){
+		last_modification_time = ros::Time::now(); // update
+		result = true;
+	}
+	return result;
+}
 
 typedef struct node_budget_t {
 	string node_type;
@@ -157,7 +167,7 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	// -- with which the callbacks are called,
 	// -- and if we set the control_inputs to msg, we can overwrite
 	// -- the nex_steps_callback sensor_to_acuation_time_budget
-	control.inputs.sensor_volume_to_digest_estimated = msg->inputs.sensor_volume_to_digest_estimated;
+	control.inputs.sensor_volume_to_digest = msg->inputs.sensor_volume_to_digest;
 	control.inputs.gap_statistics_avg = msg->inputs.gap_statistics_avg;
 	control.inputs.gap_statistics_min = msg->inputs.gap_statistics_min;
 	control.inputs.gap_statistics_max = msg->inputs.gap_statistics_max;
@@ -286,7 +296,7 @@ int get_point_count(double resolution, vector<std::pair<double, int>>& pc_res_po
 	exit(0);
 }
 
-
+/*
 void static_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
 	// -- knobs to set (and some temp values)
 	double point_cloud_num_points;
@@ -369,6 +379,168 @@ void static_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_po
     }
     //
 }
+*/
+
+
+
+void performance_modeling(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
+	// -- knobs to set (and some temp values)
+	double point_cloud_num_points;
+	float MapToTransferSideLength;
+	double pc_res;
+	double om_to_pl_res;
+	int pc_res_power_index; // -- temp
+
+	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
+	double pc_res_max = .15;
+	int num_of_steps_on_y = 5;
+	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
+	static double static_pc_res = pc_res_max;
+	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
+	double pc_vol_ideal_max = 8000;
+	double pc_vol_ideal_min = 100;
+	double pc_vol_ideal_step_cnt = 30;
+	static double  static_pc_vol_ideal = pc_vol_ideal_max;
+
+	//double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+	double map_to_transfer_side_length_max = 500;
+	double map_to_transfer_side_length_min = 40;
+	double map_to_transfer_side_length_step_cnt = 20;
+	double point_cloud_num_points_step_cnt = 2;
+	double point_cloud_num_points_max;  // -- depends on resolution
+	double point_cloud_num_points_min = 10;
+	double om_to_pl_res_max = pc_res_max;
+	double om_to_pl_res_min = pow(2, num_of_steps_on_y)*om_to_pl_res_max;  //this value must be a power of two
+	static double static_om_to_pl_res = om_to_pl_res_max;
+	double om_to_pl_vol_ideal_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+											   // -- wanna cover be, and match it to this value.
+	double om_to_pl_vol_ideal_min = 3500;
+	double om_to_pl_vol_ideal_step_cnt = 20;
+	static double  static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max;
+
+
+	double ppl_vol_ideal_max = 400000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
+											   // -- wanna cover be, and match it to this value.
+	double ppl_vol_ideal_min = 100000;
+	double ppl_vol_ideal_step_cnt = 20;
+	static double  static_ppl_vol_ideal = ppl_vol_ideal_max;
+
+    // not used any more
+	static double static_point_cloud_num_points = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
+	double map_to_transfer_side_length_step_size = (map_to_transfer_side_length_max -  map_to_transfer_side_length_min)/map_to_transfer_side_length_step_cnt;
+
+
+	// --initialize some knobs
+	//pc_res = static_pc_res;
+	static double static_point_cloud_num_points_max = (double) get_point_count(static_pc_res, pc_res_point_count_vec); // -- get the resolution and look into the vector to find the maximum number of points for a certain resolution
+	static double static_point_cloud_num_points_step_size = (int) (static_point_cloud_num_points_max - point_cloud_num_points_min)/point_cloud_num_points_step_cnt;
+
+
+	// -- knob performance modeling logic
+	//ros::Duration(1).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
+	// -- point cloud knobs (pointcloud/octomap since these knobs impact octomap)
+	if (knob_performance_modeling_for_pc_om && last_modification(4)){
+		//ros::Duration(4).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
+		ROS_INFO_STREAM("------ changing the values");
+		if (static_pc_vol_ideal < pc_vol_ideal_min){
+			if (static_pc_res == pc_res_min){
+				static_pc_res = pc_res_max;
+			}else{
+				static_pc_res = min(2*static_pc_res, pc_res_min);
+			}
+			//static_point_cloud_num_points_max = (double) get_point_count(static_pc_res, pc_res_point_count_vec); // -- get the resolution and look into the vector to find the maximum number of points for a certain resolution
+			//static_point_cloud_num_points = static_point_cloud_num_points_max;
+			//static_point_cloud_num_points_step_size = (int) (static_point_cloud_num_points_max - point_cloud_num_points_min)/point_cloud_num_points_step_cnt;
+			static_pc_vol_ideal  = pc_vol_ideal_max;
+		}else{
+			static_pc_vol_ideal -= (pc_vol_ideal_max - pc_vol_ideal_min)/pc_vol_ideal_step_cnt;
+		}
+		static_om_to_pl_res = static_pc_res;  // set it equal (because we have an assertion that requires pc_res <= om_to_pl_res
+	}
+
+	// -- octomap to planning communication knobs
+	if (knob_performance_modeling_for_om_to_pl && last_modification(6)){
+		//ros::Duration(6).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
+		if (static_om_to_pl_vol_ideal < om_to_pl_vol_ideal_min){
+			static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max; // -- reset the map size
+			if (static_om_to_pl_res == om_to_pl_res_min){
+				static_om_to_pl_res = om_to_pl_res_max;
+			}else{
+				static_om_to_pl_res = min(2*static_om_to_pl_res, om_to_pl_res_min);
+			}
+
+		}else{
+			static_om_to_pl_vol_ideal -= (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/om_to_pl_vol_ideal_step_cnt;
+		}
+		static_pc_res = static_om_to_pl_res;  // set it equal (because we have an assertion that requires pc_res <= om_to_pl_res
+	}
+
+	// -- piecewise planner
+	if (knob_performance_modeling_for_piecewise_planner && last_modification(20) ){
+		//ros::Duration(20).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
+		if (static_ppl_vol_ideal < ppl_vol_ideal_min){
+			static_ppl_vol_ideal = ppl_vol_ideal_max; // -- reset the map size
+			if (om_to_pl_res == om_to_pl_res_min){
+				static_om_to_pl_res = om_to_pl_res_max;
+			}else{
+				static_om_to_pl_res = min(2*static_om_to_pl_res, om_to_pl_res_min);
+			}
+
+		}else{
+			static_ppl_vol_ideal -= (ppl_vol_ideal_max - ppl_vol_ideal_min)/ppl_vol_ideal_step_cnt;
+		}
+	}
+
+	// -- sanity check
+	//assert(knob_performance_modeling_for_pc_om ^ knob_performance_modeling_for_om_to_pl);///, "could not have both of the knobs to be true"); // this is a hack, but we actually want to have the capability to simaltenouysly modify both of the kernels
+	pc_res_power_index = 0;
+	//static_point_cloud_num_points -= static_point_cloud_num_points_step_size;
+
+
+	// -- set the parameters
+	ros::param::set("pc_res", static_pc_res);
+    profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
+    profiling_container->capture("om_to_pl_res", "single", om_to_pl_res, g_capture_size);
+	ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
+	ros::param::set("pc_vol_ideal", static_pc_vol_ideal);
+	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
+	profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
+// -- determine how much of the space to keep
+//	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
+	ros::param::set("om_to_pl_vol_ideal", static_om_to_pl_vol_ideal);
+	ros::param::set("ppl_vol_ideal", static_ppl_vol_ideal);
+	ros::param::set("om_to_pl_res", static_om_to_pl_res);
+
+
+
+	// -- determine the planning budgets
+//	double ppl_time_budget_min = .01;
+	//double ppl_time_budget_max = .5;
+//	double ppl_time_budget = (ppl_time_budget_max - ppl_time_budget_min)/(pc_res_max- min_pc_res)*pc_res +
+//			ppl_time_budget_max;
+
+	//vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
+	vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
+	double ppl_time_budget = ppl_time_budget_vec[pc_res_power_index];
+	ros::param::set("ppl_time_budget", ppl_time_budget);
+	double smoothening_budget = ppl_time_budget;
+	ros::param::set("smoothening_budget", smoothening_budget);
+    profiling_container->capture("ppl_time_budget", "single", ppl_time_budget, g_capture_size);
+    profiling_container->capture("smoothening_budget", "single", smoothening_budget, g_capture_size);
+
+	ros::param::set("new_control_data", true);
+	ros::param::set("optimizer_succeeded", false);
+
+    if (DEBUG_RQT) {
+    	debug_data.header.stamp = ros::Time::now();
+    	debug_data.pc_res = profiling_container->findDataByName("pc_res")->values.back();
+    	debug_data.om_to_pl_res = profiling_container->findDataByName("om_to_pl_res")->values.back();
+    	debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
+    	debug_data.ppl_time_budget =  profiling_container->findDataByName("ppl_time_budget")->values.back();
+    	debug_data.smoothening_budget =  profiling_container->findDataByName("smoothening_budget")->values.back();
+    }
+    //
+}
 
 
 
@@ -429,86 +601,28 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 
 
 	// -- feed forward (simple)
-	if (!knob_performance_modeling){
-		float offset_v_max = g_v_max/num_of_steps_on_y; // this is used to offsset the g_v_max; this is necessary otherwise, the step function basically never reacehs the min_pc_res
-		double pc_res_temp =  (pc_res_max - pc_res_min)/(0 - (g_v_max-offset_v_max)) * vel_mag + pc_res_max;
-		pc_res_power_index = int(log2(pc_res_temp/pc_res_max));
+	float offset_v_max = g_v_max/num_of_steps_on_y; // this is used to offsset the g_v_max; this is necessary otherwise, the step function basically never reacehs the min_pc_res
+	double pc_res_temp =  (pc_res_max - pc_res_min)/(0 - (g_v_max-offset_v_max)) * vel_mag + pc_res_max;
+	pc_res_power_index = int(log2(pc_res_temp/pc_res_max));
 
-		static_pc_res =  pow(2, pc_res_power_index)*pc_res_max;
-		static_pc_vol_ideal  = (pc_vol_ideal_max - pc_vol_ideal_min)/(0 - g_v_max)*vel_mag + pc_vol_ideal_max;
-		static_om_to_pl_res = static_pc_res;
-		static_om_to_pl_vol_ideal = (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/(0 - g_v_max)*vel_mag + om_to_pl_vol_ideal_max;
-		static_ppl_vol_ideal = (ppl_vol_ideal_max - ppl_vol_ideal_min)/(0 - g_v_max)*vel_mag + ppl_vol_ideal_max;
+	static_pc_res =  pow(2, pc_res_power_index)*pc_res_max;
+	static_pc_vol_ideal  = (pc_vol_ideal_max - pc_vol_ideal_min)/(0 - g_v_max)*vel_mag + pc_vol_ideal_max;
+	static_om_to_pl_res = static_pc_res;
+	static_om_to_pl_vol_ideal = (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/(0 - g_v_max)*vel_mag + om_to_pl_vol_ideal_max;
+	static_ppl_vol_ideal = (ppl_vol_ideal_max - ppl_vol_ideal_min)/(0 - g_v_max)*vel_mag + ppl_vol_ideal_max;
 
-		// -- determine the number of points within point cloud
-		/*
-		double max_point_cloud_point_count_max_resolution = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
-		double max_point_cloud_point_count_min_resolution = max_point_cloud_point_count_max_resolution/15;
-		double min_point_cloud_point_count = max_point_cloud_point_count_min_resolution;
-		//--  calculate the maximum number of points in an unfiltered point cloud as a function of resolution
-		//    double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(pc_res_max - min_pc_res)*(pc_res - pc_res_max) + max_point_cloud_point_count_max_resolution;
-		//    calucate num of points as function of velocity
-		//static_point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + max_point_cloud_point_count_max_resolution;
-		//MapToTransferSideLength = 500 + (500 -40)/(0-g_v_max)*vel_mag;
-		 */
+	// -- determine the number of points within point cloud
+	/*
+	double max_point_cloud_point_count_max_resolution = (double) get_point_count(static_pc_res, pc_res_point_count_vec);
+	double max_point_cloud_point_count_min_resolution = max_point_cloud_point_count_max_resolution/15;
+	double min_point_cloud_point_count = max_point_cloud_point_count_min_resolution;
+	//--  calculate the maximum number of points in an unfiltered point cloud as a function of resolution
+	//    double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(pc_res_max - min_pc_res)*(pc_res - pc_res_max) + max_point_cloud_point_count_max_resolution;
+	//    calucate num of points as function of velocity
+	//static_point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + max_point_cloud_point_count_max_resolution;
+	//MapToTransferSideLength = 500 + (500 -40)/(0-g_v_max)*vel_mag;
+	 */
 
-
-	}
-
-	// -- knob performance modeling logic
-	if (knob_performance_modeling){
-		ros::Duration(1).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-		// -- point cloud knobs (pointcloud/octomap since these knobs impact octomap)
-		if (knob_performance_modeling_for_pc_om){
-			ros::Duration(4).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-			if (static_pc_vol_ideal < pc_vol_ideal_min){
-				if (static_pc_res == pc_res_min){
-					static_pc_res = pc_res_max;
-				}else{
-					static_pc_res = min(2*static_pc_res, pc_res_min);
-				}
-				//static_point_cloud_num_points_max = (double) get_point_count(static_pc_res, pc_res_point_count_vec); // -- get the resolution and look into the vector to find the maximum number of points for a certain resolution
-				//static_point_cloud_num_points = static_point_cloud_num_points_max;
-				//static_point_cloud_num_points_step_size = (int) (static_point_cloud_num_points_max - point_cloud_num_points_min)/point_cloud_num_points_step_cnt;
-				static_pc_vol_ideal  = pc_vol_ideal_max;
-			}
-			om_to_pl_res = pc_res_max;  // -- just set it equal cause it doesn't matter
-			//MapToTransferSideLength = map_to_transfer_side_length_max;
-		}
-
-		// -- octomap to planning communication knobs
-		if (knob_performance_modeling_for_om_to_pl){
-			ros::Duration(6).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-			if (static_om_to_pl_vol_ideal < om_to_pl_vol_ideal_min){
-				static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max; // -- reset the map size
-				if (static_om_to_pl_res == om_to_pl_res_min){
-					static_om_to_pl_res = om_to_pl_res_max;
-				}else{
-					static_om_to_pl_res = min(2*static_om_to_pl_res, om_to_pl_res_min);
-				}
-
-			}
-		}
-
-	    // -- piecewise planner
-		if (knob_performance_modeling_for_piecewise_planner){
-			ros::Duration(20).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
-			if (static_ppl_vol_ideal < ppl_vol_ideal_min){
-				static_ppl_vol_ideal = ppl_vol_ideal_max; // -- reset the map size
-				if (om_to_pl_res == om_to_pl_res_min){
-					static_om_to_pl_res = om_to_pl_res_max;
-				}else{
-					static_om_to_pl_res = min(2*static_om_to_pl_res, om_to_pl_res_min);
-				}
-
-			}
-		}
-
-		// -- sanity check
-		//assert(knob_performance_modeling_for_pc_om ^ knob_performance_modeling_for_om_to_pl);///, "could not have both of the knobs to be true"); // this is a hack, but we actually want to have the capability to simaltenouysly modify both of the kernels
-		pc_res_power_index = 0;
-		//static_point_cloud_num_points -= static_point_cloud_num_points_step_size;
-	}
 
 
 	// -- set the parameters
@@ -528,8 +642,8 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 
 
 	// -- determine the planning budgets
-	double ppl_time_budget_min = .01;
-	double ppl_time_budget_max = .5;
+//	double ppl_time_budget_min = .01;
+	//double ppl_time_budget_max = .5;
 //	double ppl_time_budget = (ppl_time_budget_max - ppl_time_budget_min)/(pc_res_max- min_pc_res)*pc_res +
 //			ppl_time_budget_max;
 
@@ -542,17 +656,8 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
     profiling_container->capture("ppl_time_budget", "single", ppl_time_budget, g_capture_size);
     profiling_container->capture("smoothening_budget", "single", smoothening_budget, g_capture_size);
 
-    if (knob_performance_modeling_for_pc_om){
-    	static_pc_vol_ideal -= (pc_vol_ideal_max - pc_vol_ideal_min)/pc_vol_ideal_step_cnt;
-    }
-    if (knob_performance_modeling_for_om_to_pl){
-    	static_om_to_pl_vol_ideal -= (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/om_to_pl_vol_ideal_step_cnt;
-    }
-    if (knob_performance_modeling_for_piecewise_planner){
-    	static_ppl_vol_ideal -= (ppl_vol_ideal_max - ppl_vol_ideal_min)/ppl_vol_ideal_step_cnt;
-    }
-
-
+	ros::param::set("new_control_data", true);
+	ros::param::set("optimizer_succeeded", false);
 
 
     if (DEBUG_RQT) {
@@ -585,6 +690,7 @@ int main(int argc, char **argv)
     //n2.setCallbackQueue(&callback_queue_2);
 
     //signal(SIGINT, sigIntHandler);
+    last_modification_time = ros::Time::now();
 
     node_types.push_back("point_cloud");
     node_types.push_back("octomap");
@@ -665,10 +771,18 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
+    /*
     if(!ros::param::get("/dynamic_budgetting", dynamic_budgetting)) {
         ROS_FATAL("Could not start occupancy map node. dynamic_budgetting parameter missing!");
         exit(-1);
     }
+*/
+    if(!ros::param::get("/budgetting_mode", budgetting_mode)) {
+        ROS_FATAL("Could not start runtime node. budgetting_mode parameter missing!");
+        exit(-1);
+    }
+
+
 
     if(!ros::param::get("/reactive_runtime", reactive_runtime)) {
         ROS_FATAL("Could not start occupancy map node. reactive_runtime parameter missing!");
@@ -773,15 +887,24 @@ int main(int argc, char **argv)
     		assert (!(use_pyrun && knob_performance_modeling_for_pc_om));
     		assert (!(use_pyrun && knob_performance_modeling_for_piecewise_planner));
 
-    		if (dynamic_budgetting){
+    		if (budgetting_mode == "manual"){
+    			ros::param::set("new_control_data", true);
+    		} else if (budgetting_mode == "dynamic"){
     			if (reactive_runtime){
     				reactive_budgetting(vel_mag, pc_res_point_count);
     			}
-    			ros::param::set("new_control_data", true);
-    		}else{
+    		} else if (budgetting_mode == "performance_modeling"){
+    				performance_modeling(vel_mag, pc_res_point_count);
+    		} else{
+    		  ROS_INFO_STREAM("budgetting mode" << budgetting_mode<< " not defined");
+    		  exit(0);
+    		}
+    	    /*
+    		else if (budgetting_mode == "static"){
     			static_budgetting(vel_mag, pc_res_point_count);
     			ros::param::set("new_control_data", true);
     		}
+    	*/
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
     		if (traj.size() == 0 || time_budgetting_failed) { // -- if we haven't started the initla planning or there is not trajectory

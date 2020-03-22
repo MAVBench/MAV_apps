@@ -92,7 +92,8 @@ public:
 //  ros::NodeHandle private_nh;//("~");
 	ros::CallbackQueue callback_queue_meta_data; // -- only meta_data
   double pc_vol_actual; // -- the estimated volume of the information coming from point cloud
- double pc_res; // -- the resolution of the information coming from point cloud
+  double pc_vol_estimated; // -- the volume that point cloud  thinks (estimated) it has enforced. This is used for modeling
+  double pc_res; // -- the resolution of the information coming from point cloud
  ros::Time pc_capture_time; // -- time insertCloud was called
  std::string voxel_type_to_publish;
  DataContainer profiling_container;
@@ -352,7 +353,8 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
   bool m_latchedTopics;
   bool m_publishFreeSpace;
 
-  double m_res, om_to_pl_res;
+  double m_res, om_to_pl_res, m_res_original; //m_res is the virtual resolution of the main tree(m_octree) that changes and m_res_original is the actually resolution of tree. Note virtual res (m_res) changes to regulate the
+  	  	  	  	  	  	  	  	  	  	  	  // computation
   double om_to_pl_res_rel_vol_height, om_to_pl_res_rel_vol_width, om_to_pl_res_rel_vol_length; //width and height of the lower resolution with respect to the current drone position
   unsigned m_treeDepth;
   unsigned m_maxTreeDepth;

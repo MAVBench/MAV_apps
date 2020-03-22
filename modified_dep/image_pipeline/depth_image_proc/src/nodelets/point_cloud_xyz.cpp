@@ -110,6 +110,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   bool DEBUG_VIS = false;
   double capture_size = 600;
   bool knob_performance_modeling = false;
+  bool knob_performance_modeling_for_pc_om = false;
   virtual void onInit();
   double sensor_to_actuation_time_budget_to_enforce;
   double om_latency_expected;
@@ -124,6 +125,11 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 
   void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                const sensor_msgs::CameraInfoConstPtr& info_msg);
+
+
+  double estimated_to_actual_vol_correction(double estimated_vol);   // for correction the estimated value to real
+  double actual_to_estimated_vol_correction(double actual_vol);   // for correction of the actual values to estimated (since pc lives in the estimated world for enforcement)
+
   // Profiling
   //void sigIntHandlerPrivate(int signo);
   void log_data_before_shutting_down();
@@ -261,6 +267,16 @@ void PointCloudXyzNodelet::onInit()
     	return ;
 
     }
+
+   if(!ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om)){
+    	ROS_FATAL_STREAM("Could not start point cloud knob_performance_modeling_for_pc_om not provided");
+    	exit(0);
+    	return ;
+
+    }
+
+
+
 
     if(!ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce)){
     	ROS_FATAL_STREAM("Could not start point cloud sensor_to_actuation_time_budget_to_enforce not provided");
@@ -1478,6 +1494,23 @@ void calc_avg_worse_point_distance(std::vector<float> &xs,  std::vector<float> &
   }
   */
 
+double PointCloudXyzNodelet::estimated_to_actual_vol_correction(double estimated_vol){
+	if (knob_performance_modeling && knob_performance_modeling_for_pc_om){ // dont need to do anything because we are trying find the function for correction
+		return estimated_vol;
+	}else{
+		return estimated_vol;
+	}
+}
+
+
+double PointCloudXyzNodelet::actual_to_estimated_vol_correction(double actual_vol){
+	if (knob_performance_modeling && knob_performance_modeling_for_pc_om){ // dont need to do anything because we are trying find the function for correction
+		return actual_vol;
+	}else{
+		return actual_vol;
+	}
+}
+
 
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
@@ -1575,7 +1608,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
 
   mavbench_msgs::control control;
-  control.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  double sensor_volume_to_digest =  estimated_to_actual_vol_correction(sensor_volume_to_digest_estimated); // convert to actual, because the runtime makes decision with actual values
+  control.inputs.sensor_volume_to_digest = sensor_volume_to_digest;
   double cur_tree_total_volume;
   ros::param::get("cur_tree_total_volume", cur_tree_total_volume);
   control.inputs.cur_tree_total_volume = float(cur_tree_total_volume);
@@ -1631,8 +1665,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   // -- start filtering
   profiling_container->capture("filtering", "start", ros::Time::now(), capture_size);
-  double pc_vol_actual= 0;
-  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal, pc_vol_actual, gridded_volume, grid_size, diagnostic_resolution);
+  double pc_vol_estimated = 0;
+  double pc_vol_ideal_estimated = actual_to_estimated_vol_correction(pc_vol_ideal); // convert the ideal to estimated because point cloud can only enforce in the estimated world
+  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
 
   // -- destroy the grid
   for (int h = 0; h < grid_size; h++)
@@ -1696,9 +1731,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.ee_profiles.expected_time.ee_latency = ee_latency_expected;
 
   // -- for profiling purposes
-  pcl_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual;
+  pcl_aug_data.ee_profiles.space_stats.pc_vol_estimated = pc_vol_estimated; // this is the estimation not the actual. Note that the actuall value can not be determined
+  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   // untill PC is intergrated in octomap
   pcl_aug_data.ee_profiles.expected_cmds = pcl_aug_data.controls.cmds;
-  pcl_aug_data.controls.inputs.sensor_volume_to_digest_estimated = sensor_volume_to_digest_estimated;
+  pcl_aug_data.controls.inputs.sensor_volume_to_digest = sensor_volume_to_digest;
   pcl_aug_data.controls.inputs.cur_tree_total_volume = cur_tree_total_volume;
   pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
   pcl_aug_data.controls.inputs.velocity_to_budget_on = velocity_to_budget_on;
@@ -1720,7 +1756,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   //point_cloud_meta_data_pub.publish(meta_data_msg);
 
   profiling_container->capture("point_cloud_area_to_digest", "single", area_to_digest, capture_size);
-  profiling_container->capture("point_cloud_sensor_volume_to_digest_estimated", "single", sensor_volume_to_digest_estimated, capture_size);
+  profiling_container->capture("sensor_volume_to_digest", "single", sensor_volume_to_digest, capture_size);
   profiling_container->capture("point_cloud_resolution", "single", pc_res, capture_size);
 
 
@@ -1732,8 +1768,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.point_cloud_point_cnt = xs_best.size();
 	  debug_data.point_cloud_filtering_time = profiling_container->findDataByName("filtering")->values.back();
 	  debug_data.entire_point_cloud_depth_callback= profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
-	  debug_data.point_cloud_sensor_volume_to_digest_estimated=  profiling_container->findDataByName("point_cloud_sensor_volume_to_digest_estimated")->values.back();
-	  debug_data.pc_vol_actual = pc_vol_actual;
+	  debug_data.sensor_volume_to_digest =  profiling_container->findDataByName("sensor_volume_to_digest")->values.back();
+	  debug_data.pc_vol_estimated = pc_vol_estimated;
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
 	  debug_data.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;

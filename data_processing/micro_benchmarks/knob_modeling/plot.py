@@ -9,10 +9,11 @@ sys.path.append('../../common_utils')
 from data_parsing import *
 
 
-stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl"]
+stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl", "pc_om_estimation"]
 
 # which stage are you trying to plot
-stage_of_interest = "pp_pl" # pick form ["om_to_pl", "pc_om", "pp_pl"]
+stage_of_interest = "pc_om_estimation" # pick form ["om_to_pl", "pc_om", "pp_pl"]
+
 assert stage_of_interest in stage_of_interests_to_pick_from
 
 result_folder = stage_of_interest+"/data_1"
@@ -21,7 +22,7 @@ input_filepath = result_folder + "/" + input_file_name
 
 # data to collect
 metrics_to_collect_easy = []
-metrics_to_collect_hard = ["octomap_exposed_resolution", "point_cloud_estimated_volume", "octomap_volume_digested",
+metrics_to_collect_hard = ["octomap_exposed_resolution", "point_cloud_estimated_volume", "octomap_volume_digested", "pc_vol_estimated",
         "potential_volume_to_explore_knob_modeling", "resolution_to_explore_knob_modeling", 
         "piecewise_planner_time_knob_modeling", "piecewise_planner_resolution_knob_modeling", "piecewise_planner_volume_explored_knob_modeling",
         "piecewise_planner_time_knob_modeling", "octomap_to_motion_planner_serialization_to_reception_knob_modeling", "octomap_insertCloud_minus_publish_all",
@@ -37,6 +38,10 @@ point_cloud_estimated_volume  = result_dic["point_cloud_estimated_volume"]
 #point_cloud_estimated_volume  = result_dic["octomap_volume_digested"]
 #point_cloud_volume_to_digest = result_dic["point_cloud_volume_to_digest"]
 #filtering = result_dic["filtering"]
+octomap_volume_digested = result_dic["octomap_volume_digested"]
+pc_vol_estimated = result_dic["pc_vol_estimated"]
+
+
 octomap_integeration_response_time = result_dic["octomap_insertCloud_minus_publish_all"]
 resolution_to_explore_knob_modeling = result_dic["resolution_to_explore_knob_modeling"]
 piecewise_planner_resolution_knob_modeling = result_dic["piecewise_planner_resolution_knob_modeling"]
@@ -57,10 +62,21 @@ ppl_vol_actual_knob_modeling = result_dic["ppl_vol_actual_knob_modeling"]
 #filtered_results = filter_based_on_key_value(filtered_results, "piecewise_planner_resolution_knob_modeling", 1.2, "in")
 
 fig = plt.figure()
+#if (stage_of_interest == "pc_om_estimation"):
+#    ax = fig.add_subplot(111)
+#else:
 ax = fig.add_subplot(111, projection='3d')
 
 # -- for point cloud/octomap (data_1/stats.json_om)
-if stage_of_interest == "pc_om":
+if stage_of_interest == "pc_om_estimation":
+    print(len(pc_res))
+    print(len(pc_vol_estimated))
+    print(len(octomap_volume_digested))
+    ax.scatter(pc_res, pc_vol_estimated, octomap_volume_digested)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    print(pc_res)
+    print(pc_vol_estimated)
+    print(octomap_volume_digested)
+elif stage_of_interest == "pc_om":
     ax.scatter(pc_res, pc_vol_actual, octomap_integeration_response_time)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 elif stage_of_interest == "om_to_pl":
     ax.scatter(om_to_pl_res, om_to_pl_vol_actual, octomap_to_motion_planner_serialization_to_reception_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
@@ -72,9 +88,14 @@ else:
     system.exit(0)
 
 # plot
-ax.set_xlabel('resolution')
-ax.set_ylabel('estimated volume')
-ax.set_zlabel('response time (s)');
+if (stage_of_interest == "pc_om_estimation"):
+    ax.set_xlabel('pc_vol_estimation')
+    ax.set_ylabel('octomap_volume_digested')
+    ax.set_ylabel('resolution')
+else:
+    ax.set_xlabel('resolution')
+    ax.set_ylabel('estimated volume')
+    ax.set_zlabel('response time (s)');
 ax.legend(loc='best', fontsize="small")
 output_file = "knob_performance_modeling" + ".png"
 plt.show()
