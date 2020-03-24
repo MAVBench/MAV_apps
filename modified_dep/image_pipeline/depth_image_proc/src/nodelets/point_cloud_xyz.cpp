@@ -527,7 +527,7 @@ void filterByResolutionAndEdges(sensor_msgs::PointCloud2Iterator<float> &cloud_x
 // to understand the gap size and volume
 float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<float> cloud_x, sensor_msgs::PointCloud2Iterator<float> cloud_y, sensor_msgs::PointCloud2Iterator<float> cloud_z,
   int n_points, const int grid_size, float diagnostic_resolution, double &sensor_volume_to_digest_estimated, double &area_to_digest,
-  double &gap_statistics_min, double& gap_statistics_max, double& gap_statistics_avg, double &obs_dist_statistics_min, double  &obs_dist_statistics_avg
+  double &gap_statistics_min, double& gap_statistics_max, double& gap_statistics_avg, double &obs_dist_statistics_min, double  &obs_dist_statistics_avg_from_pc
   ){
   double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
   bool first_itr = true;
@@ -543,7 +543,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
   int cntr= 0;
  int cntr1 = 0;
  bool first_point = true; // first point in the first gap
- obs_dist_statistics_avg = 0;
+ obs_dist_statistics_avg_from_pc = 0;
  obs_dist_statistics_min = sensor_max_range;
 
  //const float diagnostic_resolution = 1;
@@ -584,7 +584,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
     	  	  	  	  	  	  	  	    // -- i.e., make sure resolution is bigger than closest_obstacle
     	  obs_dist_statistics_min = new_norm;
       }
-      obs_dist_statistics_avg += new_norm;
+      obs_dist_statistics_avg_from_pc += new_norm;
 
       new_row = this_x < last_x;
       //bool point_is_gap = this_z > (sensor_max_range - resolution);
@@ -627,7 +627,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
 
       int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_size/2;
       int y_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution) + (int)grid_size/2;
-      gridded_volume[x_index][y_index] = round_to_resolution_(this_z, diagnostic_resolution);
+      gridded_volume[x_index][y_index] = max(round_to_resolution_(this_z, diagnostic_resolution), (double)gridded_volume[x_index][y_index]);
 
       if (!new_row && !first_itr ){
     	  if (fabs(last_z - this_z) < .5){
@@ -700,7 +700,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
   gap_statistics_max= max_gap;
  // }
 
-  obs_dist_statistics_avg /= float(n_points);
+  obs_dist_statistics_avg_from_pc /= float(n_points);
   return gridded_volume;
 }
 
@@ -1517,6 +1517,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 {
    profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
    ros::param::get("/sensor_max_range", sensor_max_range);
+   sensor_max_range += 10;
    //ros::param::get("/point_cloud_width", point_cloud_width);
    //ros::param::get("/point_cloud_height", point_cloud_height);
    //ros::param::get("/point_cloud_num_points", point_cloud_num_points);
@@ -1601,10 +1602,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   const int grid_size = 60;
   float **gridded_volume;
   float diagnostic_resolution = 1; // -- point cloud resolution to use for diagnostic purposes
-  double gap_statistics_avg, gap_statistics_min, gap_statistics_max, obs_dist_statistics_min, obs_dist_statistics_avg;
+  double gap_statistics_avg, gap_statistics_min, gap_statistics_max, obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om, obs_dist_statistics_avg_from_pc;
 
   gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistics_min,
-		  gap_statistics_max, gap_statistics_avg, obs_dist_statistics_min, obs_dist_statistics_avg);
+		  gap_statistics_max, gap_statistics_avg, obs_dist_statistics_min_from_pc, obs_dist_statistics_avg_from_pc);
 
 
   mavbench_msgs::control control;
@@ -1612,12 +1613,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   control.inputs.sensor_volume_to_digest = sensor_volume_to_digest;
   double cur_tree_total_volume;
   ros::param::get("cur_tree_total_volume", cur_tree_total_volume);
+  ros::param::get("obs_dist_statistics_min_from_om", obs_dist_statistics_min_from_om);
   control.inputs.cur_tree_total_volume = float(cur_tree_total_volume);
   control.inputs.gap_statistics_min = gap_statistics_min;
   control.inputs.gap_statistics_max = gap_statistics_max;
   control.inputs.gap_statistics_avg = gap_statistics_avg;
-  control.inputs.obs_dist_statistics_avg = obs_dist_statistics_avg;
-  control.inputs.obs_dist_statistics_min = obs_dist_statistics_min;
+  control.inputs.obs_dist_statistics_min = min(obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om);
+  control.inputs.obs_dist_statistics_avg = obs_dist_statistics_avg_from_pc;  // note that we can't really get avg distance from octomap, since there
+  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	     // so many obstacles in the map
 
   control_pub.publish(control);
   //ROS_INFO_STREAM("publishing control now");
@@ -1734,10 +1737,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.ee_profiles.space_stats.pc_vol_estimated = pc_vol_estimated; // this is the estimation not the actual. Note that the actuall value can not be determined
   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   // untill PC is intergrated in octomap
   pcl_aug_data.ee_profiles.expected_cmds = pcl_aug_data.controls.cmds;
-  pcl_aug_data.controls.inputs.sensor_volume_to_digest = sensor_volume_to_digest;
-  pcl_aug_data.controls.inputs.cur_tree_total_volume = cur_tree_total_volume;
-  pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
+  //pcl_aug_data.controls.inputs.sensor_volume_to_digest = sensor_volume_to_digest;
+  //pcl_aug_data.controls.inputs.cur_tree_total_volume = cur_tree_total_volume;
+  pcl_aug_data.controls.inputs =  control.inputs;
   pcl_aug_data.controls.inputs.velocity_to_budget_on = velocity_to_budget_on;
+
+  pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
   pcl_aug_data.ee_profiles.actual_time.pc_latency =  profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
   pcl_aug_data.ee_profiles.actual_time.pc_pre_pub_time_stamp = ros::Time::now();

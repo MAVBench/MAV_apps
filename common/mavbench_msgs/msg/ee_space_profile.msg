@@ -1,2 +1,5 @@
 float32 ppl_vol_unit_cube
+float32 pc_vol_unit_cube
+float32 pc_occupied_vol_unit_cube
+float32 pc_free_vol_unit_cube
 float32 pc_vol_estimated

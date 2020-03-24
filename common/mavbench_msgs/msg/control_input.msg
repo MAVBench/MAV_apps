@@ -3,6 +3,7 @@ float32 gap_statistics_min
 float32 gap_statistics_max
 float32 gap_statistics_avg
 float32 obs_dist_statistics_min
+float32 obs_dist_statistics_min_calc_from_octomap
 float32 obs_dist_statistics_max
 float32 obs_dist_statistics_avg
 float32 velocity_to_budget_on

@@ -50,6 +50,8 @@ double planner_drone_radius;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 bool time_budgetting_failed = false;
+double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min;
+
 
 mavbench_msgs::control control;
 
@@ -392,13 +394,12 @@ void performance_modeling(double vel_mag, vector<std::pair<double, int>>& pc_res
 	int pc_res_power_index; // -- temp
 
 	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
-	double pc_res_max = .15;
-	int num_of_steps_on_y = 5;
+	//double pc_res_max = .15;
+	int num_of_steps_on_y = num_of_res_to_try -1;
 	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
 	static double static_pc_res = pc_res_max;
 	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
-	double pc_vol_ideal_max = 8000;
-	double pc_vol_ideal_min = 100;
+
 	double pc_vol_ideal_step_cnt = 30;
 	static double  static_pc_vol_ideal = pc_vol_ideal_max;
 
@@ -555,13 +556,12 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	int pc_res_power_index; // -- temp
 
 	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
-	double pc_res_max = .15;
-	int num_of_steps_on_y = 4;
+	int num_of_steps_on_y = num_of_res_to_try-1;
 	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
 	static double static_pc_res = pc_res_max;
 	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
-	double pc_vol_ideal_max = 8000;
-	double pc_vol_ideal_min = 100;
+//	double pc_vol_ideal_max = 8000;
+//	double pc_vol_ideal_min = 100;
 	double pc_vol_ideal_step_cnt = 30;
 	static double  static_pc_vol_ideal = pc_vol_ideal_max;
 
@@ -822,6 +822,25 @@ int main(int argc, char **argv)
 
    if(!ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner)){
 			ROS_FATAL_STREAM("Could not start runtime; knob_performance_modeling_for_piecewise_planner not provided");
+			exit(0);
+    }
+
+    if(!ros::param::get("/pc_res_max", pc_res_max)){
+			ROS_FATAL_STREAM("Could not start runtime; pc_res_max_for_piecewise_planner not provided");
+			exit(0);
+    }
+    if(!ros::param::get("/num_of_res_to_try", num_of_res_to_try)){
+			ROS_FATAL_STREAM("Could not start runtime; num_of_res_to_try_for_piecewise_planner not provided");
+			exit(0);
+    }
+
+    if(!ros::param::get("/pc_vol_ideal_min", pc_vol_ideal_min)){
+			ROS_FATAL_STREAM("Could not start runtime; pc_vol_ideal_min not provided");
+			exit(0);
+    }
+
+   if(!ros::param::get("/pc_vol_ideal_max", pc_vol_ideal_max)){
+			ROS_FATAL_STREAM("Could not start runtime; pc_vol_ideal_max not provided");
 			exit(0);
     }
 

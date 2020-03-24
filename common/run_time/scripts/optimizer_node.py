@@ -12,52 +12,50 @@ from optimizer_settings import *
 rt_max = 10  # this is actually set in the roslaunch file
 drone_radius = 3
 import time
-dist_to_closest_obs_calc_from_octomap = 100
+obs_dist_min_calc_from_octomap = 100
 
 def run_optimizer(control):
+
+    # -- determine the response time destired (rt_d)
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency
     if (time_budget_left_to_distribute < 0):
         print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
-#    else:
-#        print("budget in python"+ str(control.internal_states.sensor_to_actuation_time_budget_to_enforce))
     rt_d = min(time_budget_left_to_distribute, rt_max)
     rt_d = max(rt_d, .2)
-#    time.sleep(10)
-#    r_gap_max = max(control.inputs.gap_statistics_max, r_min)  # can't really see smaller than r_min anyways
-    r_gap_max = control.inputs.gap_statistics_max  # can't really see smaller than r_min anyways
-    r_gap_avg = control.inputs.gap_statistics_avg
-    obs_dist_avg = control.inputs.obs_dist_statistics_avg
-    obs_dist_min = min(control.inputs.obs_dist_statistics_min, dist_to_closest_obs_calc_from_octomap)
 
+    # -- determine the resolution
+    # intuitively speaking, min value for resolution (r_min) indicate, we don't need to do better than that
+    # we can also think of r_min as what regulates the intellignce (i.e, the lower r_min the more intelligence the decision
+    # making since we have more free space to make decision based off of)
+    # and max value for resolution indicates  that we can't not do worse than this
+    r_min_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_avg) - drone_radius  # min to impose the worse case as the
+                                                                                                                # determinant
+
+    r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
+    r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
+    r_min_ = r_min_temp
+
+    #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
+    r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) - drone_radius  # min is because we want the tigher bound of the two:
+                                                                                                                 # note that if r_max is greater than
+                                                                                                                 # r_gap_max, we can't actually see any gaps
+    r_max_temp = max(r_max_temp, r_min_static)  # not lower than r_min_static
+    r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
+    if r_max_ < r_min_:
+        print("-------------------------------------------- bounds inverted -----------------------------------")
+        r_min_ = r_max_
+    #r_gap_hat = 1 / r_gap
+    r_max_hat = 1 / r_min_
+    r_min_hat = 1 / r_max_
+    r_min_list = [r_min_hat] * 2
+    r_max_list = [r_max_hat] * 2
+
+    # --- determine the volume
     v_sensor_max = control.inputs.sensor_volume_to_digest
     v_tree_max = max(control.inputs.cur_tree_total_volume, v_min)#, v_sensor_max)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, 10*v_sensor_max)
 
-    #
-    r_min_temp =  max(max(r_gap_avg, obs_dist_avg) - drone_radius, r_min)  # get the minium between the average gap
-                                                               # and average obstacle distance
-    r_min_ = max(r_min, min(r_min_temp , r_max))  # the outer max term makes sure the resolution is not 0
-                                                           # the inner min, is for not exceeding r_max
-
-
-
-    r_max_temp = max(min(r_gap_max, obs_dist_min) - drone_radius, r_min) # get the tigher bound of the two:
-                                                                                 # aka, maximum gap and closest obstacle
-                                                                                 # the intuition is that if
-                                                                                 # our resolution is bigger than either
-                                                                                 # we can't see the gaps/distance properly
-    r_max_ = min(r_max_temp, r_max)
-    if r_max_ < r_min_:
-        print("-------------------------------------------- bounds inverted -----------------------------------")
-        r_min_ = r_max_
-#    r_max_ = r_max - drone_radius
-    #r_gap_hat = 1 / r_gap
-    r_max_hat = 1 / r_min_
-    r_min_hat = 1 / r_max_
-
-    r_min_list = [r_min_hat] * 2
-    r_max_list = [r_max_hat] * 2
     v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]
     #print("fufufufufufuf" +str(ppl_vol_min))
     v_max_list = [v_sensor_max, v_tree_max, max(v_max, ppl_vol_min)]
@@ -66,7 +64,7 @@ def run_optimizer(control):
     Q = np.array([[-2.16196038e-05, -2.78515364e-03,  2.86859999e-05],
         [ 2.00720436e-04,  4.60333360e-02, -1.05093373e-05],
         [ 1.34399197e-04,  4.64316885e-02,  1.24233987e-05],
-        [ pl_to_ppl_ratio*1.00483609e-01,  pl_to_ppl_ratio*1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
+        [pl_to_ppl_ratio*1.00483609e-01,  pl_to_ppl_ratio*1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
     # Constraint matrices #
 
     #  --  w/ r_gap  as constraint
@@ -118,8 +116,17 @@ def control_callback(control):
         r0 = 1.0/r0_hat
         r1 = 1.0/r1_hat
         # round up to exponents of 2
-        pc_res = (2 ** math.ceil(math.log(r0/pc_res_min, 2)))*pc_res_min
-        om_to_pl_res = (2 ** math.ceil(math.log(r1/om_to_pl_res_min, 2)))*om_to_pl_res_min
+        """
+        blah =  math.log(round(r0/pc_res_min,2), 2)
+        blah2 = math.log(round(r1/om_to_pl_res_min,2), 2)
+        blah_3 =  math.ceil(blah)
+        blah4 = math.ceil(blah2)
+        """
+        pc_res = (2 ** math.ceil(math.log(round(r0/pc_res_min,2), 2)))*pc_res_min  # round is there, because, the
+                                                                                   # float division sometimes gives slightly different resutls (say sometimes 0.0, sometimes 3.6*e**--16
+                                                                                   # which results in an assertion error
+        om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
+        assert(om_to_pl_res >= pc_res, "om_to_pl_res should be >= pc_res")
         pc_vol_ideal = results.x[2]
         om_to_pl_vol_ideal = results.x[3]
         ppl_vol_ideal = results.x[4]
@@ -172,5 +179,4 @@ if __name__ == '__main__':
     rt_max = rospy.get_param("max_time_budget")
     drone_radius = rospy.get_param("planner_drone_radius")
     while not rospy.is_shutdown():
-        dist_to_closest_obs_calc_from_octomap = rospy.get_param("dist_to_closest_obs_calc_from_octomap")
         rate.sleep()

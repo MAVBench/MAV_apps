@@ -219,7 +219,7 @@
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
   <param name="budgetting_mode" value="$(arg budgetting_mode)"/>
   <arg name="gap_statistic_mode" default="avg" />   
-  <arg name="use_pyrun" default="false" />   
+  <arg name="use_pyrun" default="true" />   
   <param name="use_pyrun" value="$(arg use_pyrun)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
   <arg name="max_time_budget" default="10" />   
@@ -234,10 +234,10 @@
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
 
   <!-- fixed knob values --> 
-  <arg name="pc_res" default=".15" />   
+  <arg name="pc_res" default=".6" />   
   <param name="pc_res" value="$(arg pc_res)"/>
-  <arg name="om_to_pl_res" default=".15" />   
-  <param name="om_to_pl_res" value="$(arg om_to_pl_res)"/>
+  <!-- arg name="om_to_pl_res" default="" /-->   
+  <param name="om_to_pl_res" value="$(arg pc_res)"/>
   <arg name="pc_vol_ideal" default="10000" />   
   <param name="pc_vol_ideal" value="$(arg pc_vol_ideal)"/>
   <arg name="om_to_pl_vol_ideal" default="20000" />   
@@ -250,6 +250,16 @@
   <param name="om_to_pl_latency_expected" value="$(arg expected_latency)"/>
   <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
   <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
+ <!-- ========================= Performance Modeling ()  ============================ -->
+ <arg name="pc_res_max" default=".6" />   
+ <param name="pc_res_max" value="$(arg pc_res_max)"/>
+ <arg name="num_of_res_to_try" default="2" />   
+ <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
+ <arg name="pc_vol_ideal_min" default="1000" />   
+ <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
+ <arg name="pc_vol_ideal_max" default="8000" />   
+ <param name="pc_vol_ideal_max" value="$(arg pc_vol_ideal_max)"/>
+
 
   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
   <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen">

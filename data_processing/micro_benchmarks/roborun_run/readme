@@ -1,0 +1,9 @@
+purpose: measure the impact of  map volume on octomap perforamnce. Note that you can measure the impact of any parameter on the octomap with this benchmark.
+intentend behavior: drone lifting up and flying for 100 second.
+note that we have collected data for different resolutions (one and two resolutions and same point cloud)
+
+map: simple_map_00
+
+how to run: 
+  # fly and collect performance measurements
+  ./script_1.bash

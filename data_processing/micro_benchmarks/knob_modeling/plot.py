@@ -31,7 +31,7 @@ metrics_to_collect_hard = ["octomap_exposed_resolution", "point_cloud_estimated_
 
 # parse  data
 result_dic = parse_stat_file_flattened(input_filepath, metrics_to_collect_easy, metrics_to_collect_hard)
-#result_dic = filter_based_on_key_value(result_dic_, "octomap_exposed_resolution", 0.15, "in")
+result_dic = filter_based_on_key_value(result_dic, "pc_res", 1.200000, "in")
 #write_results_to_csv(result_dic, output_all_csv_filepath)
 octomap_exposed_resolution = result_dic["octomap_exposed_resolution"]
 point_cloud_estimated_volume  = result_dic["point_cloud_estimated_volume"]
@@ -72,7 +72,8 @@ if stage_of_interest == "pc_om_estimation":
     print(len(pc_res))
     print(len(pc_vol_estimated))
     print(len(octomap_volume_digested))
-    ax.scatter(pc_res, pc_vol_estimated, octomap_volume_digested)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    ax.scatter(pc_vol_estimated[1000:], octomap_volume_digested[1000:])#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    #ax.scatter(pc_res[100:], pc_vol_estimated[100:], octomap_volume_digested[100:])#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     print(pc_res)
     print(pc_vol_estimated)
     print(octomap_volume_digested)

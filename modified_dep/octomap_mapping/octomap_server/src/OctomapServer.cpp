@@ -564,8 +564,9 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
   //ROS_INFO_STREAM("-------------- exposed volume"<<exposed_volume);
   profiling_container.capture("octomap_insertCloud_minus_publish_all", "end", ros::Time::now(), capture_size);
   profiling_container.capture("pc_vol_actual", "single", pc_vol_actual, capture_size);
-
   profiling_container.capture("pc_res", "single", pc_res, capture_size);
+  profiling_container.capture("octomap_volume_digested", "single", pc_vol_actual, capture_size);
+  profiling_container.capture("pc_vol_estimated", "single", pc_vol_estimated, capture_size);
 
 
   profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
@@ -586,7 +587,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 */
 
   //ROS_INFO_STREAM("closest obst"<<dist_to_closest_obs);
-  ros::param::set("dist_to_closest_obs_calc_from_octomap", dist_to_closest_obs);
+  ros::param::set("obs_dist_statistics_min_from_om", dist_to_closest_obs);
   if (m_save_map){ // for micro benchmarking purposes
 	  m_octree->write("high_res_map.ot");
 	  m_octree_lower_res->write("low_res_map.ot");
@@ -712,7 +713,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
       point3d new_end = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
       if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay, resolution_ratio, depth_to_look_at)){
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
-    	//  ROS_INFO_STREAM("number of keys"<< m_keyRay.size());
         octomap::OcTreeKey endKey;
         if (m_octree->coordToKeyChecked(new_end, endKey)){
           free_cells.insert(endKey);
@@ -799,6 +799,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
   profiling_container.capture("perceived_closest_obs_distance", "single", dist_to_closest_obs, capture_size);
   profiling_container.capture("octomap_calc_disjoint_and_update", "end", ros::Time::now(), capture_size);
+  octomap_aug_data.ee_profiles.space_stats.pc_vol_unit_cube = free_cells_cnt + occupied_cells.size();
+  octomap_aug_data.ee_profiles.space_stats.pc_occupied_vol_unit_cube = occupied_cells.size();
+  octomap_aug_data.ee_profiles.space_stats.pc_free_vol_unit_cube = free_cells_cnt;
 
   // TODO: eval lazy+updateInner vs. proper insertion
   // non-lazy by default (updateInnerOccupancy() too slow for large maps)
@@ -873,9 +876,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   pc_vol_actual = free_cell_volume + occupied_cell_volume;
 
   profiling_container.capture("octomap_prune_in_octomap_server", "end", ros::Time::now(), capture_size);
-  profiling_container.capture("octomap_volume_digested", "single", pc_vol_actual, capture_size);
-  profiling_container.capture("pc_vol_estimated", "single", pc_vol_estimated, capture_size);
-
 
   if (DEBUG_RQT) {
 	  	debug_data.header.stamp = ros::Time::now();
@@ -1598,8 +1598,8 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
  // ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
 //  ros::param::get("/om_to_pl_res", om_to_pl_res);
   //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
-  assert(om_to_pl_res >= m_res_original);
-  assert(om_to_pl_res >= m_res);
+  if (om_to_pl_res < m_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<m_res);} assert(om_to_pl_res >= m_res);
+  if(om_to_pl_res < m_res_original){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res_original"<<m_res_original);} assert(om_to_pl_res >= m_res_original);
 
 //  float potential_volume_to_explore = PotentialVolumeToExplore;
   int depth_to_look_at = 16;
@@ -1675,7 +1675,6 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
   double volume_communicated_in_unit_cubes = 0;
   // serialize
-//  if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_resm_octree->getResolution(), lower_res_map_depth)){
    if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_res_original, lower_res_map_depth)){
   int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
@@ -1703,10 +1702,9 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  // ros::param::get("/om_to_pl_res", om_to_pl_res);
 //  ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
   //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
+ if (om_to_pl_res < m_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<m_res);} assert(om_to_pl_res >= m_res);
+ if(om_to_pl_res < m_res_original){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res_original"<<m_res_original);} assert(om_to_pl_res >= m_res_original);
 
-
-  assert(om_to_pl_res >= m_res);
-  assert(om_to_pl_res >= m_res_original);
   unsigned int pos;
   int depth_found_at;
   // take care of space gridding for filtering octomap
@@ -1734,7 +1732,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  // -- expand MapToTransferSideLength untill you hit the volume target
  int upper_bound_MapToTransferSideLength  = int(max(map_max_length, (float) (1.2*m_maxRange))) + 1; // adding one, because later, when converting from float to int, we are essentially rounding down
  int lower_bound_MapToTransferSideLength  = 5;
- int binary_search_cntr_threshold = 30;
+ int binary_search_cntr_threshold = 60;
  int binary_search_cntr= 0;
  double error = INFINITY;
  MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
@@ -1910,9 +1908,9 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
   ros::param::get("/om_to_pl_res", om_to_pl_res);
+  if (om_to_pl_res < m_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<m_res);} assert(om_to_pl_res >= m_res);
+  if(om_to_pl_res < m_res_original){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res_original"<<m_res_original);} assert(om_to_pl_res >= m_res_original);
 
-
-  assert(om_to_pl_res >= m_res);
   int lower_res_map_depth = m_octree->getTreeDepth() - int(log2(om_to_pl_res/m_res));
 
 
