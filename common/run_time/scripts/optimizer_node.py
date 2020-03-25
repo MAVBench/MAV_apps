@@ -56,7 +56,11 @@ def run_optimizer(control):
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, 10*v_sensor_max)
 
-    v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]
+    v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]  # not that .9*v_sensor_max is there
+                                                                    # because sometimes, we actually might have a smaller
+                                                                    # than v_min volume, in which case we need to
+                                                                    # provide a volume as a min that is smaller
+                                                                    # than what we can already see (v_sennsor_max)
     #print("fufufufufufuf" +str(ppl_vol_min))
     v_max_list = [v_sensor_max, v_tree_max, max(v_max, ppl_vol_min)]
 
@@ -137,11 +141,13 @@ def control_callback(control):
         smoothening_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
     else:
         rospy.set_param("optimizer_succeeded", False)
+        rospy.set_param("log_control_data", False)
         rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
         print("====================optimizer failed")
         return
 
     rospy.set_param("optimizer_succeeded", True)
+    rospy.set_param("log_control_data", True)
     ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + misc_latency
     # set the knobs
     rospy.set_param("pc_res", float(pc_res))
