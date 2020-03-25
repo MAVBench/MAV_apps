@@ -531,6 +531,8 @@ void performance_modeling(double vel_mag, vector<std::pair<double, int>>& pc_res
 
 	ros::param::set("new_control_data", true);
 	ros::param::set("optimizer_succeeded", false);
+	ros::param::set("log_control_data", true);
+
 
     if (DEBUG_RQT) {
     	debug_data.header.stamp = ros::Time::now();
@@ -658,6 +660,7 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 
 	ros::param::set("new_control_data", true);
 	ros::param::set("optimizer_succeeded", false);
+	ros::param::set("log_control_data", true);
 
 
     if (DEBUG_RQT) {
@@ -907,6 +910,8 @@ int main(int argc, char **argv)
     		assert (!(use_pyrun && knob_performance_modeling_for_piecewise_planner));
 
     		if (budgetting_mode == "manual"){
+    			ros::param::set("optimizer_succeeded", false);
+    			ros::param::set("log_control_data", true);
     			ros::param::set("new_control_data", true);
     		} else if (budgetting_mode == "dynamic"){
     			if (reactive_runtime){

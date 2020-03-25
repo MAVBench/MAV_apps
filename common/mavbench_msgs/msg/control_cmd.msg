@@ -5,3 +5,4 @@ float32 om_to_pl_res
 float32 om_to_pl_vol
 float32 ppl_vol
 float32 optimizer_succeeded
+float32 log_control_data

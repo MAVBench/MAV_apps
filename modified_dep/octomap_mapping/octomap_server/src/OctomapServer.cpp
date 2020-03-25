@@ -405,6 +405,7 @@ using namespace std; //
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
 //	m_octree->clear();
+	pc_vol_actual = 0;
 	pc_capture_time = ros::Time::now();
 	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
@@ -414,7 +415,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	ppl_vol_ideal = pcl_aug_data->controls.cmds.ppl_vol;
     m_res = pcl_aug_data->controls.cmds.pc_res;
     pc_vol_estimated = pcl_aug_data->ee_profiles.space_stats.pc_vol_estimated;
-
+    pc_vol_ideal = pcl_aug_data->controls.cmds.pc_vol;
 
 	// -- for profiling
 	octomap_aug_data.controls = pcl_aug_data->controls;
@@ -662,7 +663,16 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   KeySet free_cells, occupied_cells;
   // insert ground points only as free:
   for (PCLPointCloud::const_iterator it = ground.begin(); it != ground.end(); ++it){
-    point3d point(it->x, it->y, it->z);
+    if (pc_vol_actual >= pc_vol_ideal){
+    	/*
+    	double error = (pc_vol_actual - pc_vol_ideal)/pc_vol_ideal;
+    	if (error > .12){
+    		ROS_INFO_STREAM("what the hell");
+    	}
+    	*/
+    	break;
+    }
+	point3d point(it->x, it->y, it->z);
     // maxrange check
     if ((m_maxRange > 0.0) && ((point - sensorOrigin).norm() > m_maxRange) ) {
       point = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
@@ -670,8 +680,11 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
     // only clear space (ground points)
     if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
+    	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
     	free_cells.insert(m_keyRay.begin(), m_keyRay.end());
     }
+
+
 
     octomap::OcTreeKey endKey;
     if (m_octree->coordToKeyChecked(point, endKey)){
@@ -680,12 +693,23 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     } else{
       ROS_ERROR_STREAM("Could not generate Key for endpoint "<<point);
     }
+
   }
 
   profiling_container.capture("octomap_calc_hash", "start", ros::Time::now(), capture_size);
   // all other points: free on ray, occupied on endpoint:
   for (PCLPointCloud::const_iterator it = nonground.begin(); it != nonground.end(); ++it){
-    point3d point(it->x, it->y, it->z);
+	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
+    if (pc_vol_actual >= pc_vol_ideal){
+    	/*
+    	double error = (pc_vol_actual - pc_vol_ideal)/pc_vol_ideal;
+    	if (error > .12){
+    		ROS_INFO_STREAM("what the hell");
+    	}
+    	*/
+    	break;
+    }
+	point3d point(it->x, it->y, it->z);
     // maxrange check
     if ((m_maxRange < 0.0) || ((point - sensorOrigin).norm() <= m_maxRange) ) {
 
@@ -693,6 +717,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
       if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
       }
+
       // occupied endpoint
       OcTreeKey key;
       if (m_octree->coordToKeyChecked(point, key)){
@@ -725,6 +750,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
       }
     }
+
   }
   profiling_container.capture("octomap_calc_hash", "end", ros::Time::now(), capture_size);
   if (DEBUG_RQT) {
@@ -873,7 +899,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     //m_octree_lower_res->prune();
   }
 
-  pc_vol_actual = free_cell_volume + occupied_cell_volume;
+  //pc_vol_actual = free_cell_volume + occupied_cell_volume;
 
   profiling_container.capture("octomap_prune_in_octomap_server", "end", ros::Time::now(), capture_size);
 
@@ -922,7 +948,7 @@ void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensorOr
 		dist_to_closest_obs = dist_to_this_obs;
 		closest_obs_coord = coordinate;
 	}
-	dist_to_closest_obs = min(dist_to_this_obs, this->m_maxRange);
+	dist_to_closest_obs = min(dist_to_closest_obs, this->m_maxRange);
 }
 
 
@@ -1722,7 +1748,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  vector<OcTreeNode *> octomap_block_vec;
  double volume_increment; // -- volume to add per iteration
 
- // ros::Duration(10).sleep();
+  //ros::Duration(10).sleep();
  // -- max_length is max of dimension and twice the sensor range. I want to have a bit more
  // -- left over for max_length to include all the voxels (since gridifying can cause looinsg
  // -- a chunk

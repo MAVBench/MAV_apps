@@ -94,7 +94,8 @@ public:
   double pc_vol_actual; // -- the estimated volume of the information coming from point cloud
   double pc_vol_estimated; // -- the volume that point cloud  thinks (estimated) it has enforced. This is used for modeling
   double pc_res; // -- the resolution of the information coming from point cloud
- ros::Time pc_capture_time; // -- time insertCloud was called
+  double pc_vol_ideal;
+  ros::Time pc_capture_time; // -- time insertCloud was called
  std::string voxel_type_to_publish;
  DataContainer profiling_container;
  ProfileManager my_profile_manager;

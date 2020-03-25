@@ -1022,7 +1022,7 @@ void filterByNumOfPoints(sensor_msgs::PointCloud2Iterator<float> &cloud_x, senso
 	}
 }
 
-
+/*
 // -- filter based on the desired volume to maintain
 void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
 		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points, double volume_to_keep, double &volume_kept, float **gridded_volume, int grid_volume_row_size, float diagnostic_resolution)
@@ -1090,6 +1090,84 @@ void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msg
 	}
 	volume_kept = volume_included;
 }
+*/
+
+// -- filter based on the desired volume to maintain
+void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points, double volume_to_keep, double &volume_kept, float **gridded_volume, int grid_volume_row_size, float diagnostic_resolution)
+{
+	const int num_radius_buckets = 10*sensor_max_range;
+	double radius_volume[num_radius_buckets];
+	memset(&radius_volume[0], 0, sizeof(radius_volume));
+	vector<double> radius_points[num_radius_buckets];
+	//	vector<double> radius_points_x[num_radius_buckets];
+//	vector<double> radius_points_y[num_radius_buckets];
+//	vector<double> radius_points_z[num_radius_buckets];
+//	bool radius_points_valid[num_radius_buckets];
+//	memset(&radius_points_valid[0], false, sizeof(radius_points_valid));
+
+	double max_radius = sensor_max_range* std::pow(2, 0.5);
+	double bucket_width = max_radius / num_radius_buckets;
+	double this_x, this_y, this_z, last_x, last_y, last_z;
+	double last_row_y; // y associated with the first element of last row
+	bool new_row = false;
+	bool first_itr = true;
+	double total_volume = 0;
+
+    for (int i = 0; i < num_points; i++){
+    	this_x = *(cloud_x + i);
+    	this_y = *(cloud_y + i);
+    	this_z = *(cloud_z + i);
+    	// -- project x,y,z if they are outside of the sensor range
+    	double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
+    	if (norm > sensor_max_range){
+    		//	  this_x = (sensor_max_range/norm)*this_x;
+    		//	  this_y = (sensor_max_range/norm)*this_y;
+    		this_z = (sensor_max_range/norm)*this_z;
+    	}
+    	int radius_bucket = (int) (std::pow(std::pow(this_x, 2) + std::pow(this_y, 2), 0.5) / bucket_width);
+    	//radius_volume[radius_bucket] += (1.0/3)*fabs(this_x-last_x)*fabs(this_y - last_row_y)*this_z;
+    	// using the gridded approach
+    	int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_volume_row_size/2;
+    	int y_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution) + (int)grid_volume_row_size/2;
+    	radius_volume[radius_bucket] += (1.0/3)*pow(diagnostic_resolution, 2)*gridded_volume[x_index][y_index];
+    	radius_points[radius_bucket].push_back(i);
+    	//radius_points_valid[radius_bucket] = true;
+    	gridded_volume[x_index][y_index] = 0;
+    }
+
+    for (int bucket_number= 0; bucket_number <num_radius_buckets; bucket_number++){
+    	for (int pt_idx= 0; pt_idx< radius_points[bucket_number].size(); pt_idx++){
+    		int idx = (radius_points[bucket_number])[pt_idx];
+    		xs.push_back(*(cloud_x+ idx));
+			ys.push_back(*(cloud_y+idx));
+			zs.push_back(*(cloud_z+idx));
+    	}
+    }
+
+    /*
+    // select the most central points to include
+	int max_radius_bucket = 0;
+	double volume_included = 0;
+	while (volume_included <= volume_to_keep && max_radius_bucket < num_radius_buckets) {
+		max_radius_bucket++;
+		volume_included += radius_volume[max_radius_bucket];
+
+
+	}
+
+	for (int i = 0; i < num_points; i++) {
+		int radius_bucket = (int) (std::pow(std::pow(*(cloud_x+i), 2) + std::pow(*(cloud_y+i), 2), 0.5) / bucket_width);
+		if (radius_bucket <= max_radius_bucket) {
+			xs.push_back(*(cloud_x+i));
+			ys.push_back(*(cloud_y+i));
+			zs.push_back(*(cloud_z+i));
+		}
+	}
+	volume_kept = volume_included;
+	*/
+}
+
 
 
 void filterByNumOfPointsHeightWise(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
@@ -1635,7 +1713,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   ros::param::set("new_control_data", new_control_data);
 
   bool optimizer_succeeded;
+  bool log_control_data; // used to determine whether the data coming from optimizer or manual is valid. This is
+  	  	  	  	  	  	 // mainly used to avoid loging bogus data which occurs when the optimizer fails and
+  	  	  	  	  	     // hence we don't have reasonable actual cmds to follow (note that a policty such as using the
+  	  	  	  	  	     // the last actual cmds might result in bogus data since we don't know if we have for example
+  	  	  	  	  	     // enough volume to consume in this round (comparing to last round)
   ros::param::get("/optimizer_succeeded", optimizer_succeeded);
+  ros::param::get("/log_control_data", log_control_data);
+
   /*
   if (!optimizer_succeeded){
 	  ROS_INFO_STREAM("----------------------------- OPTIMIZER FAILD<<<<<<<<<<<<<<<<<<<<<");
@@ -1670,7 +1755,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   profiling_container->capture("filtering", "start", ros::Time::now(), capture_size);
   double pc_vol_estimated = 0;
   double pc_vol_ideal_estimated = actual_to_estimated_vol_correction(pc_vol_ideal); // convert the ideal to estimated because point cloud can only enforce in the estimated world
-  filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
+  //filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
+  sequencer(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
 
   // -- destroy the grid
   for (int h = 0; h < grid_size; h++)
@@ -1721,6 +1807,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.pcl = *cloud_msg;
 
   pcl_aug_data.controls.cmds.optimizer_succeeded = optimizer_succeeded;
+  pcl_aug_data.controls.cmds.log_control_data = log_control_data;
   pcl_aug_data.controls.cmds.pc_res = pc_res;
   pcl_aug_data.controls.cmds.pc_vol = pc_vol_ideal;
   pcl_aug_data.controls.cmds.om_to_pl_vol = om_to_pl_vol_ideal;

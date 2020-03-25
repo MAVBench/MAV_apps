@@ -248,7 +248,7 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	debug_data.slack.actual.control_flow =  -1;
 	debug_data.slack.actual.total = -1;
 
-	if (!debug_data.controls.cmds.optimizer_succeeded){
+	if (!debug_data.controls.cmds.log_control_data){
 		return;
 	}
 
@@ -570,7 +570,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	debug_data.slack.actual.total = -1;
 
 
-	if (!debug_data.controls.cmds.optimizer_succeeded){
+	if (!debug_data.controls.cmds.log_control_data){
 		return;
 	}
 

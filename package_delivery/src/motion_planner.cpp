@@ -251,7 +251,8 @@ bool MotionPlanner::goal_rcv_call_back(package_delivery::point::Request &req, pa
 }
 
 void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
-   size_t octomapSize = m_octree->size();
+	ros::param::get("/voxel_type_to_publish", voxel_type_to_publish);
+	size_t octomapSize = m_octree->size();
   // TODO: estimate num occ. voxels for size of arrays (reserve)
   if (octomapSize <= 1){
     ROS_WARN("Nothing to publish, octree is empty");
