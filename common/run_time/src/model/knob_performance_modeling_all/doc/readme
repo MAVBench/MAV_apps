@@ -1,0 +1,18 @@
+purpose: measuring the impact of time budget (for planning) and map resolution on planning. Basically, 
+we expect that for higher map resolutions, we need to dedicate more time budget for planning because  casting ray takes longer in a higher resolution map.
+In this experiment, we have varied the map resolution and planning budget. 
+
+map: simple_map_20_20
+
+How to run: use the profiling scripts
+
+Quantifying the results:
+    We quanitify the impact by measuring the piecewise_planning and smooothening failure rate.
+    we also quantify the path quality by measuring the normalized path length (i.e., RRT generated path/direct path)
+    we can also quantify the path quality by looking at the distance travelled. We see an intersting trend. 
+
+    data1: was collected with two resolutions simaltensously carried in octomap
+    data2: was collected with one resolution. collected the path length 
+
+
+    In both above data, planner takes the lower resolution. 
