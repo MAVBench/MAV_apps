@@ -409,6 +409,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	pc_capture_time = ros::Time::now();
 	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
+	double size = cloud->data.size();
+	//ROS_INFO_STREAM("-----size is "<<size);
 	pc_res =  pcl_aug_data->controls.cmds.pc_res;
 	om_to_pl_res = pcl_aug_data->controls.cmds.om_to_pl_res;
 	om_to_pl_vol_ideal = pcl_aug_data->controls.cmds.om_to_pl_vol;
@@ -553,6 +555,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   //profiling_container.capture("sensor_volume_to_digest", "single", pcl_aug_data->controls.inputs.sensor_volume_to_digest, capture_size);
 
+  //m_octree->clear(); // blah
+  //m_octree =new OcTree(m_res); //blah
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
   ros::param::set("cur_tree_total_volume", m_octree->getRoot()->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
@@ -625,6 +629,11 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
    double temp_res;
    int resolution_ratio = (int)(m_res/m_res_original);
    int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+   //int resolution_ratio = 1;
+   //int depth_to_look_at = 16;
+
+
+
 
    /*
    ros::param::get("/om_res", temp_res);
@@ -663,7 +672,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   KeySet free_cells, occupied_cells;
   // insert ground points only as free:
   for (PCLPointCloud::const_iterator it = ground.begin(); it != ground.end(); ++it){
-    if (pc_vol_actual >= pc_vol_ideal){
+      pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
+	  if (pc_vol_actual >= pc_vol_ideal){
     	/*
     	double error = (pc_vol_actual - pc_vol_ideal)/pc_vol_ideal;
     	if (error > .12){
@@ -679,8 +689,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     }
 
     // only clear space (ground points)
-    if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
-    	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
+    if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){//blah
+    //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	free_cells.insert(m_keyRay.begin(), m_keyRay.end());
     }
 
@@ -715,9 +725,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
       // free cells
       if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
+      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
       }
-
       // occupied endpoint
       OcTreeKey key;
       if (m_octree->coordToKeyChecked(point, key)){
@@ -737,6 +747,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     } else {// ray longer than maxrange:;
       point3d new_end = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
       if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay, resolution_ratio, depth_to_look_at)){
+      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
         octomap::OcTreeKey endKey;
         if (m_octree->coordToKeyChecked(new_end, endKey)){
@@ -751,6 +762,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
       }
     }
 
+      //break; //blah
   }
   profiling_container.capture("octomap_calc_hash", "end", ros::Time::now(), capture_size);
   if (DEBUG_RQT) {
@@ -825,7 +837,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
   profiling_container.capture("perceived_closest_obs_distance", "single", dist_to_closest_obs, capture_size);
   profiling_container.capture("octomap_calc_disjoint_and_update", "end", ros::Time::now(), capture_size);
-  octomap_aug_data.ee_profiles.space_stats.pc_vol_unit_cube = free_cells_cnt + occupied_cells.size();
+  octomap_aug_data.ee_profiles.space_stats.pc_vol_unit_cube = pc_vol_actual/pow(m_res, 3);
+  //ROS_INFO_STREAM("=== *(**********  ** pc_vol_unit_cube"<< pc_vol_actual/pow(m_res, 3));
+  //ROS_INFO_STREAM("===== pc_vol_unit_cube actually consumed"<< occupied_cells.size() + free_cells_cnt);
   octomap_aug_data.ee_profiles.space_stats.pc_occupied_vol_unit_cube = occupied_cells.size();
   octomap_aug_data.ee_profiles.space_stats.pc_free_vol_unit_cube = free_cells_cnt;
 
@@ -911,7 +925,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 		debug_data.octomap_avg_depth_touched= profiling_container.findDataByName("octomap_avg_depth_touched")->values.back();
 		debug_data.octomap_prune_in_octomap_server = profiling_container.findDataByName("octomap_prune_in_octomap_server")->values.back();
 		debug_data.octomap_construct_lower_res_map= profiling_container.findDataByName("construct_lower_res_map")->values.back();
-		debug_data.octomap_space_volume_digested =  free_cell_volume + occupied_cell_volume;
+		debug_data.octomap_space_volume_digested =  pc_vol_actual;//free_cell_volume + occupied_cell_volume;
 //		debug_data.integrated_volume_tracking_error =  (free_cell_volume + occupied_cell_volume) - profiling_container.findDataByName("sensor_volume_to_digest")->values.back();
 
 		//octomap_debug_pub.publish(debug_data);

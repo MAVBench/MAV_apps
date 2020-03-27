@@ -397,9 +397,15 @@ unsigned long int inline point_hash_xy(double x, double y) {
 }
 
 double inline round_to_resolution(double v, double resolution) {
-    // add half, then truncate to round to nearest multiple of resolution
+
+   /*
+	// add half, then truncate to round to nearest multiple of resolution
     v += boost::math::sign(v) * resolution / 2;
     return v - fmod(v, resolution);
+    */
+	//v= floor(v*100)/100;
+	double result = floor((1./resolution)*v)*resolution;
+	return result;
 }
 
 double inline round_to_resolution_(double v, double resolution) {
@@ -529,7 +535,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
   int n_points, const int grid_size, float diagnostic_resolution, double &sensor_volume_to_digest_estimated, double &area_to_digest,
   double &gap_statistics_min, double& gap_statistics_max, double& gap_statistics_avg, double &obs_dist_statistics_min, double  &obs_dist_statistics_avg_from_pc
   ){
-  double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z;
+  double last_x, last_y, last_z, this_x, this_y, this_z, first_x, first_y, first_z, this_z_under_estimate;
   bool first_itr = true;
   vector<int> gap_ctr_per_row_vec;
 
@@ -568,6 +574,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
       this_x = *cloud_x;
       this_y = *cloud_y;
       this_z = *cloud_z;
+      this_z_under_estimate = *cloud_z;
       this_y_no_norm = this_y;
 
 
@@ -577,6 +584,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
     	  this_x = (sensor_max_range/norm)*this_x;
     	  this_y = (sensor_max_range/norm)*this_y;
     	  this_z = (sensor_max_range/norm)*this_z;
+    	  this_z_under_estimate = ((sensor_max_range)/norm)*this_z_under_estimate;
       }
       double new_norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
 
@@ -625,9 +633,15 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
      	  }
       }
 
-      int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_size/2;
-      int y_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution) + (int)grid_size/2;
-      gridded_volume[x_index][y_index] = max(round_to_resolution_(this_z, diagnostic_resolution), (double)gridded_volume[x_index][y_index]);
+      int x_index = ((int)floor(1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution)) + (int)grid_size/2;
+      int y_index = ((int)floor(1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution)) + (int)grid_size/2;
+      //gridded_volume[x_index][y_index] = max(round_to_resolution_(this_z, diagnostic_resolution), (double)gridded_volume[x_index][y_index]);
+      if (gridded_volume[x_index][y_index] == 0){
+    	  gridded_volume[x_index][y_index] = this_z_under_estimate;
+      }else{
+    	  gridded_volume[x_index][y_index] = min(this_z_under_estimate, (double)gridded_volume[x_index][y_index]);
+      }
+
 
       if (!new_row && !first_itr ){
     	  if (fabs(last_z - this_z) < .5){
@@ -1247,9 +1261,9 @@ void filterByResolutionByHashing(std::vector<float> &xs,  std::vector<float> &ys
       if (hashed_point != last_hashed_point){
 		  if (seen.find(hashed_point) == seen.end()) {
 			  seen.insert(hashed_point);
-			  xs_best.push_back(xs[i]);
-			  ys_best.push_back(ys[i]);
-			  zs_best.push_back(zs[i]);
+			  xs_best.push_back(rounded_x);
+			  ys_best.push_back(rounded_y);
+			  zs_best.push_back(rounded_z);
 			  num_of_points +=1;
 		  }
 		  last_hashed_point = hashed_point;
@@ -1595,7 +1609,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 {
    profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
    ros::param::get("/sensor_max_range", sensor_max_range);
-   sensor_max_range += 10;
    //ros::param::get("/point_cloud_width", point_cloud_width);
    //ros::param::get("/point_cloud_height", point_cloud_height);
    //ros::param::get("/point_cloud_num_points", point_cloud_num_points);
