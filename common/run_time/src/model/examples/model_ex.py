@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 sys.path.append('..')
-from model import Model
+from model.model import Model
 from data_parser import DataParser
 
 ## May want to convert this to using absolute paths to make life easier ##
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
 	# File names with data
 	om_fname = 'stats.json_om'
-	om_pl_fname = 'stats.json_om_pl'
+	om_pl_fname = 'stats.json_om_to_pl'
 	pp_pl_fname = 'stats.json_pp_pl'
 
 	# Create parser objects
