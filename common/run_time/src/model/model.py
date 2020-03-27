@@ -57,11 +57,11 @@ class Model(object):
 	# curve_fit must be called with a p0 so it can deduce the number of coefficients
 	# popt is list of model coefficients found by optimizer
 	# pcov is associated covariances
-	def _fit(self, xdata, ydata, p0, profile=False, *args, **kwargs):
+	def _fit(self, xdata, ydata, p0, profile=False, **kwargs):
 		if (profile):
 			t0 = time.time()
 
-		popt, pcov = curve_fit(f=self.task_model, xdata=xdata, ydata=ydata, p0=p0, *args, **kwargs)
+		popt, pcov = curve_fit(f=self.task_model, xdata=xdata, ydata=ydata, p0=p0, **kwargs)
 
 		elapsed = None
 		if (profile):
@@ -74,9 +74,9 @@ class Model(object):
 	#	popt is model coefficient values
 	#   pcov is associated covariance
 	#   elapsed is the time taken to execute if profiled
-	def fit(res, vol, response_time, profile=False, *args, **kwargs):
+	def fit(self, res, vol, response_time, profile=False, **kwargs):
 		xdata = np.vstack((res, vol)).T
 		ydata = np.array(response_time)
 
 		# p0 is needed so number of coefficients can be extrapolated
-		return self._fit(xdata=xdata, ydata=ydata, p0=self.p0, profile=profile, *args, **kwargs)
+		return self._fit(xdata=xdata, ydata=ydata, p0=self.p0, profile=profile, **kwargs)

@@ -27,7 +27,7 @@ class DataParser(object):
 
 
 	# should probably check that fname is a json
-	def _parse_data(fname):
+	def _parse_data(self, fname):
 		#input_file_name = "stats.json"
 		fpath = self.result_folder + "/" + fname
 		self.result_dic = parse_stat_file_flattened(fpath, self.easy_metrics, self.hard_metrics)
