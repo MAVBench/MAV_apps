@@ -95,7 +95,13 @@ public:
   double pc_vol_estimated; // -- the volume that point cloud  thinks (estimated) it has enforced. This is used for modeling
   double pc_res; // -- the resolution of the information coming from point cloud
   double pc_vol_ideal;
-  ros::Time pc_capture_time; // -- time insertCloud was called
+  bool pc_vol_maximum_underestimated; // to specify whether the volume requested by the controller was not achievable because the total volume possibe was smaller than
+  	  	  	  	  	  	  	  	  	 // what the controller asked for. Note that this kind of error is caused by estimation (not enforcement)
+
+ bool om_to_pl_vol_maximum_underestimated; // to specify whether the volume requested by the controller was not achievable because the total volume possibe was smaller than
+  	  	  	  	  	  	  	  	  	 // what the controller asked for. Note that this kind of error is caused by estimation (not enforcement)
+
+ ros::Time pc_capture_time; // -- time insertCloud was called
  std::string voxel_type_to_publish;
  DataContainer profiling_container;
  ProfileManager my_profile_manager;

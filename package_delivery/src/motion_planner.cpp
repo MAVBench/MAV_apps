@@ -63,10 +63,11 @@ void planner_termination_func(double &volume_explored_so_far, double &volume_exp
 */
 
 bool planner_termination_func(){
-	bool taking_to_long = (ros::Time::now() - g_planning_start_time).toSec() > 20; // -- this is just to make sure the volume is not gonna be too big
+//	bool taking_to_long = (ros::Time::now() - g_planning_start_time).toSec() > 20; // -- this is just to make sure the volume is not gonna be too big
 																				   // -- so that we will return
 	//ROS_INFO_STREAM("===== in termination with volume of "<< volume_explored_in_unit_cubes);
-	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube) || taking_to_long;
+//	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube) || taking_to_long;
+	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
 
 }
 
@@ -419,6 +420,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 		msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 		msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
 		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube =  ppl_vol_unit_cube_actual;
 		msg_for_follow_traj.ee_profiles.control_flow_path = .5;
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
@@ -446,6 +448,7 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msg)
 {
 
+	ppl_vol_maximum_underestimated = false;
 	msg_for_follow_traj.controls = msg->controls;
 	msg_for_follow_traj.ee_profiles = msg->ee_profiles;
 	msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.om_pre_pub_time_stamp).toSec();
@@ -680,6 +683,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+    		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
 			msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
@@ -728,7 +732,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
-		res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
+    	res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
+        res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
@@ -746,10 +751,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
 
     res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
-	res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
+    res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
+    res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
     res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 	msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
     msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+    msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
     volume_explored_in_unit_cubes = 0;
 
 

@@ -238,7 +238,7 @@
   <param name="pc_res" value="$(arg pc_res)"/>
   <!-- arg name="om_to_pl_res" default="" /-->   
   <param name="om_to_pl_res" value="$(arg pc_res)"/>
-  <arg name="pc_vol_ideal" default="10000" />   
+  <arg name="pc_vol_ideal" default="80000" />   
   <param name="pc_vol_ideal" value="$(arg pc_vol_ideal)"/>
   <arg name="om_to_pl_vol_ideal" default="20000" />   
   <param name="om_to_pl_vol_ideal" value="$(arg om_to_pl_vol_ideal)"/>
@@ -317,7 +317,7 @@
   <arg name="filterOctoMap" default="true" /> 
   <arg name="MapToTransferSideLength" default="30" /> 
 
-  <arg name="gridSliceCountPerSide" default="4" />
+  <arg name="gridSliceCountPerSide" default="2" />
   <arg name="gridMode" default="3d" />
   <arg name="voxel_type_to_publish" default="occupied" />
  

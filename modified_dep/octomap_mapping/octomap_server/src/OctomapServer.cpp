@@ -404,8 +404,12 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 using namespace std; //
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
-//	m_octree->clear();
+	ros::param::get("/voxel_type_to_publish", voxel_type_to_publish, voxel_type_to_publish);
+	//	m_octree->clear();
 	pc_vol_actual = 0;
+	pc_vol_maximum_underestimated = true;
+	om_to_pl_vol_maximum_underestimated = true;
+
 	pc_capture_time = ros::Time::now();
 	const sensor_msgs::PointCloud2 * cloud = &(pcl_aug_data->pcl);
 	// -- insert the point cloud into the map
@@ -555,7 +559,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   //profiling_container.capture("sensor_volume_to_digest", "single", pcl_aug_data->controls.inputs.sensor_volume_to_digest, capture_size);
 
-  //m_octree->clear(); // blah
+   //m_octree->clear(); // blah
   //m_octree =new OcTree(m_res); //blah
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
@@ -680,12 +684,14 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     		ROS_INFO_STREAM("what the hell");
     	}
     	*/
-    	break;
+		  pc_vol_maximum_underestimated = false;
+		  break;
     }
 	point3d point(it->x, it->y, it->z);
     // maxrange check
-    if ((m_maxRange > 0.0) && ((point - sensorOrigin).norm() > m_maxRange) ) {
-      point = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
+	if ((m_maxRange > 0.0) && ((point - sensorOrigin).norm() > m_maxRange) ) {
+
+		point = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
     }
 
     // only clear space (ground points)
@@ -717,12 +723,13 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     		ROS_INFO_STREAM("what the hell");
     	}
     	*/
+		pc_vol_maximum_underestimated = false;
     	break;
     }
 	point3d point(it->x, it->y, it->z);
     // maxrange check
     if ((m_maxRange < 0.0) || ((point - sensorOrigin).norm() <= m_maxRange) ) {
-
+    	auto distance = (point - sensorOrigin).norm();
       // free cells
       if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
       //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
@@ -1776,6 +1783,13 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  int binary_search_cntr= 0;
  double error = INFINITY;
  MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
+
+ // conduct a binary search to find the betst MapToTransferSideLength
+
+ double tree_total_volume = m_octree->getRoot()->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3);
+ if (om_to_pl_vol_ideal <= tree_total_volume){
+	 om_to_pl_vol_maximum_underestimated = false;
+ }
  while (true){
 	 om_to_pl_vol_actual = 0;
 	 octomap_block_vec.clear();
@@ -1793,7 +1807,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 		 auto m_octree_leaf_node = m_octree->search(key);
 		 auto m_octree_block = m_octree->search_with_pos_and_depth_return_(key, pos, depth_found_at, MapToTransferBorrowedDepth);
 		 if (!m_octree_block){
-			continue;
+			 continue;
 		 }else{
 			 if (std::find(octomap_block_vec.begin(), octomap_block_vec.end(),m_octree_block) !=octomap_block_vec.end()) {
 				 continue;
@@ -1815,7 +1829,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 		 MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
 	 }
 	 binary_search_cntr++;
-}
+ }
 
   /*
   if (error > .1){
@@ -1924,6 +1938,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  octomap_aug_data.header.stamp = rostime;
 	  octomap_aug_data.oct = map;
 	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
+	  octomap_aug_data.ee_profiles.space_stats.pc_vol_maxium_underestimated = pc_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
+	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_vol_maxium_underestimated = om_to_pl_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
@@ -1942,7 +1958,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
 
 
-
+/*
 // filter octomap before publishing
 void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
@@ -2005,12 +2021,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
       }
 
 
-     /*
-      if (std::find(point_to_consider_vec.begin(), point_to_consider_vec.end(),point_to_consider)!=point_to_consider_vec.end()) {
-    //	  ROS_ERROR_STREAM("already inclucded the point");
-    	  continue;
-      }
-	*/
+
 
       point_to_consider_vec.push_back(point_to_consider);
 
@@ -2066,6 +2077,8 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 	  octomap_aug_data.oct = map;
 	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
 	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual;
+	  octomap_aug_data.ee_profiles.space_stats.pc_vol_maxium_underestimated = pc_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
+	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_vol_maxium_underestimated.data = om_to_pl_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
 	  profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
@@ -2082,7 +2095,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", om_to_pl_res, capture_size); // @suppress("Invalid arguments")
   profiling_container.capture(std::string("octomap_potential_exploration_volume"), "single", total_volume, capture_size); // @suppress("Invalid arguments")
 }
-
+*/
 
 void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
   Octomap map;
@@ -2104,6 +2117,8 @@ void OctomapServer::publishBinaryOctoMap(const ros::Time& rostime) {
 	  octomap_aug_data.oct = map;
 	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
 	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual;
+	  octomap_aug_data.ee_profiles.space_stats.pc_vol_maxium_underestimated = pc_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
+	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_vol_maxium_underestimated = om_to_pl_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
 	  //octomap_aug_data.blah = -1;

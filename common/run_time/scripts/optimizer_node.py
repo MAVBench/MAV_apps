@@ -41,6 +41,9 @@ def run_optimizer(control):
                                                                                                                  # r_gap_max, we can't actually see any gaps
     r_max_temp = max(r_max_temp, r_min_static)  # not lower than r_min_static
     r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
+    r_max_ = (2 ** math.floor(math.log(round(r_max_ /pc_res_min, 2), 2))) * pc_res_min  # must get the floor otherwise, when converting (after solving), when we get the floor, we might go over
+                                                                                        # the max value
+
     if r_max_ < r_min_:
         print("-------------------------------------------- bounds inverted -----------------------------------")
         r_min_ = r_max_
@@ -151,7 +154,8 @@ def control_callback(control):
     ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + misc_latency
     # set the knobs
     rospy.set_param("pc_res", float(pc_res))
-    rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))
+#    rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))
+    rospy.set_param("pc_vol_ideal", 11000)
     rospy.set_param("om_to_pl_res", float(om_to_pl_res))
     rospy.set_param("om_to_pl_vol_ideal", float(om_to_pl_vol_ideal))
     rospy.set_param("ppl_vol_ideal", float(ppl_vol_ideal))

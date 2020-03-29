@@ -1,3 +1,7 @@
+bool pc_vol_maxium_underestimated
+bool om_to_pl_vol_maxium_underestimated
+bool ppl_vol_maxium_underestimated
+
 float32 ppl_vol_unit_cube
 float32 pc_vol_unit_cube
 float32 pc_occupied_vol_unit_cube

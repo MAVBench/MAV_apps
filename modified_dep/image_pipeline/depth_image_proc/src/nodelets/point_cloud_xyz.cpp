@@ -398,13 +398,13 @@ unsigned long int inline point_hash_xy(double x, double y) {
 
 double inline round_to_resolution(double v, double resolution) {
 
-   /*
+
 	// add half, then truncate to round to nearest multiple of resolution
     v += boost::math::sign(v) * resolution / 2;
-    return v - fmod(v, resolution);
-    */
+    double result = v - fmod(v, resolution);
+
 	//v= floor(v*100)/100;
-	double result = floor((1./resolution)*v)*resolution;
+	//double result = floor((1./resolution)*v)*resolution;
 	return result;
 }
 
@@ -1156,6 +1156,9 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     		xs.push_back(*(cloud_x+ idx));
 			ys.push_back(*(cloud_y+idx));
 			zs.push_back(*(cloud_z+idx));
+//			double temp_zs = *(cloud_z+idx);
+//			double temp_xs = *(cloud_x+idx);
+//			double temp_ys = *(cloud_y+idx);
     	}
     }
 
@@ -1261,9 +1264,12 @@ void filterByResolutionByHashing(std::vector<float> &xs,  std::vector<float> &ys
       if (hashed_point != last_hashed_point){
 		  if (seen.find(hashed_point) == seen.end()) {
 			  seen.insert(hashed_point);
-			  xs_best.push_back(rounded_x);
-			  ys_best.push_back(rounded_y);
-			  zs_best.push_back(rounded_z);
+			  //xs_best.push_back(rounded_x);
+			  //ys_best.push_back(rounded_y);
+			  //zs_best.push_back(rounded_z);
+			  xs_best.push_back(xs[i]);
+			  ys_best.push_back(ys[i]);
+			  zs_best.push_back(zs[i]);
 			  num_of_points +=1;
 		  }
 		  last_hashed_point = hashed_point;
@@ -1690,9 +1696,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   //run_diagnostics_for_shape(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution);
   //runDiagnostics(cloud_x, cloud_y, cloud_z, n_points, point_cloud_resolution, volume_to_digest, area_to_digest);
   // -- using the gridded approach
-  const int grid_size = 60;
-  float **gridded_volume;
+  //float diagnostic_resolution = pc_res; // -- point cloud resolution to use for diagnostic purposes
   float diagnostic_resolution = 1; // -- point cloud resolution to use for diagnostic purposes
+  const int grid_size = 60/diagnostic_resolution;
+  float **gridded_volume;
   double gap_statistics_avg, gap_statistics_min, gap_statistics_max, obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om, obs_dist_statistics_avg_from_pc;
 
   gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistics_min,
