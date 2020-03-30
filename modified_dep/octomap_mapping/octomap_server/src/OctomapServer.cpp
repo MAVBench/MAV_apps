@@ -187,7 +187,6 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   closest_obs_coord = point3d(m_maxRange, m_maxRange, m_maxRange);
   dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0));
 
-
   double r, g, b, a;
   private_nh.param("color/r", r, 0.0);
   private_nh.param("color/g", g, 0.0);
@@ -404,7 +403,7 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 using namespace std; //
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
-	ros::param::get("/voxel_type_to_publish", voxel_type_to_publish, voxel_type_to_publish);
+	//ros::param::get("/voxel_type_to_publish", voxel_type_to_publish);
 	//	m_octree->clear();
 	pc_vol_actual = 0;
 	pc_vol_maximum_underestimated = true;
@@ -638,7 +637,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
 
 
-
    /*
    ros::param::get("/om_res", temp_res);
    if (temp_res != m_res) { //construct a new map
@@ -667,6 +665,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  originalSensorOrigin = sensorOrigin; // to ensure the shrunk tree maintains the same origin as the normal tree
 	  first_time_scanning = false;
 	  ROS_ERROR_STREAM("getting sensor origin");
+      //auto my_key_ = m_octree->adjustKeyAtDepth(my_key,10);
+	  auto my_key = m_octree->coordToKey(originalSensorOrigin);
+	  m_octree->updateNode((OcTreeKey) my_key, false, false);
   }
 
   //update the closest obstacle
@@ -695,8 +696,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     }
 
     // only clear space (ground points)
-    if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){//blah
-    //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
+    //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){//blah
+    if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	free_cells.insert(m_keyRay.begin(), m_keyRay.end());
     }
 
@@ -731,8 +732,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     if ((m_maxRange < 0.0) || ((point - sensorOrigin).norm() <= m_maxRange) ) {
     	auto distance = (point - sensorOrigin).norm();
       // free cells
-      if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
-      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
+      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
+      if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
       }
       // occupied endpoint
@@ -753,8 +754,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
       }
     } else {// ray longer than maxrange:;
       point3d new_end = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
-      if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay, resolution_ratio, depth_to_look_at)){
-      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
+      //if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay, resolution_ratio, depth_to_look_at)){
+      if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
         octomap::OcTreeKey endKey;
         if (m_octree->coordToKeyChecked(new_end, endKey)){
@@ -1633,7 +1634,7 @@ static inline bool binaryMapToMsgModified(const OctomapT& octomap, Octomap& msg,
 	return true;
 }
 
-
+/*
 // filter octomap based On Volume publishing
 void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
@@ -1652,7 +1653,7 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   int depth_to_look_at = 16;
 
   // -- put the original sensorOrigin in the shrunk_tree
-  OcTreeT* m_octree_shrunk = new OcTreeT(m_octree->getResolution());
+  m_octree_shrunk = new OcTreeT(m_octree->getResolution());
   m_octree_shrunk->setProbHit(m_octree->getProbHit());
   m_octree_shrunk->setProbMiss(m_octree->getProbMiss());
   m_octree_shrunk->setClampingThresMin(m_octree->getClampingThresMin());
@@ -1739,7 +1740,7 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   profiling_container.capture(std::string("octomap_potential_exploration_resolution"), "single", om_to_pl_res, capture_size); // @suppress("Invalid arguments")
   profiling_container.capture(std::string("octomap_potential_exploration_volume"), "single", total_volume, capture_size); // @suppress("Invalid arguments")
 }
-
+*/
 
 // filter octomap before publishing based on volume
 // we use a sampling method to make sure that we continously include the map
@@ -1867,12 +1868,17 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   }else{
 	  node_occupancy =  m_octree->isNodeOccupied(m_octree_node);
   }
-  m_octree_shrunk->updateNode(m_octree->coordToKey(originalSensorOrigin), node_occupancy);
+  m_octree_shrunk->updateNode(m_octree->coordToKey(originalSensorOrigin), node_occupancy, false);
   int parentBorrowedDepth = MapToTransferBorrowedDepth - 1;
   generateOffSets(offset_vals, gridSideLength, gridSideLength/4, gridSliceCountToInclude, gridMode) ;
   vector<point3d> point_to_consider_vec;
+  vector<OcTreeKey> key_at_depth_vec;
   //ros::Duration(10).sleep();
   // iteratve and add slices TODO: possibly add a prune, but probably not necessary
+
+  int cntr_total =0;
+  int cntr_to_cnt = 0;
+  bool to_continue;
   for (auto it = offset_vals.begin(); it != offset_vals.end(); it++) {
       point3d offset_point = *it;
 
@@ -1891,22 +1897,62 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	*/
 
       point_to_consider_vec.push_back(point_to_consider);
-
       auto key = m_octree->coordToKey(point_to_consider);
-	  auto m_octree_block = m_octree->search_with_pos_and_depth_return_(key, pos, depth_found_at, MapToTransferBorrowedDepth);
-	  auto m_octree_leaf_node = m_octree->search(key);
-	  if (!m_octree_block){
+      // -- get the block that has the key (At certain depth)
+      auto m_octree_block = m_octree->search_with_pos_and_depth_return_(key, pos, depth_found_at, MapToTransferBorrowedDepth);
+      if (!m_octree_block){
 		  continue;
 	  }
+      /*
+      if (depth_found_at != MapToTransferBorrowedDepth-1){
+		  continue;
+	  }
+		*/
+	  // get the key at the depth it has been found and
+	  // add it to the vector to avoid adding it again
+	  auto key_at_depth = m_octree->coordToKey(point_to_consider, depth_found_at+1);
+	  //to_continue = false;
+
+	  //for (int i =0; i<8; i++){
+//		  key_at_depth = m_octree->coordToKey(point_to_consider, depth_found_at-i);
+		  //if (std::find(key_at_depth_vec.begin(), key_at_depth_vec.end(),key_at_depth)!=key_at_depth_vec.end()) {
+			//  to_continue = true;
+	//		  cntr_to_cnt++;
+			  //			  break;
+		  //}
+//	  }
+		  //cntr_total++;
+	  if (std::find(key_at_depth_vec.begin(), key_at_depth_vec.end(),key_at_depth)!=key_at_depth_vec.end()) {
+		  continue;
+	  }else{
+		  //key_at_depth = m_octree->coordToKey(point_to_consider, depth_found_at);
+		  //coord_at_depth = m_octree->coordToKey(key_at_depth, depth_found_at);
+		  key_at_depth_vec.push_back(key_at_depth);
+		  //coord_at_depth_vec.push_back(coord_at_depth);
+	  }
+
+
+	  //auto m_octree_leaf_node = m_octree->search(key);
+	  auto m_octree_shrunk_leaf_node_ = m_octree_shrunk->search(key);
+	  int octree_shrunk_depth_found_at;
+	  //auto m_octree_shrunk_leaf_node = m_octree_shrunk->search_with_pos_and_depth_return_(key, pos, octree_shrunk_depth_found_at, MapToTransferBorrowedDepth);
+
+
 	  // now we just insert a leaf (of depth max) as a place holder to replace later
 	  // we delete this node later
 	  OcTreeNode* m_octree_shrunk_node;
-	  if (!m_octree_leaf_node){ //if the node doesn't exist, add it
+	  if (!m_octree_shrunk_leaf_node_){ //if the node doesn't exist, add it
 		  m_octree_shrunk_node = m_octree_shrunk->updateNode(key, false, false);
-	  }else{
+	  }
+	  /*
+	  else if (octree_shrunk_depth_found_at <= depth_found_at){ // already added it in one of the previous iterations
+		  continue;
+	  }*/
+		  /*
+	  else{
 		  m_octree_shrunk_node = m_octree_shrunk->updateNode(key, m_octree_leaf_node->getValue(), true);
 	  }
-
+	 */
 	  //ROS_INFO_STREAM(sizeof(*m_octree_shrunk_node));
 	  //float ok = m_octree_shrunk_node->to_delete;
 
@@ -1915,7 +1961,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 
 	  int parent_depth_found_at;
 	  unsigned int parent_pos_found_at;
-	  auto m_octree_shrunk_block_parent = m_octree_shrunk->search_with_pos_and_depth_return_(key, parent_pos_found_at, parent_depth_found_at, parentBorrowedDepth); //parent
+	  auto m_octree_shrunk_block_parent = m_octree_shrunk->search_with_pos_and_depth_return_(key, parent_pos_found_at, parent_depth_found_at, depth_found_at); //parent
 
 	  if (parent_depth_found_at != depth_found_at - 1){ //this is a sanity check to make sure we don't encounter situations where the depth requested is different than
 		  	  	  	  	  	  	  	  	  	  	  	    //acquired
@@ -1925,7 +1971,9 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  m_octree_shrunk->setChild(m_octree_shrunk_block_parent, m_octree_block, pos);
 	  //delete m_octree_shrunk_node;
   }
-
+  //if (cntr_total > 0){
+  //ROS_INFO_STREAM("----------- percentage skipedd"<<(float)cntr_to_cnt/cntr_total<< " total"<<cntr_total<< " skipped"<<cntr_to_cnt);
+  //}
   profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
   double volume_communicated_in_unit_cubes = 0;
   // serialize

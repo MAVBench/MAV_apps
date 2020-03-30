@@ -54,7 +54,10 @@ double total_collision_func = 0;
 double potential_distance_to_explore = 0; // the distance that the planner ask to expore (note that this can be bigger than the volume since the volume calculation stops after hitting a an obstacle)
 double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
 double ppl_vol_idealInUnitCube;
+double volume_explored_in_unit_cube_last = 0;
+int stagnation_ctr = 0;
 ros::Time g_planning_start_time;
+bool ppl_vol_maximum_underestimated;
 /*
 void planner_termination_func(double &volume_explored_so_far, double &volume_explored_threshold){
 	bool res = volume_explored_so_far > volume_explored_threshold;
@@ -67,14 +70,25 @@ bool planner_termination_func(){
 																				   // -- so that we will return
 	//ROS_INFO_STREAM("===== in termination with volume of "<< volume_explored_in_unit_cubes);
 //	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube) || taking_to_long;
-	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
-
+	bool volume_explored_exceeded = (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
+	if (volume_explored_in_unit_cube_last < volume_explored_in_unit_cubes){
+		volume_explored_in_unit_cube_last = volume_explored_in_unit_cubes;
+		stagnation_ctr = 0;
+	}else{
+		stagnation_ctr++;
+	}
+	bool explored_new_teritory = stagnation_ctr < 20;
+	if (explored_new_teritory){
+		ppl_vol_maximum_underestimated = false;
+	}
+	return volume_explored_exceeded || !explored_new_teritory;
 }
 
 template<class PlannerType>
 MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int& status)
 {
 
+   stagnation_ctr = 0;
 	//publish_dummy_octomap_vis(octree);
 	namespace ob = ompl::base;
     namespace og = ompl::geometric;
@@ -448,7 +462,7 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msg)
 {
 
-	ppl_vol_maximum_underestimated = false;
+	ppl_vol_maximum_underestimated = true;
 	msg_for_follow_traj.controls = msg->controls;
 	msg_for_follow_traj.ee_profiles = msg->ee_profiles;
 	msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.om_pre_pub_time_stamp).toSec();

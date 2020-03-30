@@ -205,7 +205,6 @@ private:
     ros::ServiceServer get_trajectory_srv_server, goal_rcv_service;
     ros::Publisher traj_pub;
     ros::Publisher timing_msg_from_mp_pub;
-	bool ppl_vol_maximum_underestimated;
     octomap::OcTree * octree = nullptr; int future_col_seq_id = 0;
     ros::Publisher motion_plannineg_debug_pub;
     int trajectory_seq_id = 0;

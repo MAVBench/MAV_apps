@@ -162,7 +162,7 @@ public:
   virtual void insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data);
   virtual bool openFile(const std::string& filename);
   void log_data_before_shutting_down();
-
+ OcTreeT* m_octree_shrunk;
 
 
 protected:
