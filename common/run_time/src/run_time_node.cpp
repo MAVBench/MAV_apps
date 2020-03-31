@@ -194,7 +194,7 @@ bool goal_known = false;
 double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag){
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
 
-	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining");
+	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", control.inputs.obs_dist_statistics_min);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
 	return time_budget;
 }
@@ -211,8 +211,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
-	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency);
-
+	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
 	double time_budget;
 	if (msg->points.size() < 2 || macro_time_budgets.size() < 2){
 		time_budgetting_failed = true;
@@ -225,12 +224,15 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 		//ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
 	}
 
+    ROS_INFO_STREAM("time budget"<<time_budget<< "obstacle distance"<<control.inputs.obs_dist_statistics_min);
+
 //	else{
 //		time_budget = min(max_time_budget, macro_time_budgets[0]);
 //	}
 //	ROS_INFO_STREAM("---- next step"<< control_inputs.sensor_to_actuation_time_budget_to_enforce);
 
 	control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
+
 	//	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
 
 	/*
@@ -943,6 +945,8 @@ int main(int argc, char **argv)
     		}else{
     			control.inputs.ppl_vol_min = 0;
     		}
+
+
     		control_to_pyrun.publish(control);
     		time_budgetting_failed  = false;
     	}

@@ -29,6 +29,7 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRang
 	return budget;
 }
 
+/*
 double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency){
 	double budget = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensorRange , this->sensorActuatorModel_.accelerationCoeffs()) - latency;
 	if (isnan(budget) || isinf(budget))  { // occurs when velocity is 0
@@ -36,10 +37,12 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRang
 	}
 
 }
+*/
 
+double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, string mode="no_pipelining", double sensor_range=25){
+	//double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, this->sensorActuatorModel_.maxSensorRange(), this->sensorActuatorModel_.accelerationCoeffs());
+	double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensor_range, this->sensorActuatorModel_.accelerationCoeffs());
 
-double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, string mode="no_pipelining"){
-	double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, this->sensorActuatorModel_.maxSensorRange(), this->sensorActuatorModel_.accelerationCoeffs());
 	double next_sampling_time;
 	if (mode == "no_pipelining"){ // this assumes that latency is equal to 1/throughput
 		next_sampling_time = response_time/2;
@@ -58,14 +61,16 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 
 // calcSamplingTime helper (called recursively)
 void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin, std::deque<multiDOFpoint>::iterator trajEnd,
-		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency){
+		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency, double sensor_range){
 	multiDOFpoint point = *(trajBegin);
 	double velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
 
+	/*
 	if (isnan(velocity_magnitude)){
 		ROS_INFO_STREAM("fucked up");
 	}
-	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency);
+	*/
+	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, "no_pipelineing", sensor_range);
 	double potentialBudgetTillNextSample;  // a place holder that gets updated
 	std::deque<multiDOFpoint>::iterator trajItrTemp =  trajBegin;  //pointing to the sample point we are considering at the moment
 
@@ -84,7 +89,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		nextSamplingTimeTemp += this->timeIncr_;
 		point = *(trajItrTemp);
 		velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
-		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency);
+		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, "no_pipelining", sensor_range);
 		if (potentialBudgetTillNextSample <= 0) {
 			//std::cout<<"-- shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
 			trajItrTemp +=1;
@@ -105,7 +110,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 
 // iteratively going through all the points in the trajectory and calculating the time budget by
 // calling its Helper
-std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double latency){
+std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double latency, double sensor_range){
 	double thisSampleTime = 0;
 	double nextSampleTime = 0;
 	this->SamplingTimes_.clear();
@@ -116,7 +121,7 @@ std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double la
 	std::deque<multiDOFpoint>::iterator trajItr = traj.begin();
 
 	while (trajRollingItrBegin < trajItrEnd){
-		calcSamplingTimeHelper(trajRollingItrBegin, trajItrEnd, trajItr, nextSampleTime, latency);
+		calcSamplingTimeHelper(trajRollingItrBegin, trajItrEnd, trajItr, nextSampleTime, latency, sensor_range);
 		thisSampleTime += nextSampleTime;
 		this->SamplingTimes_.push_back(thisSampleTime);
 		trajRollingItrBegin = trajItr;

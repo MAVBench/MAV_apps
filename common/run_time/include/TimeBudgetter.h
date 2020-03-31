@@ -12,13 +12,13 @@ public:
 	TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget);
 
 	double calcSamplingTimeFixV(double velocityMag , double sensorRange, std::vector<double> acceleartionCoeffs, double latency);
-	double calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency);
-	double calcSamplingTimeFixV(double velocityMag, double latency, string mode);
+	//double calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency);
+	double calcSamplingTimeFixV(double velocityMag, double latency, string mode, double closest_obs);
 
 	void calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin,
 			std::deque<multiDOFpoint>::iterator trajEnd , std::deque<multiDOFpoint>::iterator &trajItr,
-			double &nextSamplingTime, double latency);
-	std::vector<double> calcSamplingTime(trajectory_t traj, double latency);
+			double &nextSamplingTime, double latency, double sensor_range);
+	std::vector<double> calcSamplingTime(trajectory_t traj, double latency, double sensor_range);
 	double calc_magnitude(double x, double y, double z);
 
 	virtual ~TimeBudgetter();

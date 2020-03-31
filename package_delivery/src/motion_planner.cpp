@@ -471,9 +471,12 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 	g_smoothening_budget = msg->ee_profiles.expected_time.ppl_latency;  // -- for now setting it equal to ppl_budget
 															   // -- todo: this can be another knob
 
+	SA_time_budget_to_enforce= msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce;
+	img_capture_time = msg->ee_profiles.actual_time.img_capture_time_stamp;
 	// reset all the profiling values
 	potential_distance_to_explore = 0;
     volume_explored_in_unit_cubes = 0;
+    volume_explored_in_unit_cube_last = 0;
     debug_data.motion_planning_collision_check_volume_explored = 0;
     debug_data.motion_planning_piecewise_volume_explored = 0;
     debug_data.motion_planning_smoothening_volume_explored = 0;
@@ -638,8 +641,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //----------------------------------------------------------------- 
     auto hook_end_t_2 = ros::Time::now(); 
 
-	ros::param::get("/ppl_time_budget", g_ppl_time_budget);
-	ros::param::get("/smoothening_budget", g_smoothening_budget);
+	//ros::param::get("/ppl_time_budget", g_ppl_time_budget);
+	//ros::param::get("/smoothening_budget", g_smoothening_budget);
 
     //auto hook_start_t = ros::Time::now();
     //g_start_pos = req.start;
@@ -894,7 +897,7 @@ void MotionPlanner::get_start_in_future(Drone& drone,
     //Data *look_ahead_time;
     //profiling_container.findDataByName("motion_planning_time_total", &look_ahead_time);
     //multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, look_ahead_time->values.back());
-    multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, g_smoothening_budget + g_ppl_time_budget);
+    multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, 2*g_ppl_time_budget);
 	//multiDOFpoint mdofp = trajectory_at_time(g_next_steps_msg, .2);
 
 
@@ -1424,6 +1427,8 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     // }
 
     // Finally, loop over the drone's bounding box to search for collisions
+    int resolution_ratio = (int)(map_res/octree->getResolution());
+    int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
     octomap::point3d end;
     for (auto it = octree->begin_leafs_bbx(min, max),
             end_it = octree->end_leafs_bbx(); it != end_it; ++it)
@@ -1432,8 +1437,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
         
         // std::cout << distance << " (" << start.x() << " " << start.y() << " " << start.z() << ") (" << direction.x() << " " << direction.y() << " " << direction.z() << ")" << std::endl;
         double volume_explored_in_unit_cubes_ = 0;
-        int resolution_ratio = (int)(map_res/octree->getResolution());
-        int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+
 
         if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_explored_in_unit_cubes_, resolution_ratio, depth_to_look_at)) {
             if (end_ptr != nullptr) {
@@ -1746,6 +1750,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool col;
     int smoothening_ctr = 0;	
     ros::Duration smoothening_time_so_far;
+	g_smoothening_budget = SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec();
     do {
 		col = false;
 
@@ -1763,6 +1768,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		// (Each segment goes from one of the original nodes to the next one in the path)
 		mav_trajectory_generation::Segment::Vector segments;
 		opt.getSegments(&segments);
+
 
 		// Loop through the vector of segments looking for collisions
 		for (int i = 0; !col && i < segments.size(); ++i) {
@@ -1828,7 +1834,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     	 bool now = 1;
      }
 
-     ROS_ERROR_STREAM("smoothening_ctr"<<smoothening_ctr << " smoothening tim so far"<<smoothening_time_so_far.toSec());
+     ROS_ERROR_STREAM("smoothening_ctr"<<smoothening_ctr << " smoothening tim so far"<<smoothening_time_so_far.toSec()<<" while budget is"<<ros::Duration(g_smoothening_budget).toSec());
     } while (col &&
             smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec());
     		//smoothening_ctr < 5);

@@ -252,6 +252,10 @@ private:
     float g_smoothening_budget;
     float g_out_of_bounds_allowance = 5;
     int replanning_reason;
+    double SA_time_budget_to_enforce; // end to end budget
+	ros::Time img_capture_time; // time when image was captured
+
+
     // The following block of variables only exist for debugging purposes
     visualization_msgs::MarkerArray smooth_traj_markers;
     visualization_msgs::MarkerArray piecewise_traj_markers;
