@@ -106,7 +106,7 @@ private:
     void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg);
 
     // is the trajecotry colliding
-    bool traj_colliding(mavbench_msgs::multiDOFtrajectory *traj);
+    bool traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, geometry_msgs::Point &closest_unknown);
 
 
     void octomap_communication_proxy_msg_cb(const std_msgs::Header& msg);
@@ -134,12 +134,18 @@ private:
 
     // *** F:DN Checks whether there is a collision between two nodes in the occupancy grid.
     bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr = nullptr);
-
-    bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2,string mode, graph::node * end_ptr = nullptr);
+    bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, geometry_msgs::Point &closest_unknown, graph::node * end_ptr = nullptr);
 
     // whether the drone is already following a trajectory
     bool haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj);
 
+
+    double inline calc_dist(octomap::point3d point1, octomap::point3d point2) {
+    	double dx = point1.x() - point2.x();
+    	double dy = point1.y() - point2.y();
+    	double dz = point1.z() - point2.z();
+    	return std::sqrt(dx*dx + dy*dy + dz*dz);
+    }
 
     bool shouldReplan(const octomap_msgs::Octomap& msg);
 
@@ -197,7 +203,7 @@ private:
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
-    ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub;
+    ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub, closest_unknown_pub;
     bool knob_performance_modeling = false;
     bool knob_performance_modeling_for_om_to_pl = false;
     bool knob_performance_modeling_for_piecewise_planner = false;

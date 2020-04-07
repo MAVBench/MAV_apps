@@ -17,12 +17,12 @@ public:
 
 	void calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin,
 			std::deque<multiDOFpoint>::iterator trajEnd , std::deque<multiDOFpoint>::iterator &trajItr,
-			double &nextSamplingTime, double latency, double sensor_range);
-	std::vector<double> calcSamplingTime(trajectory_t traj, double latency, double sensor_range);
+			double &nextSamplingTime, double latency, multiDOFpoint closest_unknown_point, double velocity_error);
+	std::vector<double> calcSamplingTime(trajectory_t traj, double latency, multiDOFpoint closest_unknown_point, double velocity_mag);
 	double calc_magnitude(double x, double y, double z);
 
 	virtual ~TimeBudgetter();
-
+    double calc_dist(multiDOFpoint point1, multiDOFpoint point2);
 private:
 	SensorActuatorModel sensorActuatorModel_;
 	std::vector<double> SamplingTimes_;

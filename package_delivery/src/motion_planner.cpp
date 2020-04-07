@@ -245,7 +245,8 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	m_markerPub = nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_dumy", 1);
 	smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
 	piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
-    goal_rcv_service = nh.advertiseService("goal_rcv", &MotionPlanner::goal_rcv_call_back, this);
+	closest_unknown_pub = nh.advertise<geometry_msgs::Point>("closest_unknown_point", 1);
+	goal_rcv_service = nh.advertiseService("goal_rcv", &MotionPlanner::goal_rcv_call_back, this);
 	//re = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
     if (knob_performance_modeling){
     	capture_size = 1;
@@ -366,6 +367,12 @@ void MotionPlanner::publish_dummy_octomap(octomap::OcTree *m_octree){
 	//publish_dummy_octomap_vis(m_octree);
 }
 
+double dist(coord t, graph::node m)
+{
+    // We must convert between the two coordinate systems
+    return std::sqrt((t.x-m.x)*(t.x-m.x) + (t.y-m.y)*(t.y-m.y) + (t.z-m.z)*(t.z-m.z));
+}
+
 double dist(coord t, geometry_msgs::Point m)
 {
     // We must convert between the two coordinate systems
@@ -411,7 +418,8 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		}
 		else {
 			profiling_container.capture("collision_check_for_replanning", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
-			bool collision_coming = this->traj_colliding(&g_next_steps_msg);
+			geometry_msgs::Point closest_unknown_way_point;
+			bool collision_coming = this->traj_colliding(&g_next_steps_msg, closest_unknown_way_point);
 			profiling_container.capture("collision_check_for_replanning", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 			debug_data.collision_check_for_replanning = profiling_container.findDataByName("collision_check_for_replanning")->values.back();
 			if (collision_coming){
@@ -422,6 +430,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				replan = true;
 			} else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
 				replanning_reason = No_need_to_plan;
+				closest_unknown_pub.publish(closest_unknown_way_point);
 				replan = false;
 			}
 		}
@@ -562,7 +571,6 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
 
 	if (DEBUG_VIS){
-    	ROS_INFO_STREAM("publishing octomap in motion planner is heavy. It's just used for debuuging. so comment out this block");
     	publish_dummy_octomap_vis(octree);
     }
 
@@ -842,7 +850,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     notified_failure = false;
 
     create_response(res, smooth_path);
-
 
     // Publish the trajectory (for debugging purposes)
     if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
@@ -1264,7 +1271,7 @@ bool MotionPlanner::out_of_bounds_lax(const graph::node& pos)
     return !x_correct || !y_correct || !z_correct;
 }
 
-
+/*
 bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, string mode, graph::node * end_ptr)
 {
 	profiling_container.capture("collision_func", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
@@ -1361,8 +1368,135 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 	//LOG_ELAPSED(motion_planner);
 	return false;
 }
+*/
 
 
+bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, geometry_msgs::Point &closest_unknown_point, graph::node * end_ptr)
+{
+	profiling_container.capture("collision_func", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+
+	if (motion_planning_core_str == "lawn_mower")
+        return false;
+
+	if (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube && piecewise_planning){
+		return true;
+	}
+
+    octomap::point3d n1_point; // to convert n1 from graph::node to octomap::point
+    n1_point(0) = n1.x;
+    n1_point(1) = n1.y;
+    n1_point(2) = n1.z;
+    closest_unknown_point.x = nan(""); // intialize for scenarios that we exceed the bound
+    closest_unknown_point.y = nan(""); // intialize for scenarios that we exceed the bound
+    closest_unknown_point.z = nan(""); // intialize for scenarios that we exceed the bound
+    double min_dist_to_unknown_so_far = std::numeric_limits<double>::max();
+
+    RESET_TIMER();
+
+    // First, check if anything goes too close to the ground
+    if (n1.z <= drone_height__global || n2.z <= drone_height__global){
+    	return true;
+    }
+
+    // Next, check if it goes out-of-bounds
+    bool z_out_of_bounds = !is_between(n1.z, z__low_bound__global, z__high_bound__global)
+        || !is_between(n2.z, z__low_bound__global, z__high_bound__global);
+    if (z_out_of_bounds) {
+        if (!is_between(n1.x, n2.x - g_out_of_bounds_allowance, n2.x + g_out_of_bounds_allowance)
+                || !is_between(n1.y, n2.y - g_out_of_bounds_allowance, n2.y + g_out_of_bounds_allowance)) {
+            if (end_ptr != nullptr) {
+                end_ptr->x = n1.x;
+                end_ptr->y = n1.y;
+                end_ptr->z = n1.z;
+            }
+            return true;
+        }
+    }
+
+    // Create a bounding box representing the drone
+    double height = drone_height__global;
+    double radius = drone_radius__global;
+
+    octomap::point3d min(n1.x-radius, n1.y-radius, n1.z-height/2);
+    octomap::point3d max(n1.x+radius, n1.y+radius, n1.z+height/2);
+
+    // Create a direction vector over which to check for collisions
+	double dx = n2.x - n1.x;
+	double dy = n2.y - n1.y;
+	double dz = n2.z - n1.z;
+    double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+    potential_distance_to_explore += distance;
+    octomap::point3d direction(dx, dy, dz);
+
+    // Make sure the direction vector isn't just (0,0,0)
+    // Otherwise, we'll get a bunch of really annoying error messages
+    // if (distance == 0) {
+    //     if (occupied(octree, n1.x, n1.y, n1.z)) {
+    //         if (end_ptr != nullptr) {
+    //             end_ptr->x = n1.x;
+    //             end_ptr->y = n1.y;
+    //             end_ptr->z = n1.z;
+    //         }
+    //         return true;
+    //     } else
+    //         return false;
+    // }
+
+    // Finally, loop over the drone's bounding box to search for collisions
+    int resolution_ratio = (int)(map_res/octree->getResolution());
+    int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+    octomap::point3d end;
+
+
+    // unknown calculation
+    octomap::OcTreeKey current_key;
+    if (!octree->coordToKeyChecked(n1_point, current_key) ) { // if out of bound
+    	closest_unknown_point.x = n1_point.x();
+    	closest_unknown_point.y = n1_point.y();
+    	closest_unknown_point.z = n1_point.z();
+    }else{
+    	if (!octree->search(current_key, depth_to_look_at)) { // if node doesn't exist
+    		closest_unknown_point.x = n1_point.x();
+    		closest_unknown_point.y = n1_point.y();
+    		closest_unknown_point.z = n1_point.z();
+    	}
+    }
+
+    //    octomap::point3d start = min;
+
+    //for (auto it = octree->begin_leafs_bbx(min, max),
+   //         end_it = octree->end_leafs_bbx(); it != end_it; ++it)
+
+    auto it = octree->begin_leafs_bbx(min, max);
+    auto end_it = octree->end_leafs_bbx();
+    while(true) {
+    	if (it == end_it){
+        	break;
+        }
+
+    	octomap::point3d start(it.getCoordinate());
+        double volume_explored_in_unit_cubes_ = 0;
+
+        if (octree->castRayAndCollectVolumeTraveresed(start, direction, end, true, distance, volume_explored_in_unit_cubes_, resolution_ratio, depth_to_look_at)) {
+            if (end_ptr != nullptr) {
+                end_ptr->x = end.x();
+                end_ptr->y = end.y();
+                end_ptr->z = end.z();
+            }
+            volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
+            profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+            total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
+            return true;
+        }
+        volume_explored_in_unit_cubes += volume_explored_in_unit_cubes_;
+        ++it;
+    }
+
+	profiling_container.capture("collision_func", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+	total_collision_func +=  profiling_container.findDataByName("collision_func")->values.back();
+	//LOG_ELAPSED(motion_planner);
+	return false;
+}
 
 
 bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr)
@@ -1541,22 +1675,31 @@ void MotionPlanner::spinOnce() {
 
 
 
-bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj)
+bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, geometry_msgs::Point &closest_unknown_way_point)
 {
 	if (octree == nullptr || traj->points.size() < 1) {
         return false;
     }
 
     bool col = false;
+    geometry_msgs::Point closest_unknown_point;
+    bool first_unknown_collected = false; // to only allow writing into the closest_unknown_way_point once
     graph::node *end_ptr = new graph::node();
     for (int i = 0; i < traj->points.size() - 1; ++i) {
         auto& pos1 = traj->points[i];
         auto& pos2 = traj->points[i+1];
         graph::node n1 = {pos1.x, pos1.y, pos1.z};
         graph::node n2 = {pos2.x, pos2.y, pos2.z};
-        if (collision(octree, n1, n2, end_ptr)) {
-            col = true;
+        if (collision(octree, n1, n2, closest_unknown_point, end_ptr)) {
+        	col = true;
             break;
+        }else{
+        	if (!isnan(closest_unknown_point.x) && !first_unknown_collected){
+        		first_unknown_collected = true;
+        		closest_unknown_way_point.x = closest_unknown_point.x;
+        		closest_unknown_way_point.y = closest_unknown_point.y;
+        		closest_unknown_way_point.z = closest_unknown_point.z;
+        	}
         }
     }
     //ROS_INFO_STREAM("volume"<<volume_explored_in_unit_cubes);
@@ -1751,9 +1894,11 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     int smoothening_ctr = 0;	
     ros::Duration smoothening_time_so_far;
 	g_smoothening_budget = SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec();
-    do {
+	geometry_msgs::Point closest_unknown_way_point;
+	bool first_unknown_collected = false;
+	do {
+		first_unknown_collected = false;
 		col = false;
-
 		// Estimate the time the drone should take flying between each node
 		auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
 
@@ -1780,6 +1925,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			auto segment_end = *(piecewise_path.begin() + i + 1);
 
 			// Step through each individual segment, at increments of "time_step" seconds, looking for a collision
+			geometry_msgs::Point closest_unknown_point;
 			for (double t = 0; t < segment_len - time_step; t += time_step) {
                 // ROS_INFO("Stepping through individual...");
 				auto pos1 = segments[i].evaluate(t);
@@ -1790,9 +1936,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 				// Check for a collision between two near points on the segment
 
-                //if (motion_planning_core_str != "lawn_mower") {
                 //if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, "smoothener")) {
-                if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2)) {
+                if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, closest_unknown_point)) {
                 	/*
                 	if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2)){
                 		ROS_INFO_STREAM("out of bound n1");
@@ -1819,6 +1964,13 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 					col = true;
 
 					break;
+				}else{
+					if (!isnan(closest_unknown_point.x) && !first_unknown_collected){
+						first_unknown_collected = true;
+						closest_unknown_way_point.x = closest_unknown_point.x;
+						closest_unknown_way_point.y = closest_unknown_point.y;
+						closest_unknown_way_point.z = closest_unknown_point.z;
+					}
 				}
                 /*
                 else{
@@ -1837,14 +1989,15 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
      ROS_ERROR_STREAM("smoothening_ctr"<<smoothening_ctr << " smoothening tim so far"<<smoothening_time_so_far.toSec()<<" while budget is"<<ros::Duration(g_smoothening_budget).toSec());
     } while (col &&
             smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec());
-    		//smoothening_ctr < 5);
+//    		smoothening_ctr < 15);
             //ros::Time::now() < g_start_time+ros::Duration(g_ppl_time_budget));
 
     if (col || smoothening_time_so_far.toSec() >= ros::Duration(g_smoothening_budget).toSec()) {
         return smooth_trajectory();
     }
 
-	// Return the collision-free smooth trajectory
+
+    // Return the collision-free smooth trajectory
 	mav_trajectory_generation::Trajectory traj;
 	opt.getTrajectory(&traj);
 	int num_of_optimums_till_idx = 3; // return the accumulated number of optimums until this index. The idea is that
@@ -1890,7 +2043,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Visualize path for debugging purposes
 	mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
 	mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
-
+	assert(first_unknown_collected);
+	closest_unknown_pub.publish(closest_unknown_way_point);
 	return traj;
 }
 

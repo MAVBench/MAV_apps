@@ -33,10 +33,13 @@
 #include <mavbench_msgs/control.h>
 #include "package_delivery/point.h"
 #include <common.h>
+#include "coord.h"
+#include <visualization_msgs/Marker.h>
 
 using namespace std;
 std::string ip_addr__global;
 double g_sensor_max_range, g_sampling_interval, g_v_max;
+bool DEBUG_VIS;
 std::deque<double> MacroBudgets;
 bool reactive_runtime;
 string budgetting_mode;
@@ -187,16 +190,25 @@ double maxSensorRange;
 double TimeIncr;
 double maxVelocity;
 geometry_msgs::Point g_goal_pos;
+multiDOFpoint closest_unknown_point;
+multiDOFpoint closest_unknown_point_upper_bound; // used if closest_uknown is inf, that's there is not unknown
 bool goal_known = false;
+double cur_vel_mag; // current drone's velocity
 
-
-
-double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag){
+double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag, double sensor_range){
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
 
-	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", control.inputs.obs_dist_statistics_min);
+	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", sensor_range);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
 	return time_budget;
+}
+
+
+void closest_unknown_callback(const geometry_msgs::Point::ConstPtr& msg){
+	closest_unknown_point.x = msg->x;
+	closest_unknown_point.y = msg->y;
+	closest_unknown_point.z = msg->z;
+
 }
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
@@ -208,10 +220,19 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
     	traj.push_back(point__);
     }
 
+	if (isnan(closest_unknown_point.x) ||
+			isnan(closest_unknown_point.y) ||
+			isnan(closest_unknown_point.z) ){
+		ROS_INFO_STREAM("================================== closest_uknown_is not defined");
+		closest_unknown_point = closest_unknown_point_upper_bound;
+	}
+
 
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
-	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
+//	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
+
+	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, cur_vel_mag);
 	double time_budget;
 	if (msg->points.size() < 2 || macro_time_budgets.size() < 2){
 		time_budgetting_failed = true;
@@ -224,7 +245,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 		//ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
 	}
 
-    ROS_INFO_STREAM("time budget"<<time_budget<< "obstacle distance"<<control.inputs.obs_dist_statistics_min);
+    //ROS_INFO_STREAM("time budget"<<time_budget<< "obstacle distance"<<control.inputs.obs_dist_statistics_min);
 
 //	else{
 //		time_budget = min(max_time_budget, macro_time_budgets[0]);
@@ -264,12 +285,20 @@ void initialize_global_params() {
         exit(-1);
 	}
 
+
+	if(!ros::param::get("/DEBUG_VIS", DEBUG_VIS)){
+		ROS_FATAL_STREAM("Could not start run_time_node DEBUG_VIS not provided");
+        exit(-1);
+	}
+
+
 	if(!ros::param::get("/v_max", g_v_max)) {
 		ROS_FATAL_STREAM("Could not start run_time_node v_max not provided");
         exit(-1);
 	}
 
 	if(!ros::param::get("/sensor_max_range", g_sensor_max_range)) {
+
 		ROS_FATAL_STREAM("Could not start run_time_node sensor_max_range not provided");
         exit(-1);
 	}
@@ -301,7 +330,7 @@ int get_point_count(double resolution, vector<std::pair<double, int>>& pc_res_po
 }
 
 /*
-void static_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
+void static_budgetting(double cur_vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
 	// -- knobs to set (and some temp values)
 	double point_cloud_num_points;
 	float MapToTransferSideLength;
@@ -360,7 +389,7 @@ void static_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_po
 	static_pc_vol_ideal  = pc_vol_ideal_max;
 	static_om_to_pl_res = static_pc_res;
 	static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max;
-	static_ppl_vol_ideal = ppl_vol_ideal_max;// - ppl_vol_ideal_min)/(0 - g_v_max)*vel_mag + ppl_vol_ideal_max;
+	static_ppl_vol_ideal = ppl_vol_ideal_max;// - ppl_vol_ideal_min)/(0 - g_v_max)*cur_vel_mag + ppl_vol_ideal_max;
 
 
 	// -- set the parameters
@@ -387,7 +416,7 @@ void static_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_po
 
 
 
-void performance_modeling(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
+void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
 	// -- knobs to set (and some temp values)
 	double point_cloud_num_points;
 	float MapToTransferSideLength;
@@ -551,7 +580,7 @@ void performance_modeling(double vel_mag, vector<std::pair<double, int>>& pc_res
 
 
 
-void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
+void reactive_budgetting(double cur_vel_mag, vector<std::pair<double, int>>& pc_res_point_count_vec){
 	// -- knobs to set (and some temp values)
 	double point_cloud_num_points;
 	float MapToTransferSideLength;
@@ -606,14 +635,14 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 
 	// -- feed forward (simple)
 	float offset_v_max = g_v_max/num_of_steps_on_y; // this is used to offsset the g_v_max; this is necessary otherwise, the step function basically never reacehs the min_pc_res
-	double pc_res_temp =  (pc_res_max - pc_res_min)/(0 - (g_v_max-offset_v_max)) * vel_mag + pc_res_max;
+	double pc_res_temp =  (pc_res_max - pc_res_min)/(0 - (g_v_max-offset_v_max)) * cur_vel_mag + pc_res_max;
 	pc_res_power_index = int(log2(pc_res_temp/pc_res_max));
 
 	static_pc_res =  pow(2, pc_res_power_index)*pc_res_max;
-	static_pc_vol_ideal  = (pc_vol_ideal_max - pc_vol_ideal_min)/(0 - g_v_max)*vel_mag + pc_vol_ideal_max;
+	static_pc_vol_ideal  = (pc_vol_ideal_max - pc_vol_ideal_min)/(0 - g_v_max)*cur_vel_mag + pc_vol_ideal_max;
 	static_om_to_pl_res = static_pc_res;
-	static_om_to_pl_vol_ideal = (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/(0 - g_v_max)*vel_mag + om_to_pl_vol_ideal_max;
-	static_ppl_vol_ideal = (ppl_vol_ideal_max - ppl_vol_ideal_min)/(0 - g_v_max)*vel_mag + ppl_vol_ideal_max;
+	static_om_to_pl_vol_ideal = (om_to_pl_vol_ideal_max - om_to_pl_vol_ideal_min)/(0 - g_v_max)*cur_vel_mag + om_to_pl_vol_ideal_max;
+	static_ppl_vol_ideal = (ppl_vol_ideal_max - ppl_vol_ideal_min)/(0 - g_v_max)*cur_vel_mag + ppl_vol_ideal_max;
 
 	// -- determine the number of points within point cloud
 	/*
@@ -623,8 +652,8 @@ void reactive_budgetting(double vel_mag, vector<std::pair<double, int>>& pc_res_
 	//--  calculate the maximum number of points in an unfiltered point cloud as a function of resolution
 	//    double modified_max_point_cloud_point_count = (max_point_cloud_point_count_max_resolution - max_point_cloud_point_count_min_resolution)/(pc_res_max - min_pc_res)*(pc_res - pc_res_max) + max_point_cloud_point_count_max_resolution;
 	//    calucate num of points as function of velocity
-	//static_point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*vel_mag + max_point_cloud_point_count_max_resolution;
-	//MapToTransferSideLength = 500 + (500 -40)/(0-g_v_max)*vel_mag;
+	//static_point_cloud_num_points = (max_point_cloud_point_count_max_resolution - min_point_cloud_point_count)/(0 - g_v_max)*cur_vel_mag + max_point_cloud_point_count_max_resolution;
+	//MapToTransferSideLength = 500 + (500 -40)/(0-g_v_max)*cur_vel_mag;
 	 */
 
 
@@ -682,6 +711,56 @@ bool goal_rcv_call_back(package_delivery::point::Request &req, package_delivery:
 }
 
 
+
+double inline calc_dist(coord point1, multiDOFpoint point) {
+    	double dx = point1.x - point.x;
+    	double dy = point1.y - point.y;
+    	double dz = point1.z - point.z;
+    	return std::sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+
+visualization_msgs::Marker get_marker(multiDOFpoint closest_unknown_point){
+	uint32_t shape = visualization_msgs::Marker::SPHERE;
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "basic_shapes";
+	marker.id = 0;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = shape;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = closest_unknown_point.x;
+	marker.pose.position.y = closest_unknown_point.y;
+	marker.pose.position.z = closest_unknown_point.z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 2.0;
+	marker.scale.y = 2.0;
+	marker.scale.z = 2.0;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 0.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+
+	marker.lifetime = ros::Duration(2);
+	return marker;
+}
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
@@ -703,12 +782,14 @@ int main(int argc, char **argv)
 
     std::string ns = ros::this_node::getName();
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
+    ros::Subscriber closest_unknown_sub = n.subscribe<geometry_msgs::Point>("/closest_unknown_point", 1, closest_unknown_callback);
+
     initialize_global_params();
     ros::Subscriber control_sub = n.subscribe<mavbench_msgs::control>("/control_to_crun", 1, control_callback);
     ros::ServiceServer goal_rcv_service = n.advertiseService("goal_rcv_2", goal_rcv_call_back);
 
     ros::Publisher control_to_pyrun = n.advertise<mavbench_msgs::control>("control_to_pyrun", 1);//, connect_cb, connect_cb);
-
+    ros::Publisher closest_unknown_marker_pub = n.advertise<visualization_msgs::Marker>("closest_unknown_marker", 1);//, connect_cb, connect_cb);
 
     profiling_container = new DataContainer();
     ROS_INFO_STREAM("ip to contact to now"<<ip_addr__global);
@@ -878,10 +959,17 @@ int main(int argc, char **argv)
     ros::Publisher runtime_debug_pub = n.advertise<mavbench_msgs::runtime_debug>("/runtime_debug", 1);
     ros::param::get("/max_time_budget", max_time_budget);
 
+
     Drone drone(ip_addr.c_str(), port, localization_method);
+
+    closest_unknown_point.x = drone.position().x  + g_sensor_max_range/3;
+    closest_unknown_point.y = drone.position().y + g_sensor_max_range/3;
+    closest_unknown_point.z = drone.position().z + g_sensor_max_range/3;
+
     //Drone drone(ip_addr__global.c_str(), port);
 	ros::Rate pub_rate(50);
-    while (ros::ok())
+
+	while (ros::ok())
 	{
 
     	ros::spinOnce();
@@ -897,10 +985,11 @@ int main(int argc, char **argv)
     	}
     	got_new_input = false;
     	auto vel = drone.velocity();
-    	auto vel_mag = (double) calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+    	cur_vel_mag = (double) calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+    	auto drone_position = drone.position();
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
-    		ros::param::set("velocity_to_budget_on", vel_mag);
+    		ros::param::set("velocity_to_budget_on", cur_vel_mag);
     		ros::param::get("/reactive_runtime", reactive_runtime);
     		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
     		ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om);
@@ -917,40 +1006,63 @@ int main(int argc, char **argv)
     			ros::param::set("new_control_data", true);
     		} else if (budgetting_mode == "dynamic"){
     			if (reactive_runtime){
-    				reactive_budgetting(vel_mag, pc_res_point_count);
+    				reactive_budgetting(cur_vel_mag, pc_res_point_count);
     			}
     		} else if (budgetting_mode == "performance_modeling"){
-    				performance_modeling(vel_mag, pc_res_point_count);
+    				performance_modeling(cur_vel_mag, pc_res_point_count);
     		} else{
     		  ROS_INFO_STREAM("budgetting mode" << budgetting_mode<< " not defined");
     		  exit(0);
     		}
     	    /*
     		else if (budgetting_mode == "static"){
-    			static_budgetting(vel_mag, pc_res_point_count);
+    			static_budgetting(cur_vel_mag, pc_res_point_count);
     			ros::param::set("new_control_data", true);
     		}
     	*/
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
-    		if (traj.size() == 0 || time_budgetting_failed) { // -- if we haven't started the initla planning or there is not trajectory
-    			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(vel_mag));
-    			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
-    			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  vel_mag:"<<vel_mag);
-    		}
+    		closest_unknown_point_upper_bound.x = drone.position().x  + 10*g_sensor_max_range/pow(3,.5);
+    		closest_unknown_point_upper_bound.y = drone.position().y + 10*g_sensor_max_range/pow(3, .5);
+    		closest_unknown_point_upper_bound.z = drone.position().z + 10*g_sensor_max_range/pow(3, .5);
+
     		if (goal_known){
     			double direct_length = calc_vec_magnitude(drone.position().x - g_goal_pos.x, drone.position().y - g_goal_pos.y, drone.position().z - g_goal_pos.z);
     			double volume_of_direct_distance_to_goal = 3.4*pow(planner_drone_radius, 2)*direct_length;
     			control.inputs.ppl_vol_min = float(ppl_vol_min_coeff*volume_of_direct_distance_to_goal);
     		}else{
+    			closest_unknown_point.x = drone.position().x  + g_sensor_max_range/pow(3,.5);
+    			closest_unknown_point.y = drone.position().y + g_sensor_max_range/pow(3, .5);
+    			closest_unknown_point.z = drone.position().z + g_sensor_max_range/pow(3, .5);
     			control.inputs.ppl_vol_min = 0;
     		}
 
+    		if (traj.size() == 0 || time_budgetting_failed) { // -- if we haven't started the initla planning or there is not trajectory
+    			double closest_unknown_point_distance = calc_dist(drone_position, closest_unknown_point);
+    			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
+    			double sensor_range = closest_unknown_point_distance;
+    			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
+    			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
+    			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
+    		}
 
     		control_to_pyrun.publish(control);
     		time_budgetting_failed  = false;
+
+    		if (DEBUG_VIS){
+    			auto marker = get_marker(closest_unknown_point);
+    			closest_unknown_marker_pub.publish(marker);
+    		}
+    		if (DEBUG_RQT){
+    			debug_data.header.stamp = ros::Time::now();
+    			debug_data.closest_unknown_distance = calc_dist(drone_position, closest_unknown_point);
+    			runtime_debug_pub.publish(debug_data);
+    		}
     	}
 	}
+
+
+
 
 }
 
