@@ -14,12 +14,19 @@ drone_radius = 3
 import time
 obs_dist_min_calc_from_octomap = 100
 
+class dummy_output:
+    def __init__(self):
+        self.success = False
+
 def run_optimizer(control):
 
     # -- determine the response time destired (rt_d)
-    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency
+    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency - runtime_latency # the second run_time_latency is for the following iteration
     if (time_budget_left_to_distribute < 0):
         print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+        results = dummy_output()
+        failure_status = 2
+        return results, failure_status
     rt_d = min(time_budget_left_to_distribute, rt_max)
     rt_d = max(rt_d, .2)
 
@@ -95,11 +102,16 @@ def run_optimizer(control):
     profile = True
     tol = 1e-12
     results = opt.opt(profile=profile, rt_d=rt_d, x0=x0, tol=tol, verbose=False)
-    return results
+    if not results.success:
+        failure_status = 1
+    else:
+        failure_status = 0
+    return results, failure_status
     
 
 def control_callback(control):
-    results = run_optimizer(control)
+    results, failure_status = run_optimizer(control)  # failure status key: 1:no valid cofig, 2:not enough time
+
 
     # some default values
     #pc_res = pc_res_min
@@ -143,6 +155,7 @@ def control_callback(control):
         ppl_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
         smoothening_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
     else:
+        rospy.set_param("optimizer_failure_status", failure_status)
         rospy.set_param("optimizer_succeeded", False)
         rospy.set_param("log_control_data", False)
         rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
@@ -159,7 +172,7 @@ def control_callback(control):
     rospy.set_param("om_to_pl_res", float(om_to_pl_res))
     rospy.set_param("om_to_pl_vol_ideal", float(om_to_pl_vol_ideal))
     rospy.set_param("ppl_vol_ideal", float(ppl_vol_ideal))
-
+    rospy.set_param("optimizer_failure_status", failure_status)
     # time budgets (expected with the above knob settings)
     rospy.set_param("sensor_to_actuation_time_budget_to_enforce", control.internal_states.sensor_to_actuation_time_budget_to_enforce)
     rospy.set_param("om_latency_expected", float(om_latency_expected))

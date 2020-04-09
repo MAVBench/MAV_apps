@@ -54,7 +54,7 @@ bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 bool time_budgetting_failed = false;
 double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min;
-
+coord drone_position;
 
 mavbench_msgs::control control;
 
@@ -195,6 +195,7 @@ multiDOFpoint closest_unknown_point_upper_bound; // used if closest_uknown is in
 bool goal_known = false;
 double cur_vel_mag; // current drone's velocity
 
+
 double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag, double sensor_range){
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
 
@@ -208,7 +209,12 @@ void closest_unknown_callback(const geometry_msgs::Point::ConstPtr& msg){
 	closest_unknown_point.x = msg->x;
 	closest_unknown_point.y = msg->y;
 	closest_unknown_point.z = msg->z;
-
+	if (isnan(closest_unknown_point.x) ||
+			isnan(closest_unknown_point.y) ||
+			isnan(closest_unknown_point.z) ){
+		ROS_INFO_STREAM("================================== closest_uknown_is not defined");
+		closest_unknown_point = closest_unknown_point_upper_bound;
+	}
 }
 
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
@@ -220,19 +226,13 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
     	traj.push_back(point__);
     }
 
-	if (isnan(closest_unknown_point.x) ||
-			isnan(closest_unknown_point.y) ||
-			isnan(closest_unknown_point.z) ){
-		ROS_INFO_STREAM("================================== closest_uknown_is not defined");
-		closest_unknown_point = closest_unknown_point_upper_bound;
-	}
-
 
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
 //	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
 
-	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, cur_vel_mag);
+	//auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, distance_error);
+	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, drone_position); // not really working well with cur_vel_mag
 	double time_budget;
 	if (msg->points.size() < 2 || macro_time_budgets.size() < 2){
 		time_budgetting_failed = true;
@@ -747,9 +747,9 @@ visualization_msgs::Marker get_marker(multiDOFpoint closest_unknown_point){
 	marker.pose.orientation.w = 1.0;
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 2.0;
-	marker.scale.y = 2.0;
-	marker.scale.z = 2.0;
+	marker.scale.x = .5;
+	marker.scale.y = .5;
+	marker.scale.z = .5;
 
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = 0.0f;
@@ -757,7 +757,7 @@ visualization_msgs::Marker get_marker(multiDOFpoint closest_unknown_point){
 	marker.color.b = 0.0f;
 	marker.color.a = 1.0;
 
-	marker.lifetime = ros::Duration(2);
+	marker.lifetime = ros::Duration(.5);
 	return marker;
 }
 
@@ -929,8 +929,7 @@ int main(int argc, char **argv)
 			ROS_FATAL_STREAM("Could not start runtime; pc_vol_ideal_max not provided");
 			exit(0);
     }
-
-   if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
+if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
 			ROS_FATAL_STREAM("Could not start runtime; ppl_vol_min_coeff not provided");
 			exit(0);
     }
@@ -986,7 +985,8 @@ int main(int argc, char **argv)
     	got_new_input = false;
     	auto vel = drone.velocity();
     	cur_vel_mag = (double) calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
-    	auto drone_position = drone.position();
+    	drone_position = drone.position();
+
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
     		ros::param::set("velocity_to_budget_on", cur_vel_mag);
@@ -1022,9 +1022,9 @@ int main(int argc, char **argv)
     	*/
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
-    		closest_unknown_point_upper_bound.x = drone.position().x  + 10*g_sensor_max_range/pow(3,.5);
-    		closest_unknown_point_upper_bound.y = drone.position().y + 10*g_sensor_max_range/pow(3, .5);
-    		closest_unknown_point_upper_bound.z = drone.position().z + 10*g_sensor_max_range/pow(3, .5);
+    		closest_unknown_point_upper_bound.x = drone.position().x  + g_sensor_max_range/pow(3,.5);
+    		closest_unknown_point_upper_bound.y = drone.position().y + g_sensor_max_range/pow(3, .5);
+    		closest_unknown_point_upper_bound.z = drone.position().z + g_sensor_max_range/pow(3, .5);
 
     		if (goal_known){
     			double direct_length = calc_vec_magnitude(drone.position().x - g_goal_pos.x, drone.position().y - g_goal_pos.y, drone.position().z - g_goal_pos.z);

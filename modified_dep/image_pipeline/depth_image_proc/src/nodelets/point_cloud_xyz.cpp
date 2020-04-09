@@ -35,12 +35,15 @@
 #include <nodelet/nodelet.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
+#include <mavbench_msgs/multiDOFpoint.h>
 #include <image_geometry/pinhole_camera_model.h>
+#include <geometry_msgs/Point.h>
 #include <boost/thread.hpp>
 #include <depth_image_proc/depth_conversions.h>
 #include <signal.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <datacontainer.h>
+#include <tf/transform_listener.h>
 #include "Profiling.h"
 #include "profile_manager/start_profiling_srv.h"
 #include "profile_manager/profiling_data_srv.h"
@@ -60,6 +63,8 @@ using namespace std;
 namespace depth_image_proc {
 
 namespace enc = sensor_msgs::image_encodings;
+geometry_msgs::PointStamped unknown_point_converted_to_pc_coord; // by default it's set to 0,0  (basically same as the pc cetner unless modified)
+																 // this is used to calculate the bucket radius (and also the maximum bucket radius)
 
 float sensor_max_range;
 double point_cloud_max_z;
@@ -81,6 +86,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::Publisher pc_debug_pub;
   ros::Publisher control_pub;
   ros::Subscriber inform_pc_done_sub;
+  ros::Subscriber closest_unknown_sub;
 
   image_geometry::PinholeCameraModel model_;
     
@@ -121,6 +127,8 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
   bool  new_control_data = false;
 
+  tf::TransformListener listener;
+
   void connectCb();
 
   void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
@@ -135,6 +143,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   void log_data_before_shutting_down();
   ~PointCloudXyzNodelet();
   void inform_pc_done_cb(std_msgs::Bool);
+  void closest_unknown_callback(geometry_msgs::Point);
   ProfileManager *profile_manager_;
   DataContainer *profiling_container;
 };
@@ -297,6 +306,13 @@ void PointCloudXyzNodelet::onInit()
     	capture_size = 1;
     }
 
+
+    unknown_point_converted_to_pc_coord.point.x = 0.0;
+    unknown_point_converted_to_pc_coord.point.y = 0.0;
+    unknown_point_converted_to_pc_coord.point.z = 0.0;
+
+
+
     pt_cld_ctr = 0;
     pt_cld_generation_acc = 0;
     img_to_pt_cloud_acc = 0;
@@ -314,9 +330,58 @@ void PointCloudXyzNodelet::onInit()
     pc_debug_pub = nh.advertise<mavbench_msgs::point_cloud_debug>("/point_cloud_debug", 1);
     control_pub = nh.advertise<mavbench_msgs::control>("control_to_crun", 1);
     inform_pc_done_sub =  nh.subscribe("inform_pc_done", 1, &PointCloudXyzNodelet::inform_pc_done_cb, this);
+    closest_unknown_sub = nh.subscribe("closest_unknown_point", 1, &PointCloudXyzNodelet::closest_unknown_callback, this);
+
 
     profile_manager_client =
     		private_nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data", true);
+}
+
+bool got_new_closest_unknown = true;
+bool got_first_unknown = false;
+geometry_msgs::PointStamped closest_unknown_point;
+geometry_msgs::PointStamped closest_unknown_point_upper_bound; // used if closest_uknown is inf, that's there is not unknown
+
+void PointCloudXyzNodelet::closest_unknown_callback(const geometry_msgs::Point msg){
+	got_first_unknown = true;
+	got_new_closest_unknown = true;
+	if (isnan(msg.x) ||
+			isnan(msg.y) ||
+			isnan(msg.z) ){ // filtering is centered around pc center
+		unknown_point_converted_to_pc_coord.point.x =
+				unknown_point_converted_to_pc_coord.point.y =
+						unknown_point_converted_to_pc_coord.point.z = 0;
+		return;
+	}
+	closest_unknown_point.point.x = msg.x;
+	closest_unknown_point.point.y = msg.y;
+	closest_unknown_point.point.z = msg.z;
+	closest_unknown_point.header.frame_id = "world";
+	closest_unknown_point.header.stamp = ros::Time(); // TODO: change this to
+
+	// point to convert from
+	//geometry_msgs::PointStamped unknown_point;
+	//just an arbitrary point in space
+	//closest_unknown_point.point.x = 1.0;  //
+	//closest_unknown_point.point.y = 0.2;
+	//closest_unknown_point.point.z = 0.0;
+	//closest_unknown_point.header.frame_id = "world";
+	//closest_unknown_point.header.stamp = ros::Time::now(); // TODO: change this to
+	// transfer the point to point cloud coordinates
+	try {
+		listener.transformPoint("camera", closest_unknown_point, unknown_point_converted_to_pc_coord); // from point, to
+	}catch(...){
+		; // just use the previous unknown_pont_converted_to_pc_coord
+	}
+
+	/*
+	// rubbish for now
+	tf::StampedTransform transform;
+    listener.lookupTransform("camera", "world",
+    		closest_unknown_point.header.stamp, transform);
+	Eigen::Matrix4f sensorToWorld;
+	pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
+	*/
 }
 
  PointCloudXyzNodelet::~PointCloudXyzNodelet(){
@@ -1036,8 +1101,9 @@ void filterByNumOfPoints(sensor_msgs::PointCloud2Iterator<float> &cloud_x, senso
 	}
 }
 
-/*
+
 // -- filter based on the desired volume to maintain
+/*
 void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
 		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points, double volume_to_keep, double &volume_kept, float **gridded_volume, int grid_volume_row_size, float diagnostic_resolution)
 {
@@ -1119,8 +1185,13 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
 //	vector<double> radius_points_z[num_radius_buckets];
 //	bool radius_points_valid[num_radius_buckets];
 //	memset(&radius_points_valid[0], false, sizeof(radius_points_valid));
+	double closest_unknown_pt_distance_to_pc_center = (int) (std::pow(std::pow(unknown_point_converted_to_pc_coord.point.x, 2) +
+    			std::pow(unknown_point_converted_to_pc_coord.point.y, 2), 0.5)); // would be zero if uknown_point_converted is at the cetner of pc
+																				 // i.e,. 0,0
 
-	double max_radius = sensor_max_range* std::pow(2, 0.5);
+	double max_radius = sensor_max_range* std::pow(2, 0.5) +  closest_unknown_pt_distance_to_pc_center + 1;
+
+	//radius_volume[radiu
 	double bucket_width = max_radius / num_radius_buckets;
 	double this_x, this_y, this_z, last_x, last_y, last_z;
 	double last_row_y; // y associated with the first element of last row
@@ -1134,12 +1205,13 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     	this_z = *(cloud_z + i);
     	// -- project x,y,z if they are outside of the sensor range
     	double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
-    	if (norm > sensor_max_range){
-    		//	  this_x = (sensor_max_range/norm)*this_x;
-    		//	  this_y = (sensor_max_range/norm)*this_y;
-    		this_z = (sensor_max_range/norm)*this_z;
+    	if (norm > sensor_max_range + .5){
+    	//		  this_x = (sensor_max_range/norm)*this_x;
+    	//		  this_y = (sensor_max_range/norm)*this_y;
+    			  this_z = (sensor_max_range/norm)*this_z;
     	}
-    	int radius_bucket = (int) (std::pow(std::pow(this_x, 2) + std::pow(this_y, 2), 0.5) / bucket_width);
+    	int radius_bucket = (int) (std::pow(std::pow(this_x - unknown_point_converted_to_pc_coord.point.x, 2) +
+    			std::pow(this_y-unknown_point_converted_to_pc_coord.point.y, 2), 0.5) / bucket_width);
     	//radius_volume[radius_bucket] += (1.0/3)*fabs(this_x-last_x)*fabs(this_y - last_row_y)*this_z;
     	// using the gridded approach
     	int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_volume_row_size/2;
@@ -1149,6 +1221,7 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     	//radius_points_valid[radius_bucket] = true;
     	gridded_volume[x_index][y_index] = 0;
     }
+
 
     for (int bucket_number= 0; bucket_number <num_radius_buckets; bucket_number++){
     	for (int pt_idx= 0; pt_idx< radius_points[bucket_number].size(); pt_idx++){
@@ -1163,9 +1236,13 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     }
 
     /*
+    // use the following for filtering the pc within pc
+    // PS: we moved away from this because the estimation is inaccurate
+    // PS: however, filtering within pc is actually makes up for better visuals (for audience)
     // select the most central points to include
 	int max_radius_bucket = 0;
 	double volume_included = 0;
+	//volume_to_keep = 1000;
 	while (volume_included <= volume_to_keep && max_radius_bucket < num_radius_buckets) {
 		max_radius_bucket++;
 		volume_included += radius_volume[max_radius_bucket];
@@ -1174,7 +1251,8 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
 	}
 
 	for (int i = 0; i < num_points; i++) {
-		int radius_bucket = (int) (std::pow(std::pow(*(cloud_x+i), 2) + std::pow(*(cloud_y+i), 2), 0.5) / bucket_width);
+		int radius_bucket = (int) (std::pow(std::pow(*(cloud_x+i) - unknown_point_converted_to_pc_coord.point.x, 2) +
+				std::pow(*(cloud_y+i) - unknown_point_converted_to_pc_coord.point.y , 2), 0.5) / bucket_width);
 		if (radius_bucket <= max_radius_bucket) {
 			xs.push_back(*(cloud_x+i));
 			ys.push_back(*(cloud_y+i));
@@ -1183,6 +1261,7 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
 	}
 	volume_kept = volume_included;
 	*/
+
 }
 
 
@@ -1613,7 +1692,34 @@ double PointCloudXyzNodelet::actual_to_estimated_vol_correction(double actual_vo
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
-   profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
+
+
+
+	if (got_first_unknown && !got_new_closest_unknown){
+		return;
+	}
+	got_new_closest_unknown = false;
+
+
+	/*
+	// for debugging for now
+	//geometry_msgs::PointStamped unknown_point;
+	//just an arbitrary point in space
+	//unknown_point.point.x = 1.0;  //
+	//unknown_point.point.y = 0.2;
+	//unknown_point.point.z = 0.0;
+	//unknown_point.header.frame_id = "world";
+	//unknown_point.header.stamp = ros::Time();// get the latest // TODO: change this
+
+	// transfer the point to point cloud coordinates
+	try {
+		listener.transformPoint("camera", closest_unknown_point, unknown_point_converted_to_pc_coord); // from point, to
+	}catch(...){
+		; // just use the previous unknown_pont_converted_to_pc_coord
+	}
+	*/
+
+	profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
    ros::param::get("/sensor_max_range", sensor_max_range);
    //ros::param::get("/point_cloud_width", point_cloud_width);
    //ros::param::get("/point_cloud_height", point_cloud_height);
@@ -1718,7 +1824,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   control.inputs.gap_statistics_avg = gap_statistics_avg;
   control.inputs.obs_dist_statistics_min = min(obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om);
   control.inputs.obs_dist_statistics_avg = obs_dist_statistics_avg_from_pc;  // note that we can't really get avg distance from octomap, since there
-  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	     // so many obstacles in the map
 
   control_pub.publish(control);
   //ROS_INFO_STREAM("publishing control now");
@@ -1733,12 +1838,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   ros::param::set("new_control_data", new_control_data);
 
   bool optimizer_succeeded;
+  int optimizer_failure_status;  // failure status key: 0: no failure, 1: no valid config 2:not enough time
   bool log_control_data; // used to determine whether the data coming from optimizer or manual is valid. This is
   	  	  	  	  	  	 // mainly used to avoid loging bogus data which occurs when the optimizer fails and
   	  	  	  	  	     // hence we don't have reasonable actual cmds to follow (note that a policty such as using the
   	  	  	  	  	     // the last actual cmds might result in bogus data since we don't know if we have for example
   	  	  	  	  	     // enough volume to consume in this round (comparing to last round)
   ros::param::get("/optimizer_succeeded", optimizer_succeeded);
+  ros::param::get("/optimizer_failure_status", optimizer_failure_status);
   ros::param::get("/log_control_data", log_control_data);
 
   /*
@@ -1769,6 +1876,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
    // -- piecewise planner
    ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
+
+
+   if (om_to_pl_res < pc_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<pc_res);} assert(om_to_pl_res >= pc_res);
 
 
   // -- start filtering
@@ -1827,6 +1937,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   pcl_aug_data.pcl = *cloud_msg;
 
   pcl_aug_data.controls.cmds.optimizer_succeeded = optimizer_succeeded;
+  pcl_aug_data.controls.cmds.optimizer_failure_status = optimizer_failure_status;
   pcl_aug_data.controls.cmds.log_control_data = log_control_data;
   pcl_aug_data.controls.cmds.pc_res = pc_res;
   pcl_aug_data.controls.cmds.pc_vol = pc_vol_ideal;

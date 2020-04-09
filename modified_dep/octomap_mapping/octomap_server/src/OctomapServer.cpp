@@ -219,7 +219,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_markerPub = m_nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array", 1, m_latchedTopics);
   inform_pc_done_pub = m_nh.advertise<std_msgs::Bool>("inform_pc_done", 1, m_latchedTopics);
 
-
+  closest_obs_marker_pub = m_nh.advertise<visualization_msgs::Marker>("closest_obs_marker_pub", 1);
 
   octomap_communication_proxy_msg =  m_nh.advertise<std_msgs::Header>("octomap_communication_proxy_msg", 1, m_latchedTopics);
   m_markerLowerResPub = m_nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_lower_res", 1, m_latchedTopics);
@@ -628,10 +628,25 @@ void OctomapServer::SaveMapCb(std_msgs::Bool msg){
 
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
 
+
+  //ros::Duration(10).sleep();
    point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
    double temp_res;
    int resolution_ratio = (int)(m_res/m_res_original);
    int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+
+   // correct(update) the coordinate of the closest obstacle based on new resolution
+   // this means recentering it based on the new resolution
+   int om_to_pl_resolution_ratio = (int)(om_to_pl_res/m_res_original);
+   int om_to_pl_depth_to_look_at = 16 - (int)log2((double)om_to_pl_resolution_ratio);
+   auto closest_obs_key = m_octree->coordToKey(closest_obs_coord, om_to_pl_depth_to_look_at);
+   closest_obs_coord = m_octree->keyToCoord(closest_obs_key, om_to_pl_depth_to_look_at);
+   auto sensor_origin_key = m_octree->coordToKey(sensorOrigin, om_to_pl_depth_to_look_at);
+   auto sensor_origin_corrected = m_octree->keyToCoord(sensor_origin_key, om_to_pl_depth_to_look_at);
+
+
+
+
    //int resolution_ratio = 1;
    //int depth_to_look_at = 16;
 
@@ -671,7 +686,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   }
 
   //update the closest obstacle
-  dist_to_closest_obs = min(calc_dist(closest_obs_coord, sensorOrigin), this->m_maxRange);
+  dist_to_closest_obs = min(max(calc_dist(closest_obs_coord, sensor_origin_corrected) - om_to_pl_res, 0.0), this->m_maxRange);
 
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
@@ -788,10 +803,10 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   float depth_acc_touched = 0;
   int cell_touched_cnt = 0;
   for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ++it){
-	  auto coordinate = m_octree->keyToCoord(*it);
-	  tree_max_x = max(tree_max_x, coordinate.x());
-	  tree_max_y = max(tree_max_y, coordinate.y());
-	  tree_max_z = max(tree_max_z, coordinate.z());
+	  auto coordinate_om = m_octree->keyToCoord(*it, depth_to_look_at);
+	  tree_max_x = max(tree_max_x, coordinate_om.x());
+	  tree_max_y = max(tree_max_y, coordinate_om.y());
+	  tree_max_z = max(tree_max_z, coordinate_om.z());
 
 	  if (occupied_cells.find(*it) == occupied_cells.end()){
     	const OcTreeKey my_key = *it;
@@ -815,12 +830,14 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, true, false);
 
 	  // calculate the closest obstacle distance
-	  auto coordinate = m_octree->keyToCoord(*it);
-	  tree_max_x = max(tree_max_x, coordinate.x());
-	  tree_max_y = max(tree_max_y, coordinate.y());
-	  tree_max_z = max(tree_max_z, coordinate.z());
+	  auto coordinate_om = m_octree->keyToCoord(*it, depth_to_look_at);
+	  auto coordinate_om_to_pl = m_octree->keyToCoord(*it, om_to_pl_depth_to_look_at);
 
-	  update_closest_obstacle(coordinate, sensorOrigin);
+	  tree_max_x = max(tree_max_x, coordinate_om.x());
+	  tree_max_y = max(tree_max_y, coordinate_om.y());
+	  tree_max_z = max(tree_max_z, coordinate_om.z());
+
+	  update_closest_obstacle(coordinate_om_to_pl, sensor_origin_corrected);
 
 	  //auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), true);
 	  //lower resolution map handling
@@ -961,11 +978,59 @@ double OctomapServer::calc_dist(point3d point1, point3d point2) {
 }
 
 
+
+visualization_msgs::Marker get_marker(octomap::point3d point){
+	uint32_t shape = visualization_msgs::Marker::SPHERE;
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "basic_shapes";
+	marker.id = 0;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = shape;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = point.x();
+	marker.pose.position.y = point.y();
+	marker.pose.position.z = point.z();
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 2.0;
+	marker.scale.y = 2.0;
+	marker.scale.z = 2.0;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 0.0f;
+	marker.color.g = 0.0f;
+	marker.color.b = 1.0f;
+	marker.color.a = 1.0;
+
+	marker.lifetime = ros::Duration(2);
+	return marker;
+}
+
+
+
+
 // this function is conserverative, that's if doesn't not correct for obstacles that are
 // labeled as occupied before, but not occupied now anymore
-void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensorOrigin) {
-	double dist_to_this_obs = calc_dist(coordinate, sensorOrigin);
-	dist_to_closest_obs = calc_dist(closest_obs_coord, sensorOrigin);
+void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensor_origin_corrected) {
+	double dist_to_this_obs = calc_dist(coordinate, sensor_origin_corrected);
+	dist_to_this_obs = max(dist_to_this_obs - om_to_pl_res, 0.0); // because octomap would bloat the voxels (note that both coordinate and
+									    // origin are the center of the voxels
+	dist_to_closest_obs = calc_dist(closest_obs_coord, sensor_origin_corrected);
+	dist_to_closest_obs = max(dist_to_closest_obs - om_to_pl_res, 0.0); // because octomap would bloat the voxels (note that both coordinate and
 	if (dist_to_this_obs <= dist_to_closest_obs){
 		dist_to_closest_obs = dist_to_this_obs;
 		closest_obs_coord = coordinate;
@@ -1372,6 +1437,11 @@ void OctomapServer::publishAll(const ros::Time& rostime){
   }
   */
 
+
+  if (DEBUG_VIS){
+	  auto marker = get_marker(closest_obs_coord);
+	  closest_obs_marker_pub.publish(marker);
+  }
 
 
   if (publishBinaryMap){

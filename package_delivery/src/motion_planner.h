@@ -238,6 +238,10 @@ private:
     bool DEBUG__global;
     double drone_height__global;
     double drone_radius__global;
+    double planner_drone_radius_when_hovering;
+    double planner_drone_height_when_hovering;
+
+
     double rrt_step_size__global;
     int rrt_bias__global;
     double x__low_bound__global, x__high_bound__global;

@@ -111,7 +111,7 @@ public:
  bool measure_time_end_to_end;
  ros::Time rcvd_point_cld_time_stamp;
  ros::Publisher inform_pc_done_pub;
-
+ ros::Publisher closest_obs_marker_pub;
  double om_to_pl_vol_actual = 0;
 
  //void log_data_before_shutting_down();

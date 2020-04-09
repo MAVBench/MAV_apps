@@ -52,7 +52,9 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 
 	double next_sampling_time;
 	if (mode == "no_pipelining"){ // this assumes that latency is equal to 1/throughput
-		next_sampling_time = response_time/2;
+		next_sampling_time = response_time;  // at this I belive, we just have the entire time
+											 // to dedicate for budget (but remember to remove decision making time
+											 // of this iteration and next iteration from it)
 	}else{
 		next_sampling_time = response_time - latency;
 	}
@@ -68,12 +70,12 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 
 // calcSamplingTime helper (called recursively)
 void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin, std::deque<multiDOFpoint>::iterator trajEnd,
-		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency, multiDOFpoint closest_unknown_point, double velocity_error){
+		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency, multiDOFpoint closest_unknown_point, double distance_error){
 	multiDOFpoint point = *(trajBegin);
 	double velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
-	velocity_magnitude -= velocity_error;
+	//velocity_magnitude -= velocity_error;
 
-	double sensor_range = calc_dist(point, closest_unknown_point);
+	double sensor_range = calc_dist(point, closest_unknown_point) + distance_error;
 	/*
 	if (first_itr){ // for debugging
 		//ROS_INFO_STREAM("------------ first unknown point distance from first way point"<<sensor_range);
@@ -103,7 +105,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		nextSamplingTimeTemp += this->timeIncr_;
 		point = *(trajItrTemp);
 		velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
-		velocity_magnitude -= velocity_error;
+		//velocity_magnitude -= velocity_error;
 		sensor_range = calc_dist(point, closest_unknown_point);
 		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, "no_pipelining", sensor_range);
 		if (potentialBudgetTillNextSample <= 0) {
@@ -126,7 +128,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 
 // iteratively going through all the points in the trajectory and calculating the time budget by
 // calling its Helper
-std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double latency, multiDOFpoint closest_unknown_point, double cur_velocity_mag = -1){
+std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double latency, multiDOFpoint closest_unknown_point, coord position){
 	double thisSampleTime = 0;
 	double nextSampleTime = 0;
 	this->SamplingTimes_.clear();
@@ -142,14 +144,19 @@ std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double la
 	multiDOFpoint point = *(trajItr);
 	double velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
 	double velocity_error;
+	double distance_error = calc_magnitude(position.x - point.x , position.y - point.y, position.z - point.z);
+	// use velocity error to correct for the difference between current velocity and the desired velocity
+	// this will help us to avoid being conservative
+	/*
 	if (cur_velocity_mag == -1){
-		velocity_error = velocity_magnitude - cur_velocity_mag;
-	}else{
 		velocity_error = 0;
+	}else{
+		velocity_error = velocity_magnitude - cur_velocity_mag;
 	}
+	*/
 
 	while (trajRollingItrBegin < trajItrEnd){
-		calcSamplingTimeHelper(trajRollingItrBegin, trajItrEnd, trajItr, nextSampleTime, latency, closest_unknown_point, velocity_error);
+		calcSamplingTimeHelper(trajRollingItrBegin, trajItrEnd, trajItr, nextSampleTime, latency, closest_unknown_point, distance_error);
 		thisSampleTime += nextSampleTime;
 		this->SamplingTimes_.push_back(thisSampleTime);
 		trajRollingItrBegin = trajItr;
