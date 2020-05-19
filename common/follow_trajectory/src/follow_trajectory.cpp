@@ -30,7 +30,7 @@ bool slam_lost = false;
 ros::Time future_collision_time{0}; // The moment in time when the drone should stop because of an upcoming collision
 int future_collision_seq = 0;
 int trajectory_seq = 0;
-
+geometry_msgs::Point closest_unknown_point;
 // Parameters
 float g_v_max;
 double p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
@@ -212,7 +212,8 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 //call back function to receive timing msgs_from_mp. Using this, we reset the vector because this means
 //that we have already made a decision to not make a traj for those imgs
 void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::ConstPtr& msg) {
-    erase_up_to_msg(msg->header, "timing_msgs_from_mp_callback");
+	closest_unknown_point = msg->closest_unknown_point;
+	erase_up_to_msg(msg->header, "timing_msgs_from_mp_callback");
     if (msg->planning_status == "first_time_planning") {
     	return;
     }else if (SA_response_time_capture_ctr >=1 and !micro_benchmark_signaled_supervisor) { //>=1 cause the first one is really big due to pre_mission steps
@@ -456,7 +457,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 {
 	//for profiling SA
 	erase_up_to_msg(msg->header, "callback_trajectory"); //erase the predecessors of the msg that currently reside in the timing_msgs_vec
-
+	closest_unknown_point = msg->closest_unknown_point;
     // Check for trajectories that arrive out of order
 	if (msg->trajectory_seq < trajectory_seq) {
         ROS_ERROR("follow_trajectory: Trajectories arrived out of order! New seq: %d, old seq: %d", msg->trajectory_seq, trajectory_seq);
@@ -871,7 +872,8 @@ int main(int argc, char **argv)
         trajectory_t * forward_traj;
         trajectory_t * rev_traj;
 
-        yaw_strategy_t yaw_strategy = follow_yaw;
+        //yaw_strategy_t yaw_strategy = follow_yaw;
+        yaw_strategy_t yaw_strategy = follow_closest_unknown;
         float max_velocity = g_v_max;
 
         /*
@@ -984,6 +986,7 @@ int main(int argc, char **argv)
         		// @suppress("Invalid arguments")
                 rev_traj,
         		debug_data,
+				closest_unknown_point,
 				yaw_strategy, check_position , max_velocity,
                 g_fly_trajectory_time_out, p_vx, p_vy, p_vz, I_px, I_py, I_pz, d_px, d_py, d_pz, reset_PID);
 

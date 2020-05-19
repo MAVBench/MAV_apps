@@ -15,3 +15,4 @@ float32 pc_vol_actual
 float32 sensor_to_actuation_time_budget_to_enforce
 float32 velocity_to_budget_on
 float32 pc_vol_estimated
+float32 optimizer_failure_status

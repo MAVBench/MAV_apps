@@ -48,8 +48,6 @@
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 
-
-
 double total_collision_func = 0;
 double potential_distance_to_explore = 0; // the distance that the planner ask to expore (note that this can be bigger than the volume since the volume calculation stops after hitting a an obstacle)
 double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
@@ -220,7 +218,6 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 
 	motion_planning_initialize_params();
     g_goal_pos.x = g_goal_pos.y = g_goal_pos.z = nan("");
-
 	// Create a new callback queue
 	nh.setCallbackQueue(&callback_queue);
 
@@ -228,6 +225,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 	get_trajectory_srv_server = nh.advertiseService("/get_trajectory_srv", &MotionPlanner::get_trajectory_fun, this);
 
 	future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
+	runtime_failure_sub = nh.subscribe("/runtime_failure", 1, &MotionPlanner::runtime_failure_cb, this);
 	octomap_communication_proxy_msg = nh.subscribe("/octomap_communication_proxy_msg", 1, &MotionPlanner::octomap_communication_proxy_msg_cb, this);
 	next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
 
@@ -238,20 +236,27 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
     timing_msg_from_mp_pub = nh.advertise<mavbench_msgs::response_time_capture> ("/timing_msgs_from_mp", 1);
     motion_planning_debug_pub = nh.advertise<mavbench_msgs::motion_planning_debug>("/motion_planning_debug", 1);
 
+    smoothener_collision_marker_pub = nh.advertise<visualization_msgs::Marker>("smoothener_collision_marker", 1);//, connect_cb, connect_cb);
+
+
 	// for stress testing
-	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 1);
+	octomap_dummy_pub = nh.advertise<octomap_msgs::Octomap>("octomap_binary_2", 2);
 
 	// for visualizatrion (rviz)
 	m_markerPub = nh.advertise<visualization_msgs::MarkerArray>("occupied_cells_vis_array_dumy", 1);
 	smooth_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("trajectory", 1);
 	piecewise_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
+	collision_traj_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("collision_waypoints", 1);
 	closest_unknown_pub = nh.advertise<geometry_msgs::Point>("closest_unknown_point", 1);
 	goal_rcv_service = nh.advertiseService("goal_rcv", &MotionPlanner::goal_rcv_call_back, this);
 	//re = nh.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
     if (knob_performance_modeling){
     	capture_size = 1;
     }
-}
+
+    time_budgetter = new TimeBudgetter(10.0, 10.0, accelerationCoeffs, 0.1, 10.0);  // non of the hardcoded values actually matter for motion planner
+
+		}
 
 
 
@@ -297,6 +302,12 @@ void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
     bool inUpdateBBX = true;
 
     bool publish_voxel = voxel_type_to_publish == "free" ? !m_octree->isNodeOccupied(*it):  m_octree->isNodeOccupied(*it);
+    if (voxel_type_to_publish == "all") {
+    		publish_voxel =true;
+    }
+
+
+
     if (publish_voxel){
       double z = it.getZ();
         double size = it.getSize();
@@ -328,7 +339,20 @@ void MotionPlanner::publish_dummy_octomap_vis(octomap::OcTree *m_octree){
 
             //double h = (1.0 - std::min(std::max((cubeCenter.z-minZ)/ (maxZ - minZ), 0.0), 1.0)) *m_colorFactor;
             std_msgs::ColorRGBA color;
-            color.a = 1; color.r = 1; color.g = 1; color.b = 1;
+
+
+             if (voxel_type_to_publish == "free"){
+            	color.a = .3; color.r = 0; color.g = 1; color.b = 0;
+            }else if (voxel_type_to_publish == "occupied"){
+            	color.a = .3; color.r = 1; color.g = 0; color.b = 0;
+            }else if (voxel_type_to_publish == "all") {
+            	if (m_octree->isNodeOccupied(*it)){
+            		color.a = .3; color.r = 1; color.g = 0; color.b = 0;
+            	}else{
+            		color.a = .3; color.r = 0; color.g = 1; color.b = 0;
+            	}
+            }
+//            color.a = 1; color.r = 1; color.g = 1; color.b = 1;
             occupiedNodesVis.markers[idx].colors.push_back(color);
         }
   }
@@ -378,6 +402,27 @@ double dist(coord t, geometry_msgs::Point m)
     // We must convert between the two coordinate systems
     return std::sqrt((t.x-m.x)*(t.x-m.x) + (t.y-m.y)*(t.y-m.y) + (t.z-m.z)*(t.z-m.z));
 }
+
+void MotionPlanner::runtime_failure_cb(const mavbench_msgs::runtime_failure_msg & msg){
+	//res.multiDOFtrajectory.planning_status = Short_time_failure;
+	mavbench_msgs::multiDOFtrajectory traj;
+	traj.header.stamp = msg.header.stamp;
+	traj.trajectory_seq = trajectory_seq_id;
+	traj.planning_status = "piecewise_planning_failed";
+    traj.reverse = false;
+    traj.stop = true;
+    traj.controls = msg.controls;
+    trajectory_seq_id++;
+    geometry_msgs::Point closest_unknown_way_point;
+    closest_unknown_way_point.x = nan("");
+    closest_unknown_way_point.y = nan("");
+    closest_unknown_way_point.z = nan("");
+	closest_unknown_pub.publish(closest_unknown_way_point);
+	traj.closest_unknown_point = closest_unknown_way_point;
+    traj_pub.publish(traj);
+    runtime_failure_last_time = true;
+}
+
 // determine whether it's time to replan
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	bool replan;
@@ -393,8 +438,14 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		replanning_reason = First_time_planning;
 		replan = true;
 	} else if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
-		if (failed_to_plan_last_time) {
-		//ROS_ERROR_STREAM("failed to plan last time , so replan");
+		if (runtime_failure_last_time){
+			replanning_reason = Runtime_failure;
+			runtime_failure_last_time = false;;
+			ROS_ERROR_STREAM("runtime failed last time , so replan");
+			replan = true;
+		}
+		else if (failed_to_plan_last_time) {
+		ROS_ERROR_STREAM("failed to plan last time , so replan");
 		replanning_reason = Failed_to_plan_last_time;
 		replan = true;
 		} else if (!planned_optimally && (ros::Time::now() - this->last_planning_time).toSec() < 3) {
@@ -427,15 +478,19 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				//ROS_INFO_STREAM("there is a collision");
 				profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0, capture_size); // @suppress("Invalid arguments")
 				//ROS_ERROR_STREAM("collision comming, so replan");
+				ROS_ERROR_STREAM(" collision detected");
 				replan = true;
-				closest_unknown_pub.publish(closest_unknown_way_point);
 			} else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
 				replanning_reason = No_need_to_plan;
-				closest_unknown_pub.publish(closest_unknown_way_point);
 				replan = false;
+				closest_unknown_pub.publish(closest_unknown_way_point);
+				msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
+				ROS_ERROR_STREAM(" not collision detected");
 			}
 		}
 	}
+
+
 	// for profiling
 	if (!replan) { //notify the follow trajectory to erase up to this msg
 		msg_for_follow_traj.planning_status = "no_planning_needed";
@@ -495,6 +550,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
     ppl_vol_ideal = msg->controls.cmds.ppl_vol;
 
+
     map_res = msg->controls.cmds.om_to_pl_res;
     ppl_vol_idealInUnitCube = ppl_vol_ideal/(pow(msg->controls.cmds.om_to_pl_res, 3));
     //ppl_vol_idealInUnitCube = 4000;
@@ -534,6 +590,9 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 			profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
 
 
+    if (DEBUG_VIS){
+    	publish_dummy_octomap_vis(octree);
+    }
 
     // -- purelly for knob_performance_modeling;
     // -- only collect data when the knob is set.
@@ -571,10 +630,6 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 	}
 
 
-	if (DEBUG_VIS){
-    	publish_dummy_octomap_vis(octree);
-    }
-
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
     		debug_data.octomap_deserialization_time = profiling_container.findDataByName("octomap_deserialization_time")->values.back();
@@ -590,11 +645,13 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     }
 
     auto blah = octree->getResolution();
-	if (!shouldReplan(msg->oct) && !knob_performance_modeling_for_piecewise_planner){
+    ppl_start_time = ros::Time::now();
+    if (!shouldReplan(msg->oct) && !knob_performance_modeling_for_piecewise_planner){
     	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(map_res, 3);
     	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
     	return;
     }
+    last_unknown_pt_ctr = 0;
 
     this->last_planning_time = ros::Time::now();
     g_planning_start_time = this->last_planning_time;
@@ -602,6 +659,21 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     bool planning_succeeded = this->motion_plan_end_to_end(msg->header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    if (unknown_budget_failed){
+    	/*
+    	auto vel = drone->velocity();
+    	if (drone->velocity().linear.x < .1 && drone->velocity().linear.y <.1 && drone->velocity().linear.z <.1){
+    		spin_around(*drone);
+    		closest_unknown_pub.publish(closest_unknown_way_point);
+    	}else{
+    		closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
+    	}
+    */
+    	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(map_res, 3);
+    	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
+    	unknown_budget_failed = false;
+    	return;
+    }
     //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
 
     if (knob_performance_modeling_for_piecewise_planner){
@@ -637,6 +709,7 @@ octomap::OcTree* MotionPlanner::getOctree() {
 
 //*** F:DN getting the smoothened trajectory
 bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res){
+	ros::Duration ppl_latency_so_far;
 
 	volume_explored_in_unit_cubes = 0; // reset the value for piecewise planning
 	//-----------------------------------------------------------------
@@ -656,6 +729,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //auto hook_start_t = ros::Time::now();
     //g_start_pos = req.start;
     //g_goal_pos = req.goal;
+    geometry_msgs::Point closest_unknown_way_point;
+    closest_unknown_way_point.x = nan("");
+    closest_unknown_way_point.y = nan("");
+    closest_unknown_way_point.z = nan("");
 
 
     //hard code values for now
@@ -680,9 +757,22 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     //publish_dummy_octomap_vis(octree);
     int status;
+
     total_collision_func =0;
     profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now(), capture_size);
-    piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
+    double last_time_planning_duration;
+    do {
+    	ros::Time this_time_ppl_start_time = ros::Time::now();
+    	piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
+    	ppl_latency_so_far = (ros::Time::now() - ppl_start_time);
+    	last_time_planning_duration = (ros::Time::now() - this_time_ppl_start_time).toSec();
+    	if(!got_enough_budget_for_next_SA_itr(piecewise_path)){
+    		return false;
+    	}
+
+    }while(((ppl_latency_so_far.toSec() + last_time_planning_duration) < g_ppl_time_budget) &&
+    		(piecewise_path.empty() || status == 3 || !got_enough_budget_for_next_SA_itr(piecewise_path) || !ppl_inbound_check(piecewise_path)));
+
     profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now(), capture_size);
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
@@ -699,11 +789,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     if (piecewise_path.empty() || status == 3) {
-    	geometry_msgs::Point closest_unknown_way_point;
-    	closest_unknown_way_point.x = nan("");
-    	closest_unknown_way_point.y = nan("");
-    	closest_unknown_way_point.z = nan("");
-    	closest_unknown_pub.publish(closest_unknown_way_point);
+		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
+		closest_unknown_pub.publish(closest_unknown_way_point);
     	msg_for_follow_traj.ee_profiles.control_flow_path = 1;
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
@@ -716,7 +803,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
 			msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
-			//msg_for_follow_traj.closest_unknown_point = closest_unknown_point;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		return false;
     	}
@@ -746,7 +832,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         	res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
         	res.multiDOFtrajectory.reverse = false;
         	res.multiDOFtrajectory.stop = true;
-        	draw_piecewise(piecewise_path, status);
+        	draw_piecewise(piecewise_path, status, &piecewise_traj_markers);
         	piecewise_traj_vis_pub.publish(piecewise_traj_markers);
         }
         else{
@@ -758,6 +844,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         notified_failure = true;
         if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
         else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
+        res.multiDOFtrajectory.closest_unknown_point = msg_for_follow_traj.closest_unknown_point;
         res.multiDOFtrajectory.planning_status = "piecewise_planning_failed";
         res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
         res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
@@ -775,11 +862,13 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		calculate_path_length(piecewise_path)/calc_vec_magnitude(drone->position().x - req.goal.x, drone->position().y - req.goal.y, drone->position().z - req.goal.z),
     		capture_size);
 
+    /*
     if (motion_planning_core_str != "lawn_mower") {
     	profiling_container.capture("piecewise_path_post_process", "start", ros::Time::now(), capture_size);
     	postprocess(piecewise_path);
     	profiling_container.capture("piecewise_path_post_process", "end", ros::Time::now(), capture_size);
     }
+	*/
 
 
     res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
@@ -791,8 +880,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
     volume_explored_in_unit_cubes = 0;
 
-
-    draw_piecewise(piecewise_path, status);
+    draw_piecewise(piecewise_path, status, &piecewise_traj_markers);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
 
     // Smoothen the path and build the multiDOFtrajectory response
@@ -804,7 +892,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
                                         req.twist.linear.z), 
                                     Eigen::Vector3d(req.acceleration.linear.x,
                                                     req.acceleration.linear.y,
-                                                    req.acceleration.linear.z));
+                                                    req.acceleration.linear.z), closest_unknown_way_point);
+    if (unknown_budget_failed){
+    	return false;
+    }
+
+
     profiling_container.capture("motion_planning_smoothening_time", "end", ros::Time::now(), capture_size);
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
@@ -813,9 +906,10 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 	}
     debug_data.motion_planning_smoothening_volume_explored = volume_explored_in_unit_cubes*pow(map_res,3);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
-
+    closest_unknown_pub.publish(closest_unknown_way_point);
     if (smooth_path.empty()) {
-		msg_for_follow_traj.ee_profiles.control_flow_path = 1.5;
+		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
+    	msg_for_follow_traj.ee_profiles.control_flow_path = 1.5;
     	ROS_ERROR("Path could not be smoothened successfully");
     	profiling_container.capture("motion_planning_smoothening_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
@@ -846,6 +940,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         else{ res.multiDOFtrajectory.header.stamp = req.header.stamp; }
         res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
         res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
+        res.multiDOFtrajectory.closest_unknown_point= msg_for_follow_traj.closest_unknown_point;
         //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
@@ -1277,6 +1372,7 @@ bool MotionPlanner::out_of_bounds_lax(const graph::node& pos)
     bool z_correct = is_between(pos.z, z_low, z_high);
     if (!x_correct || !y_correct || !z_correct){
     	ROS_INFO_STREAM("fuuuuuuuuuuuuuuuuuck");
+    	ROS_ERROR_STREAM("here are the posistion"<<pos.x<< "" << pos.y<< " "<<pos.z);
     }
 
     return !x_correct || !y_correct || !z_correct;
@@ -1382,6 +1478,15 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 */
 
 
+bool MotionPlanner::coord_on_drone(octomap::point3d point){
+	if ((point.x() < drone->position().x + drone_radius__global && point.x()> drone->position().x - drone_radius__global )&&
+			(point.y() < drone->position().y + drone_radius__global && point.y()> drone->position().y - drone_radius__global )&&
+			(point.z() < drone->position().z + drone_height__global && point.z()> drone->position().z - drone_height__global )){
+		return true;
+	}
+	return false;
+}
+
 bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, geometry_msgs::Point &closest_unknown_point, graph::node * end_ptr)
 {
 	profiling_container.capture("collision_func", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
@@ -1473,9 +1578,11 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     	closest_unknown_point.z = n1_point.z();
     }else{
     	if (!octree->search(current_key, depth_to_look_at)) { // if node doesn't exist
-    		closest_unknown_point.x = n1_point.x();
-    		closest_unknown_point.y = n1_point.y();
-    		closest_unknown_point.z = n1_point.z();
+    		if (!coord_on_drone(n1_point)){ // if it's on the drone, it can not be an unknown
+    			closest_unknown_point.x = n1_point.x();
+    			closest_unknown_point.y = n1_point.y();
+    			closest_unknown_point.z = n1_point.z();
+    		}
     	}
     }
 
@@ -1585,7 +1692,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     // }
 
     // Finally, loop over the drone's bounding box to search for collisions
-    int resolution_ratio = (int)(map_res/octree->getResolution());
+    int resolution_ratio = (int)((map_res*2)/octree->getResolution());
     int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
     octomap::point3d end;
     for (auto it = octree->begin_leafs_bbx(min, max),
@@ -1644,7 +1751,8 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
     res.unknown = -1;
 
     int state_index = 0;
-	// for (const auto& s : states) {
+    int seq_ctr = 0;
+    // for (const auto& s : states) {
     for (int i = 0; i < states.size() - 1; i++) {
         const auto& s = states[i];
         const auto& s_next = states[i+1];
@@ -1664,6 +1772,8 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
 		point.ax = s.acceleration_W.x();
 		point.ay = s.acceleration_W.y();
 		point.az = s.acceleration_W.z();
+		point.pt_ctr = seq_ctr;
+		seq_ctr +=1;
 
         point.yaw = yawFromVelocity(point.vx, point.vy);
         point.blocking_yaw = false;
@@ -1709,20 +1819,34 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, geom
     geometry_msgs::Point closest_unknown_point;
     bool first_unknown_collected = false; // to only allow writing into the closest_unknown_way_point once
     graph::node *end_ptr = new graph::node();
+    ROS_INFO_STREAM("map_res is "<<map_res);
     for (int i = 0; i < traj->points.size() - 1; ++i) {
         auto& pos1 = traj->points[i];
         auto& pos2 = traj->points[i+1];
         graph::node n1 = {pos1.x, pos1.y, pos1.z};
         graph::node n2 = {pos2.x, pos2.y, pos2.z};
         if (collision(octree, n1, n2, closest_unknown_point, end_ptr)) {
+        	// TODO: this is not unknown anymore, but nevertheless should be used to determine the budget
+        	closest_obstacle_on_path_way_point.x = pos1.x;
+        	closest_obstacle_on_path_way_point.y = pos1.y;
+        	closest_obstacle_on_path_way_point.z = pos1.z;
+        	last_unknown_pt_ctr  = pos1.pt_ctr;
         	col = true;
             break;
         }else{
         	if (!isnan(closest_unknown_point.x) && !first_unknown_collected){
-        		first_unknown_collected = true;
-        		closest_unknown_way_point.x = closest_unknown_point.x;
-        		closest_unknown_way_point.y = closest_unknown_point.y;
-        		closest_unknown_way_point.z = closest_unknown_point.z;
+        		if (pos1.pt_ctr >= last_unknown_pt_ctr){  // if smaller, what that means is that the unknown is discovered because we lowered the voxel
+        												 // size, however, this is really not an issue because in our subsampling, we would
+        											     // made sure to include any point that would be been an obstacle
+        												 // so we won't be mistakenly thinking that an unknown is free because of subsampling
+					closest_unknown_way_point.x = pos1.x;
+					closest_unknown_way_point.y = pos1.y;
+					closest_unknown_way_point.z = pos1.z;
+					last_unknown_pt_ctr  = pos1.pt_ctr;
+					first_unknown_collected = true;
+        		}else{
+        			ROS_INFO_STREAM("closest uknown didn't change");
+        		}
         	}
         }
     }
@@ -1828,7 +1952,7 @@ void drawVerticesModified(const mav_trajectory_generation::Vertex::Vector& verti
   }else{
 	  marker.color = mav_visualization::Color::Green();
   }
-  marker.scale.x = 0.1;
+  marker.scale.x = 1;
   marker.ns = "straight_path";
 
   for (const mav_trajectory_generation::Vertex& vertex : vertices) {
@@ -1855,7 +1979,7 @@ void drawVerticesModified(const mav_trajectory_generation::Vertex::Vector& verti
                                 marker_array);
 }
 
-void MotionPlanner::draw_piecewise(piecewise_trajectory& piecewise_path, int status ){
+void MotionPlanner::draw_piecewise(piecewise_trajectory& piecewise_path, int status, visualization_msgs::MarkerArray* marker_array){
 	mav_trajectory_generation::Vertex::Vector vertices;
 	const int dimension = 3;
 	std::string frame_id = "world";
@@ -1864,11 +1988,131 @@ void MotionPlanner::draw_piecewise(piecewise_trajectory& piecewise_path, int sta
 		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
 		vertices.push_back(v);
 	}
-	drawVerticesModified(vertices, frame_id, &piecewise_traj_markers, status);
+	drawVerticesModified(vertices, frame_id, marker_array, status);
 }
 
 
-MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration)
+// blah now
+// determine wheter we have enough budget to  run SA again
+bool MotionPlanner::got_enough_budget_for_next_SA_itr(piecewise_trajectory& piecewise_path)	{
+	bool got_enough_budget_for_next_itr = false;
+	for (auto it=piecewise_path.begin(); it !=piecewise_path.end(); it++){
+		graph::node n1 = {it->x, it->y, it->z};
+		graph::node n2 = {(it+1)->x, (it+1)->y, (it+1)->z};
+		geometry_msgs::Point closest_unknown_way_point;
+		collision(octree, n1, n2, closest_unknown_way_point);
+		multiDOFpoint cur_point;
+		cur_point.x = it->x;
+		cur_point.y = it->y;
+		cur_point.z = it->z;
+		cur_point.vx = drone->velocity().linear.x;
+		cur_point.vy = drone->velocity().linear.y;
+		cur_point.vz = drone->velocity().linear.z;
+		multiDOFpoint closest_unknown_point;
+		closest_unknown_point.x = closest_unknown_way_point.x;
+		closest_unknown_point.y = closest_unknown_way_point.y;
+		closest_unknown_point.z = closest_unknown_way_point.z;
+		double budget_till_next_unknown = time_budgetter->calc_budget_till_closest_unknown(cur_point, closest_unknown_point);
+		/*
+		if (budget_till_next_unknown < (map_res/2)){
+			unknown_budget_failed = true;
+			ROS_ERROR_STREAM("--------------------------- didn't got teh budget");
+			return false;
+		}
+		*/
+	}
+	return true;
+}
+
+
+bool MotionPlanner::got_enough_budget_for_next_SA_itr(geometry_msgs::Point closest_unknown_way_point, mav_trajectory_generation::Trajectory smoothened_traj){
+	multiDOFpoint cur_point;
+	cur_point.x = drone->position().x;
+	cur_point.y = drone->position().y;
+	cur_point.z = drone->position().z;
+//	cur_point.vx = drone->velocity().linear.x;
+//	cur_point.vy = drone->velocity().linear.y;
+//	cur_point.vz = drone->velocity().linear.z;
+	coord drone_position = {cur_point.x, cur_point.y, cur_point.z};
+	multiDOFpoint closest_unknown_point;
+	closest_unknown_point.x = closest_unknown_way_point.x;
+	closest_unknown_point.y = closest_unknown_way_point.y;
+	closest_unknown_point.z = closest_unknown_way_point.z;
+	//double budget_till_next_unknown = time_budgetter->calc_budget_till_closest_unknown(cur_point, closest_unknown_point);
+
+	// iterate through all the points and find the budget till next unknown
+	trajectory_t traj_converted;
+	// Sample trajectory
+	mav_msgs::EigenTrajectoryPoint::Vector states;
+	mav_trajectory_generation::sampleWholeTrajectory(smoothened_traj, sampling_interval__global, &states);
+    graph::node start = {states[0].position_W.x(), states[0].position_W.y(), states[0].position_W.z()};
+    for (int i = 0; i < states.size() - 1; i++) {
+        const auto& s = states[i];
+        const auto& s_next = states[i+1];
+
+		multiDOFpoint point;
+
+        graph::node current;
+		point.x = current.x = s.position_W.x();
+		point.y = current.y = s.position_W.y();
+		point.z = current.z = s.position_W.z();
+
+		point.vx = s.velocity_W.x();
+		point.vy = s.velocity_W.y();
+		point.vz = s.velocity_W.z();
+        //ROS_INFO_STREAM("-----vx"<<point.vx<<"vy"<<point.vy<<"vz"<<point.vz) ;
+
+		point.ax = s.acceleration_W.x();
+		point.ay = s.acceleration_W.y();
+		point.az = s.acceleration_W.z();
+        point.yaw = yawFromVelocity(point.vx, point.vy);
+	    point.duration = double(s_next.time_from_start_ns - s.time_from_start_ns) / 1e9;
+		traj_converted.push_back(point);
+	}
+	double budget_till_next_unknown = time_budgetter->calc_budget_till_closest_unknown(traj_converted, closest_unknown_point, drone_position);
+	ROS_ERROR_STREAM("================budget till next unknown"<< budget_till_next_unknown);
+
+	bool got_budget = budget_till_next_unknown > .6;
+	if (!got_budget){
+		//unknown_budget_failed = true;
+		ROS_ERROR_STREAM("--------------------------- didn't got teh budget");
+	}
+	return got_budget;
+}
+
+
+
+
+/*
+MotionPlanner::get_drones_distance_to_closeset_unknown(piecewise_trajectory& piecewise_path)	{
+	double distance_to_unknown = nan("");
+	for (auto it=piecewise_path.begin(); it+1 !=piecewise_path.end(); it++){
+		graph::node n1 = {it->x, it->y, it->z};
+		graph::node n2 = {(it+1)->x, (it+1)->y, (it+1)->z};
+		geometry_msgs::Point closest_unknown_point;
+		collision(octree, n1, n2, closest_unknown_point);
+		distance_to_unkonwn = calc_vec_magnitude(drone->position().x - closest_unknown_point.x, drone->position().y - closest_unknown_point.y, drone->position().z - closest_unknown_point.z);
+		if (!isnan(distance_to_uknown)) {
+			return distance_to_unknown;
+		}
+	}
+	return distance_to_unknown;
+}
+*/
+bool  MotionPlanner::ppl_inbound_check(piecewise_trajectory& piecewise_path){
+	for (auto it=piecewise_path.begin(); it!=piecewise_path.end(); it++){
+		graph::node n1 = {it->x, it->y, it->z};
+		if (out_of_bounds_lax(n1)){
+			return false;
+		}
+	}
+	return true;
+}
+
+
+
+MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration,
+	geometry_msgs::Point &closest_unknown_way_point)
 {
 
     ros::Time smoothening_start_time = ros::Time::now();
@@ -1917,13 +2161,14 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool col;
     int smoothening_ctr = 0;	
     ros::Duration smoothening_time_so_far;
-	g_smoothening_budget = SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec();
-	geometry_msgs::Point closest_unknown_way_point;
-	closest_unknown_way_point.x = nan("");
-	closest_unknown_way_point.y = nan("");
-	closest_unknown_way_point.z = nan("");
+    //blah reactive the bellow after data collection
+    g_smoothening_budget = SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec();  // whatever is left of the budget
+    //g_smoothening_budget = min(3.0,  SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec());
 
 	bool first_unknown_collected = false;
+	bool too_close_to_unknown = false;
+	//bool got_enough_budget_for_next_SA_itr = false;
+	mav_trajectory_generation::Trajectory traj;
 	do {
 		first_unknown_collected = false;
 		col = false;
@@ -1944,6 +2189,9 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 
 		// Loop through the vector of segments looking for collisions
+		graph::node n1, n2;
+		graph::node collision_n1, collision_n2;
+
 		for (int i = 0; !col && i < segments.size(); ++i) {
             // ROS_INFO("Looping through segments...");
 			const double time_step = 0.1;
@@ -1959,9 +2207,16 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				auto pos1 = segments[i].evaluate(t);
 				auto pos2 = segments[i].evaluate(t + time_step);
 
-				graph::node n1 = {pos1.x(), pos1.y(), pos1.z()};
-				graph::node n2 = {pos2.x(), pos2.y(), pos2.z()};
+				n1 = {pos1.x(), pos1.y(), pos1.z()};
+				n2 = {pos2.x(), pos2.y(), pos2.z()};
+				if (pos1.x() == pos2.x() &&
+						pos1.y() == pos2.y() &&
+						pos1.z() == pos2.z()){
+					ROS_ERROR_STREAM("EQUAL positions detection");
+				}
 
+				n1 = {pos1.x(), pos1.y(), pos1.z()};
+				n2 = {pos2.x(), pos2.y(), pos2.z()};
 				// Check for a collision between two near points on the segment
 
                 //if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, "smoothener")) {
@@ -1980,6 +2235,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 					double middle_x = (segment_start.x + segment_end.x) / 2;
 					double middle_y = (segment_start.y + segment_end.y) / 2;
 					double middle_z = (segment_start.z + segment_end.z) / 2;
+
+
 
 					middle.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(middle_x, middle_y, middle_z));
 
@@ -2010,24 +2267,87 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		}
      smoothening_ctr++;	
      smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
+     /*
      if (smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
     	 bool now = 1;
      }
+	*/
 
+     //double distance_to_unknown = calc_vec_magnitude(drone->position().x - closest_unknown_way_point.x, drone->position().y - closest_unknown_way_point.y, drone->position().z - closest_unknown_way_point.z);
+     //too_close_to_unknown = distance_to_unknown < 2;
+     // making sure we have enough budget for the next iterations to prevent stoppage
+         //got_enough_budget_for_next_SA_itr = time_budgetter.calc_budget_till_closest_unknown(cur_point, closest_unknown_point);
+
+
+     if (col){ // only for debugging
+    	 multiDOFpoint smoothener_collision_wp_1;
+    	 /*
+    	 smoothener_collision_wp_1.x = n1.x;
+    	 smoothener_collision_wp_1.y = n1.y;
+    	 smoothener_collision_wp_1.z = n1.z;
+
+    	 multiDOFpoint smoothener_collision_wp_2;
+    	 smoothener_collision_wp_2.x = n2.x;
+    	 smoothener_collision_wp_2.y = n2.y;
+    	 smoothener_collision_wp_2.z = n2.z;
+//    	 auto marker = get_marker(smoothener_collision_wp_1, smoothener_collision_wp_2);
+
+    	 */
+    	 piecewise_trajectory collision_path;
+    	 collision_path.push_back(n1);
+    	 n2.x += 1;
+    	 n2.y += 1;
+    	 n2.z += 1;
+    	 collision_path.push_back(n2);
+    	 collision_path.push_back(n2);
+    	 visualization_msgs::MarkerArray collision_traj_markers;
+    	 draw_piecewise(collision_path, 1, &collision_traj_markers);
+    	 collision_traj_vis_pub.publish(collision_traj_markers);
+    	 //mav_trajectory_generation::Trajectory collision_traj;
+    	 //mav_trajectory_generation::drawMavTrajectory(collision_traj, distance, frame_id, &collision_smooth_traj_markers);
+
+    	 //smoothener_collision_marker_pub.publish(marker);
+     }
      ROS_ERROR_STREAM("smoothening_ctr"<<smoothening_ctr << " smoothening tim so far"<<smoothening_time_so_far.toSec()<<" while budget is"<<ros::Duration(g_smoothening_budget).toSec());
-    } while (col &&
-            smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec());
+	 opt.getTrajectory(&traj);
+
+	 if(smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec()){ // if enough budget for this iteration
+		 if(!got_enough_budget_for_next_SA_itr(closest_unknown_way_point, traj)){
+			 if (drone->velocity().linear.x < .1 && drone->velocity().linear.y <.1 && drone->velocity().linear.z <.1){ // already stopped so no path
+				 closest_unknown_pub.publish(closest_unknown_way_point);
+			 }else{
+				 closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
+			 }
+			 unknown_budget_failed= true;
+    		 return smooth_trajectory();
+		 }
+		 if (col){
+			 continue;
+		 }else{
+			 break;
+		 }
+	 }else{
+		 break;
+	 }
+	} while(true);
+	/*
+	while ((smoothening_time_so_far.toSec() < ros::Duration(g_smoothening_budget).toSec()) &&
+			(col || !got_enough_budget_for_next_SA_itr(closest_unknown_way_point, traj)));
 //    		smoothening_ctr < 15);
             //ros::Time::now() < g_start_time+ros::Duration(g_ppl_time_budget));
+	*/
 
-	closest_unknown_pub.publish(closest_unknown_way_point);
+
 	if (col || smoothening_time_so_far.toSec() >= ros::Duration(g_smoothening_budget).toSec()) {
-        return smooth_trajectory();
+		closest_unknown_way_point.x = nan("");
+		closest_unknown_way_point.y = nan("");
+		closest_unknown_way_point.z = nan("");
+		return smooth_trajectory();
     }
 
 
     // Return the collision-free smooth trajectory
-	mav_trajectory_generation::Trajectory traj;
+	//mav_trajectory_generation::Trajectory traj;
 	opt.getTrajectory(&traj);
 	int num_of_optimums_till_idx = 3; // return the accumulated number of optimums until this index. The idea is that
 									  // we are only concern with suboptimal (oscilating) paths at the intial vertecis of the trajectory. Such behavior is the result of sudden

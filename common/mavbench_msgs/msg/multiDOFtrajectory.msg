@@ -10,3 +10,4 @@ string planning_status
 
 mavbench_msgs/control controls
 mavbench_msgs/ee_profile ee_profiles
+geometry_msgs/Point closest_unknown_point

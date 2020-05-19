@@ -21,7 +21,7 @@ class dummy_output:
 def run_optimizer(control):
 
     # -- determine the response time destired (rt_d)
-    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency - runtime_latency # the second run_time_latency is for the following iteration
+    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency # the second run_time_latency is for the following iteration
     if (time_budget_left_to_distribute < 0):
         print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
         results = dummy_output()
@@ -35,7 +35,7 @@ def run_optimizer(control):
     # we can also think of r_min as what regulates the intellignce (i.e, the lower r_min the more intelligence the decision
     # making since we have more free space to make decision based off of)
     # and max value for resolution indicates  that we can't not do worse than this
-    r_min_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_avg) - drone_radius  # min to impose the worse case as the
+    r_min_temp = min(control.inputs.gap_statistics_avg/2, control.inputs.obs_dist_statistics_avg/2) - drone_radius  # min to impose the worse case as the
                                                                                                                 # determinant
 
     r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
@@ -43,7 +43,7 @@ def run_optimizer(control):
     r_min_ = r_min_temp
 
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
-    r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) - drone_radius  # min is because we want the tigher bound of the two:
+    r_max_temp = min(control.inputs.gap_statistics_max/2, control.inputs.obs_dist_statistics_min/2) - drone_radius  # min is because we want the tigher bound of the two:
                                                                                                                  # note that if r_max is greater than
                                                                                                                  # r_gap_max, we can't actually see any gaps
     r_max_temp = max(r_max_temp, r_min_static)  # not lower than r_min_static
@@ -110,6 +110,7 @@ def run_optimizer(control):
     
 
 def control_callback(control):
+    print("---- runing the optimizer now")
     results, failure_status = run_optimizer(control)  # failure status key: 1:no valid cofig, 2:not enough time
 
 
@@ -147,6 +148,7 @@ def control_callback(control):
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
         assert(om_to_pl_res >= pc_res, "om_to_pl_res should be >= pc_res")
         pc_vol_ideal = results.x[2]
+        #pc_vol_ideal = 20000
         om_to_pl_vol_ideal = results.x[3]
         ppl_vol_ideal = results.x[4]
         # expected time budgets
@@ -167,8 +169,8 @@ def control_callback(control):
     ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + misc_latency
     # set the knobs
     rospy.set_param("pc_res", float(pc_res))
-#    rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))
-    rospy.set_param("pc_vol_ideal", 11000)
+    rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))
+    #rospy.set_param("pc_vol_ideal", 11000)
     rospy.set_param("om_to_pl_res", float(om_to_pl_res))
     rospy.set_param("om_to_pl_vol_ideal", float(om_to_pl_vol_ideal))
     rospy.set_param("ppl_vol_ideal", float(ppl_vol_ideal))

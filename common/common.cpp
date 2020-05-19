@@ -37,6 +37,115 @@ static T last_msg (std::string topic) {
 }
 
 
+visualization_msgs::Marker get_marker(multiDOFpoint point_1, multiDOFpoint point_2){
+	uint32_t shape = visualization_msgs::Marker::LINE_STRIP;
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	//marker.ns = "basic_shapes";
+	marker.ns = "straight_path";
+    marker.id = 0;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = shape;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = point_1.x;
+	marker.pose.position.y = point_1.y;
+	marker.pose.position.z = point_1.z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = .5;
+	marker.scale.y = .5;
+	marker.scale.z = .5;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 0.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+
+	
+    marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = point_2.x;
+	marker.pose.position.y = point_2.y;
+	marker.pose.position.z = point_2.z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = .5;
+	marker.scale.y = .5;
+	marker.scale.z = .5;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 0.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+    
+    marker.lifetime = ros::Duration(.5);
+	return marker;
+}
+
+
+visualization_msgs::Marker get_marker(multiDOFpoint closest_unknown_point){
+	uint32_t shape = visualization_msgs::Marker::SPHERE;
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "basic_shapes";
+	marker.id = 0;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = shape;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = closest_unknown_point.x;
+	marker.pose.position.y = closest_unknown_point.y;
+	marker.pose.position.z = closest_unknown_point.z;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = .5;
+	marker.scale.y = .5;
+	marker.scale.z = .5;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 0.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 1.0f;
+	marker.color.a = 1.0;
+
+	marker.lifetime = ros::Duration(.5);
+	return marker;
+}
+
+
+
 void sigIntHandler(int sig)
 {
     //ros::shutdown();
@@ -222,6 +331,7 @@ void spin_around(Drone &drone) {
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj,
 		mavbench_msgs::follow_traj_debug& debug_data,
+		geometry_msgs::Point closest_unknown_point,
 		yaw_strategy_t yaw_strategy,
         bool check_position, float max_speed, float time,
 		float p_vx, float p_vy, float p_vz, float I_px, float I_py, float I_pz,
@@ -473,13 +583,23 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 
 
         // Calculate the yaw we should be flying with
-        float yaw = p.yaw;
+       // float yaw = p.yaw;
+
+       float yaw;
         if (yaw_strategy == ignore_yaw)
             yaw = YAW_UNCHANGED;
         else if (yaw_strategy == face_forward)
             yaw = FACE_FORWARD;
         else if (yaw_strategy == face_backward)
             yaw = FACE_BACKWARD;
+        else if (yaw_strategy == follow_closest_unknown){
+        	if (isnan(closest_unknown_point.x) || isnan(closest_unknown_point.y)){
+        		yaw = p.yaw;
+        	}
+        	yaw =  90 - atan2(closest_unknown_point.y - pos.y, closest_unknown_point.x - pos.x)*180.0/3.14;
+        }
+        else
+        	yaw = p.yaw;
 
         // Check whether the yaw needs to be set before we fly
         if (p.blocking_yaw)
@@ -635,7 +755,7 @@ trajectory_t create_trajectory_from_msg(const mavbench_msgs::multiDOFtrajectory&
 
         mdp.yaw = mdp_msg.yaw;
         mdp.blocking_yaw = mdp_msg.blocking_yaw;
-
+        mdp.pt_ctr = mdp_msg.pt_ctr;
         mdp.duration = mdp_msg.duration;
 
         result.push_back(mdp);
@@ -770,7 +890,7 @@ mavbench_msgs::multiDOFtrajectory create_trajectory_msg(const trajectory_t& t, D
 
         mdp_msg.yaw = mdp.yaw;
         mdp_msg.blocking_yaw = mdp.blocking_yaw;
-
+        mdp_msg.pt_ctr = mdp.pt_ctr;
         mdp_msg.duration = mdp.duration;
 
         result.points.push_back(mdp_msg);

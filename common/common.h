@@ -9,7 +9,7 @@
 #include "Profiling.h"
 #include <mavbench_msgs/follow_traj_debug.h>
 #include "Drone.h"
-
+#include <visualization_msgs/Marker.h>
 void sigIntHandler(int sig);
 
 
@@ -21,9 +21,12 @@ struct multiDOFpoint {
     double yaw;
     bool blocking_yaw;
     double duration;
+    double pt_ctr;
 };
 
 
+visualization_msgs::Marker get_marker(multiDOFpoint closest_unknown_point);
+visualization_msgs::Marker get_marker(multiDOFpoint point_1, multiDOFpoint point_2);
 struct debug_follow_trajectory_data {
 	double vx, vy, vz;
 	double vx_error, vy_error, vz_error;
@@ -32,7 +35,7 @@ struct debug_follow_trajectory_data {
 
 
 typedef std::deque<multiDOFpoint> trajectory_t;
-enum yaw_strategy_t { ignore_yaw, face_forward, face_backward, follow_yaw };
+enum yaw_strategy_t { ignore_yaw, face_forward, face_backward, follow_yaw, follow_closest_unknown };
 
 trajectory_t create_trajectory_from_msg(const mavbench_msgs::multiDOFtrajectory&);
 mavbench_msgs::multiDOFtrajectory create_trajectory_msg(const trajectory_t&, Drone *drone);
@@ -42,7 +45,7 @@ trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second);
 
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj,
-		mavbench_msgs::follow_traj_debug &debug_data,
+		mavbench_msgs::follow_traj_debug &debug_data, geometry_msgs::Point closest_unknown_point,
 		yaw_strategy_t yaw_strategy = ignore_yaw,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),

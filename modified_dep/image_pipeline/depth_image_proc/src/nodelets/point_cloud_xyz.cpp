@@ -36,6 +36,7 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
 #include <mavbench_msgs/multiDOFpoint.h>
+#include <mavbench_msgs/runtime_failure_msg.h>
 #include <image_geometry/pinhole_camera_model.h>
 #include <geometry_msgs/Point.h>
 #include <boost/thread.hpp>
@@ -82,6 +83,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   typedef sensor_msgs::PointCloud2 PointCloud;
   ros::Publisher pub_point_cloud_;
   ros::Publisher pub_point_cloud_aug_;
+  ros::Publisher runtime_failure_pub;
   ros::Publisher point_cloud_meta_data_pub;
   ros::Publisher pc_debug_pub;
   ros::Publisher control_pub;
@@ -324,6 +326,7 @@ void PointCloudXyzNodelet::onInit()
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
     sub_depth_ = it_->subscribeCamera("image_rect", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
     pub_point_cloud_aug_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points_aug", 1);//, connect_cb, connect_cb);
+    runtime_failure_pub = nh.advertise<mavbench_msgs::runtime_failure_msg>("runtime_failure", 1);//, connect_cb, connect_cb);
     pub_point_cloud_ = nh.advertise<PointCloud>("points", 1);//, connect_cb, connect_cb);
 
     //point_cloud_meta_data_pub = nh.advertise<mavbench_msgs::point_cloud_meta_data>("/pc_meta_data", 1);
@@ -1189,7 +1192,10 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     			std::pow(unknown_point_converted_to_pc_coord.point.y, 2), 0.5)); // would be zero if uknown_point_converted is at the cetner of pc
 																				 // i.e,. 0,0
 
+
+	//double max_radius = 2*sensor_max_range; // blah, change to bellow after collection
 	double max_radius = sensor_max_range* std::pow(2, 0.5) +  closest_unknown_pt_distance_to_pc_center + 1;
+	//double max_radius = sensor_max_range* std::pow(2, 0.5);
 
 	//radius_volume[radiu
 	double bucket_width = max_radius / num_radius_buckets;
@@ -1210,8 +1216,16 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     	//		  this_y = (sensor_max_range/norm)*this_y;
     			  this_z = (sensor_max_range/norm)*this_z;
     	}
+    	//reactivate this after you collectred data
     	int radius_bucket = (int) (std::pow(std::pow(this_x - unknown_point_converted_to_pc_coord.point.x, 2) +
     			std::pow(this_y-unknown_point_converted_to_pc_coord.point.y, 2), 0.5) / bucket_width);
+
+//    		int radius_bucket = (int) (std::pow(std::pow(this_x , 2) +
+ //   			std::pow(this_y, 2), 0.5) / bucket_width);
+
+
+
+
     	//radius_volume[radius_bucket] += (1.0/3)*fabs(this_x-last_x)*fabs(this_y - last_row_y)*this_z;
     	// using the gridded approach
     	int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_volume_row_size/2;
@@ -1223,12 +1237,12 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     }
 
 
-    for (int bucket_number= 0; bucket_number <num_radius_buckets; bucket_number++){
+    for (int bucket_number= 0; bucket_number < num_radius_buckets; bucket_number++){
     	for (int pt_idx= 0; pt_idx< radius_points[bucket_number].size(); pt_idx++){
     		int idx = (radius_points[bucket_number])[pt_idx];
     		xs.push_back(*(cloud_x+ idx));
-			ys.push_back(*(cloud_y+idx));
-			zs.push_back(*(cloud_z+idx));
+			ys.push_back(*(cloud_y+ idx));
+			zs.push_back(*(cloud_z+ idx));
 //			double temp_zs = *(cloud_z+idx);
 //			double temp_xs = *(cloud_x+idx);
 //			double temp_ys = *(cloud_y+idx);
@@ -1689,17 +1703,19 @@ double PointCloudXyzNodelet::actual_to_estimated_vol_correction(double actual_vo
 }
 
 
+double last_res = .3;
+
+ros::Time last_time = ros::Time::now();
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
 
 
-
+	//blah. reactivate after collecting data
 	if (got_first_unknown && !got_new_closest_unknown){
 		return;
 	}
 	got_new_closest_unknown = false;
-
 
 	/*
 	// for debugging for now
@@ -1848,6 +1864,23 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   ros::param::get("/optimizer_failure_status", optimizer_failure_status);
   ros::param::get("/log_control_data", log_control_data);
 
+
+   //blah, reactive this after you collected the data
+  if (optimizer_failure_status == 2){
+	  mavbench_msgs::runtime_failure_msg rtf_msg;
+	  rtf_msg.header.stamp = img_capture_time_stamp;
+	  rtf_msg.controls.cmds.optimizer_succeeded = optimizer_succeeded;
+	  rtf_msg.controls.cmds.optimizer_failure_status = optimizer_failure_status;
+	  rtf_msg.controls.cmds.log_control_data = log_control_data;
+	  runtime_failure_pub.publish(rtf_msg);
+	  debug_data.header.stamp = ros::Time::now();
+	  debug_data.optimizer_failure_status = optimizer_failure_status;
+	  pc_debug_pub.publish(debug_data);
+	  return;
+  }
+
+
+
   /*
   if (!optimizer_succeeded){
 	  ROS_INFO_STREAM("----------------------------- OPTIMIZER FAILD<<<<<<<<<<<<<<<<<<<<<");
@@ -1868,10 +1901,32 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    // -- point cloud to octomap knobs
    ros::param::get("/pc_res", pc_res);
    ros::param::get("/pc_vol_ideal", pc_vol_ideal);
-
    // -- octomap to planner
    ros::param::get("/om_to_pl_res", om_to_pl_res);
    ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
+
+
+
+   // just for visuals
+   /*
+   om_to_pl_vol_ideal = 5000;
+   pc_vol_ideal = 6000;
+   ros::Time this_time = ros::Time::now();
+   double time_diff = (this_time - last_time).toSec() ;
+   if (time_diff > 5){
+	   pc_res= 2*last_res;
+		if (pc_res> 8){
+			pc_res= .3;
+		}
+		last_res = pc_res;
+		om_to_pl_res = pc_res;
+		ROS_INFO_STREAM("pc_res"<<pc_res);
+		last_time = ros::Time::now();
+   }else{
+	   pc_res = last_res;
+	   om_to_pl_res = pc_res;
+   }
+	*/
 
 
    // -- piecewise planner
@@ -1929,6 +1984,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
       *new_y = ys_best[i];
       *new_z = zs_best[i];
   }
+  //ROS_INFO_STREAM("size of point cloud"<<xs_best.size());
 
   profiling_container->capture("filtering", "end", ros::Time::now());
 
@@ -1996,6 +2052,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
 	  debug_data.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
+	  debug_data.optimizer_failure_status = optimizer_failure_status;
 	  debug_data.velocity_to_budget_on = velocity_to_budget_on;
 
 	  pc_debug_pub.publish(debug_data);

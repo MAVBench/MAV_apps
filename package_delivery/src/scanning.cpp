@@ -232,8 +232,10 @@ int main(int argc, char **argv)
         } else if (state == flying)
         {
 
-        	mavbench_msgs::follow_traj_debug debug_data = {};
+         geometry_msgs::Point closest_uknown_point;	
+            mavbench_msgs::follow_traj_debug debug_data = {};
         	follow_trajectory(drone, &trajectory, nullptr,  debug_data,
+                    closest_uknown_point, 
                     ignore_yaw, true ,v_max__global, g_fly_trajectory_time_out);
             //follow_trajectory(drone, &trajectory, &reverse_trajectory, ignore_yaw, true);
             next_state = trajectory_done(trajectory) ? completed : flying;

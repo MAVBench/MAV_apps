@@ -78,6 +78,7 @@ add_message_files(
   octomap_aug.msg
   point_cloud_aug.msg
   multiDOFtrajectory.msg
+  runtime_failure_msg.msg
   )
 
 ## Generate services in the 'srv' folder

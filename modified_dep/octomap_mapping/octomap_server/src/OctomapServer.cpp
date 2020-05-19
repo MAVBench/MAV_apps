@@ -401,6 +401,8 @@ double OctomapServer::calcTreeVolume(OcTreeT* tree){
 
 
 using namespace std; //
+int last_volume = 0;
+double last_res = .6;
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
 	//ros::param::get("/voxel_type_to_publish", voxel_type_to_publish);
@@ -416,11 +418,30 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	//ROS_INFO_STREAM("-----size is "<<size);
 	pc_res =  pcl_aug_data->controls.cmds.pc_res;
 	om_to_pl_res = pcl_aug_data->controls.cmds.om_to_pl_res;
+
+	/*
+	om_to_pl_res = 2*last_res;
+	if (om_to_pl_res > 8){
+		om_to_pl_res = .6;
+	}
+	last_res = om_to_pl_res;
+	ros::Duration(.5).sleep();
+	*/
+
 	om_to_pl_vol_ideal = pcl_aug_data->controls.cmds.om_to_pl_vol;
+    //om_to_pl_vol_ideal = (last_volume + 20000)%200000; //blah, get rid of this
+	//last_volume = (int) om_to_pl_vol_ideal;
+	//ros::Duration(.5).sleep();
+
+
 	ppl_vol_ideal = pcl_aug_data->controls.cmds.ppl_vol;
     m_res = pcl_aug_data->controls.cmds.pc_res;
     pc_vol_estimated = pcl_aug_data->ee_profiles.space_stats.pc_vol_estimated;
     pc_vol_ideal = pcl_aug_data->controls.cmds.pc_vol;
+    ///pc_vol_ideal = (last_volume + 530)%7000; //blah, get rid of this
+	last_volume = (int) pc_vol_ideal;
+
+
 
 	// -- for profiling
 	octomap_aug_data.controls = pcl_aug_data->controls;
@@ -558,7 +579,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   //profiling_container.capture("sensor_volume_to_digest", "single", pcl_aug_data->controls.inputs.sensor_volume_to_digest, capture_size);
 
-   //m_octree->clear(); // blah
+  //m_octree->clear(); // blah
   //m_octree =new OcTree(m_res); //blah
   profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
@@ -711,8 +732,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     }
 
     // only clear space (ground points)
-    //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){//blah
-    if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
+    if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){//blah
+    //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	free_cells.insert(m_keyRay.begin(), m_keyRay.end());
     }
 
@@ -747,8 +768,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     if ((m_maxRange < 0.0) || ((point - sensorOrigin).norm() <= m_maxRange) ) {
     	auto distance = (point - sensorOrigin).norm();
       // free cells
-      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
-      if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
+      if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay, resolution_ratio, depth_to_look_at)){
+      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
       }
       // occupied endpoint
@@ -769,8 +790,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
       }
     } else {// ray longer than maxrange:;
       point3d new_end = sensorOrigin + (point - sensorOrigin).normalized() * m_maxRange;
-      //if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay, resolution_ratio, depth_to_look_at)){
-      if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
+      if (m_octree->computeRayKeys(sensorOrigin, new_end, m_keyRay, resolution_ratio, depth_to_look_at)){
+      //if (m_octree->computeRayKeys(sensorOrigin, point, m_keyRay)){ //blah
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
         octomap::OcTreeKey endKey;
         if (m_octree->coordToKeyChecked(new_end, endKey)){
@@ -1820,8 +1841,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  // ros::param::get("/om_to_pl_res", om_to_pl_res);
 //  ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
   //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
- if (om_to_pl_res < m_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<m_res);} assert(om_to_pl_res >= m_res);
- if(om_to_pl_res < m_res_original){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res_original"<<m_res_original);} assert(om_to_pl_res >= m_res_original);
+ if (om_to_pl_res < m_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<m_res);} assert(om_to_pl_res >= m_res || fabs(om_to_pl_res - m_res) <.1); // <./1 is ther because of how sometimes floating points are treated
+ if(om_to_pl_res < m_res_original){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res_original"<<m_res_original);} assert(om_to_pl_res >= m_res_original || fabs(om_to_pl_res - m_res_original)<.1);
 
   unsigned int pos;
   int depth_found_at;
@@ -2301,6 +2322,11 @@ void OctomapServer::publish_octomap_vis(octomap::OcTree *m_octree_, ros::Publish
     bool inUpdateBBX = true;
 
     bool publish_voxel = voxel_type_to_publish == "free" ? !m_octree_->isNodeOccupied(*it):  m_octree_->isNodeOccupied(*it);
+
+    if (voxel_type_to_publish == "all") {
+    		publish_voxel =true;
+    }
+
     if (publish_voxel){
       double z = it.getZ();
         double size = it.getSize();
@@ -2312,7 +2338,7 @@ void OctomapServer::publish_octomap_vis(octomap::OcTree *m_octree_, ros::Publish
         int b = it->getColor().b;
         */
         int r = 0;
-        int g = 0;
+        int g = 1;
         int b = 0;
 
         // Ignore speckles in the map:
@@ -2332,7 +2358,19 @@ void OctomapServer::publish_octomap_vis(octomap::OcTree *m_octree_, ros::Publish
 
             //double h = (1.0 - std::min(std::max((cubeCenter.z-minZ)/ (maxZ - minZ), 0.0), 1.0)) *m_colorFactor;
             std_msgs::ColorRGBA color;
-            color.a = 1.0; color.r = 1; color.g = 1; color.b = 1;
+
+            if (voxel_type_to_publish == "free"){
+
+            	color.a = 1.0; color.r = 0; color.g = 1; color.b = 0;
+            }else if (voxel_type_to_publish == "occupied"){
+            	color.a = 1.0; color.r = 1; color.g = 0; color.b = 0;
+            }else if (voxel_type_to_publish == "all") {
+            	if (m_octree_->isNodeOccupied(*it)){
+            		color.a = 1.0; color.r = 1; color.g = 0; color.b = 0;
+            	}else{
+            		color.a = 1.0; color.r = 0; color.g = 1; color.b = 0;
+            	}
+            }
             occupiedNodesVis.markers[idx].colors.push_back(color);
         }
   }

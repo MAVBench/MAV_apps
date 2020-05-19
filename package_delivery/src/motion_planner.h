@@ -17,7 +17,9 @@
 #include "package_delivery/get_trajectory.h"
 #include "package_delivery/point.h"
 #include "timer.h"
+#include "TimeBudgetter.h"
 
+#include <mavbench_msgs/runtime_failure_msg.h>
 #include <profile_manager.h>
 #include <profile_manager/profiling_data_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
@@ -155,6 +157,8 @@ private:
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
     bool out_of_bounds(const graph::node& pos);
 
+   void runtime_failure_cb(const mavbench_msgs::runtime_failure_msg & msg);
+
     // *** F:DN Checks whether a cell in the occupancy grid is occupied.
     bool out_of_bounds_strict(const graph::node& pos);
 
@@ -162,7 +166,7 @@ private:
     bool out_of_bounds_lax(const graph::node& pos);
 
     // *** F:DN Optimize and smoothen a piecewise path without causing any new collisions.
-    smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration);
+    smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration, geometry_msgs::Point &closest_unknown_point);
 
     // ***F:DN Build the response to the service from the smooth_path
     void create_response(package_delivery::get_trajectory::Response &res, const smooth_trajectory& smooth_path);
@@ -176,17 +180,31 @@ private:
     // *** F:DN Check the validity of states for OMPL planners
     bool OMPLStateValidityChecker(const ompl::base::State * state);
 
-    void draw_piecewise(piecewise_trajectory& piecewise_path, int status);
+    void draw_piecewise(piecewise_trajectory& piecewise_path, int status,visualization_msgs::MarkerArray* marker_array);
 
     // *** F:DN A flexible wrapper for OMPL planners
     template<class PlannerType>
     piecewise_trajectory OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int &status);
 
 
+    bool  ppl_inbound_check(piecewise_trajectory& piecewise_path);
     // dummy publishers for debugging/microbenchmarking
     void publish_dummy_octomap(octomap::OcTree *m_octree);
     void publish_dummy_octomap_vis(octomap::OcTree *m_octree);
     bool goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res);
+
+    bool coord_on_drone(octomap::point3d point);
+    geometry_msgs::Point closest_obstacle_on_path_way_point;
+    bool unknown_budget_failed = false;
+    bool got_enough_budget_for_next_SA_itr(piecewise_trajectory& piecewise_path);
+    bool got_enough_budget_for_next_SA_itr(geometry_msgs::Point closest_unknown_way_point);
+    bool got_enough_budget_for_next_SA_itr(geometry_msgs::Point closest_unknown_way_point, mav_trajectory_generation::Trajectory smoothened_traj);
+
+    vector<double> accelerationCoeffs = {.1439,.8016};
+    TimeBudgetter *time_budgetter;//(10, 10, accelerationCoeffs, 0.1, 10);  // non of the hardcoded values actually matter for motion planner
+
+
+    int last_unknown_pt_ctr;
     double planner_min_freq;
     ros::Time last_planning_time;
     bool failed_to_plan_last_time = false;
@@ -199,15 +217,16 @@ private:
     int capture_size = 600; //set this to 1 if you want to see every data captured separately
     int next_steps_msg_size  = 0;
     bool piecewise_planning = false;
+    ros::Time ppl_start_time;
     string voxel_type_to_publish;
 private:
     ros::NodeHandle nh;
     ros::CallbackQueue callback_queue;
-    ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, octomap_dummy_pub, m_markerPub, closest_unknown_pub;
+    ros::Publisher smooth_traj_vis_pub, piecewise_traj_vis_pub, collision_traj_vis_pub, octomap_dummy_pub, m_markerPub, closest_unknown_pub;
     bool knob_performance_modeling = false;
     bool knob_performance_modeling_for_om_to_pl = false;
     bool knob_performance_modeling_for_piecewise_planner = false;
-    ros::Subscriber future_col_sub, next_steps_sub, octomap_sub, octomap_communication_proxy_msg;
+    ros::Subscriber future_col_sub, next_steps_sub, octomap_sub, octomap_communication_proxy_msg, runtime_failure_sub;
     ros::ServiceServer get_trajectory_srv_server, goal_rcv_service;
     ros::Publisher traj_pub;
     ros::Publisher timing_msg_from_mp_pub;
@@ -219,7 +238,7 @@ private:
     bool first_time_planning_succeeded = false;
     bool DEBUG_RQT;
     bool DEBUG_VIS;
-
+    bool runtime_failure_last_time = false;
     ros::Time planning_start_time_stamp;
 
     mavbench_msgs::response_time_capture msg_for_follow_traj;
@@ -228,7 +247,7 @@ private:
     geometry_msgs::Point g_goal_pos;
     bool goal_known = false;
     ros::Time g_start_time{0};
-	enum planning_reason_enum {No_need_to_plan, Collision_detected, Last_plan_approximate, Failed_to_plan_last_time, Min_freq_passed, First_time_planning};
+	enum planning_reason_enum {No_need_to_plan, Collision_detected, Last_plan_approximate, Failed_to_plan_last_time, Min_freq_passed, First_time_planning, Runtime_failure};
 	enum planning_status {Short_time_failure, Initial_state_failure, Success};
 	bool planned_approximately = false; //if true, we replan again
 
@@ -240,6 +259,7 @@ private:
     double drone_radius__global;
     double planner_drone_radius_when_hovering;
     double planner_drone_height_when_hovering;
+    ros::Publisher smoothener_collision_marker_pub;
 
 
     double rrt_step_size__global;

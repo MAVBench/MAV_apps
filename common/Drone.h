@@ -90,7 +90,7 @@ private:
 
     float max_yaw_rate = 90.0;
     //float max_yaw_rate_during_flight = 90.0;
-    float max_yaw_rate_during_flight = 90.0;
+    float max_yaw_rate_during_flight = 180.0;
     // Initial position as determined by the flight-controller 
     coord initial_fc_pos;
 };

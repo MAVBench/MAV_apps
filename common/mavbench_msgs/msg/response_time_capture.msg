@@ -3,3 +3,4 @@ string planning_status
 mavbench_msgs/control controls
 mavbench_msgs/ee_profile ee_profiles
 float32 control_flow_path
+geometry_msgs/Point closest_unknown_point

@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="5"/> 
+  <arg name="v_max" default="4"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -238,7 +238,7 @@
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
 
   <!-- fixed knob values --> 
-  <arg name="pc_res" default=".6" />   
+  <arg name="pc_res" default=".3" />   
   <param name="pc_res" value="$(arg pc_res)"/>
   <!-- arg name="om_to_pl_res" default="" /-->   
   <param name="om_to_pl_res" value="$(arg pc_res)"/>
@@ -255,7 +255,7 @@
   <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
   <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
  <!-- ========================= Performance Modeling ()  ============================ -->
- <arg name="pc_res_max" default=".6" />   
+ <arg name="pc_res_max" default=".3" />   
  <param name="pc_res_max" value="$(arg pc_res_max)"/>
  <arg name="num_of_res_to_try" default="2" />   
  <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
@@ -409,12 +409,12 @@
     <param name="rrt_step_size" value="1.0"/>
     <param name="rrt_bias" value="10"/>
 
-    <param name="x_dist_to_sample_from__low_bound" value="-200"/>
-    <param name="x_dist_to_sample_from__high_bound" value="200"/>
-    <param name="y_dist_to_sample_from__low_bound" value="-100"/>
+    <param name="x_dist_to_sample_from__low_bound" value="-400"/>
+    <param name="x_dist_to_sample_from__high_bound" value="400"/>
+    <param name="y_dist_to_sample_from__low_bound" value="-600"/>
     <param name="y_dist_to_sample_from__high_bound" value="600"/>
     <param name="z_dist_to_sample_from__low_bound" value="0"/>
-    <param name="z_dist_to_sample_from__high_bound" value="80"/>
+    <param name="z_dist_to_sample_from__high_bound" value="150"/>
 
     <!-- options for motion_planning core --> 
     <!-- param name="motion_planning_core" value="PRM"/-->
@@ -441,7 +441,7 @@
   <arg name="stay_in_place_duration_for_stop" default="3"/>
   <param name="p_vx" value="2"/>
   <param name="p_vy" value="2"/>
-  <param name="p_vz" value="2"/>true
+  <param name="p_vz" value="2"/>
   <param name="I_px" value=".01"/>
   <param name="I_py" value=".01"/>
   <param name="I_pz" value="0.0"/>
