@@ -295,7 +295,6 @@
     <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
         <!-- remap from="/points" to="/cloud_in" / -->
     </node>
-    <!--node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager_2"/-->
 
 	<!-- Convert to point cloud -->
 	<node pkg="nodelet" type="nodelet" name="cloudify"
@@ -308,17 +307,19 @@
 
     </node>
 
-    <comment>
+    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager_2" output="screen">
+        <!-- remap from="/points" to="/cloud_in" / -->
+    </node>
+
 	<node pkg="nodelet" type="nodelet" name="cloudify_2"
  	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager_2 --no-bond" output="screen">
 
 		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
 		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
 		<!-- Input: Rectified depth image -->
-		<!--remap from="image_rect" to="/Airsim/depth_back"/-->
+		<remap from="image_rect" to="/Airsim/depth_back"/>
 		<remap from="points" to="/points_back" />
     </node>
-    </comment>
     
     <comment> 
     <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
