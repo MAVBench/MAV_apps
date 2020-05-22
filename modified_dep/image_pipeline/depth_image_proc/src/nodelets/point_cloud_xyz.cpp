@@ -54,6 +54,7 @@
 #include "boost/functional/hash.hpp"
 #include <std_msgs/Bool.h>
 #include <tuple>
+#include <queue>
 using namespace std;
 #include <mavbench_msgs/point_cloud_debug.h>
 #include <string>
@@ -74,8 +75,11 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 {
   // Subscriptions
   boost::shared_ptr<image_transport::ImageTransport> it_;
-  image_transport::CameraSubscriber sub_depth_;
+  image_transport::CameraSubscriber sub_depth_front_;
+  image_transport::CameraSubscriber sub_depth_bottom_;
+  image_transport::CameraSubscriber sub_depth_back_;
   int queue_size_;
+  int camera_counter = 0;
 
 
   // Publications
@@ -129,6 +133,11 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
   bool  new_control_data = false;
 
+  ///> For consuming multiple camera data
+  std::queue<sensor_msgs::ImageConstPtr> depth_front_q;
+  std::queue<sensor_msgs::ImageConstPtr> depth_bottom_q;
+  std::queue<sensor_msgs::ImageConstPtr> depth_back_q;
+
   tf::TransformListener listener;
 
   void connectCb();
@@ -136,6 +145,9 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                const sensor_msgs::CameraInfoConstPtr& info_msg);
 
+  // for consuming multiple camera data
+  void cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
+               const sensor_msgs::CameraInfoConstPtr& info_msg);
 
   double estimated_to_actual_vol_correction(double estimated_vol);   // for correction the estimated value to real
   double actual_to_estimated_vol_correction(double actual_vol);   // for correction of the actual values to estimated (since pc lives in the estimated world for enforcement)
@@ -324,7 +336,9 @@ void PointCloudXyzNodelet::onInit()
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     //boost::lock_guard<boost::mutex> lock(connect_mutex_);
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
-    sub_depth_ = it_->subscribeCamera("image_rect", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
+    sub_depth_front_ = it_->subscribeCamera("/Airsim/depth_front", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
+    sub_depth_bottom_ = it_->subscribeCamera("/Airsim/depth_bottom", queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
+    sub_depth_back_ = it_->subscribeCamera("/Airsim/depth_back", queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
     pub_point_cloud_aug_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points_aug", 1);//, connect_cb, connect_cb);
     runtime_failure_pub = nh.advertise<mavbench_msgs::runtime_failure_msg>("runtime_failure", 1);//, connect_cb, connect_cb);
     pub_point_cloud_ = nh.advertise<PointCloud>("points", 1);//, connect_cb, connect_cb);
@@ -404,12 +418,12 @@ void PointCloudXyzNodelet::connectCb()
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
   if (pub_point_cloud_.getNumSubscribers() == 0)
   {
-    sub_depth_.shutdown();
+    sub_depth_front_.shutdown();
   }
-  else if (!sub_depth_)
+  else if (!sub_depth_front_)
   {
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
-    sub_depth_ = it_->subscribeCamera("image_rect", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
+    sub_depth_front_ = it_->subscribeCamera("/Airsim/depth_front", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
   }
 }
 
@@ -1702,6 +1716,31 @@ double PointCloudXyzNodelet::actual_to_estimated_vol_correction(double actual_vo
 	}
 }
 
+///< This is thread-safe only because ROS executes callbacks one at a time,
+///< and concurrent callbacks are disabled. This ensures there is no race
+///< while incrementing `camera_counter`.
+void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
+                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
+{
+    if (depth_msg->header.frame_id == "camera") {
+        depth_front_q.push(depth_msg);
+        camera_counter += 1;
+    }
+    else if (depth_msg->header.frame_id == "camera_bottom") {
+        depth_bottom_q.push(depth_msg);
+        camera_counter += 1;
+    }
+    else if (depth_msg->header.frame_id == "camera_back") {
+        depth_back_q.push(depth_msg);
+        camera_counter += 1;
+    }
+
+    if (camera_counter == 3) {
+        camera_counter = 0;
+        //depthCb(info_msg);
+    }
+}
+
 
 double last_res = .3;
 
@@ -1709,8 +1748,6 @@ ros::Time last_time = ros::Time::now();
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                    const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
-
-
 	//blah. reactivate after collecting data
 	if (got_first_unknown && !got_new_closest_unknown){
 		return;
