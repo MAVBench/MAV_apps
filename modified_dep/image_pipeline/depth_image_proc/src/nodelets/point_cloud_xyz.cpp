@@ -1903,15 +1903,17 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   //        raw_cloud_msgs[2]->header.frame_id, ros::Time(0), backToFrontTransform);
 
   for (int i = 0; i < N_CAMERAS; ++i) {
-      sensor_msgs::PointCloud2Iterator<float> cloud_x_cam(*cloud_msgs[i], "x");
-      sensor_msgs::PointCloud2Iterator<float> cloud_y_cam(*cloud_msgs[i], "y");
-      sensor_msgs::PointCloud2Iterator<float> cloud_z_cam(*cloud_msgs[i], "z");
+      //if (i == 0) {
+          sensor_msgs::PointCloud2Iterator<float> cloud_x_cam(*cloud_msgs[i], "x");
+          sensor_msgs::PointCloud2Iterator<float> cloud_y_cam(*cloud_msgs[i], "y");
+          sensor_msgs::PointCloud2Iterator<float> cloud_z_cam(*cloud_msgs[i], "z");
 
-      for (int j = 0; j < n_points_cam; ++j) {
-          *(cloud_x + i * N_CAMERAS + j) = *(cloud_x_cam + j);
-          *(cloud_y + i * N_CAMERAS + j) = *(cloud_y_cam + j);
-          *(cloud_z + i * N_CAMERAS + j) = *(cloud_z_cam + j);
-      }
+          for (int j = 0; j < n_points_cam; ++j) {
+              *(cloud_x + i * n_points_cam + j) = *(cloud_x_cam + j);
+              *(cloud_y + i * n_points_cam + j) = *(cloud_y_cam + j);
+              *(cloud_z + i * n_points_cam + j) = *(cloud_z_cam + j);
+          }
+      //}
   }
 
   // radhika: I renamed the combined point cloud to cloud_msg so that 
