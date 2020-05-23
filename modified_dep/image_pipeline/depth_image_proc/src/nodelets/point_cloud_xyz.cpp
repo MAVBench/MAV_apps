@@ -1,6 +1,6 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
-* 
+camera* 
 *  Copyright (c) 2008, Willow Garage, Inc.
 *  All rights reserved.
 * 
@@ -43,6 +43,7 @@
 #include <depth_image_proc/depth_conversions.h>
 #include <signal.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
+#include <pcl_ros/transforms.h>
 #include <datacontainer.h>
 #include <tf/transform_listener.h>
 #include "Profiling.h"
@@ -62,6 +63,8 @@ using namespace std;
 #include <mavbench_msgs/point_cloud_aug.h>
 #include <mavbench_msgs/control.h>
 
+#define N_CAMERAS 3
+
 namespace depth_image_proc {
 
 namespace enc = sensor_msgs::image_encodings;
@@ -75,11 +78,13 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 {
   // Subscriptions
   boost::shared_ptr<image_transport::ImageTransport> it_;
+
   image_transport::CameraSubscriber sub_depth_front_;
   image_transport::CameraSubscriber sub_depth_bottom_;
   image_transport::CameraSubscriber sub_depth_back_;
+
   int queue_size_;
-  int camera_counter = 0;
+  int camera_counter;
 
 
   // Publications
@@ -142,8 +147,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 
   void connectCb();
 
-  void depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
-               const sensor_msgs::CameraInfoConstPtr& info_msg);
+  void depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg);
 
   // for consuming multiple camera data
   void cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
@@ -325,8 +329,7 @@ void PointCloudXyzNodelet::onInit()
     unknown_point_converted_to_pc_coord.point.y = 0.0;
     unknown_point_converted_to_pc_coord.point.z = 0.0;
 
-
-
+    camera_counter = 0;
     pt_cld_ctr = 0;
     pt_cld_generation_acc = 0;
     img_to_pt_cloud_acc = 0;
@@ -336,7 +339,7 @@ void PointCloudXyzNodelet::onInit()
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     //boost::lock_guard<boost::mutex> lock(connect_mutex_);
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
-    sub_depth_front_ = it_->subscribeCamera("/Airsim/depth_front", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
+    sub_depth_front_ = it_->subscribeCamera("/Airsim/depth_front", queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
     sub_depth_bottom_ = it_->subscribeCamera("/Airsim/depth_bottom", queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
     sub_depth_back_ = it_->subscribeCamera("/Airsim/depth_back", queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
     pub_point_cloud_aug_ = nh.advertise<mavbench_msgs::point_cloud_aug>("points_aug", 1);//, connect_cb, connect_cb);
@@ -386,7 +389,7 @@ void PointCloudXyzNodelet::closest_unknown_callback(const geometry_msgs::Point m
 	//closest_unknown_point.header.stamp = ros::Time::now(); // TODO: change this to
 	// transfer the point to point cloud coordinates
 	try {
-		listener.transformPoint("camera", closest_unknown_point, unknown_point_converted_to_pc_coord); // from point, to
+		listener.transformPoint("camera_front", closest_unknown_point, unknown_point_converted_to_pc_coord); // from point, to
 	}catch(...){
 		; // just use the previous unknown_pont_converted_to_pc_coord
 	}
@@ -423,7 +426,7 @@ void PointCloudXyzNodelet::connectCb()
   else if (!sub_depth_front_)
   {
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
-    sub_depth_front_ = it_->subscribeCamera("/Airsim/depth_front", queue_size_, &PointCloudXyzNodelet::depthCb, this, hints);
+    sub_depth_front_ = it_->subscribeCamera("/Airsim/depth_front", queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
   }
 }
 
@@ -1722,7 +1725,7 @@ double PointCloudXyzNodelet::actual_to_estimated_vol_correction(double actual_vo
 void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                     const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
-    if (depth_msg->header.frame_id == "camera") {
+    if (depth_msg->header.frame_id == "camera_front") {
         depth_front_q.push(depth_msg);
         camera_counter += 1;
     }
@@ -1737,7 +1740,7 @@ void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
     if (camera_counter == 3) {
         camera_counter = 0;
-        //depthCb(info_msg);
+        depthCb(info_msg);
     }
 }
 
@@ -1745,9 +1748,17 @@ void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
 double last_res = .3;
 
 ros::Time last_time = ros::Time::now();
-void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
-                                   const sensor_msgs::CameraInfoConstPtr& info_msg)
+void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
+    sensor_msgs::ImageConstPtr depth_msgs[N_CAMERAS];
+    depth_msgs[0] = depth_front_q.front();
+    depth_msgs[1] = depth_bottom_q.front();
+    depth_msgs[2] = depth_back_q.front();
+
+    depth_front_q.pop();
+    depth_bottom_q.pop();
+    depth_back_q.pop();
+
 	//blah. reactivate after collecting data
 	if (got_first_unknown && !got_new_closest_unknown){
 		return;
@@ -1772,7 +1783,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 	}
 	*/
 
-	profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
+   profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
    ros::param::get("/sensor_max_range", sensor_max_range);
    //ros::param::get("/point_cloud_width", point_cloud_width);
    //ros::param::get("/point_cloud_height", point_cloud_height);
@@ -1781,46 +1792,50 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
    //ros::param::get("/point_cloud_density_reduction", point_cloud_density_reduction);
    //ros::param::get("/point_cloud_max_z", point_cloud_max_z);
 
-
-
-  PointCloud::Ptr cloud_msg(new PointCloud);
+  PointCloud::Ptr raw_cloud_msgs[3];
+  raw_cloud_msgs[0] = PointCloud::Ptr(new PointCloud);
+  raw_cloud_msgs[1] = PointCloud::Ptr(new PointCloud);
+  raw_cloud_msgs[2] = PointCloud::Ptr(new PointCloud);
 
   ros::Time start_hook_t = ros::Time::now();
   
-  img_to_pt_cloud_acc += (start_hook_t - depth_msg->header.stamp).toSec()*1e9;
+  img_to_pt_cloud_acc += (start_hook_t - depth_msgs[0]->header.stamp).toSec()*1e9;
 
   //img_capture_time_stamp = depth_msg->header.stamp;
   img_capture_time_stamp = ros::Time::now();
 
-  if (measure_time_end_to_end){ 
-    cloud_msg->header = depth_msg->header;
-  }else{
-	  cloud_msg->header = depth_msg->header;
-	  cloud_msg->header.stamp = ros::Time::now();
-  }
-  cloud_msg->height = depth_msg->height;
-  cloud_msg->width  = depth_msg->width;
-  cloud_msg->is_dense = false;
-  cloud_msg->is_bigendian = false;
+  for (int i = 0; i < N_CAMERAS; ++i) {
+      if (measure_time_end_to_end){ 
+        raw_cloud_msgs[i]->header = depth_msgs[i]->header;
+      }else{
+          raw_cloud_msgs[i]->header = depth_msgs[i]->header;
+          raw_cloud_msgs[i]->header.stamp = ros::Time::now();
+      }
 
-  sensor_msgs::PointCloud2Modifier pcd_modifier(*cloud_msg);
-  pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
+      raw_cloud_msgs[i]->height = depth_msgs[i]->height;
+      raw_cloud_msgs[i]->width  = depth_msgs[i]->width;
+      raw_cloud_msgs[i]->is_dense = false;
+      raw_cloud_msgs[i]->is_bigendian = false;
 
-  // Update camera model
-  model_.fromCameraInfo(info_msg);
+      sensor_msgs::PointCloud2Modifier pcd_modifier(*raw_cloud_msgs[i]);
+      pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
 
-  if (depth_msg->encoding == enc::TYPE_16UC1)
-  {
-    convert<uint16_t>(depth_msg, cloud_msg, model_);
-  }
-  else if (depth_msg->encoding == enc::TYPE_32FC1)
-  {
-    convert<float>(depth_msg, cloud_msg, model_);
-  }
-  else
-  {
-    NODELET_ERROR_THROTTLE(5, "Depth image has unsupported encoding [%s]", depth_msg->encoding.c_str());
-    return;
+      // Update camera model
+      model_.fromCameraInfo(info_msg);
+
+      if (depth_msgs[i]->encoding == enc::TYPE_16UC1)
+      {
+        convert<uint16_t>(depth_msgs[i], raw_cloud_msgs[i], model_);
+      }
+      else if (depth_msgs[i]->encoding == enc::TYPE_32FC1)
+      {
+        convert<float>(depth_msgs[i], raw_cloud_msgs[i], model_);
+      }
+      else
+      {
+        NODELET_ERROR_THROTTLE(5, "Depth image has unsupported encoding [%s]", depth_msgs[i]->encoding.c_str());
+        return;
+      }
   }
    
   ros::Time end_hook_t = ros::Time::now(); 
@@ -1831,19 +1846,78 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
   if (CLCT_DATA_){
    /*
-	  pt_cld_ctr++;
+      pt_cld_ctr++;
     if ((pt_cld_ctr+1) % data_collection_iteration_freq_ == 0) { // this is because I can't figure out how
-    															 // insert the shutting_down function in the sigInt
+                                                                 // insert the shutting_down function in the sigInt
         log_data_before_shutting_down();
     }
     */
   }
+
+  // radhika: uncomment the below 4 lines and...
+  //PointCloud::Ptr cloud_msgs[3];
+  //cloud_msgs[0] = raw_cloud_msgs[0];
+  //cloud_msgs[1] = raw_cloud_msgs[1];
+  //cloud_msgs[2] = raw_cloud_msgs[2];
+
+  // comment out the parts between the horizontal lines for a sort of 
+  // semi-working version
+
+  //------------------------
+
+  PointCloud::Ptr cloud_msgs[3];
+  cloud_msgs[0] = raw_cloud_msgs[0];
+  cloud_msgs[1] = PointCloud::Ptr(new PointCloud);
+  cloud_msgs[2] = PointCloud::Ptr(new PointCloud);
+
+  // transforming "camera_bottom" and "camera_back" to "camera_front"'s
+  // coordinate system
+  pcl_ros::transformPointCloud("camera_front",
+          *raw_cloud_msgs[1], *cloud_msgs[1], listener);
+  pcl_ros::transformPointCloud("camera_front",
+          *raw_cloud_msgs[2], *cloud_msgs[2], listener);
+
+  //------------------------
  
-  // -- convert the msg to vector
-  int n_points = cloud_msg->width * cloud_msg->height;
-  sensor_msgs::PointCloud2Iterator<float> cloud_x(*cloud_msg, "x");
-  sensor_msgs::PointCloud2Iterator<float> cloud_y(*cloud_msg, "y");
-  sensor_msgs::PointCloud2Iterator<float> cloud_z(*cloud_msg, "z");
+  // merging all three camera point clouds together
+  PointCloud::Ptr cloud_comb(new PointCloud);
+  cloud_comb->header = depth_msgs[0]->header;
+  sensor_msgs::PointCloud2Modifier modifier_comb(*cloud_comb);
+
+  int n_points_cam = cloud_msgs[0]->height * cloud_msgs[0]->width;
+  int n_points = 3 * n_points_cam;
+  modifier_comb.resize(n_points);
+
+  modifier_comb.setPointCloud2FieldsByString(1, "xyz");
+
+  sensor_msgs::PointCloud2Iterator<float> cloud_x(*cloud_comb, "x");
+  sensor_msgs::PointCloud2Iterator<float> cloud_y(*cloud_comb, "y");
+  sensor_msgs::PointCloud2Iterator<float> cloud_z(*cloud_comb, "z");
+
+  //tf::StampedTransform bottomToFrontTransform;
+  //listener.lookupTransform(raw_cloud_msgs[0]->header.frame_id, 
+  //        raw_cloud_msgs[1]->header.frame_id, ros::Time(0), bottomToFrontTransform);
+
+  //tf::StampedTransform backToFrontTransform;
+  //listener.lookupTransform(raw_cloud_msgs[0]->header.frame_id, 
+  //        raw_cloud_msgs[2]->header.frame_id, ros::Time(0), backToFrontTransform);
+
+  for (int i = 0; i < N_CAMERAS; ++i) {
+      sensor_msgs::PointCloud2Iterator<float> cloud_x_cam(*cloud_msgs[i], "x");
+      sensor_msgs::PointCloud2Iterator<float> cloud_y_cam(*cloud_msgs[i], "y");
+      sensor_msgs::PointCloud2Iterator<float> cloud_z_cam(*cloud_msgs[i], "z");
+
+      for (int j = 0; j < n_points_cam; ++j) {
+          *(cloud_x + i * N_CAMERAS + j) = *(cloud_x_cam + j);
+          *(cloud_y + i * N_CAMERAS + j) = *(cloud_y_cam + j);
+          *(cloud_z + i * N_CAMERAS + j) = *(cloud_z_cam + j);
+      }
+  }
+
+  // radhika: I renamed the combined point cloud to cloud_msg so that 
+  // the rest of the code remains consistent
+  PointCloud::Ptr cloud_msg = cloud_comb;
+
   std::vector<float> xs;
   std::vector<float> ys;
   std::vector<float> zs;
@@ -1862,7 +1936,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::ImageConstPtr& depth_msg,
   double gap_statistics_avg, gap_statistics_min, gap_statistics_max, obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om, obs_dist_statistics_avg_from_pc;
 
   gridded_volume = runDiagnosticsUsingGriddedApproach(cloud_x, cloud_y, cloud_z, n_points, grid_size, diagnostic_resolution, sensor_volume_to_digest_estimated, area_to_digest, gap_statistics_min,
-		  gap_statistics_max, gap_statistics_avg, obs_dist_statistics_min_from_pc, obs_dist_statistics_avg_from_pc);
+          gap_statistics_max, gap_statistics_avg, obs_dist_statistics_min_from_pc, obs_dist_statistics_avg_from_pc);
 
 
   mavbench_msgs::control control;
