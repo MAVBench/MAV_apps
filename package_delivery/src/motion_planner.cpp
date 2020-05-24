@@ -766,10 +766,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
     	ppl_latency_so_far = (ros::Time::now() - ppl_start_time);
     	last_time_planning_duration = (ros::Time::now() - this_time_ppl_start_time).toSec();
+    	/*
     	if(!got_enough_budget_for_next_SA_itr(piecewise_path)){
     		return false;
     	}
-
+		*/
     }while(((ppl_latency_so_far.toSec() + last_time_planning_duration) < g_ppl_time_budget) &&
     		(piecewise_path.empty() || status == 3 || !got_enough_budget_for_next_SA_itr(piecewise_path) || !ppl_inbound_check(piecewise_path)));
 

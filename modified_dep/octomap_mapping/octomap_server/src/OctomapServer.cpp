@@ -184,6 +184,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_octree_lower_res->setClampingThresMin(thresMin);
   m_octree_lower_res->setClampingThresMax(thresMax);
 
+	; // just use the previous unknown_pont_converted_to_pc_coord
+}
   closest_obs_coord = point3d(m_maxRange, m_maxRange, m_maxRange);
   dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0));
 
