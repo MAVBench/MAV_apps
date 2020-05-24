@@ -5,6 +5,7 @@ from opts.opt_6var import opt_6var
 from opts.opt_6var_rhat import opt_6var_rhat
 from opts.opt_5var import opt_5var
 from opts.opt_5var_rhat import opt_5var_rhat
+from opts.opt_5var_rhat_volmax import opt_5var_rhat_volmax
 from opts.opt_4var import opt_4var
 from opts.opt_4var_rhat import opt_4var_rhat
 from opts.opt_3var import opt_3var
@@ -32,6 +33,8 @@ class Opt:
 			self.optimizer = opt_5var(*self.init_args, **self.init_kwargs)
 		elif (self.method == 'var5_rhat'):
 			self.optimizer = opt_5var_rhat(*self.init_args, **self.init_kwargs)
+		elif (self.method == 'var5_rhat_volmax'):
+			self.optimizer = opt_5var_rhat_volmax(*self.init_args, **self.init_kwargs)
 		elif (self.method == 'var4'):
 			self.optimizer = opt_4var(*self.init_args, **self.init_kwargs)
 		elif (self.method == 'var4_rhat'):
