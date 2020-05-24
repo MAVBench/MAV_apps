@@ -1957,9 +1957,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   double gap_statistics_avg = gap_statistics_avg_total / n_points;
   double obs_dist_statistics_avg_from_pc = obs_dist_statistics_avg_from_pc_total / n_points;
 
-  std::cout << "gap_statistics_avg: " << gap_statistics_avg << "\n";
-  std::cout << "sensor_volume_to_digest_estimated: " << sensor_volume_to_digest_estimated << "\n";
-
   mavbench_msgs::control control;
   double sensor_volume_to_digest =  estimated_to_actual_vol_correction(sensor_volume_to_digest_estimated); // convert to actual, because the runtime makes decision with actual values
   control.inputs.sensor_volume_to_digest = sensor_volume_to_digest;
@@ -2037,7 +2034,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
    ros::param::get("/om_to_pl_res", om_to_pl_res);
    ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
 
-   std::cout << "pc_vol_ideal: " << pc_vol_ideal << "\n";
+   //std::cout << "pc_vol_ideal: " << pc_vol_ideal << "\n";
 
    pc_vol_ideal = sensor_volume_to_digest;
 
