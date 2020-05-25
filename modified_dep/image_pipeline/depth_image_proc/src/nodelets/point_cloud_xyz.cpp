@@ -177,7 +177,7 @@ void PointCloudXyzNodelet::onInit()
   it_.reset(new image_transport::ImageTransport(nh));
   //profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
   //signal(SIGINT, sigIntHandlerPrivate);
-  ros::Duration(1).sleep();
+  ros::Duration(3).sleep();
   // Read parameters
   private_nh.param("queue_size", queue_size_, 1);
 
@@ -1926,6 +1926,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
       sensor_msgs::PointCloud2Iterator<float> cloud_x_cam(*raw_cloud_msgs[i], "x");
       sensor_msgs::PointCloud2Iterator<float> cloud_y_cam(*raw_cloud_msgs[i], "y");
       sensor_msgs::PointCloud2Iterator<float> cloud_z_cam(*raw_cloud_msgs[i], "z");
+      _sensor_volume_to_digest_estimated = 0;
 
       double volume_to_digest_2; // -- at the moment, we are not measuing this
 
@@ -1943,7 +1944,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
               _obs_dist_statistics_min_from_pc, _obs_dist_statistics_avg_from_pc);
 
       // fixing the combined camera stats
-      gap_statistics_min = min(_gap_statistics_min, gap_statistics_min);
+
+      if (i == 0) { // only pay attention to camera 0 which is the front camera for gaps
+    	  gap_statistics_min = min(_gap_statistics_min, gap_statistics_min);
+      }
       obs_dist_statistics_min_from_pc = min(_obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_pc);
       obs_dist_statistics_min_from_om = min(_obs_dist_statistics_min_from_om, obs_dist_statistics_min_from_om);
 
