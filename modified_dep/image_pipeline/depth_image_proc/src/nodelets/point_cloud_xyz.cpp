@@ -62,14 +62,15 @@ using namespace std;
 #include <mavbench_msgs/point_cloud_aug.h>
 #include <mavbench_msgs/control.h>
 
-#define N_CAMERAS 4
+#define N_CAMERAS 6
 
 const std::string camera_names[] = {
     "front",
-	//"down",
     "back",
     "right",
-	"left"
+	"left",
+	"top",
+	"down",
 };
 
 namespace depth_image_proc {
