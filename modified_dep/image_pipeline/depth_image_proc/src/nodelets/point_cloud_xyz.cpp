@@ -62,11 +62,11 @@ using namespace std;
 #include <mavbench_msgs/point_cloud_aug.h>
 #include <mavbench_msgs/control.h>
 
-#define N_CAMERAS 3
+#define N_CAMERAS 4
 
 const std::string camera_names[] = {
     "front",
-	"down",
+	//"down",
     "back",
     "right",
 	"left"
@@ -1202,7 +1202,7 @@ void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msg
 void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
 		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points, double volume_to_keep, double &volume_kept, float **gridded_volume, int grid_volume_row_size, float diagnostic_resolution)
 {
-	const int num_radius_buckets = 10*sensor_max_range;
+	int num_radius_buckets = 10*sensor_max_range;
 	double radius_volume[num_radius_buckets];
 	memset(&radius_volume[0], 0, sizeof(radius_volume));
 	vector<double> radius_points[num_radius_buckets];
@@ -1242,6 +1242,9 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
     	int radius_bucket = (int) (std::pow(std::pow(this_x - unknown_point_converted_to_pc_coord.point.x, 2) +
     			std::pow(this_y-unknown_point_converted_to_pc_coord.point.y, 2), 0.5) / bucket_width);
 
+    	// updating upper bound
+    	radius_bucket = min(num_radius_buckets-1, radius_bucket);
+
 //    		int radius_bucket = (int) (std::pow(std::pow(this_x , 2) +
  //   			std::pow(this_y, 2), 0.5) / bucket_width);
 
@@ -1250,12 +1253,12 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
 
     	//radius_volume[radius_bucket] += (1.0/3)*fabs(this_x-last_x)*fabs(this_y - last_row_y)*this_z;
     	// using the gridded approach
-    	int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_volume_row_size/2;
-    	int y_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution) + (int)grid_volume_row_size/2;
-    	radius_volume[radius_bucket] += (1.0/3)*pow(diagnostic_resolution, 2)*gridded_volume[x_index][y_index];
+    	//int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_volume_row_size/2;
+    	//int y_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution) + (int)grid_volume_row_size/2;
+    	//radius_volume[radius_bucket] += (1.0/3)*pow(diagnostic_resolution, 2)*gridded_volume[x_index][y_index];
     	radius_points[radius_bucket].push_back(i);
     	//radius_points_valid[radius_bucket] = true;
-    	gridded_volume[x_index][y_index] = 0;
+    	//gridded_volume[x_index][y_index] = 0;
     }
 
     for (int bucket_number= 0; bucket_number < num_radius_buckets; bucket_number++){
@@ -1979,6 +1982,9 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 	  ros::Duration(.01).sleep();
 	  control_pub.publish(control);
   }
+
+  //ros::Duration(10).sleep();
+
   new_control_data = false;
   ros::param::set("new_control_data", new_control_data);
 
