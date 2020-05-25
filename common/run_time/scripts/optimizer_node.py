@@ -89,13 +89,14 @@ def run_optimizer(control):
     d = np.array([0, 0, v_sensor_max])
 
 
-    opt = Opt(Q=Q, 
-            r_min=r_min_list,
-            r_max=r_max_list,
-            v_min=v_min_list,
-            v_max=v_max_list,
-            G=G,
-            d=d)
+    opt = Opt(method="var5_rhat_volmax",
+              Q=Q,
+              r_min=r_min_list,
+              r_max=r_max_list,
+              v_min=v_min_list,
+              v_max=v_max_list,
+              G=G,
+              d=d)
 
     # Optimization parameters #
     x0 = np.array([1/0.5, 1/0.5, 5000, 5000, 5000])
