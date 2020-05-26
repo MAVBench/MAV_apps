@@ -186,6 +186,13 @@ void PointCloudXyzNodelet::onInit()
   profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
 
   // Profiling 
+  /*
+  if (!ros::param::get("/num_cameras", N_CAMERAS)) {
+    ROS_FATAL("Could not start pointcloud. Parameter missing! Looking for num_cameras");
+    exit(0);
+  }
+ */
+  // Profiling
   if (!ros::param::get("/DEBUG", DEBUG_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for DEBUG");
     exit(0);
@@ -661,6 +668,7 @@ float** runDiagnosticsUsingGriddedApproach(sensor_msgs::PointCloud2Iterator<floa
 	 }
  }
 
+ assert(n_points>1);
  // iterate through points row by row and get gaps for each row
   for(size_t i=0; i< n_points - 1 ; ++i, ++cloud_x, ++cloud_y, ++cloud_z){
       this_x = *cloud_x;
@@ -1948,6 +1956,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
       if (i == 0) { // only pay attention to camera 0 which is the front camera for gaps
     	  gap_statistics_min = min(_gap_statistics_min, gap_statistics_min);
+    	  //profiling_container->capture("gap_statistics_min", "single", gap_statistics_min, 1);
+
       }
       obs_dist_statistics_min_from_pc = min(_obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_pc);
       obs_dist_statistics_min_from_om = min(_obs_dist_statistics_min_from_om, obs_dist_statistics_min_from_om);
@@ -1960,6 +1970,8 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
       sensor_volume_to_digest_estimated += _sensor_volume_to_digest_estimated;
       area_to_digest += _area_to_digest;
   }
+
+  //profiling_container->capture("sensor_volume_to_digest_estimated", "single", sensor_volume_to_digest_estimated, 1);
 
   // average of averages
   double gap_statistics_avg = gap_statistics_avg_total / n_points;
@@ -2047,7 +2059,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
    //std::cout << "pc_vol_ideal: " << pc_vol_ideal << "\n";
 
-   pc_vol_ideal = sensor_volume_to_digest;
+//   pc_vol_ideal = 20*sensor_volume_to_digest;
 
    // just for visuals
    /*

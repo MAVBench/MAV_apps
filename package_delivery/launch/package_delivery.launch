@@ -187,6 +187,7 @@
   </comment>
 
  
+  <param name="num_cameras" value="6"/>
 
   <!-- ========================= Sensors ============================ -->
   <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
@@ -242,12 +243,13 @@
   <!-- fixed knob values --> 
   <arg name="pc_res" default=".3" />   
   <param name="pc_res" value="$(arg pc_res)"/>
+  <param name="pc_res_delete_later" value="$(arg pc_res)"/>
   <!-- arg name="om_to_pl_res" default="" /-->   
   <param name="om_to_pl_res" value="$(arg pc_res)"/>
   <arg name="pc_vol_ideal" default="80000" />   
   <param name="pc_vol_ideal" value="$(arg pc_vol_ideal)"/>
-  <arg name="om_to_pl_vol_ideal" default="20000" />   
-  <param name="om_to_pl_vol_ideal" value="$(arg om_to_pl_vol_ideal)"/>
+  <!-- arg name="om_to_pl_vol_ideal" default= /-->   
+  <param name="om_to_pl_vol_ideal" value="$(arg pc_vol_ideal)"/>
   <arg name="ppl_vol_ideal" default="600000" />   
   <param name="ppl_vol_ideal" value="$(arg ppl_vol_ideal)"/>
 

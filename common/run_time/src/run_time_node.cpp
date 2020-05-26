@@ -54,7 +54,7 @@ int g_capture_size = 600; //set this to 1, if you want to see every data collect
 bool time_budgetting_failed = false;
 double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min;
 coord drone_position;
-
+ProfileManager *profile_manager_client;
 mavbench_msgs::control control;
 
 bool got_new_input = false;
@@ -231,6 +231,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 //	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
 
 	//auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, distance_error);
+	double sensor_range_calc;
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, drone_position); // not really working well with cur_vel_mag
 	double time_budget;
 	if (msg->points.size() < 2 || macro_time_budgets.size() < 2){
@@ -243,6 +244,10 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 		time_budget = min (max_time_budget, macro_time_budgets[1]);
 		//ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
 	}
+
+
+	//profiling_container->capture("time_budget", "single", time_budget, 1);
+
 
     //ROS_INFO_STREAM("time budget"<<time_budget<< "obstacle distance"<<control.inputs.obs_dist_statistics_min);
 
@@ -535,7 +540,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 	ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
 	ros::param::set("pc_vol_ideal", static_pc_vol_ideal);
 	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
-	profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
+	//profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
 // -- determine how much of the space to keep
 //	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
 	ros::param::set("om_to_pl_vol_ideal", static_om_to_pl_vol_ideal);
@@ -680,13 +685,13 @@ void reactive_budgetting(double cur_vel_mag, vector<std::pair<double, int>>& pc_
 //			ppl_time_budget_max;
 
 	//vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
-	vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
-	double ppl_time_budget = ppl_time_budget_vec[pc_res_power_index];
-	ros::param::set("ppl_time_budget", ppl_time_budget);
-	double smoothening_budget = ppl_time_budget;
-	ros::param::set("smoothening_budget", smoothening_budget);
-    profiling_container->capture("ppl_time_budget", "single", ppl_time_budget, g_capture_size);
-    profiling_container->capture("smoothening_budget", "single", smoothening_budget, g_capture_size);
+	//vector<double> ppl_time_budget_vec{.8, .3, .1, .05, .01};
+	//double ppl_time_budget = ppl_time_budget_vec[pc_res_power_index];
+	//ros::param::set("ppl_time_budget", ppl_time_budget);
+	//double smoothening_budget = ppl_time_budget;
+	//ros::param::set("smoothening_budget", smoothening_budget);
+    //profiling_container->capture("ppl_time_budget", "single", ppl_time_budget, g_capture_size);
+    //profiling_container->capture("smoothening_budget", "single", smoothening_budget, g_capture_size);
 
 	ros::param::set("new_control_data", true);
 	ros::param::set("optimizer_succeeded", false);
@@ -697,9 +702,9 @@ void reactive_budgetting(double cur_vel_mag, vector<std::pair<double, int>>& pc_
     	debug_data.header.stamp = ros::Time::now();
     	debug_data.pc_res = profiling_container->findDataByName("pc_res")->values.back();
     	debug_data.om_to_pl_res = profiling_container->findDataByName("om_to_pl_res")->values.back();
-    	debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
-    	debug_data.ppl_time_budget =  profiling_container->findDataByName("ppl_time_budget")->values.back();
-    	debug_data.smoothening_budget =  profiling_container->findDataByName("smoothening_budget")->values.back();
+    	//debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
+    	//debug_data.ppl_time_budget =  profiling_container->findDataByName("ppl_time_budget")->values.back();
+    	//debug_data.smoothening_budget =  profiling_container->findDataByName("smoothening_budget")->values.back();
     }
     //
 }
@@ -719,6 +724,27 @@ double inline calc_dist(coord point1, multiDOFpoint point) {
 }
 
 
+
+void log_data_before_shutting_down()
+{
+    profiling_container->setStatsAndClear();
+    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container->getStatsInString();
+    profile_manager_client->verboseClientCall(profiling_data_verbose_srv_inst);
+
+}
+
+void sigIntHandlerPrivate(int signo){
+    if (signo == SIGINT) {
+        log_data_before_shutting_down();
+        ros::shutdown();
+    }
+    exit(0);
+}
+
 // *** F:DN main function
 int main(int argc, char **argv)
 {
@@ -730,6 +756,9 @@ int main(int argc, char **argv)
     //ros::CallbackQueue callback_queue_2; // -- queues for control_inputs
     //n.setCallbackQueue(&callback_queue_1);
     //n2.setCallbackQueue(&callback_queue_2);
+
+    signal(SIGINT, sigIntHandlerPrivate);
+    profile_manager_client = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
 
     //signal(SIGINT, sigIntHandler);
     last_modification_time = ros::Time::now();
@@ -1001,6 +1030,7 @@ if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
     			double sensor_range = closest_unknown_point_distance;
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
+
     			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     		}
 

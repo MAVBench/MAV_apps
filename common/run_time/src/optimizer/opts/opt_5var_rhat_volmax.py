@@ -37,7 +37,7 @@ class opt_5var_rhat_volmax(opt_base_rhat, opt_5var_base):
         J_adj = np.array([0, 0, -1, 0, 0]) # adjustment from volume term
         return self.obj_norm_J(x) + J_adj
 
-    def opt(self, rt_d, x0, tol=1e-9, maxiter=100, verbose=False):
+    def opt(self, rt_d, x0, tol=1e-9, maxiter=10000, verbose=False):
         # only handles SLSQP for now
         method = 'SLSQP'
         self.rt_d = rt_d

@@ -406,7 +406,7 @@ double last_res = .6;
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
 	//ros::param::get("/voxel_type_to_publish", voxel_type_to_publish);
-	//	m_octree->clear();
+	//m_octree->clear();
 	pc_vol_actual = 0;
 	pc_vol_maximum_underestimated = true;
 	om_to_pl_vol_maximum_underestimated = true;

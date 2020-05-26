@@ -872,8 +872,8 @@ int main(int argc, char **argv)
         trajectory_t * forward_traj;
         trajectory_t * rev_traj;
 
-        //yaw_strategy_t yaw_strategy = follow_yaw;
-        yaw_strategy_t yaw_strategy = follow_closest_unknown;
+        yaw_strategy_t yaw_strategy = follow_yaw;
+        //yaw_strategy_t yaw_strategy = follow_closest_unknown;
         float max_velocity = g_v_max;
 
         /*

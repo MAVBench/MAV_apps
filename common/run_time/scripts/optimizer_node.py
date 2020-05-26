@@ -62,7 +62,7 @@ def run_optimizer(control):
 
     # --- determine the volume
     v_sensor_max = control.inputs.sensor_volume_to_digest
-    v_tree_max = max(control.inputs.cur_tree_total_volume, v_min)#, v_sensor_max)
+    v_tree_max = max(control.inputs.cur_tree_total_volume, v_min) + v_sensor_max#, v_sensor_max)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, 10*v_sensor_max)
 
@@ -72,7 +72,7 @@ def run_optimizer(control):
                                                                     # provide a volume as a min that is smaller
                                                                     # than what we can already see (v_sennsor_max)
     #print("fufufufufufuf" +str(ppl_vol_min))
-    v_max_list = [v_sensor_max, v_tree_max, max(v_max, ppl_vol_min)]
+    v_max_list = [r_max_*v_sensor_max, r_max_*v_tree_max, max(v_max, ppl_vol_min)]
 
 
     Q = np.array([[-2.16196038e-05, -2.78515364e-03,  2.86859999e-05],
@@ -86,7 +86,7 @@ def run_optimizer(control):
     #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
     # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
     G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0]])
-    d = np.array([0, 0, v_sensor_max])
+    d = np.array([0, 0, r_max_*v_sensor_max])
 
 
     opt = Opt(method="var5_rhat_volmax",
@@ -99,7 +99,7 @@ def run_optimizer(control):
               d=d)
 
     # Optimization parameters #
-    x0 = np.array([1/0.5, 1/0.5, 5000, 5000, 5000])
+    x0 = np.array([1/0.5, 1/0.5, (r_max_/r_min_static)*5000, (r_max_/r_min_static)*5000, r_max_*5000])
     profile = True
     tol = 1e-12
     results = opt.opt(profile=profile, rt_d=rt_d, x0=x0, tol=tol, verbose=False)
