@@ -62,7 +62,7 @@ using namespace std;
 #include <mavbench_msgs/point_cloud_aug.h>
 #include <mavbench_msgs/control.h>
 
-#define N_CAMERAS 6
+//#define N_CAMERAS 6
 
 const std::string camera_names[] = {
     "front",
@@ -87,7 +87,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   // Subscriptions
   boost::shared_ptr<image_transport::ImageTransport> it_;
 
-  image_transport::CameraSubscriber sub_depths_[N_CAMERAS];
+  image_transport::CameraSubscriber *sub_depths_; //[N_CAMERAS];
 
   int queue_size_;
   int camera_counter;
@@ -145,7 +145,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   bool  new_control_data = false;
 
   ///> For consuming multiple camera data
-  std::queue<sensor_msgs::ImageConstPtr> depth_qs[N_CAMERAS];
+  std::queue<sensor_msgs::ImageConstPtr> *depth_qs;//[N_CAMERAS];
 
   tf::TransformListener listener;
 
@@ -168,6 +168,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   void closest_unknown_callback(geometry_msgs::Point);
   ProfileManager *profile_manager_;
   DataContainer *profiling_container;
+  int N_CAMERAS = 1;
 };
 
 
@@ -182,16 +183,18 @@ void PointCloudXyzNodelet::onInit()
   // Read parameters
   private_nh.param("queue_size", queue_size_, 1);
 
+
+
+
   profiling_container = new DataContainer();
   profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
 
   // Profiling 
-  /*
+
   if (!ros::param::get("/num_cameras", N_CAMERAS)) {
     ROS_FATAL("Could not start pointcloud. Parameter missing! Looking for num_cameras");
     exit(0);
   }
- */
   // Profiling
   if (!ros::param::get("/DEBUG", DEBUG_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for DEBUG");
@@ -349,8 +352,10 @@ void PointCloudXyzNodelet::onInit()
 
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     //boost::lock_guard<boost::mutex> lock(connect_mutex_);
+    depth_qs = new std::queue<sensor_msgs::ImageConstPtr>[N_CAMERAS]; //[N_CAMERAS];
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
 
+    sub_depths_ = new image_transport::CameraSubscriber[N_CAMERAS];
     // for multiple cameras
     for (int i = 0; i < N_CAMERAS; ++i) {
         sub_depths_[i] = it_->subscribeCamera("/Airsim/depth_" + camera_names[i], queue_size_, &PointCloudXyzNodelet::cameraCb, this, hints);
