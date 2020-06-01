@@ -72,7 +72,7 @@ def run_optimizer(control):
                                                                     # provide a volume as a min that is smaller
                                                                     # than what we can already see (v_sennsor_max)
     #print("fufufufufufuf" +str(ppl_vol_min))
-    v_max_list = [r_max_*v_sensor_max, r_max_*v_tree_max, max(v_max, ppl_vol_min)]
+    v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, ppl_vol_min)]
 
 
     Q = np.array([[-2.16196038e-05, -2.78515364e-03,  2.86859999e-05],
@@ -86,7 +86,7 @@ def run_optimizer(control):
     #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
     # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
     G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0]])
-    d = np.array([0, 0, r_max_*v_sensor_max])
+    d = np.array([0, 0, (r_max_/r_min_static)*v_sensor_max])
 
 
     opt = Opt(method="var5_rhat_volmax",
@@ -147,7 +147,7 @@ def control_callback(control):
                                                                                    # float division sometimes gives slightly different resutls (say sometimes 0.0, sometimes 3.6*e**--16
                                                                                    # which results in an assertion error
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
-        assert(om_to_pl_res >= pc_res, "om_to_pl_res should be >= pc_res")
+        assert(om_to_pl_res >= pc_res), "om_to_pl_res should be >= pc_res"
         pc_vol_ideal = results.x[2]
         #pc_vol_ideal = 20000
         om_to_pl_vol_ideal = results.x[3]

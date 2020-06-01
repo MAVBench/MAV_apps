@@ -146,8 +146,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
 
   ///> For consuming multiple camera data
   std::queue<sensor_msgs::ImageConstPtr> *depth_qs;//[N_CAMERAS];
-
-  tf::TransformListener listener;
+  tf::TransformListener *listener;
 
   void connectCb();
 
@@ -179,12 +178,12 @@ void PointCloudXyzNodelet::onInit()
   it_.reset(new image_transport::ImageTransport(nh));
   //profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
   //signal(SIGINT, sigIntHandlerPrivate);
-  ros::Duration(3).sleep();
+  ros::Duration(2).sleep();
   // Read parameters
   private_nh.param("queue_size", queue_size_, 1);
 
 
-
+  listener = new tf::TransformListener(ros::Duration(30), true);
 
   profiling_container = new DataContainer();
   profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
@@ -353,6 +352,7 @@ void PointCloudXyzNodelet::onInit()
     // Make sure we don't enter connectCb() between advertising and assigning to pub_point_cloud_
     //boost::lock_guard<boost::mutex> lock(connect_mutex_);
     depth_qs = new std::queue<sensor_msgs::ImageConstPtr>[N_CAMERAS]; //[N_CAMERAS];
+
     image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
 
     sub_depths_ = new image_transport::CameraSubscriber[N_CAMERAS];
@@ -408,7 +408,7 @@ void PointCloudXyzNodelet::closest_unknown_callback(const geometry_msgs::Point m
 	//closest_unknown_point.header.stamp = ros::Time::now(); // TODO: change this to
 	// transfer the point to point cloud coordinates
 	try {
-		listener.transformPoint("camera_front", closest_unknown_point, unknown_point_converted_to_pc_coord); // from point, to
+		listener->transformPoint("camera_front", closest_unknown_point, unknown_point_converted_to_pc_coord); // from point, to
 	}catch(...){
 		; // just use the previous unknown_pont_converted_to_pc_coord
 	}
@@ -1743,22 +1743,35 @@ double PointCloudXyzNodelet::actual_to_estimated_vol_correction(double actual_vo
 ///< This is thread-safe only because ROS executes callbacks one at a time,
 ///< and concurrent callbacks are disabled. This ensures there is no race
 ///< while incrementing `camera_counter`.
+vector<std::string> camera_topic_seen;
 void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                     const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
     for (int i = 0; i < N_CAMERAS; ++i) {
         std::string camera_topic = "camera_" + camera_names[i];
-        if (depth_msg->header.frame_id == camera_topic) {
+        //bool has_seen_this_topic_before = !camera_topic_seen.empty() && (std::find(camera_topic_seen.begin(), camera_topic_seen.end(), camera_topic) != camera_topic_seen.end());
+        if (depth_msg->header.frame_id == camera_topic){ //&& !has_seen_this_topic_before ) {
             depth_qs[i].push(depth_msg);
             camera_counter += 1;
+            //camera_topic_seen.push_back(camera_topic);
             break;
         }
     }
 
+   /*
     if (camera_counter == N_CAMERAS) {
         camera_counter = 0;
         depthCb(info_msg);
+        camera_topic_seen.clear();
     }
+    */
+
+    for (int i =0; i<N_CAMERAS; i++){
+    	if (depth_qs[i].size() == 0) {
+    		return;
+    	}
+    }
+    depthCb(info_msg);
 }
 
 
@@ -1880,7 +1893,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   // coordinate system
   for (int i = 1; i < N_CAMERAS; ++i) {
       pcl_ros::transformPointCloud(cloud_msgs[0]->header.frame_id,
-              *raw_cloud_msgs[i], *cloud_msgs[i], listener);
+              *raw_cloud_msgs[i], *cloud_msgs[i], *listener);
   }
 
   // merging all three camera point clouds together
