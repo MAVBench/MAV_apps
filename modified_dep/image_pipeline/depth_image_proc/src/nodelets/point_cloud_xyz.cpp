@@ -178,7 +178,7 @@ void PointCloudXyzNodelet::onInit()
   it_.reset(new image_transport::ImageTransport(nh));
   //profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
   //signal(SIGINT, sigIntHandlerPrivate);
-  ros::Duration(2).sleep();
+  ros::Duration(4).sleep();
   // Read parameters
   private_nh.param("queue_size", queue_size_, 1);
 
@@ -1780,14 +1780,19 @@ double last_res = .3;
 ros::Time last_time = ros::Time::now();
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
-    sensor_msgs::ImageConstPtr depth_msgs[N_CAMERAS];
+
+
+	bool knob_performance_modeling = false;
+	ros::param::get("/knob_performance_modeling", knob_performance_modeling);
+
+	sensor_msgs::ImageConstPtr depth_msgs[N_CAMERAS];
     for (int i = 0; i < N_CAMERAS; ++i) {
         depth_msgs[i] = depth_qs[i].front();
         depth_qs[i].pop();
     }
 
 	//blah. reactivate after collecting data
-	if (got_first_unknown && !got_new_closest_unknown){
+	if ((got_first_unknown && !got_new_closest_unknown) && !knob_performance_modeling){
 		return;
 	}
 	got_new_closest_unknown = false;

@@ -12,10 +12,10 @@ pc_outro = .1 # filtering and such
 misc_latency = pc_outro + runtime_latency + om_to_pc_oh  # time of the stages not included in the controller
 
 # constraints
-pc_res_min = .3
-om_to_pl_res_min = pc_res_min
+#pc_res_min = .3
+r_min_static = .3
+om_to_pl_res_min = r_min_static
 r_steps = 4
-r_min_static = pc_res_min  # minimal octomap res
 r_max_static = (2 ** r_steps) * r_min_static
 v_min = 3000
 #v_max = np.inf

@@ -52,7 +52,12 @@ double planner_drone_radius;
 bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 bool time_budgetting_failed = false;
-double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min;
+double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min, om_to_pl_vol_ideal_max, ppl_vol_ideal_max ;
+
+
+
+
+
 coord drone_position;
 ProfileManager *profile_manager_client;
 mavbench_msgs::control control;
@@ -430,7 +435,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 
 	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
 	//double pc_res_max = .15;
-	int num_of_steps_on_y = num_of_res_to_try -1;
+	int num_of_steps_on_y = num_of_res_to_try;// -1;
 	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
 	static double static_pc_res = pc_res_max;
 	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
@@ -448,16 +453,14 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 	double om_to_pl_res_max = pc_res_max;
 	double om_to_pl_res_min = pow(2, num_of_steps_on_y)*om_to_pl_res_max;  //this value must be a power of two
 	static double static_om_to_pl_res = om_to_pl_res_max;
-	double om_to_pl_vol_ideal_max = 200000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
 											   // -- wanna cover be, and match it to this value.
-	double om_to_pl_vol_ideal_min = 3500;
+	double om_to_pl_vol_ideal_min = pc_vol_ideal_min;
 	double om_to_pl_vol_ideal_step_cnt = 20;
 	static double  static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max;
 
 
-	double ppl_vol_ideal_max = 400000; // -- todo: change to 20000; This value really depends on what we think the biggest map we
-											   // -- wanna cover be, and match it to this value.
-	double ppl_vol_ideal_min = 100000;
+										   // -- wanna cover be, and match it to this value.
+	double ppl_vol_ideal_min = pc_vol_ideal_min;
 	double ppl_vol_ideal_step_cnt = 20;
 	static double  static_ppl_vol_ideal = ppl_vol_ideal_max;
 
@@ -495,7 +498,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 	}
 
 	// -- octomap to planning communication knobs
-	if (knob_performance_modeling_for_om_to_pl && last_modification(6)){
+	if (knob_performance_modeling_for_om_to_pl && last_modification(12)){
 		//ros::Duration(6).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 		if (static_om_to_pl_vol_ideal < om_to_pl_vol_ideal_min){
 			static_om_to_pl_vol_ideal = om_to_pl_vol_ideal_max; // -- reset the map size
@@ -538,13 +541,13 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
     profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
     profiling_container->capture("om_to_pl_res", "single", om_to_pl_res, g_capture_size);
 	ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
-	ros::param::set("pc_vol_ideal", static_pc_vol_ideal);
+	ros::param::set("pc_vol_ideal", (static_pc_res/pc_res_max)*static_pc_vol_ideal);
 	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
 	//profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
 // -- determine how much of the space to keep
 //	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
-	ros::param::set("om_to_pl_vol_ideal", static_om_to_pl_vol_ideal);
-	ros::param::set("ppl_vol_ideal", static_ppl_vol_ideal);
+	ros::param::set("om_to_pl_vol_ideal", (static_om_to_pl_res/om_to_pl_res_max)*static_om_to_pl_vol_ideal);
+	ros::param::set("ppl_vol_ideal", (static_om_to_pl_res/om_to_pl_res_max)*static_ppl_vol_ideal);
 	ros::param::set("om_to_pl_res", static_om_to_pl_res);
 
 
@@ -573,7 +576,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
     	debug_data.header.stamp = ros::Time::now();
     	debug_data.pc_res = profiling_container->findDataByName("pc_res")->values.back();
     	debug_data.om_to_pl_res = profiling_container->findDataByName("om_to_pl_res")->values.back();
-    	debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
+    	//debug_data.point_cloud_num_points =  profiling_container->findDataByName("point_cloud_num_points")->values.back();
     	debug_data.ppl_time_budget =  profiling_container->findDataByName("ppl_time_budget")->values.back();
     	debug_data.smoothening_budget =  profiling_container->findDataByName("smoothening_budget")->values.back();
     }
@@ -593,7 +596,7 @@ void reactive_budgetting(double cur_vel_mag, vector<std::pair<double, int>>& pc_
 	int pc_res_power_index; // -- temp
 
 	// -- knob's boundaries; Note that for certain knobs, their max depends on the other knobs (e.g., point_cloud_num_points depends on resolution)
-	int num_of_steps_on_y = num_of_res_to_try-1;
+	int num_of_steps_on_y = num_of_res_to_try;//-1;
 	double pc_res_min = pow(2, num_of_steps_on_y)*pc_res_max;  //this value must be a power of two
 	static double static_pc_res = pc_res_max;
 	//static double static_map_to_transfer_side_length = map_to_transfer_side_length_max;
@@ -916,7 +919,20 @@ int main(int argc, char **argv)
 			ROS_FATAL_STREAM("Could not start runtime; pc_vol_ideal_max not provided");
 			exit(0);
     }
-if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
+
+
+     if(!ros::param::get("/om_to_pl_vol_ideal_max", om_to_pl_vol_ideal_max)){
+			ROS_FATAL_STREAM("Could not start runtime; om_topl_vol_ideal_max not provided");
+			exit(0);
+    }
+
+  if(!ros::param::get("/ppl_vol_ideal_max", ppl_vol_ideal_max)){
+			ROS_FATAL_STREAM("Could not start runtime; ppl_vol_ideal_max not provided");
+			exit(0);
+    }
+
+
+   if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
 			ROS_FATAL_STREAM("Could not start runtime; ppl_vol_min_coeff not provided");
 			exit(0);
     }
@@ -954,7 +970,6 @@ if(!ros::param::get("/ppl_vol_min_coeff", ppl_vol_min_coeff)){
 
     //Drone drone(ip_addr__global.c_str(), port);
 	ros::Rate pub_rate(50);
-
 	while (ros::ok())
 	{
 

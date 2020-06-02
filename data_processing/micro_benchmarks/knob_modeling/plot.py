@@ -12,7 +12,7 @@ from data_parsing import *
 stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl", "pc_om_estimation"]
 
 # which stage are you trying to plot
-stage_of_interest = "pc_om_estimation" # pick form ["om_to_pl", "pc_om", "pp_pl"]
+stage_of_interest = "pp_pl" # pick form ["om_to_pl", "pc_om", "pp_pl", "pc_om_estimation]
 
 assert stage_of_interest in stage_of_interests_to_pick_from
 
@@ -31,7 +31,7 @@ metrics_to_collect_hard = ["octomap_exposed_resolution", "point_cloud_estimated_
 
 # parse  data
 result_dic = parse_stat_file_flattened(input_filepath, metrics_to_collect_easy, metrics_to_collect_hard)
-result_dic = filter_based_on_key_value(result_dic, "pc_res", 1.200000, "in")
+#result_dic = filter_based_on_key_value(result_dic, "pc_res", 1.200000, "in")
 #write_results_to_csv(result_dic, output_all_csv_filepath)
 octomap_exposed_resolution = result_dic["octomap_exposed_resolution"]
 point_cloud_estimated_volume  = result_dic["point_cloud_estimated_volume"]
@@ -51,6 +51,7 @@ piecewise_planner_volume_explored_knob_modeling = result_dic["piecewise_planner_
 octomap_to_motion_planner_serialization_to_reception_knob_modeling = result_dic["octomap_to_motion_planner_serialization_to_reception_knob_modeling"]
 octomap_to_planner_com_overhead_knob_modeling = result_dic["octomap_to_planner_com_overhead_knob_modeling"]
 pc_res = result_dic["pc_res"]
+print(pc_res)
 pc_vol_actual = result_dic["pc_vol_actual"]
 om_to_pl_res = result_dic["om_to_pl_res_knob_modeling"]
 om_to_pl_vol_actual = result_dic["om_to_pl_vol_actual_knob_modeling"]
@@ -78,14 +79,16 @@ if stage_of_interest == "pc_om_estimation":
     print(pc_vol_estimated)
     print(octomap_volume_digested)
 elif stage_of_interest == "pc_om":
+    print(pc_res)
+    print(octomap_integeration_response_time)
     ax.scatter(pc_res, pc_vol_actual, octomap_integeration_response_time)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 elif stage_of_interest == "om_to_pl":
     ax.scatter(om_to_pl_res, om_to_pl_vol_actual, octomap_to_motion_planner_serialization_to_reception_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     #ax.scatter(om_to_pl_res, potential_volume_to_explore_knob_modeling, octomap_to_planner_com_overhead_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 elif stage_of_interest == "pp_pl":
-    ax.scatter(piecewise_planner_resolution_knob_modeling, ppl_vol_actual_knob_modeling, piecewise_planner_time_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    ax.scatter(om_to_pl_res[:-2], ppl_vol_actual_knob_modeling, piecewise_planner_time_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 else:
-    print "stage of interest:" + stage_of_interest + "not defined" 
+    print("stage of interest:" + stage_of_interest + "not defined")
     system.exit(0)
 
 # plot

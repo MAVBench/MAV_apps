@@ -187,7 +187,7 @@
   </comment>
 
  
-  <param name="num_cameras" value="4"/>
+  <param name="num_cameras" value="6"/>
 
   <!-- ========================= Sensors ============================ -->
   <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
@@ -241,17 +241,31 @@
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
 
   <!-- fixed knob values --> 
-  <arg name="pc_res" default=".3" />   
-  <param name="pc_res" value="$(arg pc_res)"/>
-  <param name="pc_res_delete_later" value="$(arg pc_res)"/>
+ <arg name="pc_res_max" default=".3" />   
+ <param name="pc_res_max" value="$(arg pc_res_max)"/>
+ <arg name="pc_res_steps" default="5" />   
+ <param name="pc_res_steps" value="$(arg pc_res_steps)"/>
+ <arg name="num_of_res_to_try" default="4" />   
+ <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
+ <arg name="pc_vol_ideal_min" default="2900" />   
+ <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
+ <arg name="pc_vol_ideal_max" default="50000" />   
+ <param name="pc_vol_ideal_max" value="$(arg pc_vol_ideal_max)"/>
+ <arg name="om_to_pl_vol_ideal_max" default="5000000" />   
+ <param name="om_to_pl_vol_ideal_max" value="$(arg om_to_pl_vol_ideal_max)"/>
+ <arg name="ppl_vol_ideal_max" default="8000000" />   
+ <param name="ppl_vol_ideal_max" value="$(arg ppl_vol_ideal_max)"/>
+ <!--arg name="pc_res" default=".3" /-->   
+  <param name="pc_res" value="$(arg pc_res_max)"/>
+  <param name="pc_res_delete_later" value="$(arg pc_res_max)"/>
   <!-- arg name="om_to_pl_res" default="" /-->   
-  <param name="om_to_pl_res" value="$(arg pc_res)"/>
-  <arg name="pc_vol_ideal" default="80000" />   
-  <param name="pc_vol_ideal" value="$(arg pc_vol_ideal)"/>
+  <param name="om_to_pl_res" value="$(arg pc_res_max)"/>
+  <!--arg name="pc_vol_ideal" default="80000" /-->   
+  <param name="pc_vol_ideal" value="$(arg pc_vol_ideal_max)"/>
   <!-- arg name="om_to_pl_vol_ideal" default= /-->   
-  <param name="om_to_pl_vol_ideal" value="$(arg pc_vol_ideal)"/>
-  <arg name="ppl_vol_ideal" default="600000" />   
-  <param name="ppl_vol_ideal" value="$(arg ppl_vol_ideal)"/>
+  <param name="om_to_pl_vol_ideal" value="$(arg om_to_pl_vol_ideal_max)"/>
+  <!--arg name="ppl_vol_ideal" default="600000" /-->   
+  <param name="ppl_vol_ideal" value="$(arg ppl_vol_ideal_max)"/>
 
   <arg name="expected_latency" default=".05" />   
   <param name="om_latency_expected" value="$(arg expected_latency)"/>
@@ -259,17 +273,7 @@
   <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
   <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
  <!-- ========================= Performance Modeling ()  ============================ -->
- <arg name="pc_res_max" default=".3" />   
- <param name="pc_res_max" value="$(arg pc_res_max)"/>
- <arg name="num_of_res_to_try" default="2" />   
- <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
- <arg name="pc_vol_ideal_min" default="1000" />   
- <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
- <arg name="pc_vol_ideal_max" default="8000" />   
- <param name="pc_vol_ideal_max" value="$(arg pc_vol_ideal_max)"/>
-
-
-  <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
+   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
   <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen">
     <param name="dummy_val" value="2.0" />
     <param name="rate" value="5" />

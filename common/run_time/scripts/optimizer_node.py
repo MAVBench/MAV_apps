@@ -48,7 +48,7 @@ def run_optimizer(control):
                                                                                                                  # r_gap_max, we can't actually see any gaps
     r_max_temp = max(r_max_temp, r_min_static)  # not lower than r_min_static
     r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
-    r_max_ = (2 ** math.floor(math.log(round(r_max_ /pc_res_min, 2), 2))) * pc_res_min  # must get the floor otherwise, when converting (after solving), when we get the floor, we might go over
+    r_max_ = (2 ** math.floor(math.log(round(r_max_ /r_min_static, 2), 2))) * r_min_static  # must get the floor otherwise, when converting (after solving), when we get the floor, we might go over
                                                                                         # the max value
 
     if r_max_ < r_min_:
@@ -116,7 +116,7 @@ def control_callback(control):
 
 
     # some default values
-    #pc_res = pc_res_min
+    #pc_res = r_min_static
     #om_to_pl_res = om_to_pl_res_min
     #om_to_pl_vol_ideal = 200000
     #ppl_vol_ideal = 200001
@@ -138,12 +138,12 @@ def control_callback(control):
         r1 = 1.0/r1_hat
         # round up to exponents of 2
         """
-        blah =  math.log(round(r0/pc_res_min,2), 2)
+        blah =  math.log(round(r0/r_min_static,2), 2)
         blah2 = math.log(round(r1/om_to_pl_res_min,2), 2)
         blah_3 =  math.ceil(blah)
         blah4 = math.ceil(blah2)
         """
-        pc_res = (2 ** math.ceil(math.log(round(r0/pc_res_min,2), 2)))*pc_res_min  # round is there, because, the
+        pc_res = (2 ** math.ceil(math.log(round(r0/r_min_static,2), 2)))*r_min_static  # round is there, because, the
                                                                                    # float division sometimes gives slightly different resutls (say sometimes 0.0, sometimes 3.6*e**--16
                                                                                    # which results in an assertion error
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
@@ -204,5 +204,10 @@ if __name__ == '__main__':
     rate = rospy.Rate(20) # 10hz
     rt_max = rospy.get_param("max_time_budget")
     drone_radius = rospy.get_param("planner_drone_radius")
+    v_max = max(rospy.get_param("om_to_pl_vol_ideal_max"), rospy.get_param("ppl_vol_ideal_max"))
+    v_min = rospy.get_param("pc_vol_ideal_min")
+    r_min_static = rospy.get_param("pc_res_max") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
+    r_steps = rospy.get_param("num_of_res_to_try") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
+    r_max_static = (2 ** r_steps) * r_min_static
     while not rospy.is_shutdown():
         rate.sleep()
