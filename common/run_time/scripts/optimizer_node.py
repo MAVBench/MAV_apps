@@ -41,7 +41,6 @@ def run_optimizer(control):
     r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
     r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
     r_min_ = r_min_temp
-
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
     r_max_temp = min(control.inputs.gap_statistics_max/2, control.inputs.obs_dist_statistics_min/2) - drone_radius  # min is because we want the tigher bound of the two:
                                                                                                                  # note that if r_max is greater than
@@ -183,6 +182,13 @@ def control_callback(control):
     rospy.set_param("ppl_latency_expected", float(ppl_latency_expected))
     rospy.set_param("smoothening_latency_expected", float(smoothening_latency_expected))
     rospy.set_param("ee_latency_expected", float(ee_latency_expected))
+
+    rospy.set_param("x_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.x))
+    rospy.set_param("y_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.y))
+    rospy.set_param("vel_mag_while_budgetting", float(control.internal_states.drone_point_while_budgetting.vel_mag))
+
+
+
 
     rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
 

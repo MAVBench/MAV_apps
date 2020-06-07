@@ -4,3 +4,4 @@ float32 ppl_time_budget_expected
 float32 om_to_pl_time_budget_expected
 float32 smoothening_time_budget_expected
 float32 ee_time_budget_expected
+multiDOFpoint drone_point_while_budgetting

@@ -24,7 +24,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="8"/> 
+  <arg name="v_max" default="7"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="2"/>
@@ -112,6 +112,10 @@
 
   <arg name="DEBUG_VIS" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_VIS" value="$(arg DEBUG_VIS)"/> 
+
+  <arg name="SPACE_PROFILING" default="true" /> <!-- determines whether to use RQT for debugging or not -->
+  <param name="SPACE_PROFILING" value="$(arg SPACE_PROFILING)"/> 
+
 
   <arg name="measure_time_end_to_end" default="true" />
   <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/> 
@@ -270,6 +274,12 @@
   <arg name="expected_latency" default=".05" />   
   <param name="om_latency_expected" value="$(arg expected_latency)"/>
   <param name="om_to_pl_latency_expected" value="$(arg expected_latency)"/>
+ 
+  <param name="x_coord_while_budgetting" value="0"/>
+  <param name="y_coord_while_budgetting" value="0"/>
+  <param name="vel_mag_while_budgetting" value="0"/>
+
+  
   <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
   <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
  <!-- ========================= Performance Modeling ()  ============================ -->

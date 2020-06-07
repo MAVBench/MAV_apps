@@ -2,8 +2,12 @@ import numpy as np
 import sys
 sys.path.append('..')
 from model.model import Model
-from data_parser import DataParser
+from model.data_parser import DataParser
 
+def calculate_error():
+    pass
+
+        
 ## May want to convert this to using absolute paths to make life easier ##
 if __name__ == '__main__':
 

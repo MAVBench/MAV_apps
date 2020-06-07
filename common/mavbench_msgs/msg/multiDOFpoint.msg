@@ -11,3 +11,4 @@ float64 yaw
 int32 pt_ctr 
 bool blocking_yaw
 float64 duration
+float64 vel_mag

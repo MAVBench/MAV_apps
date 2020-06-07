@@ -59,6 +59,7 @@ double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min, om_to_
 
 
 coord drone_position;
+geometry_msgs::Twist drone_vel;
 ProfileManager *profile_manager_client;
 mavbench_msgs::control control;
 
@@ -262,6 +263,12 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 //	ROS_INFO_STREAM("---- next step"<< control_inputs.sensor_to_actuation_time_budget_to_enforce);
 
 	control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
+	control.internal_states.drone_point_while_budgetting.x = drone_position.x;
+	control.internal_states.drone_point_while_budgetting.y = drone_position.y;
+	control.internal_states.drone_point_while_budgetting.z = drone_position.z;
+	double velocity_magnitude = MacrotimeBudgetter.get_velocity_projection_mag(traj[0], closest_unknown_point);
+	control.internal_states.drone_point_while_budgetting.vel_mag = velocity_magnitude;
+
 
 	//	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
 
@@ -540,7 +547,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 	ros::param::set("pc_res", static_pc_res);
     profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
     profiling_container->capture("om_to_pl_res", "single", om_to_pl_res, g_capture_size);
-	ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
+    ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
 	ros::param::set("pc_vol_ideal", (static_pc_res/pc_res_max)*static_pc_vol_ideal);
 	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
 	//profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
@@ -985,10 +992,9 @@ int main(int argc, char **argv)
     		continue;
     	}
     	got_new_input = false;
-    	auto vel = drone.velocity();
-    	cur_vel_mag = (double) calc_vec_magnitude(vel.linear.x, vel.linear.y, vel.linear.z);
+    	drone_vel = drone.velocity();
+    	cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
     	drone_position = drone.position();
-
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
     		ros::param::set("velocity_to_budget_on", cur_vel_mag);
@@ -1045,7 +1051,6 @@ int main(int argc, char **argv)
     			double sensor_range = closest_unknown_point_distance;
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
-
     			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     		}
 

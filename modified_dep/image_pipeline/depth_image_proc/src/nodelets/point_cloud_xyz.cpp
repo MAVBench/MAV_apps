@@ -131,6 +131,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   mavbench_msgs::point_cloud_debug debug_data = {};
   bool DEBUG_RQT = false;
   bool DEBUG_VIS = false;
+  bool SPACE_PROFILING = false;
   double capture_size = 600;
   bool knob_performance_modeling = false;
   bool knob_performance_modeling_for_pc_om = false;
@@ -141,6 +142,10 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double ppl_latency_expected;
   double velocity_to_budget_on;
   double ee_latency_expected;
+
+  double x_coord_while_budgetting, y_coord_while_budgetting,vel_mag_while_budgetting;
+
+
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
   bool  new_control_data = false;
 
@@ -294,6 +299,30 @@ void PointCloudXyzNodelet::onInit()
       return ;
 
    }
+
+    if(!ros::param::get("/SPACE_PROFILING", SPACE_PROFILING)){
+      ROS_FATAL_STREAM("Could not start point cloud SPACE_PROFILING not provided");
+      exit(0);
+      return ;
+    }
+
+    if(!ros::param::get("/x_coord_while_budgetting", x_coord_while_budgetting)){
+      ROS_FATAL_STREAM("Could not start point cloud x_coord_while_budgetting not provided");
+      exit(0);
+      return ;
+    }
+
+    if(!ros::param::get("/y_coord_while_budgetting", y_coord_while_budgetting)){
+    	ROS_FATAL_STREAM("Could not start point cloud y_coord_while_budgetting not provided");
+    	exit(0);
+    	return ;
+    }
+
+    if(!ros::param::get("/vel_mag_while_budgetting", vel_mag_while_budgetting)){
+    	ROS_FATAL_STREAM("Could not start point cloud vel_mag_while_budgetting not provided");
+    	exit(0);
+      return ;
+    }
 
     if(!ros::param::get("/capture_size", capture_size)){
       ROS_FATAL_STREAM("Could not start point cloud capture_size not provided");
@@ -2072,6 +2101,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
    ros::param::get("/ppl_latency_expected", ppl_latency_expected);
    ros::param::get("/velocity_to_budget_on", velocity_to_budget_on);
    ros::param::get("/ee_latency_expected", ee_latency_expected);
+   ros::param::get("/x_coord_while_budgetting", x_coord_while_budgetting);
+   ros::param::get("/y_coord_while_budgetting", y_coord_while_budgetting);
+   ros::param::get("/vel_mag_while_budgetting", vel_mag_while_budgetting);
+
+
+
 
    // -- point cloud to octomap knobs
    ros::param::get("/pc_res", pc_res);
@@ -2203,6 +2238,16 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
   pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
+  if (SPACE_PROFILING) {
+	  profiling_container->capture("sensor_to_actuation_time_budget_to_enforce", "single", sensor_to_actuation_time_budget_to_enforce, 1);
+	  profiling_container->capture("x_coord_while_budgetting", "single", x_coord_while_budgetting, 1);
+	  profiling_container->capture("y_coord_while_budgetting", "single", y_coord_while_budgetting, 1);
+	  profiling_container->capture("vel_mag_while_budgetting", "single", vel_mag_while_budgetting, 1);
+	  profiling_container->capture("gap_statistics_min", "single", control.inputs.gap_statistics_min, 1);
+	  profiling_container->capture("gap_statistics_max", "single", control.inputs.gap_statistics_max, 1);
+	  profiling_container->capture("obs_dist_statistics_min", "single", control.inputs.obs_dist_statistics_min, 1);
+
+  }
   pcl_aug_data.ee_profiles.actual_time.pc_latency =  profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
   pcl_aug_data.ee_profiles.actual_time.pc_pre_pub_time_stamp = ros::Time::now();
   pcl_aug_data.ee_profiles.actual_time.img_capture_time_stamp = img_capture_time_stamp;
