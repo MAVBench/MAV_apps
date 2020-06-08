@@ -1,6 +1,8 @@
 from data import *
 import numpy as np
 
+def calc_quadrative(a,b,c):
+    return (-b + sqrt((b**2) - 4*a*c))/2*a
 def calc_total_t_budget(v, visibility, m, b_):
     return (v**2 - 2*m*visibility*v - 2*b_*visibility)/(-2*m*(v**2) - 2*b_*v) 
 

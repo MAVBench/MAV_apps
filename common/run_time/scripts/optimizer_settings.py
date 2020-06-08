@@ -5,11 +5,14 @@ pl_to_ppl_ratio = 2  # this is there because we set the smoothening time equal t
 # since we don't have knobs for smoothening (so we haven't included it as a stage)
 
 # latency of the stages we didn't include in the optimizer formulation
-pc_latency = .15
-om_to_pc_oh = .15
+run_diagnostics = .15
+filtering = .400
+pc_latency = run_diagnostics + filtering
+
+pc_to_om_oh = .6
 runtime_latency = .2 # this does include point cloud intro (i.e, generating point cloud and running diagnostics)
 pc_outro = .1 # filtering and such
-misc_latency = pc_outro + runtime_latency + om_to_pc_oh  # time of the stages not included in the controller
+misc_latency = pc_outro + runtime_latency + pc_to_om_oh  # time of the stages not included in the controller
 
 # constraints
 #pc_res_min = .3

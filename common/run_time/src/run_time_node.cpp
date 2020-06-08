@@ -958,6 +958,24 @@ int main(int argc, char **argv)
 
 
 
+   /*
+   ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce_static_value);
+   ros::param::get("/om_latency_expected", om_latency_expected_static_value);
+   ros::param::get("/om_to_pl_latency_expected", om_to_pl_latency_expected_static_value);
+   ros::param::get("/ppl_latency_expected", ppl_latency_expected_static_value);
+   ros::param::get("/ee_latency_expected", ee_latency_expected_static_value);
+   ros::param::get("/x_coord_while_budgetting",x_coord_while_budgetting_static_value);
+   ros::param::get("/y_coord_while_budgetting", y_coord_while_budgetting_static_value);
+   ros::param::get("/vel_mag_while_budgetting", vel_mag_while_budgetting_static_value);
+   // -- point cloud to octomap knobs
+   ros::param::get("/pc_res", pc_res_static_value);
+   ros::param::get("/pc_vol_ideal", pc_vol_ideal_static_value);
+   // -- octomap to planner
+   ros::param::get("/om_to_pl_res", om_to_pl_res_static_value);
+   ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal_static_value);
+   // -- piecewise planner
+   ros::param::get("/ppl_vol_ideal", ppl_vol_ideal_static_value);
+	*/
 
     /*
     if(!ros::param::get("/map_to_transfer_side_length_step_size", map_to_transfer_side_length_step_size)){
@@ -987,7 +1005,7 @@ int main(int argc, char **argv)
     	//callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
 
 
-    	if(!got_new_input){
+    	if(!got_new_input && budgetting_mode != "static"){
     		pub_rate.sleep();
     		continue;
     	}
@@ -1008,10 +1026,11 @@ int main(int argc, char **argv)
     		assert (!(use_pyrun && knob_performance_modeling_for_pc_om));
     		assert (!(use_pyrun && knob_performance_modeling_for_piecewise_planner));
 
-    		if (budgetting_mode == "manual"){
+    		if (budgetting_mode == "manual" || budgetting_mode == "static"){
     			ros::param::set("optimizer_succeeded", false);
     			ros::param::set("log_control_data", true);
     			ros::param::set("new_control_data", true);
+    			ros::param::set("optimizer_failure_status", 0);
     		} else if (budgetting_mode == "dynamic"){
     			if (reactive_runtime){
     				reactive_budgetting(cur_vel_mag, pc_res_point_count);

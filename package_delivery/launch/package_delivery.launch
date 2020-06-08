@@ -86,8 +86,10 @@
   <arg name="sensor_max_range" default="25" />
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
-  <arg name="sensor_to_actuation_time_budget_to_enforce" default="3"/> 
-  <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg sensor_to_actuation_time_budget_to_enforce)"/>
+  <!-- arg name="sensor_to_actuation_time_budget_to_enforce" default="3"/--> 
+  <arg name="max_time_budget" default="10" />   
+  <param name="max_time_budget" value="$(arg max_time_budget)"/>
+  <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg max_time_budget)"/>
   <arg name="velocity_to_budget_on" default=".1"/> 
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
   <arg name="planner_min_freq" default=".01"/> 
@@ -113,7 +115,7 @@
   <arg name="DEBUG_VIS" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_VIS" value="$(arg DEBUG_VIS)"/> 
 
-  <arg name="SPACE_PROFILING" default="true" /> <!-- determines whether to use RQT for debugging or not -->
+  <arg name="SPACE_PROFILING" default="false" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="SPACE_PROFILING" value="$(arg SPACE_PROFILING)"/> 
 
 
@@ -233,9 +235,7 @@
   <arg name="use_pyrun" default="true" />   
   <param name="use_pyrun" value="$(arg use_pyrun)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
-  <arg name="max_time_budget" default="10" />   
-  <param name="max_time_budget" value="$(arg max_time_budget)"/>
-  <arg name="cur_tree_total_volume" default="8000" />   
+    <arg name="cur_tree_total_volume" default="8000" />   
   <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
   <arg name="ppl_vol_min_coeff" default="100" />   
   <param name="ppl_vol_min_coeff" value="$(arg ppl_vol_min_coeff)"/>
@@ -274,7 +274,8 @@
   <arg name="expected_latency" default=".05" />   
   <param name="om_latency_expected" value="$(arg expected_latency)"/>
   <param name="om_to_pl_latency_expected" value="$(arg expected_latency)"/>
- 
+  <param name="ee_latency_expected" value="$(arg expected_latency)"/>
+
   <param name="x_coord_while_budgetting" value="0"/>
   <param name="y_coord_while_budgetting" value="0"/>
   <param name="vel_mag_while_budgetting" value="0"/>

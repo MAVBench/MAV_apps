@@ -1,0 +1,13 @@
+{
+sensor_to_actuation_time_budget_to_enforce: 41.085846739975835,
+om_latency_expected: 33.66563345434682,
+om_to_pl_latency_expected: 2.3425674205764766,
+ppl_latency_expected: 2.538822932526268,
+velocity_to_budget_on: 0.24253702726644388,
+v_max: 0.24253702726644388,
+pc_res: 0.15,
+pc_vol_ideal: 30000,
+om_to_pl_res: 0.15,
+om_to_pl_vol_ideal: 60000,
+ppl_vol_ideal: 60000
+}

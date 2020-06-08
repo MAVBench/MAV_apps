@@ -482,6 +482,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	}else{
 		profiling_container.capture("point_cloud_to_octomap_communication_time", "start", cloud->header.stamp, capture_size);
 		profiling_container.capture("point_cloud_to_octomap_communication_time", "end", ros::Time::now(), capture_size);
+		ROS_INFO_STREAM("point_cloud_to_octomap_communication_overhead"<<this->profiling_container.findDataByName("point_cloud_to_octomap_communication_time")->values.back());
 	}
 
 	profiling_container.capture(std::string("octomap_insertCloud_minus_publish_all"), "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")

@@ -80,3 +80,8 @@ class Model(object):
 
 		# p0 is needed so number of coefficients can be extrapolated
 		return self._fit(xdata=xdata, ydata=ydata, p0=self.p0, profile=profile, **kwargs)
+
+	def calc_poly(self, res, vol, coeffs):
+		xdata = np.vstack(([res], [vol])).T
+		result = self.task_model(xdata, *coeffs)
+		return  result[0]

@@ -74,10 +74,10 @@ def run_optimizer(control):
     v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, ppl_vol_min)]
 
 
-    Q = np.array([[-2.16196038e-05, -2.78515364e-03,  2.86859999e-05],
-        [ 2.00720436e-04,  4.60333360e-02, -1.05093373e-05],
-        [ 1.34399197e-04,  4.64316885e-02,  1.24233987e-05],
-        [pl_to_ppl_ratio*1.00483609e-01,  pl_to_ppl_ratio*1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
+    Q = np.array([[-2.16196038e-05, -2.78515364e-03,  pl_to_ppl_ratio*2.86859999e-05],
+        [2.00720436e-04,  4.60333360e-02, pl_to_ppl_ratio*-1.05093373e-05],
+        [1.34399197e-04,  4.64316885e-02,  pl_to_ppl_ratio*1.24233987e-05],
+        [1.00483609e-01,  1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
     # Constraint matrices #
 
     #  --  w/ r_gap  as constraint
@@ -212,8 +212,9 @@ if __name__ == '__main__':
     drone_radius = rospy.get_param("planner_drone_radius")
     v_max = max(rospy.get_param("om_to_pl_vol_ideal_max"), rospy.get_param("ppl_vol_ideal_max"))
     v_min = rospy.get_param("pc_vol_ideal_min")
+    budgetting_mode = rospy.get_param("budgetting_mode")
     r_min_static = rospy.get_param("pc_res_max") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_steps = rospy.get_param("num_of_res_to_try") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_max_static = (2 ** r_steps) * r_min_static
-    while not rospy.is_shutdown():
+    while not rospy.is_shutdown(): 
         rate.sleep()

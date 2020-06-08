@@ -1499,7 +1499,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 		return true;
 	}
 
-    octomap::point3d n1_point; // to convert n1 from graph::node to octomap::point
+	octomap::point3d n1_point; // to convert n1 from graph::node to octomap::point
     n1_point(0) = n1.x;
     n1_point(1) = n1.y;
     n1_point(2) = n1.z;
@@ -1570,8 +1570,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
     octomap::point3d end;
 
-
-    // unknown calculation
+   // unknown calculation
     octomap::OcTreeKey current_key;
     if (!octree->coordToKeyChecked(n1_point, current_key) ) { // if out of bound
     	closest_unknown_point.x = n1_point.x();
@@ -2169,6 +2168,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool first_unknown_collected = false;
 	bool too_close_to_unknown = false;
 	//bool got_enough_budget_for_next_SA_itr = false;
+    int resolution_ratio = (int)(map_res/octree->getResolution());
+    int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
 	mav_trajectory_generation::Trajectory traj;
 	do {
 		first_unknown_collected = false;
@@ -2192,6 +2193,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		// Loop through the vector of segments looking for collisions
 		graph::node n1, n2;
 		graph::node collision_n1, collision_n2;
+		auto last_key = octree->coordToKey(octomap::point3d(-100, -100, -100), depth_to_look_at);
 
 		for (int i = 0; !col && i < segments.size(); ++i) {
             // ROS_INFO("Looping through segments...");
@@ -2221,7 +2223,15 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				// Check for a collision between two near points on the segment
 
                 //if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, "smoothener")) {
-                if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, closest_unknown_point)) {
+				// use some caching to avoid traversing the tree
+				auto this_key = octree->coordToKey(octomap::point3d(n1.x, n1.y, n1.z), depth_to_look_at);
+				if ( this_key != last_key || (i == 0 && t == 0)){ // first found skip
+					last_key = this_key;
+				}else{
+					continue;
+				}
+
+				if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2) || collision(octree, n1, n2, closest_unknown_point)) {
                 	/*
                 	if (out_of_bounds_lax(n1) || out_of_bounds_lax(n2)){
                 		ROS_INFO_STREAM("out of bound n1");
