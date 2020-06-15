@@ -22,6 +22,7 @@ def run_optimizer(control):
 
     # -- determine the response time destired (rt_d)
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency # the second run_time_latency is for the following iteration
+    print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < 0):
         print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
         results = dummy_output()
@@ -84,7 +85,7 @@ def run_optimizer(control):
     #G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0], [-1,0,0,0,0]])
     #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
     # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
-    G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0]])
+    G = np.array([[-1,1,0,0,0], [0,0,3,-1,0], [0,0,1,0,0]])
     d = np.array([0, 0, (r_max_/r_min_static)*v_sensor_max])
 
 

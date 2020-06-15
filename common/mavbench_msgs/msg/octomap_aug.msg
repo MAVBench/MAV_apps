@@ -2,4 +2,6 @@ Header header
 octomap_msgs/Octomap oct
 mavbench_msgs/control controls
 mavbench_msgs/ee_profile ee_profiles
+float32 dist_to_closest_obs
+time dist_to_closest_obs_time_stamp
 

@@ -174,7 +174,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   DataContainer *profiling_container;
   int N_CAMERAS = 1;
 };
-
+double g_planner_drone_radius;
 
 void PointCloudXyzNodelet::onInit()
 {
@@ -199,6 +199,13 @@ void PointCloudXyzNodelet::onInit()
     ROS_FATAL("Could not start pointcloud. Parameter missing! Looking for num_cameras");
     exit(0);
   }
+
+  	if(!ros::param::get("/planner_drone_radius", g_planner_drone_radius)) {
+		ROS_FATAL_STREAM("Could not start run_time_node planner_drone_radius not provided");
+        exit(-1);
+	}
+
+
   // Profiling
   if (!ros::param::get("/DEBUG", DEBUG_)) {
     ROS_FATAL("Could not start img_proc. Parameter missing! Looking for DEBUG");
@@ -1825,7 +1832,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
     if ((got_first_unknown && !got_new_closest_unknown) && !knob_performance_modeling){
 		return;
 	}
-	got_new_closest_unknown = false;
 
 	/*
 	// for debugging for now
@@ -2012,10 +2018,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
     	  //profiling_container->capture("gap_statistics_min", "single", gap_statistics_min, 1);
 
       }
-      obs_dist_statistics_min_from_pc = min(_obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_pc);
+      obs_dist_statistics_min_from_pc = min(_obs_dist_statistics_min_from_pc , obs_dist_statistics_min_from_pc);
       obs_dist_statistics_min_from_om = min(_obs_dist_statistics_min_from_om, obs_dist_statistics_min_from_om);
 
-      gap_statistics_max = max(_gap_statistics_max, gap_statistics_max);
+      gap_statistics_max = max(_gap_statistics_max , gap_statistics_max);
 
       gap_statistics_avg_total += _gap_statistics_avg * n_points_cam;
       obs_dist_statistics_avg_from_pc_total += _obs_dist_statistics_avg_from_pc * n_points_cam;
@@ -2024,11 +2030,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
       area_to_digest += _area_to_digest;
   }
 
+
   //profiling_container->capture("sensor_volume_to_digest_estimated", "single", sensor_volume_to_digest_estimated, 1);
 
   // average of averages
-  double gap_statistics_avg = gap_statistics_avg_total / n_points;
-  double obs_dist_statistics_avg_from_pc = obs_dist_statistics_avg_from_pc_total / n_points;
+  gap_statistics_max -= g_planner_drone_radius;
+  gap_statistics_min -= g_planner_drone_radius;
+  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - g_planner_drone_radius;
+  double obs_dist_statistics_avg_from_pc = (obs_dist_statistics_avg_from_pc_total / n_points); // dont need to subtract drone_radius already been taken care of since, we get it from camera frames
 
   mavbench_msgs::control control;
   double sensor_volume_to_digest =  estimated_to_actual_vol_correction(sensor_volume_to_digest_estimated); // convert to actual, because the runtime makes decision with actual values
@@ -2073,6 +2082,11 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
 
    //blah, reactive this after you collected the data
+   if (optimizer_failure_status == 1){
+	  return;
+   }
+  got_new_closest_unknown = false;
+
   if (optimizer_failure_status == 2){
 	  mavbench_msgs::runtime_failure_msg rtf_msg;
 	  rtf_msg.header.stamp = img_capture_time_stamp;

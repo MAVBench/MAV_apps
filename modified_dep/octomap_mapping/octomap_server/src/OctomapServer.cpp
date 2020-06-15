@@ -138,7 +138,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   }
 
 
-  dist_to_closest_obs = m_maxRange;
+  dist_to_closest_obs = m_maxRange - g_planner_drone_radius;
 
   profile_manager_client = 
       private_nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data", true);
@@ -185,7 +185,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_octree_lower_res->setClampingThresMax(thresMax);
 
   closest_obs_coord = point3d(m_maxRange, m_maxRange, m_maxRange);
-  dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0));
+  dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0)) - g_planner_drone_radius;
 
   double r, g, b, a;
   private_nh.param("color/r", r, 0.0);
@@ -276,6 +276,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("/occupancy_max_z", m_occupancyMaxZ,m_occupancyMaxZ);
   private_nh.param("min_x_size", m_minSizeX,m_minSizeX);
   private_nh.param("min_y_size", m_minSizeY,m_minSizeY);
+
+  ros::param::get("/motion_planner/drone_radius", g_planner_drone_radius);
 
   private_nh.param("filter_speckles", m_filterSpeckles, m_filterSpeckles);
   private_nh.param("filter_ground", m_filterGroundPlane, m_filterGroundPlane);
@@ -598,7 +600,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
   profiling_container.capture("octomap_volume_digested", "single", pc_vol_actual, capture_size);
   profiling_container.capture("pc_vol_estimated", "single", pc_vol_estimated, capture_size);
 
-
+  octomap_aug_data.dist_to_closest_obs = dist_to_closest_obs;
+  octomap_aug_data.dist_to_closest_obs_time_stamp = ros::Time::now();
   profiling_container.capture("octomap_publish_all", "start", ros::Time::now(), capture_size);
   if (measure_time_end_to_end){ publishAll(cloud->header.stamp);}
   else{publishAll(ros::Time::now());}
@@ -618,6 +621,12 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   //ROS_INFO_STREAM("closest obst"<<dist_to_closest_obs);
   ros::param::set("obs_dist_statistics_min_from_om", dist_to_closest_obs);
+
+  //double renewed_v_max = min(max((dist_to_closest_obs), .5), 6.0);
+  //ros::param::set("v_max", renewed_v_max);
+
+
+  //ROS_INFO_STREAM("v_max ===="<< renewed_v_max);
   if (m_save_map){ // for micro benchmarking purposes
 	  m_octree->write("high_res_map.ot");
 	  m_octree_lower_res->write("low_res_map.ot");
@@ -708,7 +717,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   }
 
   //update the closest obstacle
-  dist_to_closest_obs = min(max(calc_dist(closest_obs_coord, sensor_origin_corrected) - om_to_pl_res, 0.0), this->m_maxRange);
+  dist_to_closest_obs = min(max(calc_dist(closest_obs_coord, sensor_origin_corrected) - om_to_pl_res, 0.0), this->m_maxRange) - g_planner_drone_radius;
 
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
@@ -1051,7 +1060,7 @@ void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensor_o
 	double dist_to_this_obs = calc_dist(coordinate, sensor_origin_corrected);
 	dist_to_this_obs = max(dist_to_this_obs - om_to_pl_res, 0.0); // because octomap would bloat the voxels (note that both coordinate and
 									    // origin are the center of the voxels
-	dist_to_closest_obs = calc_dist(closest_obs_coord, sensor_origin_corrected);
+	dist_to_closest_obs = calc_dist(closest_obs_coord, sensor_origin_corrected) - g_planner_drone_radius;
 	dist_to_closest_obs = max(dist_to_closest_obs - om_to_pl_res, 0.0); // because octomap would bloat the voxels (note that both coordinate and
 	if (dist_to_this_obs <= dist_to_closest_obs){
 		dist_to_closest_obs = dist_to_this_obs;

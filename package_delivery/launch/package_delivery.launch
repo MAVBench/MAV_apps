@@ -24,10 +24,10 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="7"/> 
+  <arg name="v_max" default="5"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
-  <arg name="planner_drone_radius" default="2"/>
+  <arg name="planner_drone_radius" default="3"/>
   <arg name="planner_drone_height" default="1.2"/>
   <arg name="max_yaw_rate" default="90"/>
   <arg name="max_yaw_rate_during_flight" default="90"/>
@@ -115,7 +115,7 @@
   <arg name="DEBUG_VIS" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_VIS" value="$(arg DEBUG_VIS)"/> 
 
-  <arg name="SPACE_PROFILING" default="false" /> <!-- determines whether to use RQT for debugging or not -->
+  <arg name="SPACE_PROFILING" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="SPACE_PROFILING" value="$(arg SPACE_PROFILING)"/> 
 
 
@@ -442,10 +442,10 @@
     <param name="rrt_step_size" value="1.0"/>
     <param name="rrt_bias" value="10"/>
 
-    <param name="x_dist_to_sample_from__low_bound" value="-400"/>
-    <param name="x_dist_to_sample_from__high_bound" value="400"/>
-    <param name="y_dist_to_sample_from__low_bound" value="-600"/>
-    <param name="y_dist_to_sample_from__high_bound" value="600"/>
+    <param name="x_dist_to_sample_from__low_bound" value="-600"/>
+    <param name="x_dist_to_sample_from__high_bound" value="600"/>
+    <param name="y_dist_to_sample_from__low_bound" value="-800"/>
+    <param name="y_dist_to_sample_from__high_bound" value="800"/>
     <param name="z_dist_to_sample_from__low_bound" value="0"/>
     <param name="z_dist_to_sample_from__high_bound" value="150"/>
 
@@ -467,11 +467,11 @@
     
   <!-- ========================= Follow Trajectory (Control)============================ -->
   
-  <arg name="stay_in_place_duration_for_reverse" default="3"/>
-  <arg name="backup_duration" default="2"/>
+  <arg name="stay_in_place_duration_for_reverse" default="5"/>
+  <arg name="backup_duration" default="3"/>
   <arg name="fly_trajectory_time_out" default=".2"/> 
   <arg name="follow_trajectory_loop_rate" default="20"/>   <!-- in Hz-->
-  <arg name="stay_in_place_duration_for_stop" default="3"/>
+  <arg name="stay_in_place_duration_for_stop" default="5"/>
   <param name="p_vx" value="2"/>
   <param name="p_vy" value="2"/>
   <param name="p_vz" value="2"/>

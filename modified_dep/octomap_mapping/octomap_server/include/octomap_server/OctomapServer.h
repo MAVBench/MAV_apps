@@ -326,6 +326,7 @@ octomap::KeyRay m_keyRay;  // temp storage for ray casting
 
   double m_maxRange;
   std::string m_worldFrameId; // the map frame
+  double g_planner_drone_radius;
   std::string m_baseFrameId; // base of the robot for ground plane filtering
   bool m_useHeightMap;
   std_msgs::ColorRGBA m_color;

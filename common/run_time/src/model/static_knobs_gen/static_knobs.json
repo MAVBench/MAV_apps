@@ -1,10 +1,10 @@
 {
-		"max_time_budget": 7.85224262818768,
+		"max_time_budget": 9.150375015232795,
 		"om_latency_expected": 3.7624281218273405,
 		"om_to_pl_latency_expected": 0.3435497322701067,
 		"ppl_latency_expected": 1.2481323870451162,
-		"velocity_to_budget_on": 1.4580585030939914,
-		"v_max": 1.4580585030939914,
+		"velocity_to_budget_on": 1.2757886378833165,
+		"v_max": 1.2757886378833165,
 		"pc_res_max": 0.3,
 		"pc_vol_ideal_max": 30000,
 		"om_to_pl_res_max": 0.3,

@@ -37,7 +37,7 @@
 
 using namespace std;
 std::string ip_addr__global;
-double g_sensor_max_range, g_sampling_interval, g_v_max;
+double g_sensor_max_range, g_sampling_interval, g_v_max, g_planner_drone_radius;
 bool DEBUG_VIS;
 std::deque<double> MacroBudgets;
 bool reactive_runtime;
@@ -202,7 +202,7 @@ double cur_vel_mag; // current drone's velocity
 
 
 double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag, double sensor_range){
-	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
+	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
 
 	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", sensor_range);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
@@ -233,7 +233,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 
 
 	double latency = 1.55; //TODO: get this from follow trajectory
-	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget);
+	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
 //	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
 
 	//auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, distance_error);
@@ -248,6 +248,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	else if (macro_time_budgets.size() >= 1){
 		time_budgetting_failed = false;
 		time_budget = min (max_time_budget, macro_time_budgets[1]);
+		time_budget -= time_budget*.2;
 		//ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
 	}
 
@@ -312,6 +313,13 @@ void initialize_global_params() {
 		ROS_FATAL_STREAM("Could not start run_time_node v_max not provided");
         exit(-1);
 	}
+
+	if(!ros::param::get("/planner_drone_radius", g_planner_drone_radius)) {
+		ROS_FATAL_STREAM("Could not start run_time_node planner_drone_radius not provided");
+        exit(-1);
+	}
+
+
 
 	if(!ros::param::get("/sensor_max_range", g_sensor_max_range)) {
 
@@ -1049,6 +1057,8 @@ int main(int argc, char **argv)
     	*/
     		if (DEBUG_RQT) {runtime_debug_pub.publish(debug_data);}
     	}else{
+    		ros::param::get("/v_max", g_v_max);
+    		maxVelocity = g_v_max;
     		closest_unknown_point_upper_bound.x = drone.position().x  + g_sensor_max_range/pow(3,.5);
     		closest_unknown_point_upper_bound.y = drone.position().y + g_sensor_max_range/pow(3, .5);
     		closest_unknown_point_upper_bound.z = drone.position().z + g_sensor_max_range/pow(3, .5);

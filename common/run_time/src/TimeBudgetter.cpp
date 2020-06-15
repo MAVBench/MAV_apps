@@ -7,10 +7,11 @@
 
 #include "TimeBudgetter.h"
 bool first_itr = true; // only for debugging
-TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget)
+TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget, double  drone_radius)
 			:sensorActuatorModel_(maxSensorRange, maxVelocity, accelerationCoeffs),
 			timeIncr_(timeIncr),
-			max_time_budget(max_time_budget){}
+			max_time_budget(max_time_budget),
+			drone_radius(drone_radius){}
 
 
 
@@ -116,6 +117,8 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 	//velocity_magnitude -= velocity_error;
 
 	double sensor_range = calc_dist(point, closest_unknown_point) + distance_error;
+	sensor_range -= drone_radius;
+
 	// blah change the sensor_Range value after data collection
 	//sensor_range = 25;
 	/*

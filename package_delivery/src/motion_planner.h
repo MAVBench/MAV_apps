@@ -239,7 +239,6 @@ private:
     bool DEBUG_RQT;
     bool DEBUG_VIS;
     bool runtime_failure_last_time = false;
-    ros::Time planning_start_time_stamp;
 
     mavbench_msgs::response_time_capture msg_for_follow_traj;
 
@@ -278,12 +277,12 @@ private:
     std::function<piecewise_trajectory (geometry_msgs::Point, geometry_msgs::Point, int, int , int, octomap::OcTree *, int &status)> motion_planning_core;
     long long g_planning_without_OM_PULL_time_acc = 0;
     int g_number_of_planning = 0 ;
-    float g_ppl_time_budget;
     float g_smoothening_budget;
     float g_out_of_bounds_allowance = 5;
     int replanning_reason;
-    double SA_time_budget_to_enforce; // end to end budget
-	ros::Time img_capture_time; // time when image was captured
+
+    float dist_to_closest_obs;
+    ros::Time dist_to_closest_obs_time_stamp;
 
 
     // The following block of variables only exist for debugging purposes

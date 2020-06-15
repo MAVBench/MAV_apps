@@ -48,6 +48,8 @@
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 
+double SA_time_budget_to_enforce; // end to end budget
+float g_ppl_time_budget;
 double total_collision_func = 0;
 double potential_distance_to_explore = 0; // the distance that the planner ask to expore (note that this can be bigger than the volume since the volume calculation stops after hitting a an obstacle)
 double volume_explored_in_unit_cubes = 0; // volume explored within the piecewise planner
@@ -56,6 +58,8 @@ double volume_explored_in_unit_cube_last = 0;
 int stagnation_ctr = 0;
 ros::Time g_planning_start_time;
 bool ppl_vol_maximum_underestimated;
+ros::Time planning_start_time_stamp;
+ros::Time img_capture_time; // time when image was captured
 /*
 void planner_termination_func(double &volume_explored_so_far, double &volume_explored_threshold){
 	bool res = volume_explored_so_far > volume_explored_threshold;
@@ -69,6 +73,8 @@ bool planner_termination_func(){
 	//ROS_INFO_STREAM("===== in termination with volume of "<< volume_explored_in_unit_cubes);
 //	return (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube) || taking_to_long;
 	bool volume_explored_exceeded = (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
+	bool time_exceeded = (SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec()) < 0;  // whatever is left of the budget
+
 	if (volume_explored_in_unit_cube_last < volume_explored_in_unit_cubes){
 		volume_explored_in_unit_cube_last = volume_explored_in_unit_cubes;
 		stagnation_ctr = 0;
@@ -79,7 +85,11 @@ bool planner_termination_func(){
 	if (explored_new_teritory){
 		ppl_vol_maximum_underestimated = false;
 	}
-	return volume_explored_exceeded || !explored_new_teritory;
+	if (time_exceeded){
+		ROS_INFO_STREAM("time exceeded");
+	}
+	return volume_explored_exceeded || time_exceeded || !explored_new_teritory;
+
 }
 
 template<class PlannerType>
@@ -107,6 +117,17 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     space->setBounds(bounds);
 
     og::SimpleSetup ss(space);
+
+
+
+	double time_left_for_planning = (SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec());  // whatever is left of the budget
+	bool time_exceeded = time_left_for_planning < 0;
+	ROS_INFO_STREAM("time exceeded by "<<time_left_for_planning);
+	if (time_exceeded){
+		status = 0;
+		piecewise_planning = false;
+		return result;
+	}
 
     // Setup collision checker
     ob::SpaceInformationPtr si = ss.getSpaceInformation();
@@ -145,7 +166,18 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 	piecewise_planning = true;
 	auto planner_termination_obj = ompl::base::PlannerTerminationCondition(planner_termination_func);
 	ob::PlannerStatus solved;
-    solved = ss.solve(planner_termination_obj);
+
+
+
+	time_exceeded = (SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec()) < 0;  // whatever is left of the budget
+	time_exceeded = (ros::Time::now() - planning_start_time_stamp).toSec() > g_ppl_time_budget;
+	if (time_exceeded){
+		status = 0;
+		piecewise_planning = false;
+		return result;
+	}
+
+	solved = ss.solve(planner_termination_obj);
 	//if (knob_performance_modeling_for_piecewise_planner){
     //}else
 	//ob::PlannerStatus solved = ss.solve(planner_termination_func(volume_explored_in_unit_cubes, ppl_vol_idealInUnitCube));
@@ -254,7 +286,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
     	capture_size = 1;
     }
 
-    time_budgetter = new TimeBudgetter(10.0, 10.0, accelerationCoeffs, 0.1, 10.0);  // non of the hardcoded values actually matter for motion planner
+    time_budgetter = new TimeBudgetter(10.0, 10.0, accelerationCoeffs, 0.1, 10.0, drone_radius__global);  // non of the hardcoded values actually matter for motion planner
 
 		}
 
@@ -429,6 +461,15 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	//std_msgs::Header msg_for_follow_traj;
     //mavbench_msgs::response_time_capture msg_for_follow_traj;
 	msg_for_follow_traj.header.stamp = msg.header.stamp;
+
+	auto cur_velocity = drone->velocity().linear;
+    auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
+    auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
+    double renewed_v_max = min(max((dist_to_closest_obs - time_diff_duration*cur_vel_mag), 1.0), 6.0);
+    //bool sub_optimal_v_max = (renewed_v_max >  2*v_max__global) || (renewed_v_max <  v_max__global/2);
+    bool sub_optimal_v_max = false;
+
+
 	if(!first_time_planning_succeeded) {
 		msg_for_follow_traj.planning_status = "first_time_planning";
 		//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
@@ -454,6 +495,10 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			replanning_reason = Last_plan_approximate;
 			replan = true;
 			ROS_ERROR_STREAM("approximate planning");
+		}else if (sub_optimal_v_max){
+			replanning_reason = Last_plan_approximate;
+			replan = true;
+			ROS_ERROR_STREAM("sub_optimal v_max");
 		}
 		else if( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
 			replanning_reason = Min_freq_passed;
@@ -527,14 +572,20 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msg)
 {
 
-	ppl_vol_maximum_underestimated = true;
+    ros::param::get("/v_max", v_max__global);
+    ppl_vol_maximum_underestimated = true;
 	msg_for_follow_traj.controls = msg->controls;
 	msg_for_follow_traj.ee_profiles = msg->ee_profiles;
 	msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.om_pre_pub_time_stamp).toSec();
-	planning_start_time_stamp = ros::Time::now();
 	g_ppl_time_budget = msg->ee_profiles.expected_time.ppl_latency;
 	g_smoothening_budget = msg->ee_profiles.expected_time.ppl_latency;  // -- for now setting it equal to ppl_budget
 															   // -- todo: this can be another knob
+
+
+
+	 dist_to_closest_obs = msg->dist_to_closest_obs;
+	 dist_to_closest_obs_time_stamp = msg->dist_to_closest_obs_time_stamp;
+
 
 	SA_time_budget_to_enforce= msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce;
 	img_capture_time = msg->ee_profiles.actual_time.img_capture_time_stamp;
@@ -594,6 +645,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     	publish_dummy_octomap_vis(octree);
     }
 
+	planning_start_time_stamp = ros::Time::now();
     // -- purelly for knob_performance_modeling;
     // -- only collect data when the knob is set.
     // -- We'd like to have fine grain control over the collection so
@@ -655,6 +707,9 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
     this->last_planning_time = ros::Time::now();
     g_planning_start_time = this->last_planning_time;
+
+
+
     // if already have a plan, but not colliding, plan again
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     bool planning_succeeded = this->motion_plan_end_to_end(msg->header.stamp, g_goal_pos);
@@ -761,7 +816,18 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     total_collision_func =0;
     profiling_container.capture("motion_planning_piece_wise_time", "start", ros::Time::now(), capture_size);
     double last_time_planning_duration;
+
+    bool time_exceeded = false;
     do {
+
+    	double time_left_for_planning = (SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec());  // whatever is left of the budget
+    	time_exceeded = time_left_for_planning < 0;
+    	ROS_INFO_STREAM("time exceeded by "<<time_left_for_planning);
+    	if (time_exceeded){
+    		status = 0;
+    		break;
+    	}
+
     	ros::Time this_time_ppl_start_time = ros::Time::now();
     	piecewise_path = motion_planning_core(req.start, req.goal, req.width, req.length, req.n_pts_per_dir, octree, status);
     	ppl_latency_so_far = (ros::Time::now() - ppl_start_time);
@@ -771,7 +837,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		return false;
     	}
 		*/
-    }while(((ppl_latency_so_far.toSec() + last_time_planning_duration) < g_ppl_time_budget) &&
+
+    	//double time_left_for_planning = (SA_time_budget_to_enforce - (ros::Time::now() - img_capture_time).toSec());  // whatever is left of the budget
+    	//time_exceeded = time_left_for_planning < 0;
+
+    }while(!time_exceeded &&
     		(piecewise_path.empty() || status == 3 || !got_enough_budget_for_next_SA_itr(piecewise_path) || !ppl_inbound_check(piecewise_path)));
 
     profiling_container.capture("motion_planning_piece_wise_time", "end", ros::Time::now(), capture_size);
@@ -887,6 +957,15 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     // Smoothen the path and build the multiDOFtrajectory response
     //ROS_INFO("Smoothenning...");
     profiling_container.capture("motion_planning_smoothening_time", "start", ros::Time::now(), capture_size);
+
+    auto cur_velocity = drone->velocity().linear;
+    auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
+    auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
+    double renewed_v_max = min(max((dist_to_closest_obs - time_diff_duration*cur_vel_mag), 1.0), 6.0);
+    ROS_INFO_STREAM("v_max ===="<< renewed_v_max);
+    //ros::param::set("v_max", renewed_v_max);
+    //v_max__global = renewed_v_max;
+
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
                                         req.twist.linear.y,
@@ -1026,9 +1105,14 @@ void MotionPlanner::get_start_in_future(Drone& drone,
     	mdofp.vx =  mdofp.vy = mdofp.vz = 0;
     }
     else{
-    	mdofp.x += current_pos.x - planned_point.x;
-    	mdofp.y += current_pos.y - planned_point.y;
-    	mdofp.z += current_pos.z - planned_point.z;
+    	//mdofp.x += current_pos.x - planned_point.x;
+    	//mdofp.y += current_pos.y - planned_point.y;
+    	//mdofp.z += current_pos.z - planned_point.z;
+    	mdofp.x = current_pos.x;
+    	mdofp.y = current_pos.y;
+    	mdofp.z = current_pos.z;
+
+
     }
 
     start.x = mdofp.x; start.y = mdofp.y; start.z = mdofp.z; 
@@ -1180,7 +1264,7 @@ void MotionPlanner::motion_planning_initialize_params()
 
 
 
-    ros::param::get("/motion_planner/v_max", v_max__global);
+    ros::param::get("/v_max", v_max__global);
     ros::param::get("/motion_planner/a_max", a_max__global);
 
     ros::param::get("/knob_performance_modeling", knob_performance_modeling);
@@ -1531,14 +1615,22 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     }
 
     // Create a bounding box representing the drone
-    double height = drone_height__global;
-    double radius = drone_radius__global;
-    auto cur_velocity = drone->velocity().linear;
+    //double height = drone_height__global;
+    //double radius = drone_radius__global;
+
+    /*
     if (cur_velocity.x < .1 && cur_velocity.y <.1 && cur_velocity.z<.1){ // if stopped, no need to expand the radius since there
     																	 // the deviation from track is zero (so no saftely halo is necessary)
     	height = planner_drone_height_when_hovering;
     	radius = planner_drone_radius_when_hovering;
     }
+    */
+    auto cur_velocity = drone->velocity().linear;
+    auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
+    double height = max((cur_vel_mag/6)*drone_height__global, planner_drone_height_when_hovering);
+    double radius = max((cur_vel_mag/6)*drone_radius__global, planner_drone_radius_when_hovering);
+
+
 
     octomap::point3d min(n1.x-radius, n1.y-radius, n1.z-height/2);
     octomap::point3d max(n1.x+radius, n1.y+radius, n1.z+height/2);
@@ -1656,15 +1748,21 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     }
 
     // Create a bounding box representing the drone
-    double height = drone_height__global; 
-    double radius = drone_radius__global; 
+    //double height = drone_height__global;
+   // double radius = drone_radius__global;
+    auto cur_velocity = drone->velocity().linear;
+    auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
+    double height = max((cur_vel_mag/6)*drone_height__global, planner_drone_height_when_hovering);
+    double radius = max((cur_vel_mag/6)*drone_radius__global, planner_drone_radius_when_hovering);
+
+    /*
     auto cur_velocity = drone->velocity().linear;
     if (cur_velocity.x < .1 && cur_velocity.y <.1 && cur_velocity.z<.1){ // if stopped, no need to expand the radius since there
     																	 // the deviation from track is zero (so no saftely halo is necessary)
     	height = planner_drone_height_when_hovering;
     	radius = planner_drone_radius_when_hovering;
     }
-
+	*/
 
     octomap::point3d min(n1.x-radius, n1.y-radius, n1.z-height/2);
     octomap::point3d max(n1.x+radius, n1.y+radius, n1.z+height/2);
@@ -1692,7 +1790,7 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     // }
 
     // Finally, loop over the drone's bounding box to search for collisions
-    int resolution_ratio = (int)((map_res*2)/octree->getResolution());
+    int resolution_ratio = (int)((map_res)/octree->getResolution());
     int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
     octomap::point3d end;
     for (auto it = octree->begin_leafs_bbx(min, max),
@@ -2170,6 +2268,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	//bool got_enough_budget_for_next_SA_itr = false;
     int resolution_ratio = (int)(map_res/octree->getResolution());
     int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+	Eigen::VectorXd first_segment;
 	mav_trajectory_generation::Trajectory traj;
 	do {
 		first_unknown_collected = false;
@@ -2184,6 +2283,11 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
 		opt.solveLinear();
 
+
+		smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
+		if(smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){ // if enough budget for this iteration
+			break;
+		}
 		// Return all the smooth segments in the path
 		// (Each segment goes from one of the original nodes to the next one in the path)
 		mav_trajectory_generation::Segment::Vector segments;
@@ -2207,6 +2311,9 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			geometry_msgs::Point closest_unknown_point;
 			for (double t = 0; t < segment_len - time_step; t += time_step) {
                 // ROS_INFO("Stepping through individual...");
+				if (t ==0 && i ==0){
+					first_segment = segments[i].evaluate(0);
+				}
 				auto pos1 = segments[i].evaluate(t);
 				auto pos2 = segments[i].evaluate(t + time_step);
 
@@ -2349,16 +2456,33 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	*/
 
 
+
 	if (col || smoothening_time_so_far.toSec() >= ros::Duration(g_smoothening_budget).toSec()) {
 		closest_unknown_way_point.x = nan("");
 		closest_unknown_way_point.y = nan("");
 		closest_unknown_way_point.z = nan("");
 		return smooth_trajectory();
+    }else {
+		graph::node n1 = {drone->position().x, drone->position().y, drone->position().z};
+		graph::node n2 = {first_segment.x(), first_segment.y(), first_segment.z()};
+		auto dummy_graph_node_ptr = new graph::node();
+		double dx = n2.x - n1.x;
+		double dy = n2.y - n1.y;
+		double dz = n2.z - n1.z;
+		double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+		if (distance > map_res){
+			if(collision(octree, n1, n2, dummy_graph_node_ptr)){
+			closest_unknown_way_point.x = nan("");
+			closest_unknown_way_point.y = nan("");
+			closest_unknown_way_point.z = nan("");
+			return smooth_trajectory();
+			}
+		}
+
     }
 
 
     // Return the collision-free smooth trajectory
-	//mav_trajectory_generation::Trajectory traj;
 	opt.getTrajectory(&traj);
 	int num_of_optimums_till_idx = 3; // return the accumulated number of optimums until this index. The idea is that
 									  // we are only concern with suboptimal (oscilating) paths at the intial vertecis of the trajectory. Such behavior is the result of sudden

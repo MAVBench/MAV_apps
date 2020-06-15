@@ -520,6 +520,8 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     }
 
     g_got_new_trajectory = true;
+
+    ros::param::get("v_max", g_v_max);
     last_new_trajectory_time = ros::Time::now();
     new_trajectory_since_backed_up = !(new_trajectory.empty());
 

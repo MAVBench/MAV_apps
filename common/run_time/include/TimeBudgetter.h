@@ -9,7 +9,7 @@
 
 class TimeBudgetter {
 public:
-	TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget);
+	TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget, double drone_radius);
 
 
 	double calc_budget_till_closest_unknown(multiDOFpoint cur_point, multiDOFpoint closest_unknown_point);
@@ -34,6 +34,7 @@ private:
 	std::vector<double> SamplingTimes_;
 	double timeIncr_;
 	double max_time_budget;
+	double drone_radius;
 };
 
 #endif /* TIMEBUDGETTER_H_ */
