@@ -55,7 +55,16 @@
   
   <arg name="capture_size" default="600" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="capture_size" value="$(arg capture_size)"/> 
-  
+
+  <arg name="goal_from_host" default="false"/>
+  <arg name="goal_x" default="0.0"/>
+  <arg name="goal_y" default="0.0"/>
+  <arg name="goal_z" default="0.0"/>
+  <param name="goal_from_host" value="$(arg goal_from_host)"/>
+  <param name="goal_x" value="$(arg goal_x)"/>
+  <param name="goal_y" value="$(arg goal_y)"/>
+  <param name="goal_z" value="$(arg goal_from_host)"/>
+        
   
   <!-- ===================================================================== -->
   <!-- ========================= Performance Modeling ============================ -->
@@ -386,7 +395,7 @@
         <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/>
         <param name="CLCT_DATA" value="$(arg CLCT_DATA)"/>
         <param name="data_collection_iteration_freq_OM" value="$(arg data_collection_iteration_freq)"/>
-        
+
         <!-- data source to integrate (PointCloud2) -->
 		<remap from="cloud_in" to="/points_aug" />
 

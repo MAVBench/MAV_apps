@@ -283,10 +283,21 @@ geometry_msgs::Point get_start(Drone& drone) {
 geometry_msgs::Point get_goal() {
     geometry_msgs::Point goal;
 
-    // Get intended destination from user
-    std::cout << "Please input your destination in x,y,z format." << std::endl;
     double input_x, input_y, input_z;
-    std::cin >> input_x >> input_y >> input_z;
+
+    bool goal_from_host = false;
+    ros::param::get("goal_from_host", goal_from_host);
+    if (goal_from_host) {
+        ros::param::get("goal_x", input_x);
+        ros::param::get("goal_y", input_y);
+        ros::param::get("goal_z", input_z);
+    }
+    else {
+        // Get intended destination from user
+        std::cout << "Please input your destination in x,y,z format." << std::endl;
+        std::cin >> input_x >> input_y >> input_z;
+    }
+
     goal.x = input_x; goal.y = input_y; goal.z = input_z;
 
     return goal;
