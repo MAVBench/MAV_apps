@@ -66,27 +66,6 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 	return next_sampling_time;
 }
 
-double TimeBudgetter::get_velocity_projection_mag(multiDOFpoint cur_point, multiDOFpoint closest_unknown){
-	multiDOFpoint vector_to_project_on;
-
-	// projection of a over b is (a.b/|a|**2)*a where a and b are both vectors
-	// find the vector to project it on. This is calculated using the current point and the closest unknown point
-	// this is out b vector, where as our a vector is cur_point's velocity
-	vector_to_project_on.x= closest_unknown.x - cur_point.x;
-	vector_to_project_on.y= closest_unknown.y - cur_point.y;
-	vector_to_project_on.z= closest_unknown.z - cur_point.z;
-
-	double dot_product = vector_to_project_on.x*cur_point.vx +
-			vector_to_project_on.y*cur_point.vy + vector_to_project_on.z*cur_point.vz;
-	double vector_to_project_on_mag_sqr = pow(calc_magnitude(vector_to_project_on.x,vector_to_project_on.y, vector_to_project_on.z), 2);
-
-	multiDOFpoint projected_vector;
-	projected_vector.x = (dot_product/vector_to_project_on_mag_sqr)*vector_to_project_on.x;
-	projected_vector.y = (dot_product/vector_to_project_on_mag_sqr)*vector_to_project_on.y;
-	projected_vector.z = (dot_product/vector_to_project_on_mag_sqr)*vector_to_project_on.z;
-	return calc_magnitude(projected_vector.x, projected_vector.y, projected_vector.z);
-}
-
 
 double TimeBudgetter::calc_budget_till_closest_unknown(multiDOFpoint cur_point, multiDOFpoint closest_unknown_point){
 	double velocity_magnitude = get_velocity_projection_mag(cur_point, closest_unknown_point);
@@ -100,8 +79,6 @@ double TimeBudgetter::calc_budget_till_closest_unknown(trajectory_t traj, multiD
 	auto macro_time_budgets = calcSamplingTime(traj, 0.0, closest_unknown_point, drone_position); // not really working well with cur_vel_mag
 	return min(max_time_budget, macro_time_budgets[1]);
 }
-
-
 
 
 // calcSamplingTime helper (called recursively)

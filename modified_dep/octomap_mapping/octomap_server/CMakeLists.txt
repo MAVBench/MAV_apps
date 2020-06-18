@@ -19,6 +19,7 @@ set(PACKAGE_DEPENDENCIES
 set (CMAKE_CXX_STANDARD 11)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
+add_definitions(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES} data_collection profile_manager)
 
