@@ -80,7 +80,7 @@ int main(int argc, char** argv)
         }
     }
     server_ptr = &server;
-    ros::Duration(1).sleep(); // -- need this to prevent octomap from running before imgPublisher/point cloud
+    ros::Duration(2).sleep(); // -- need this to prevent octomap from running before imgPublisher/point cloud
     while (ros::ok()) {
     	server.spinOnce();
 //    	ros::spinOnce();
