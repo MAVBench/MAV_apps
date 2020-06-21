@@ -45,7 +45,7 @@ trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second);
 
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj,
-		mavbench_msgs::follow_traj_debug &debug_data, geometry_msgs::Point closest_unknown_point,
+		mavbench_msgs::follow_traj_debug &debug_data, mavbench_msgs::planner_info closest_unknown_point,
 		yaw_strategy_t yaw_strategy = ignore_yaw,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),

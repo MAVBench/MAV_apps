@@ -25,6 +25,7 @@ public:
 	std::vector<double> calcSamplingTime(trajectory_t traj, double latency, multiDOFpoint closest_unknown_point, coord position);
 	double calc_magnitude(double x, double y, double z);
 	double inline get_velocity_projection_mag(multiDOFpoint cur_point, multiDOFpoint closest_unknown);
+	double calc_budget(const mavbench_msgs::multiDOFtrajectory msg, std::deque<multiDOFpoint> *traj, multiDOFpoint closest_unknown_point, coord drone_position);
 
 
 	virtual ~TimeBudgetter();

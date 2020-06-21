@@ -30,7 +30,7 @@
 #include<mavbench_msgs/response_time_capture.h>
 // Misc messages
 #include <geometry_msgs/Point.h>
-
+#include <mavbench_msgs/planner_info.h>
 // Octomap specific headers
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
@@ -108,7 +108,7 @@ private:
     void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg);
 
     // is the trajecotry colliding
-    bool traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, geometry_msgs::Point &closest_unknown);
+    bool traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavbench_msgs::planner_info &closest_unknown);
 
 
     void octomap_communication_proxy_msg_cb(const std_msgs::Header& msg);
@@ -136,7 +136,7 @@ private:
 
     // *** F:DN Checks whether there is a collision between two nodes in the occupancy grid.
     bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, graph::node * end_ptr = nullptr);
-    bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, geometry_msgs::Point &closest_unknown, graph::node * end_ptr = nullptr);
+    bool collision(octomap::OcTree * octree, const graph::node& n1, const graph::node& n2, mavbench_msgs::planner_info &closest_unknown, graph::node * end_ptr = nullptr);
 
     // whether the drone is already following a trajectory
     bool haveExistingTraj(mavbench_msgs::multiDOFtrajectory *traj);
@@ -166,7 +166,7 @@ private:
     bool out_of_bounds_lax(const graph::node& pos);
 
     // *** F:DN Optimize and smoothen a piecewise path without causing any new collisions.
-    smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration, geometry_msgs::Point &closest_unknown_point);
+    smooth_trajectory smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration, mavbench_msgs::planner_info &closest_unknown_point);
 
     // ***F:DN Build the response to the service from the smooth_path
     void create_response(package_delivery::get_trajectory::Response &res, const smooth_trajectory& smooth_path);
@@ -194,18 +194,18 @@ private:
     bool goal_rcv_call_back(package_delivery::point::Request &req, package_delivery::point::Response &res);
 
     bool coord_on_drone(octomap::point3d point);
-    geometry_msgs::Point closest_obstacle_on_path_way_point;
+    mavbench_msgs::planner_info closest_obstacle_on_path_way_point;
     bool unknown_budget_failed = false;
     bool got_enough_budget_for_next_SA_itr(piecewise_trajectory& piecewise_path);
-    bool got_enough_budget_for_next_SA_itr(geometry_msgs::Point closest_unknown_way_point);
-    bool got_enough_budget_for_next_SA_itr(geometry_msgs::Point closest_unknown_way_point, mav_trajectory_generation::Trajectory smoothened_traj);
+    bool got_enough_budget_for_next_SA_itr(mavbench_msgs::planner_info closest_unknown_way_point);
+    bool got_enough_budget_for_next_SA_itr(mavbench_msgs::planner_info closest_unknown_way_point, mav_trajectory_generation::Trajectory smoothened_traj);
 
     vector<double> accelerationCoeffs = {.1439,.8016};
     TimeBudgetter *time_budgetter;//(10, 10, accelerationCoeffs, 0.1, 10);  // non of the hardcoded values actually matter for motion planner
 
 
     int last_unknown_pt_ctr;
-    double planner_min_freq;
+    double planner_min_freq, max_time_budget;
     ros::Time last_planning_time;
     bool failed_to_plan_last_time = false;
     bool planned_optimally = true; // if smoothener spits out suboptimal paths, use this to replan
@@ -217,7 +217,6 @@ private:
     int capture_size = 600; //set this to 1 if you want to see every data captured separately
     int next_steps_msg_size  = 0;
     bool piecewise_planning = false;
-    ros::Time ppl_start_time;
     string voxel_type_to_publish;
 private:
     ros::NodeHandle nh;
@@ -270,7 +269,7 @@ private:
     int nodes_to_add_to_roadmap__global;
     double max_dist_to_connect_at__global;
     double sampling_interval__global;
-    double v_max__global, a_max__global;
+    double v_max__global, a_max__global, sensor_max_range, v_max_min, v_max_max, pc_res_max;
     bool notified_failure = false;
     int max_roadmap_size__global;
     double ppl_vol_actual, ppl_vol_unit_cube_actual;
@@ -280,7 +279,7 @@ private:
     float g_smoothening_budget;
     float g_out_of_bounds_allowance = 5;
     int replanning_reason;
-
+    int planner_consecutive_failure_ctr = 0;
     float dist_to_closest_obs;
     ros::Time dist_to_closest_obs_time_stamp;
 

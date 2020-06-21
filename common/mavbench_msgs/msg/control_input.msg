@@ -9,4 +9,5 @@ float32 obs_dist_statistics_avg
 float32 velocity_to_budget_on
 float32 cur_tree_total_volume
 float32 ppl_vol_min
+float32 planner_consecutive_failure_ctr
 

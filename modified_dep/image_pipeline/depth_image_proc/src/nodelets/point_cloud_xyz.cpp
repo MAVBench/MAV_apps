@@ -55,13 +55,15 @@
 #include <std_msgs/Bool.h>
 #include <tuple>
 #include <queue>
+#include <common.h>
 using namespace std;
 #include <mavbench_msgs/point_cloud_debug.h>
 #include <string>
 #include <mavbench_msgs/point_cloud_meta_data.h>
 #include <mavbench_msgs/point_cloud_aug.h>
 #include <mavbench_msgs/control.h>
-
+#include <mavbench_msgs/planner_info.h>
+#include <Drone.h>
 //#define N_CAMERAS 6
 
 const std::string camera_names[] = {
@@ -142,9 +144,11 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double ppl_latency_expected;
   double velocity_to_budget_on;
   double ee_latency_expected;
-
+  uint16_t port = 41451;
+  std::string ip_addr, localization_method;
+  double v_max_max;
   double x_coord_while_budgetting, y_coord_while_budgetting,vel_mag_while_budgetting;
-
+  Drone *drone;
 
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
   bool  new_control_data = false;
@@ -169,9 +173,11 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   void log_data_before_shutting_down();
   ~PointCloudXyzNodelet();
   void inform_pc_done_cb(std_msgs::Bool);
-  void closest_unknown_callback(geometry_msgs::Point);
+  void closest_unknown_callback(mavbench_msgs::planner_info);
   ProfileManager *profile_manager_;
   DataContainer *profiling_container;
+  double max_time_budget;
+  double standard_max_time_budget;
   int N_CAMERAS = 1;
 };
 double g_planner_drone_radius;
@@ -181,6 +187,12 @@ void PointCloudXyzNodelet::onInit()
   ros::NodeHandle& nh         = getNodeHandle();
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   it_.reset(new image_transport::ImageTransport(nh));
+
+
+
+
+
+
   //profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
   //signal(SIGINT, sigIntHandlerPrivate);
   // Read parameters
@@ -193,6 +205,23 @@ void PointCloudXyzNodelet::onInit()
   profiling_container = new DataContainer();
   profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
 
+    if(!ros::param::get("/ip_addr",ip_addr)){
+		ROS_FATAL_STREAM("Could not start run_time_node ip_addr not provided");
+        exit(-1);
+	}
+
+    if(!ros::param::get("/v_max_max",v_max_max)){
+		ROS_FATAL_STREAM("Could not start run_time_node ip_addr not provided");
+        exit(-1);
+	}
+
+    ros::param::get("/ip_addr", ip_addr);
+    if(!ros::param::get("/localization_method", localization_method)) {
+    	ROS_FATAL("Could not start point cloud map node. Localization parameter missing!");
+    	exit(-1);
+    }
+  drone = new Drone(ip_addr.c_str(), port, localization_method);
+
   // Profiling 
 
   if (!ros::param::get("/num_cameras", N_CAMERAS)) {
@@ -200,7 +229,18 @@ void PointCloudXyzNodelet::onInit()
     exit(0);
   }
 
-  	if(!ros::param::get("/planner_drone_radius", g_planner_drone_radius)) {
+
+  if (!ros::param::get("/max_time_budget", max_time_budget)) {
+    ROS_FATAL("Could not start max_time_budget. Parameter missing! Looking for num_cameras");
+    exit(0);
+  }
+  if (!ros::param::get("/max_time_budget", standard_max_time_budget)) {
+    ROS_FATAL("Could not start max_time_budget. Parameter missing! Looking for num_cameras");
+    exit(0);
+  }
+
+
+  if(!ros::param::get("/planner_drone_radius", g_planner_drone_radius)) {
 		ROS_FATAL_STREAM("Could not start run_time_node planner_drone_radius not provided");
         exit(-1);
 	}
@@ -417,9 +457,20 @@ bool got_first_unknown = false;
 geometry_msgs::PointStamped closest_unknown_point;
 geometry_msgs::PointStamped closest_unknown_point_upper_bound; // used if closest_uknown is inf, that's there is not unknown
 
-void PointCloudXyzNodelet::closest_unknown_callback(const geometry_msgs::Point msg){
+int planner_consecutive_failure_ctr = 0;
+
+void PointCloudXyzNodelet::closest_unknown_callback(const mavbench_msgs::planner_info msg){
+	ROS_INFO_STREAM("got unknown now weird");
 	got_first_unknown = true;
 	got_new_closest_unknown = true;
+	if (msg.planning_status == "ppl_failed" || msg.planning_status=="smoothener_failed") {
+		planner_consecutive_failure_ctr +=1;
+		ROS_INFO_STREAM("counting up"<<planner_consecutive_failure_ctr);
+	}else{
+		planner_consecutive_failure_ctr = 0;
+		ROS_INFO_STREAM("resetting counter ");
+
+	}
 	if (isnan(msg.x) ||
 			isnan(msg.y) ||
 			isnan(msg.z) ){ // filtering is centered around pc center
@@ -1406,6 +1457,48 @@ void filterByResolutionNoFilter(std::vector<float> &xs,  std::vector<float> &ys,
 }
 
 
+void filterByResolutionByHashing(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget, double point_cloud_max_z, double resolution, int num_points) {
+  // map of whether a point has been seen (rounded by resolution)
+  std::unordered_set<double> seen;
+  //seen.clear();
+  double last_hashed_point = 0;
+  double last_x, last_y, last_z, this_x, this_y, this_z;
+  double volume_to_digest_partial = 0; // accumulats the depth values, which is then multipled by a square of resolution side size
+  double last_rounded_x, last_rounded_y, last_rounded_z;
+
+  for (int i = 0; i < num_points; i++){
+	this_x = *(cloud_x + i);
+	this_y = *(cloud_y + i);
+	this_z = *(cloud_z + i);
+	  double rounded_x = round_to_resolution(this_x, resolution);
+      double rounded_y = round_to_resolution(this_y, resolution);
+      double rounded_z = round_to_resolution(this_z, resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+      /*
+      this_x = *cloud_x;
+      this_y = *cloud_y;
+      this_z = *cloud_z;
+	  */
+
+      if (hashed_point != last_hashed_point){
+		  if (seen.find(hashed_point) == seen.end()) {
+			  seen.insert(hashed_point);
+			  //xs_best.push_back(rounded_x);
+			  //ys_best.push_back(rounded_y);
+			  //zs_best.push_back(rounded_z);
+			  xs_best.push_back(this_x);
+			  ys_best.push_back(this_y);
+			  zs_best.push_back(this_z);
+		  }
+		  last_hashed_point = hashed_point;
+      }
+  }
+  //ROS_INFO_STREAM("x_y_not_in_order_cntr"<< x_y_not_in_order_cntr<< "x_not_in_order_cntr"<<x_not_in_order_cntr<< "y_not_in_order_cntr"<<y_not_in_order_cntr<< "x_y_in_order_cntr"<<x_y_in_order_cntr);
+  //  ROS_INFO_STREAM("num of points "<< num_of_points);
+  // volume_to_digest = (1.0/3)*resolution*resolution*volume_to_digest_partial; // -- compilation of  cone volumes
+}
+
 // -- filter based on resolution using hashing
 void filterByResolutionByHashing(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
     std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, int points_budget, double point_cloud_max_z, double resolution) {
@@ -1814,11 +1907,13 @@ void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
 
 double last_res = .3;
 
+double blah_ctr = 0;
 ros::Time last_time = ros::Time::now();
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
 
 
+	blah_ctr +=1;
 	bool knob_performance_modeling = false;
 	ros::param::get("/knob_performance_modeling", knob_performance_modeling);
 
@@ -1830,7 +1925,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
 	//blah. reactivate after collecting data
     if ((got_first_unknown && !got_new_closest_unknown) && !knob_performance_modeling){
-		return;
+    	return;
 	}
 
 	/*
@@ -2051,6 +2146,15 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   control.inputs.gap_statistics_avg = gap_statistics_avg;
   control.inputs.obs_dist_statistics_min = min(obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om);
   control.inputs.obs_dist_statistics_avg = obs_dist_statistics_avg_from_pc;  // note that we can't really get avg distance from octomap, since there
+  control.inputs.planner_consecutive_failure_ctr = planner_consecutive_failure_ctr;
+  if (control.inputs.planner_consecutive_failure_ctr > 1){
+	  ros::param::set("max_time_budget", 4*standard_max_time_budget);
+  }else if (control.inputs.planner_consecutive_failure_ctr > 2){
+	  ros::param::set("max_time_budget", 8*standard_max_time_budget);
+  }else{
+	  ros::param::set("max_time_budget", standard_max_time_budget);
+  }
+
 
   control_pub.publish(control);
   //ROS_INFO_STREAM("publishing control now");
@@ -2083,11 +2187,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
    //blah, reactive this after you collected the data
    if (optimizer_failure_status == 1){
-	  return;
+	   ROS_INFO_STREAM("failure status is 1, so returning before pushing pc to octomap"<<blah_ctr);
+	   return;
    }
   got_new_closest_unknown = false;
 
-  if (optimizer_failure_status == 2){
+  if (optimizer_failure_status == 2){ // not enough time
+	  ROS_INFO_STREAM("failure status is 2, so returning before pushing pc to octomap"<<blah_ctr);
 	  mavbench_msgs::runtime_failure_msg rtf_msg;
 	  rtf_msg.header.stamp = img_capture_time_stamp;
 	  rtf_msg.controls.cmds.optimizer_succeeded = optimizer_succeeded;
@@ -2100,7 +2206,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 	  return;
   }
 
-
+ ROS_INFO_STREAM("succeeded got to after optimizer call"<< blah_ctr);
 
   /*
   if (!optimizer_succeeded){
@@ -2160,7 +2266,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
    // -- piecewise planner
    ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
-
+   ros::Time deadline_setting_time_stamp = ros::Time::now(); // this is not entirely accurate, since this needs to be set in the run time, however, it'll be a pain to pass the time msg around, so we approximate
 
   if (om_to_pl_res < pc_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<pc_res);} assert(om_to_pl_res >= pc_res);
 
@@ -2181,8 +2287,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   double pc_vol_ideal_estimated = actual_to_estimated_vol_correction(pc_vol_ideal); // convert the ideal to estimated because point cloud can only enforce in the estimated world
   //filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
   profiling_container->capture("sequencing", "start", ros::Time::now(), capture_size);
-  sequencer(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
 
+  auto drone_vel = drone->velocity();
+  double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+  if (cur_vel_mag < .8*v_max_max){ // only if not high speed, sequence
+	  sequencer(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
+  }
   // -- destroy the grid
   for (int h = 0; h < grid_size; h++)
   {
@@ -2199,7 +2309,14 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   std::vector<float> ys_best;
   std::vector<float> zs_best;
   //filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution, volume_to_digest_2);
-  filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res);
+  if (cur_vel_mag > .8*v_max_max){
+	  ROS_INFO_STREAM("----- skipping the sequencing and ordering");
+	  filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res, n_points);
+  }
+  else {
+	  filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res);
+  }
+
 
   //filterByResolutionNoFilter(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, point_cloud_resolution);
   // filterByResolutionNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_resolution); //for microbehcmark_3 to collect data without resoloution filtering
@@ -2276,6 +2393,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   pcl_aug_data.ee_profiles.actual_time.pc_latency =  profiling_container->findDataByName("entire_point_cloud_depth_callback")->values.back();
   pcl_aug_data.ee_profiles.actual_time.pc_pre_pub_time_stamp = ros::Time::now();
   pcl_aug_data.ee_profiles.actual_time.img_capture_time_stamp = img_capture_time_stamp;
+  pcl_aug_data.ee_profiles.actual_time.deadline_setting_time_stamp = deadline_setting_time_stamp;
 
   if (DEBUG_VIS){
 	  pub_point_cloud_.publish (*cloud_msg);

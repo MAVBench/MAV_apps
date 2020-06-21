@@ -331,7 +331,7 @@ void spin_around(Drone &drone) {
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj,
 		mavbench_msgs::follow_traj_debug& debug_data,
-		geometry_msgs::Point closest_unknown_point,
+		mavbench_msgs::planner_info closest_unknown_point,
 		yaw_strategy_t yaw_strategy,
         bool check_position, float max_speed, float time,
 		float p_vx, float p_vy, float p_vz, float I_px, float I_py, float I_pz,

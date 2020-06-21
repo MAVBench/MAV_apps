@@ -449,6 +449,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	octomap_aug_data.controls = pcl_aug_data->controls;
 	octomap_aug_data.ee_profiles = pcl_aug_data->ee_profiles;
 	octomap_aug_data.ee_profiles.actual_time.pc_to_om_ros_oh =  (ros::Time::now() - pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp).toSec();
+	//ROS_INFO_STREAM("pc_to_om_overhead is"<< octomap_aug_data.ee_profiles.actual_time.pc_to_om_ros_oh);
 
 	// -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning

@@ -1,4 +1,5 @@
 <launch>
+
   <!-- ===================================================================== -->
   <!-- ========================== Hardware in the Loop====================== -->
   <!-- ===================================================================== -->
@@ -24,7 +25,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="5"/> 
+  <arg name="v_max" default="7"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="3"/>
@@ -32,6 +33,8 @@
   <arg name="max_yaw_rate" default="90"/>
   <arg name="max_yaw_rate_during_flight" default="90"/>
   <param name="v_max" value="$(arg v_max)"/>
+  <param name="v_max_max" value="$(arg v_max)"/>
+  <param name="v_max_min" value="2.5"/>
   <param name="a_max" value="$(arg a_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
@@ -87,12 +90,12 @@
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
   <!-- arg name="sensor_to_actuation_time_budget_to_enforce" default="3"/--> 
-  <arg name="max_time_budget" default="10" />   
+  <arg name="max_time_budget" default="15" />   
   <param name="max_time_budget" value="$(arg max_time_budget)"/>
   <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg max_time_budget)"/>
   <arg name="velocity_to_budget_on" default=".1"/> 
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
-  <arg name="planner_min_freq" default=".01"/> 
+  <arg name="planner_min_freq" default=".0001"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
   <arg name="distance_to_goal_margin" default="15"/> 
   <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>
@@ -467,8 +470,8 @@
     
   <!-- ========================= Follow Trajectory (Control)============================ -->
   
-  <arg name="stay_in_place_duration_for_reverse" default="5"/>
-  <arg name="backup_duration" default="3"/>
+  <arg name="stay_in_place_duration_for_reverse" default="20"/>
+  <arg name="backup_duration" default=".5"/>
   <arg name="fly_trajectory_time_out" default=".2"/> 
   <arg name="follow_trajectory_loop_rate" default="20"/>   <!-- in Hz-->
   <arg name="stay_in_place_duration_for_stop" default="5"/>

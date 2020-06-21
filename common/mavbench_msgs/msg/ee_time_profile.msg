@@ -1,4 +1,5 @@
 time img_capture_time_stamp
+time deadline_setting_time_stamp
 float32 pc_latency
 time pc_pre_pub_time_stamp
 float32 pc_to_om_ros_oh

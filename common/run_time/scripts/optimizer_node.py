@@ -19,17 +19,15 @@ class dummy_output:
         self.success = False
 
 def run_optimizer(control):
-
     # -- determine the response time destired (rt_d)
-    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - misc_latency # the second run_time_latency is for the following iteration
+    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
     print("budget is" + str(time_budget_left_to_distribute))
-    if (time_budget_left_to_distribute < 0):
+    if (time_budget_left_to_distribute < runtime_latency):
         print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
         results = dummy_output()
         failure_status = 2
         return results, failure_status
     rt_d = min(time_budget_left_to_distribute, rt_max)
-    rt_d = max(rt_d, .2)
 
     # -- determine the resolution
     # intuitively speaking, min value for resolution (r_min) indicate, we don't need to do better than that
@@ -37,15 +35,21 @@ def run_optimizer(control):
     # making since we have more free space to make decision based off of)
     # and max value for resolution indicates  that we can't not do worse than this
     r_min_temp = min(control.inputs.gap_statistics_avg/2, control.inputs.obs_dist_statistics_avg/2) - drone_radius  # min to impose the worse case as the
-                                                                                                                # determinant
 
     r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
     r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
     r_min_ = r_min_temp
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
     r_max_temp = min(control.inputs.gap_statistics_max/2, control.inputs.obs_dist_statistics_min/2) - drone_radius  # min is because we want the tigher bound of the two:
-                                                                                                                 # note that if r_max is greater than
-                                                                                                                 # r_gap_max, we can't actually see any gaps
+
+    if control.inputs.planner_consecutive_failure_ctr > 2:  # this is for the scenarios where we are surrounded by free space, but the goal is not
+        r_min_temp = r_max_temp = r_min_static 
+        planning_failure_cntr_coeff = 2
+    if control.inputs.planner_consecutive_failure_ctr > 4:  # this is for the scenarios where we are surrounded by free space, but the goal is not
+        planning_failure_cntr_coeff = 4 
+    else:
+        planning_failure_cntr_coeff = 1
+    # r_gap_max, we can't actually see any gaps
     r_max_temp = max(r_max_temp, r_min_static)  # not lower than r_min_static
     r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
     r_max_ = (2 ** math.floor(math.log(round(r_max_ /r_min_static, 2), 2))) * r_min_static  # must get the floor otherwise, when converting (after solving), when we get the floor, we might go over
@@ -64,47 +68,70 @@ def run_optimizer(control):
     v_sensor_max = control.inputs.sensor_volume_to_digest
     v_tree_max = max(control.inputs.cur_tree_total_volume, v_min) + v_sensor_max#, v_sensor_max)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
-    ppl_vol_min = max(control.inputs.ppl_vol_min, 10*v_sensor_max)
+    ppl_vol_min = max(control.inputs.ppl_vol_min, v_sensor_max)
 
-    v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]  # not that .9*v_sensor_max is there
-                                                                    # because sometimes, we actually might have a smaller
-                                                                    # than v_min volume, in which case we need to
-                                                                    # provide a volume as a min that is smaller
-                                                                    # than what we can already see (v_sennsor_max)
-    #print("fufufufufufuf" +str(ppl_vol_min))
-    v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, ppl_vol_min)]
-
-
-    Q = np.array([[-2.16196038e-05, -2.78515364e-03,  pl_to_ppl_ratio*2.86859999e-05],
-        [2.00720436e-04,  4.60333360e-02, pl_to_ppl_ratio*-1.05093373e-05],
-        [1.34399197e-04,  4.64316885e-02,  pl_to_ppl_ratio*1.24233987e-05],
-        [1.00483609e-01,  1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
-    # Constraint matrices #
-
-    #  --  w/ r_gap  as constraint
-    #G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0], [-1,0,0,0,0]])
-    #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
-    # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
-    G = np.array([[-1,1,0,0,0], [0,0,3,-1,0], [0,0,1,0,0]])
-    d = np.array([0, 0, (r_max_/r_min_static)*v_sensor_max])
+    for i in np.arange(1, 15, .1):
+        v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]  # not that .9*v_sensor_max is there
+                                                                        # because sometimes, we actually might have a smaller
+                                                                        # than v_min volume, in which case we need to
+                                                                        # provide a volume as a min that is smaller
+                                                                        # than what we can already see (v_sennsor_max)
+        #v_max_list = [(2**i)*(r_max_/r_min_static)*v_sensor_max, (2**i)*(r_max_/r_min_static)*v_tree_max, (2**i)*max(v_max, ppl_vol_min)]
+        v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, ppl_vol_min)]
 
 
-    opt = Opt(method="var5_rhat_volmax",
-              Q=Q,
-              r_min=r_min_list,
-              r_max=r_max_list,
-              v_min=v_min_list,
-              v_max=v_max_list,
-              G=G,
-              d=d)
+        """
+        Q = np.array([[-2.16196038e-05, -2.78515364e-03,  pl_to_ppl_ratio*2.86859999e-05],
+            [2.00720436e-04,  4.60333360e-02, pl_to_ppl_ratio*-1.05093373e-05],
+            [1.34399197e-04,  4.64316885e-02,  pl_to_ppl_ratio*1.24233987e-05],
+            [1.00483609e-01,  1.80366135e-05,  pl_to_ppl_ratio*4.71434480e-03]])
+        """
+        """
+        [-0.01420042  0.01081166 -0.00413957 -0.00029888]
+        [9.78020632e-01 -7.03707300e-01   4.03608560e+00   1.36792938e-07]
+        [2.31901204e-03 -2.72136219e-02 -7.21721385e-01 -7.93304493e-06]
+        """
+        Q = np.array([[-0.01420042, 9.78020632e-01,  pl_to_ppl_ratio*2.31901204e-03],
+                      [ 0.01081166 , -7.03707300e-01 , pl_to_ppl_ratio*-2.72136219e-02],
+                      [-0.00413957, 4.03608560e+00 ,  pl_to_ppl_ratio*-7.21721385e-01],
+                      [-0.00029888, 1.36792938e-07,  pl_to_ppl_ratio*-7.93304493e-06]])
 
-    # Optimization parameters #
-    x0 = np.array([1/0.5, 1/0.5, (r_max_/r_min_static)*5000, (r_max_/r_min_static)*5000, r_max_*5000])
-    profile = True
-    tol = 1e-12
-    results = opt.opt(profile=profile, rt_d=rt_d, x0=x0, tol=tol, verbose=False)
+
+
+        # Constraint matrices #
+
+        #  --  w/ r_gap  as constraint
+        #G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0], [-1,0,0,0,0]])
+        #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
+        # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
+        G = np.array([[-1,1,0,0,0], [0,0,3*planning_failure_cntr_coeff,-1,0], [0,0,0, planning_failure_cntr_coeff,-3], [0,0,1,0,0]])
+        d = np.array([0, 0, 0, (r_max_/r_min_static)*v_sensor_max])
+
+        opt = Opt(method="var5_rhat_volmax",
+                  Q=Q,
+                  r_min=r_min_list,
+                  r_max=r_max_list,
+                  v_min=v_min_list,
+                  v_max=v_max_list,
+                  G=G,
+                  d=d)
+
+        rt_d_ = rt_d/i
+        print("well now 00000000000000000000" +str(rt_d_))
+        # Optimization parameters #
+        x0 = np.array([1/0.5, 1/0.5, (r_max_/r_min_static)*5000, 3*planning_failure_cntr_coeff*(r_max_/r_min_static)*5000, 3*planning_failure_cntr_coeff*r_max_*5000])
+        profile = True
+        tol = 1e-12
+        results = opt.opt(profile=profile, rt_d=rt_d_, x0=x0, tol=tol, verbose=False)
+        if results.success:
+            break
+
     if not results.success:
-        failure_status = 1
+        if time_budget_left_to_distribute < front_end_latency: # don't have time for another round
+            print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+            failure_status = 2
+        else:
+            failure_status = 1
     else:
         failure_status = 0
     return results, failure_status
@@ -148,6 +175,8 @@ def control_callback(control):
                                                                                    # which results in an assertion error
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
         assert(om_to_pl_res >= pc_res), "om_to_pl_res should be >= pc_res"
+        if (om_to_pl_res > pc_res):
+            print("################## what I wanted")
         pc_vol_ideal = results.x[2]
         #pc_vol_ideal = 20000
         om_to_pl_vol_ideal = results.x[3]
@@ -157,17 +186,18 @@ def control_callback(control):
         om_to_pl_latency_expected = results.exp_task_times[1]
         ppl_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
         smoothening_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
+        #print("$$$$$$$$$$$$$$$$ optimizer succeeded with status " + str(failure_status))
     else:
         rospy.set_param("optimizer_failure_status", failure_status)
         rospy.set_param("optimizer_succeeded", False)
         rospy.set_param("log_control_data", False)
         rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
-        print("====================optimizer failed")
+        #print("====================optimizer failed with status " + str(failure_status))
         return
 
     rospy.set_param("optimizer_succeeded", True)
     rospy.set_param("log_control_data", True)
-    ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + misc_latency
+    ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + back_end_latency 
     # set the knobs
     rospy.set_param("pc_res", float(pc_res))
     rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))
@@ -177,6 +207,7 @@ def control_callback(control):
     rospy.set_param("ppl_vol_ideal", float(ppl_vol_ideal))
     rospy.set_param("optimizer_failure_status", failure_status)
     # time budgets (expected with the above knob settings)
+    print("printin the S_A_time_buget" + str(control.internal_states.sensor_to_actuation_time_budget_to_enforce))
     rospy.set_param("sensor_to_actuation_time_budget_to_enforce", control.internal_states.sensor_to_actuation_time_budget_to_enforce)
     rospy.set_param("om_latency_expected", float(om_latency_expected))
     rospy.set_param("om_to_pl_latency_expected", float(om_to_pl_latency_expected))
@@ -217,5 +248,7 @@ if __name__ == '__main__':
     r_min_static = rospy.get_param("pc_res_max") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_steps = rospy.get_param("num_of_res_to_try") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_max_static = (2 ** r_steps) * r_min_static
-    while not rospy.is_shutdown(): 
+    while not rospy.is_shutdown():
+        rt_max = rospy.get_param("max_time_budget")
+        drone_radius = rospy.get_param("planner_drone_radius")
         rate.sleep()

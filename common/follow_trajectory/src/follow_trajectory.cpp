@@ -18,6 +18,7 @@
 #include <datacontainer.h>
 #include <cmath>
 #include <mavbench_msgs/response_time_capture.h>
+#include <mavbench_msgs/planner_info.h>
 using namespace std;
 
 // Trajectories
@@ -30,7 +31,7 @@ bool slam_lost = false;
 ros::Time future_collision_time{0}; // The moment in time when the drone should stop because of an upcoming collision
 int future_collision_seq = 0;
 int trajectory_seq = 0;
-geometry_msgs::Point closest_unknown_point;
+mavbench_msgs::planner_info closest_unknown_point;
 // Parameters
 float g_v_max;
 double p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function

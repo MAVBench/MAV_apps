@@ -6,6 +6,18 @@ set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 find_package(catkin REQUIRED cmake_modules cv_bridge eigen_conversions image_geometry image_transport message_filters nodelet sensor_msgs stereo_msgs tf2 tf2_ros
     data_collection profile_manager)
 
+
+
+set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
+link_directories(
+    $ENV{AirSim_base_dir}/AirLib/lib
+    $ENV{AirSim_base_dir}/AirLib/deps/rpclib/lib
+  /usr/local/cuda/lib64  #added by Behzad (for Behzad)
+  ${Airlib_addr}/deps/MavLinkCom/lib  
+)
+
+
+
 if(cv_bridge_VERSION VERSION_GREATER "1.12.0")
   add_compile_options(-std=c++11)
 endif()
@@ -34,6 +46,7 @@ include_directories(include ${BOOST_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS}
   ${CATKIN_DEVEL_PREFIX}/include
   ${common_utility_include}/profile_manager/include
   ${common_utility_include}/data_collection/include
+  $ENV{AirSim_base_dir}/AirLib/include
   )
 
 add_library(${PROJECT_NAME} src/nodelets/convert_metric.cpp
@@ -46,8 +59,11 @@ add_library(${PROJECT_NAME} src/nodelets/convert_metric.cpp
                              src/nodelets/point_cloud_xyzi_radial.cpp
                              src/nodelets/register.cpp
 			     ${common_utility_src}/Profiling.cpp 
-)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+                ${common_utility_src}/common.cpp  ${common_utility_src}/Drone.cpp 
+                 )
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} 
+    AirLib MavLinkCom rpc pthread)
+
 
 install(DIRECTORY include/${PROJECT_NAME}/
     DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}

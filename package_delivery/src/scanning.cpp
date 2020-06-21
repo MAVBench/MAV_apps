@@ -15,6 +15,7 @@
 #include "package_delivery/get_trajectory.h"
 #include <profile_manager/profiling_data_srv.h>
 #include <profile_manager/start_profiling_srv.h>
+#include <mavbench_msgs/planner_info.h>
 
 using namespace std;
 string ip_addr__global;
@@ -232,7 +233,7 @@ int main(int argc, char **argv)
         } else if (state == flying)
         {
 
-         geometry_msgs::Point closest_uknown_point;	
+         mavbench_msgs::planner_info closest_uknown_point;	
             mavbench_msgs::follow_traj_debug debug_data = {};
         	follow_trajectory(drone, &trajectory, nullptr,  debug_data,
                     closest_uknown_point, 

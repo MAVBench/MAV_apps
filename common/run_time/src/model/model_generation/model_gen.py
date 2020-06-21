@@ -109,6 +109,14 @@ if __name__ == '__main__':
     om_popt, om_pl_popt, pp_pl_popt, typical_model = roborun_model_gen(om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol,
             pp_pl_response_time_measured)	 # for error calculation
     
+    
+    print("pc om models") 
+    print(om_popt)
+    print("om to pl models") 
+    print(om_pl_popt)
+    print("pl models") 
+    print(pp_pl_popt)
+
     # calcualting the error 
     om_error, om_max_abs_error = calculate_model_error(om_popt, om_res, om_vol, om_response_time_measured, typical_model, "normalized")
     om_pl_error, om_pl_max_abs_error = calculate_model_error(om_pl_popt, om_pl_res, om_pl_vol, om_pl_response_time_measured, typical_model, "normalized")

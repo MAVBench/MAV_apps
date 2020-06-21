@@ -56,6 +56,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  planner_info.msg
   multiDOFpoint.msg
   future_collision.msg
   control_cmd.msg

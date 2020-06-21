@@ -20,6 +20,52 @@ double TimeBudgetter::calc_magnitude(double x, double y, double z) {
   return std::sqrt(x*x + y*y + z*z);
 }
 
+
+
+void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, multiDOFpoint &copy_to){
+    	copy_to.vx = copy_from.vx;
+    	copy_to.vy = copy_from.vy;
+    	copy_to.vz = copy_from.vz;
+    	copy_to.ax = copy_from.ax;
+    	copy_to.ay = copy_from.ay;
+    	copy_to.az = copy_from.az;
+    	copy_to.x = copy_from.x;
+    	copy_to.y = copy_from.y;
+    	copy_to.z = copy_from.z;
+}
+
+
+double TimeBudgetter::calc_budget(const mavbench_msgs::multiDOFtrajectory msg, std::deque<multiDOFpoint> *traj, multiDOFpoint closest_unknown_point, coord drone_position){
+	traj->clear();
+	for (auto point_: msg.points){
+		multiDOFpoint point__;
+		convertMavBenchMultiDOFtoMultiDOF(point_, point__);
+		traj->push_back(point__);
+	}
+
+
+	double latency = 1.55; //TODO: get this from follow trajectory
+	//TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
+	//double sensor_range_calc;
+	auto macro_time_budgets = calcSamplingTime(*traj, latency, closest_unknown_point, drone_position); // not really working well with cur_vel_mag
+	double time_budget;
+	if (msg.points.size() < 2 || macro_time_budgets.size() < 2){
+		//time_budgetting_failed = true;
+		ROS_INFO_STREAM("failed to time budgget");
+		time_budget = -10;
+	}
+	else if (macro_time_budgets.size() >= 1){
+		//time_budgetting_failed = false;
+		time_budget = min(max_time_budget, macro_time_budgets[1]);
+		time_budget -= time_budget*.5;
+	}
+	return time_budget;
+}
+
+
+
+
+
 double TimeBudgetter::calc_dist(multiDOFpoint point1, multiDOFpoint point2){
 	double dx = point1.x - point2.x;
 	double dy = point1.y - point2.y;

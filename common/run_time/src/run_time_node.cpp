@@ -32,6 +32,7 @@
 #include <mavbench_msgs/runtime_debug.h>
 #include <mavbench_msgs/control.h>
 #include "package_delivery/point.h"
+#include <mavbench_msgs/planner_info.h>
 #include <common.h>
 #include "coord.h"
 
@@ -158,6 +159,7 @@ void set_param(ParamVal param) {
 }
 
 
+/*
 void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, multiDOFpoint &copy_to){
     	copy_to.vx = copy_from.vx;
     	copy_to.vy = copy_from.vy;
@@ -169,7 +171,7 @@ void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, m
     	copy_to.y = copy_from.y;
     	copy_to.z = copy_from.z;
 }
-
+*/
 
 void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	// -- note that we need to set the values one by one
@@ -184,6 +186,7 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	control.inputs.cur_tree_total_volume = msg->inputs.cur_tree_total_volume;
 	control.inputs.obs_dist_statistics_avg = msg->inputs.obs_dist_statistics_avg;
 	control.inputs.obs_dist_statistics_min = msg->inputs.obs_dist_statistics_min;
+	control.inputs.planner_consecutive_failure_ctr = msg->inputs.planner_consecutive_failure_ctr;
 	//ROS_INFO_STREAM("got a new input in control_callback crun");
 	got_new_input = true;
 }
@@ -210,7 +213,7 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 }
 
 
-void closest_unknown_callback(const geometry_msgs::Point::ConstPtr& msg){
+void closest_unknown_callback(const mavbench_msgs::planner_info::ConstPtr& msg){
 	closest_unknown_point.x = msg->x;
 	closest_unknown_point.y = msg->y;
 	closest_unknown_point.z = msg->z;
@@ -222,9 +225,15 @@ void closest_unknown_callback(const geometry_msgs::Point::ConstPtr& msg){
 	}
 }
 
+
+
+TimeBudgetter *time_budgetter;
+
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
+	/*
 	traj.clear();
-	//ROS_INFO_STREAM("---------------got in next calb back. point size"<<msg->points.size());
+
+
 	for (auto point_: msg->points){
     	multiDOFpoint point__;
     	convertMavBenchMultiDOFtoMultiDOF(point_, point__);
@@ -234,10 +243,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 
 	double latency = 1.55; //TODO: get this from follow trajectory
 	TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
-//	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, control.inputs.obs_dist_statistics_min);
-
-	//auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, distance_error);
-	double sensor_range_calc;
+	//double sensor_range_calc;
 	auto macro_time_budgets = MacrotimeBudgetter.calcSamplingTime(traj, latency, closest_unknown_point, drone_position); // not really working well with cur_vel_mag
 	double time_budget;
 	if (msg->points.size() < 2 || macro_time_budgets.size() < 2){
@@ -249,7 +255,15 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 		time_budgetting_failed = false;
 		time_budget = min (max_time_budget, macro_time_budgets[1]);
 		time_budget -= time_budget*.2;
-		//ROS_INFO_STREAM("did time budget, budget is"<<time_budget);
+	}
+	*/
+
+	double time_budget = time_budgetter->calc_budget(*msg, &traj, closest_unknown_point, drone_position);
+	if (time_budget == -10){
+			time_budgetting_failed = true;
+	}
+	else{
+			time_budgetting_failed = false;
 	}
 
 
@@ -267,7 +281,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	control.internal_states.drone_point_while_budgetting.x = drone_position.x;
 	control.internal_states.drone_point_while_budgetting.y = drone_position.y;
 	control.internal_states.drone_point_while_budgetting.z = drone_position.z;
-	double velocity_magnitude = MacrotimeBudgetter.get_velocity_projection_mag(traj[0], closest_unknown_point);
+	double velocity_magnitude = time_budgetter->get_velocity_projection_mag(traj[0], closest_unknown_point);
 	control.internal_states.drone_point_while_budgetting.vel_mag = velocity_magnitude;
 
 
@@ -787,7 +801,7 @@ int main(int argc, char **argv)
 
     std::string ns = ros::this_node::getName();
     ros::Subscriber next_steps_sub = n.subscribe<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1, next_steps_callback);
-    ros::Subscriber closest_unknown_sub = n.subscribe<geometry_msgs::Point>("/closest_unknown_point", 1, closest_unknown_callback);
+    ros::Subscriber closest_unknown_sub = n.subscribe<mavbench_msgs::planner_info>("/closest_unknown_point", 1, closest_unknown_callback);
 
     initialize_global_params();
     ros::Subscriber control_sub = n.subscribe<mavbench_msgs::control>("/control_to_crun", 1, control_callback);
@@ -1005,8 +1019,11 @@ int main(int argc, char **argv)
 	ros::Rate pub_rate(50);
 	while (ros::ok())
 	{
-
     	ros::spinOnce();
+    	ros::param::get("/max_time_budget", max_time_budget);
+
+    	time_budgetter = new TimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
+
     	//bool is_empty = callback_queue_1.empty();
     	//bool is_empty_2 = callback_queue_2.empty();
     	//callback_queue_1.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
@@ -1079,8 +1096,8 @@ int main(int argc, char **argv)
     			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
     			double sensor_range = closest_unknown_point_distance;
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
+    			ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
-    			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     		}
 
     		control_to_pyrun.publish(control);
