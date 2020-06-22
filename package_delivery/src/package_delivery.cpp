@@ -424,6 +424,7 @@ int main(int argc, char **argv)
     // *** F:DN subscribers,publishers,servers,clients
     // ros::Publisher trajectory_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("normal_traj", 1);
 
+    ros::Publisher manual_control_mode = nh.advertise<std_msgs::Bool>("/manual_control_mode", 1);
     ros::Subscriber col_coming_sub = nh.subscribe("col_coming", 1, col_coming_callback);
     ros::Subscriber trajectory_sub = nh.subscribe("multidoftraj", 1, trajectory_callback);
     ros::Subscriber next_steps_sub = nh.subscribe("next_steps", 1, next_steps_callback);
@@ -495,12 +496,24 @@ int main(int argc, char **argv)
     State next_state = invalid;
 
     ros::Publisher timing_msg_from_mp_pub = nh.advertise<std_msgs::Header> ("/timing_msgs_from_pd", 1);
-
+	ifstream filestr;
 
     for (State state = setup; ros::ok(); ) {
 		pub_rate.sleep();
         ros::spinOnce();
-        
+        /*
+        if (state != setup){ // to take the control back
+        	filestr.open("/home/reddi-rtx/MAVBench_base_backup/MAVBench_base/src/MAV_apps/data_processing/micro_benchmarks/roborun_run/manually_control.txt", ios::binary); // open your file
+        	if (filestr.peek() != std::ifstream::traits_type::eof() ){
+        		std_msgs::Bool manual_control_mode_msg;
+        		manual_control_mode_msg.data = true;
+        		manual_control_mode.publish(manual_control_mode_msg); // to cut down the control stream coming from the planner
+        		ROS_INFO_STREAM("cin is "<<cin.peek());
+        		state = setup;
+        	}
+        	filestr.close();
+        }
+		*/
         loop_start_t = ros::Time::now();
         if (state == setup)
         {

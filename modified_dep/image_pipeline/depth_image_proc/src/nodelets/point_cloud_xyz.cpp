@@ -147,6 +147,7 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   uint16_t port = 41451;
   std::string ip_addr, localization_method;
   double v_max_max;
+  double planner_drone_radius_min, planner_drone_radius_max;
   double x_coord_while_budgetting, y_coord_while_budgetting,vel_mag_while_budgetting;
   Drone *drone;
 
@@ -209,6 +210,20 @@ void PointCloudXyzNodelet::onInit()
 		ROS_FATAL_STREAM("Could not start run_time_node ip_addr not provided");
         exit(-1);
 	}
+
+    if(!ros::param::get("/planner_drone_radius",planner_drone_radius_max)){
+		ROS_FATAL_STREAM("Could not start run_time_node planner_drone_radius not provided");
+        exit(-1);
+	}
+
+    if(!ros::param::get("/planner_drone_radius_when_hovering",planner_drone_radius_min)){
+		ROS_FATAL_STREAM("Could not start run_time_node planner_drone_radius_when_hovering not provided");
+        exit(-1);
+	}
+
+
+
+
 
     if(!ros::param::get("/v_max_max",v_max_max)){
 		ROS_FATAL_STREAM("Could not start run_time_node ip_addr not provided");
@@ -460,7 +475,7 @@ geometry_msgs::PointStamped closest_unknown_point_upper_bound; // used if closes
 int planner_consecutive_failure_ctr = 0;
 
 void PointCloudXyzNodelet::closest_unknown_callback(const mavbench_msgs::planner_info msg){
-	ROS_INFO_STREAM("got unknown now weird");
+	//ROS_INFO_STREAM("got unknown now weird");
 	got_first_unknown = true;
 	got_new_closest_unknown = true;
 	if (msg.planning_status == "ppl_failed" || msg.planning_status=="smoothener_failed") {
@@ -468,7 +483,7 @@ void PointCloudXyzNodelet::closest_unknown_callback(const mavbench_msgs::planner
 		ROS_INFO_STREAM("counting up"<<planner_consecutive_failure_ctr);
 	}else{
 		planner_consecutive_failure_ctr = 0;
-		ROS_INFO_STREAM("resetting counter ");
+		//ROS_INFO_STREAM("resetting counter ");
 
 	}
 	if (isnan(msg.x) ||
@@ -2114,7 +2129,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
       }
       obs_dist_statistics_min_from_pc = min(_obs_dist_statistics_min_from_pc , obs_dist_statistics_min_from_pc);
-      obs_dist_statistics_min_from_om = min(_obs_dist_statistics_min_from_om, obs_dist_statistics_min_from_om);
+      //obs_dist_statistics_min_from_om = min(_obs_dist_statistics_min_from_om, obs_dist_statistics_min_from_om);
 
       gap_statistics_max = max(_gap_statistics_max , gap_statistics_max);
 
@@ -2128,9 +2143,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
   //profiling_container->capture("sensor_volume_to_digest_estimated", "single", sensor_volume_to_digest_estimated, 1);
 
+  auto drone_vel = drone->velocity();
+  double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
   // average of averages
-  gap_statistics_max -= g_planner_drone_radius;
-  gap_statistics_min -= g_planner_drone_radius;
+  //gap_statistics_max -= g_planner_drone_radius;
+  //gap_statistics_min -= g_planner_drone_radius;
+   gap_statistics_max = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_max);
+   gap_statistics_min = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_min);
   double gap_statistics_avg = (gap_statistics_avg_total / n_points) - g_planner_drone_radius;
   double obs_dist_statistics_avg_from_pc = (obs_dist_statistics_avg_from_pc_total / n_points); // dont need to subtract drone_radius already been taken care of since, we get it from camera frames
 
@@ -2140,6 +2159,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   double cur_tree_total_volume;
   ros::param::get("cur_tree_total_volume", cur_tree_total_volume);
   ros::param::get("obs_dist_statistics_min_from_om", obs_dist_statistics_min_from_om);
+  obs_dist_statistics_min_from_om =correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, obs_dist_statistics_min_from_om);
   control.inputs.cur_tree_total_volume = float(cur_tree_total_volume);
   control.inputs.gap_statistics_min = gap_statistics_min;
   control.inputs.gap_statistics_max = gap_statistics_max;
@@ -2147,12 +2167,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   control.inputs.obs_dist_statistics_min = min(obs_dist_statistics_min_from_pc, obs_dist_statistics_min_from_om);
   control.inputs.obs_dist_statistics_avg = obs_dist_statistics_avg_from_pc;  // note that we can't really get avg distance from octomap, since there
   control.inputs.planner_consecutive_failure_ctr = planner_consecutive_failure_ctr;
-  if (control.inputs.planner_consecutive_failure_ctr > 1){
-	  ros::param::set("max_time_budget", 4*standard_max_time_budget);
-  }else if (control.inputs.planner_consecutive_failure_ctr > 2){
-	  ros::param::set("max_time_budget", 8*standard_max_time_budget);
+ if (control.inputs.planner_consecutive_failure_ctr > 1){
+	  control.inputs.max_time_budget = standard_max_time_budget + control.inputs.planner_consecutive_failure_ctr*5;
+	  //ros::param::set("max_time_budget", standard_max_time_budget + 5);
   }else{
-	  ros::param::set("max_time_budget", standard_max_time_budget);
+	  //ros::param::set("max_time_budget", standard_max_time_budget);
+	  control.inputs.max_time_budget = standard_max_time_budget;
   }
 
 
@@ -2162,10 +2182,10 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
 
 
+  //control_pub.publish(control);
   while(!new_control_data){
 	  ros::param::get("/new_control_data", new_control_data);
-	  ros::Duration(.01).sleep();
-	  control_pub.publish(control);
+	  ros::Duration(.05).sleep();
   }
 
   //ros::Duration(10).sleep();
@@ -2206,7 +2226,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 	  return;
   }
 
- ROS_INFO_STREAM("succeeded got to after optimizer call"<< blah_ctr);
+ //ROS_INFO_STREAM("succeeded got to after optimizer call"<< blah_ctr);
 
   /*
   if (!optimizer_succeeded){
@@ -2219,6 +2239,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   profiling_container->capture("diagnostics", "end", ros::Time::now());
   // -- time budget
    ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce);
+   ROS_INFO_STREAM("============ sensor_to_actuation_time_budget is "<< sensor_to_actuation_time_budget_to_enforce);
    ros::param::get("/om_latency_expected", om_latency_expected);
    ros::param::get("/om_to_pl_latency_expected", om_to_pl_latency_expected);
    ros::param::get("/ppl_latency_expected", ppl_latency_expected);
@@ -2233,6 +2254,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
    // -- point cloud to octomap knobs
    ros::param::get("/pc_res", pc_res);
+   ROS_INFO_STREAM("pc res passed to pc"<<pc_res);
    ros::param::get("/pc_vol_ideal", pc_vol_ideal);
    // -- octomap to planner
    ros::param::get("/om_to_pl_res", om_to_pl_res);
@@ -2288,8 +2310,6 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   //filterByVolume(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
   profiling_container->capture("sequencing", "start", ros::Time::now(), capture_size);
 
-  auto drone_vel = drone->velocity();
-  double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
   if (cur_vel_mag < .8*v_max_max){ // only if not high speed, sequence
 	  sequencer(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, pc_vol_ideal_estimated, pc_vol_estimated, gridded_volume, grid_size, diagnostic_resolution);
   }

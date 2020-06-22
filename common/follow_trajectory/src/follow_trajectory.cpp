@@ -81,6 +81,7 @@ int SA_response_time_capture_ctr = 0; //counting the number of response_time cap
     									  // game execution and first planning which will skew the results
 
 
+bool manual_control = false;
 string this_response_time_collected_type;
 
 bool micro_benchmark_signaled_supervisor = false; //if signaled, then don't capture the velocity anymore
@@ -333,6 +334,14 @@ void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
     slam_lost = msg->data;
 }
 
+void manual_control_mode_callback(const std_msgs::Bool::ConstPtr& msg) {
+	if (msg->data){
+		manual_control = true;
+	}else{
+		manual_control = false;
+	}
+}
+
 
 // used for connecting the current trajectory to the newly arrived trajectory.
 // to smoothen the transition between the two trajectorys (currently not used)
@@ -506,7 +515,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
         fly_backward = false;
         stop = false;
     } else {
-    	ROS_INFO_STREAM("else cond");
+    	//ROS_INFO_STREAM("else cond");
     	const double max_idling_drift_distance = 0.5;
         trajectory_t idling_correction_traj;
         trajectory_t trajectory_annex;
@@ -530,7 +539,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     if (measure_time_end_to_end) {
     	new_traj_msg_time_stamp = msg->header.stamp;
     	profiling_container->capture("sensor_to_follow_trajectorytime", "single", (ros::Time::now() - msg->header.stamp).toSec(), g_capture_size);
-    	ROS_INFO_STREAM("end to end"<< (ros::Time::now() - msg->header.stamp).toSec());
+    	//ROS_INFO_STREAM("end to end"<< (ros::Time::now() - msg->header.stamp).toSec());
     }else{
     	profiling_container->capture("motion_planner_to_follow_traj_com", "start", msg->header.stamp, g_capture_size);
     	profiling_container->capture("motion_planner_to_follow_traj_com", "end", ros::Time::now(), g_capture_size);
@@ -793,6 +802,7 @@ int main(int argc, char **argv)
     // Initialize publishers and subscribers
     ros::Publisher next_steps_pub = n.advertise<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1);
 
+    ros::Subscriber manual_control_mode_= n.subscribe<std_msgs::Bool>("/manual_control_mode", 1, manual_control_mode_callback);
     ros::Subscriber slam_lost_sub = n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
     ros::Subscriber col_coming_sub = n.subscribe<mavbench_msgs::future_collision>("/col_coming", 1, future_collision_callback);
     ros::Subscriber timing_msg_sub = n.subscribe<std_msgs::Header> ("/timing_msgs", timing_msgs_channel_size, timing_msgs_callback);
@@ -838,6 +848,9 @@ int main(int argc, char **argv)
     	}
 
     	ros::spinOnce();
+    	if (manual_control){
+    		continue;
+    	}
 
         if ((ros::Time::now() - last_time_following).toSec() < g_fly_trajectory_time_out && !g_got_new_trajectory) {
         	loop_rate.sleep();

@@ -25,7 +25,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="7"/> 
+  <arg name="v_max" default="5.5"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="3"/>
@@ -34,7 +34,7 @@
   <arg name="max_yaw_rate_during_flight" default="90"/>
   <param name="v_max" value="$(arg v_max)"/>
   <param name="v_max_max" value="$(arg v_max)"/>
-  <param name="v_max_min" value="2.5"/>
+  <param name="v_max_min" value="1.5"/>
   <param name="a_max" value="$(arg a_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>

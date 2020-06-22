@@ -138,7 +138,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   }
 
 
-  dist_to_closest_obs = m_maxRange - g_planner_drone_radius;
+  dist_to_closest_obs = m_maxRange;// - g_planner_drone_radius;
 
   profile_manager_client = 
       private_nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data", true);
@@ -185,7 +185,9 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_octree_lower_res->setClampingThresMax(thresMax);
 
   closest_obs_coord = point3d(m_maxRange, m_maxRange, m_maxRange);
-  dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0)) - g_planner_drone_radius;
+  dist_to_closest_obs = calc_dist(closest_obs_coord, point3d(0,0,0)); // - g_planner_drone_radius;
+//  dist_to_closest_obs = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_max);
+
 
   double r, g, b, a;
   private_nh.param("color/r", r, 0.0);
@@ -420,6 +422,9 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	//ROS_INFO_STREAM("-----size is "<<size);
 	pc_res =  pcl_aug_data->controls.cmds.pc_res;
 	om_to_pl_res = pcl_aug_data->controls.cmds.om_to_pl_res;
+	pc_pre_pub_time = pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp;
+	om_latency_expected = pcl_aug_data->ee_profiles.expected_time.om_latency;
+
 
 	/*
 	om_to_pl_res = 2*last_res;
@@ -718,7 +723,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   }
 
   //update the closest obstacle
-  dist_to_closest_obs = min(max(calc_dist(closest_obs_coord, sensor_origin_corrected) - om_to_pl_res, 0.0), this->m_maxRange) - g_planner_drone_radius;
+  dist_to_closest_obs = min(max(calc_dist(closest_obs_coord, sensor_origin_corrected) - om_to_pl_res, 0.0), this->m_maxRange);// - g_planner_drone_radius;
 
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
@@ -764,7 +769,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   // all other points: free on ray, occupied on endpoint:
   for (PCLPointCloud::const_iterator it = nonground.begin(); it != nonground.end(); ++it){
 	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
-    if (pc_vol_actual >= pc_vol_ideal){
+	bool time_exceeded = (ros::Time::now() - pc_pre_pub_time).toSec() > om_latency_expected;
+	if (pc_vol_actual >= pc_vol_ideal || time_exceeded){
     	/*
     	double error = (pc_vol_actual - pc_vol_ideal)/pc_vol_ideal;
     	if (error > .12){
@@ -1061,7 +1067,7 @@ void OctomapServer::update_closest_obstacle(point3d coordinate, point3d sensor_o
 	double dist_to_this_obs = calc_dist(coordinate, sensor_origin_corrected);
 	dist_to_this_obs = max(dist_to_this_obs - om_to_pl_res, 0.0); // because octomap would bloat the voxels (note that both coordinate and
 									    // origin are the center of the voxels
-	dist_to_closest_obs = calc_dist(closest_obs_coord, sensor_origin_corrected) - g_planner_drone_radius;
+	dist_to_closest_obs = calc_dist(closest_obs_coord, sensor_origin_corrected);// - g_planner_drone_radius;
 	dist_to_closest_obs = max(dist_to_closest_obs - om_to_pl_res, 0.0); // because octomap would bloat the voxels (note that both coordinate and
 	if (dist_to_this_obs <= dist_to_closest_obs){
 		dist_to_closest_obs = dist_to_this_obs;
@@ -1896,6 +1902,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  while (true){
 	 om_to_pl_vol_actual = 0;
 	 octomap_block_vec.clear();
+
+
 
 	 // -- gridify the space up to MapToTransferSideLength
 	 // -- and see if we can cover up to "volume_to_keep"

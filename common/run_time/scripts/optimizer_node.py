@@ -19,9 +19,17 @@ class dummy_output:
         self.success = False
 
 def run_optimizer(control):
+    rt_max = control.inputs.max_time_budget 
+    """ 
+    print("gap_statistics_max" + str(control.inputs.gap_statistics_max))
+    print("gap_statistics_avg" + str(control.inputs.gap_statistics_avg))
+    print("obs min" + str(control.inputs.obs_dist_statistics_min))
+    print("obs avg" + str(control.inputs.obs_dist_statistics_avg))
+    """ 
+    #print("rt_max" + str(rt_max)) 
     # -- determine the response time destired (rt_d)
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
-    print("budget is" + str(time_budget_left_to_distribute))
+    #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
         print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
         results = dummy_output()
@@ -34,13 +42,13 @@ def run_optimizer(control):
     # we can also think of r_min as what regulates the intellignce (i.e, the lower r_min the more intelligence the decision
     # making since we have more free space to make decision based off of)
     # and max value for resolution indicates  that we can't not do worse than this
-    r_min_temp = min(control.inputs.gap_statistics_avg/2, control.inputs.obs_dist_statistics_avg/2) - drone_radius  # min to impose the worse case as the
+    r_min_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_avg) #- drone_radius  # min to impose the worse case as the
 
     r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
     r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
     r_min_ = r_min_temp
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
-    r_max_temp = min(control.inputs.gap_statistics_max/2, control.inputs.obs_dist_statistics_min/2) - drone_radius  # min is because we want the tigher bound of the two:
+    r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
 
     if control.inputs.planner_consecutive_failure_ctr > 2:  # this is for the scenarios where we are surrounded by free space, but the goal is not
         r_min_temp = r_max_temp = r_min_static 
@@ -117,7 +125,7 @@ def run_optimizer(control):
                   d=d)
 
         rt_d_ = rt_d/i
-        print("well now 00000000000000000000" +str(rt_d_))
+        #print("well now 00000000000000000000" +str(rt_d_))
         # Optimization parameters #
         x0 = np.array([1/0.5, 1/0.5, (r_max_/r_min_static)*5000, 3*planning_failure_cntr_coeff*(r_max_/r_min_static)*5000, 3*planning_failure_cntr_coeff*r_max_*5000])
         profile = True
@@ -249,6 +257,6 @@ if __name__ == '__main__':
     r_steps = rospy.get_param("num_of_res_to_try") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_max_static = (2 ** r_steps) * r_min_static
     while not rospy.is_shutdown():
-        rt_max = rospy.get_param("max_time_budget")
+        #rt_max = rospy.get_param("max_time_budget")
         drone_radius = rospy.get_param("planner_drone_radius")
         rate.sleep()

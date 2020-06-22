@@ -54,7 +54,7 @@ bool DEBUG_RQT;
 int g_capture_size = 600; //set this to 1, if you want to see every data collected separately
 bool time_budgetting_failed = false;
 double pc_res_max, num_of_res_to_try, pc_vol_ideal_max, pc_vol_ideal_min, om_to_pl_vol_ideal_max, ppl_vol_ideal_max ;
-
+double planner_consecutive_failure_ctr = 0;
 
 
 
@@ -187,7 +187,11 @@ void control_callback(const mavbench_msgs::control::ConstPtr& msg){
 	control.inputs.obs_dist_statistics_avg = msg->inputs.obs_dist_statistics_avg;
 	control.inputs.obs_dist_statistics_min = msg->inputs.obs_dist_statistics_min;
 	control.inputs.planner_consecutive_failure_ctr = msg->inputs.planner_consecutive_failure_ctr;
+	planner_consecutive_failure_ctr = msg->inputs.planner_consecutive_failure_ctr;
 	//ROS_INFO_STREAM("got a new input in control_callback crun");
+	control.inputs.max_time_budget = msg->inputs.max_time_budget;
+	max_time_budget =  control.inputs.max_time_budget;
+	//ros::param::get("/max_time_budget", max_time_budget);
 	got_new_input = true;
 }
 
@@ -205,8 +209,11 @@ double cur_vel_mag; // current drone's velocity
 
 
 double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(double velocityMag, double sensor_range){
-	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
+	if (planner_consecutive_failure_ctr > 1){
+		return max_time_budget;
+	}
 
+	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
 	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", sensor_range);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
 	return time_budget;
@@ -1017,10 +1024,11 @@ int main(int argc, char **argv)
 
     //Drone drone(ip_addr__global.c_str(), port);
 	ros::Rate pub_rate(50);
+	//string state = "waiting_for_pc";
+	bool new_control_data;
 	while (ros::ok())
 	{
-    	ros::spinOnce();
-    	ros::param::get("/max_time_budget", max_time_budget);
+		ros::spinOnce();
 
     	time_budgetter = new TimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
 
@@ -1028,16 +1036,30 @@ int main(int argc, char **argv)
     	//bool is_empty_2 = callback_queue_2.empty();
     	//callback_queue_1.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
     	//callback_queue_2.callAvailable(ros::WallDuration());  // -- first, get the meta data (i.e., resolution, volume)
-
+    	/*
+    	if (state == "waiting_for_py_run"){
+    		ros::param::get("/new_control_data", new_control_data);
+    		if (new_control_data){
+    			state = "waiting_for_pc";
+    		}
+    	}
+		*/
 
     	if(!got_new_input && budgetting_mode != "static"){
     		pub_rate.sleep();
     		continue;
     	}
+    	/*
+    	else if (state == "waiting_for_py_run"){
+    		continue;
+    	}
+    	*/
     	got_new_input = false;
     	drone_vel = drone.velocity();
     	cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
     	drone_position = drone.position();
+    	//ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
+
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
     		ros::param::set("velocity_to_budget_on", cur_vel_mag);
@@ -1091,16 +1113,17 @@ int main(int argc, char **argv)
     			control.inputs.ppl_vol_min = 0;
     		}
 
-    		if (traj.size() == 0 || time_budgetting_failed) { // -- if we haven't started the initla planning or there is not trajectory
+    		if (traj.size() == 0 || time_budgetting_failed || planner_consecutive_failure_ctr>0){
     			double closest_unknown_point_distance = calc_dist(drone_position, closest_unknown_point);
     			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
     			double sensor_range = closest_unknown_point_distance;
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
-    			ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
+    			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
     		}
 
     		control_to_pyrun.publish(control);
+    		//state = "waiting_for_py_run";
     		time_budgetting_failed  = false;
 
     		if (DEBUG_VIS){

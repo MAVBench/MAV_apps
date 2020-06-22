@@ -101,7 +101,9 @@ public:
  bool om_to_pl_vol_maximum_underestimated; // to specify whether the volume requested by the controller was not achievable because the total volume possibe was smaller than
   	  	  	  	  	  	  	  	  	 // what the controller asked for. Note that this kind of error is caused by estimation (not enforcement)
 
- ros::Time pc_capture_time; // -- time insertCloud was called
+
+ ros::Time pc_capture_time, pc_pre_pub_time; // -- time insertCloud was called
+ double om_latency_expected;
  std::string voxel_type_to_publish;
  DataContainer profiling_container;
  ProfileManager my_profile_manager;

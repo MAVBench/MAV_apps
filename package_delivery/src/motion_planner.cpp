@@ -94,9 +94,9 @@ bool planner_termination_func(){
 
 bool planner_termination_func_2(){
 	//bool volume_explored_exceeded = (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
-	bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
-	bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
-	return  SA_time_exceeded || ppl_time_exceeded;
+	bool SA_time_exceeded = ((SA_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+	//bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
+	return  SA_time_exceeded;// || ppl_time_exceeded;
 }
 
 template<class PlannerType>
@@ -127,9 +127,9 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
 
 
-	bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+	bool SA_time_exceeded = ((SA_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
 	bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
-	if (SA_time_exceeded || ppl_time_exceeded){
+	if (SA_time_exceeded){ //|| ppl_time_exceeded){
 		status = 0;
 		piecewise_planning = false;
 		return result;
@@ -175,9 +175,9 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
 
 
-	SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
-	ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
-	if (SA_time_exceeded || ppl_time_exceeded){
+	SA_time_exceeded = ((SA_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+	//ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
+	if (SA_time_exceeded){// || ppl_time_exceeded){
 		status = 0;
 		piecewise_planning = false;
 		return result;
@@ -504,7 +504,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			replan = true;
 		}
 		else if (failed_to_plan_last_time) {
-		ROS_ERROR_STREAM("failed to plan last time , so replan");
+		//ROS_ERROR_STREAM("failed to plan last time , so replan");
 		replanning_reason = Failed_to_plan_last_time;
 		replan = true;
 		} else if (!planned_optimally && (ros::Time::now() - this->last_planning_time).toSec() < 3) {
@@ -634,6 +634,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
 	deadline_setting_time = msg->ee_profiles.actual_time.deadline_setting_time_stamp;
 	SA_time_budget_to_enforce= msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce;
+	//ROS_INFO_STREAM("1111 00000000000000000000000000000000000000 budget to impose on ppl"<< SA_time_budget_to_enforce/2);
 
 
 	 dist_to_closest_obs = msg->dist_to_closest_obs;
@@ -875,11 +876,13 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_ppl_time_budget = (SA_time_budget_to_enforce - (ros::Time::now() - deadline_setting_time).toSec())/3;  // distribute the rest of the budget between smoothening and ppl
 	g_smoothening_budget = g_ppl_time_budget;
 
+   ROS_INFO_STREAM("--budget to impose on ppl"<< SA_time_budget_to_enforce/2);
 
     //bool time_exceeded = false;
-    bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+    bool SA_time_exceeded = ((SA_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+
     bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
-    if (SA_time_exceeded || ppl_time_exceeded){
+    if (SA_time_exceeded){// || ppl_time_exceeded){
     	status = 0;
     } else {
     //while((piecewise_path.empty() || status == 3 || !got_enough_budget_for_next_SA_itr(piecewise_path) || !ppl_inbound_check(piecewise_path))){
@@ -902,19 +905,23 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     debug_data.collision_func = total_collision_func;
     ppl_vol_actual = volume_explored_in_unit_cubes*pow(map_res, 3);
     ppl_vol_unit_cube_actual = volume_explored_in_unit_cubes;
-    ROS_INFO_STREAM("actuall volume explored"<< ppl_vol_actual << " volume explored in unit cubes"<< volume_explored_in_unit_cubes<<  "volume expected in unit cube"<<ppl_vol_idealInUnitCube << " volume expected"<< ppl_vol_ideal<< "octree res"<< map_res);
+    //ROS_INFO_STREAM("actuall volume explored"<< ppl_vol_actual << " volume explored in unit cubes"<< volume_explored_in_unit_cubes<<  "volume expected in unit cube"<<ppl_vol_idealInUnitCube << " volume expected"<< ppl_vol_ideal<< "octree res"<< map_res);
+    //ROS_INFO_STREAM("status is "<< status);
 
     //ROS_INFO_STREAM("already flew backward"<<already_flew_backward);
     bool take_approximate = false;
     if (status == 3){
     	graph::node last_node = piecewise_path[-1];
-    	auto distance_to_end_position = distance(last_node.x - drone->position().x, last_node.y - drone->position().y, last_node.z - drone->position().z);
-    	auto distance_to_goal_position = distance(last_node.x - req.goal.x, last_node.y - req.goal.y, last_node.z - req.goal.z);
-    	if (distance_to_end_position < distance_to_goal_position){
+    	//auto appx_distance_to_end_position = distance(last_node.x - drone->position().x, last_node.y - drone->position().y, last_node.z - drone->position().z);
+    	auto appx_distance_to_end_position = distance(last_node.x - req.goal.x, last_node.y - req.goal.y, last_node.z - req.goal.z);
+    	auto cur_distance_to_end_position = distance(req.goal.x - drone->position().x, req.goal.y - drone->position().y, req.goal.z - drone->position().z);
+    	if (appx_distance_to_end_position < cur_distance_to_end_position){
     	 take_approximate = true;
+    	}else{
+    		cout<<"difference between approx and current distance"<< cur_distance_to_end_position - appx_distance_to_end_position<<endl;
     	}
     }
-    if (piecewise_path.empty() || (status == 3 && !take_approximate)) {
+    if (piecewise_path.empty() || (status == 3 && !take_approximate) || (status == 0)) {
 		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 		closest_unknown_way_point.planning_status = "ppl_failed";
 		closest_unknown_pub.publish(closest_unknown_way_point);
@@ -934,8 +941,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		return false;
     	}
 
-    	ROS_ERROR("Empty path returned.status is");
-    	ROS_INFO_STREAM("Status is "<<status);
+    	//ROS_ERROR("Empty path returned.status is");
+    	//ROS_INFO_STREAM("Status is "<<status);
     	res.path_found = false;
 
         res.multiDOFtrajectory.future_collision_seq = future_col_seq_id;
@@ -1026,7 +1033,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
  	auto cur_velocity = drone->velocity().linear;
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
-    double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
+    double dist_to_closest_obs_recalculated =  max(dist_to_closest_obs - time_diff_duration*cur_vel_mag, 0.0);
     double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
     bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     ROS_INFO_STREAM("renewed_v_max:" << renewed_v_max << "  v_max__golbal (current v_max):"<<v_max__global << " dist_to_closest_obs:"<<dist_to_closest_obs);
@@ -1119,7 +1126,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_number_of_planning++; 
     res.path_found = true;
     planned_approximately = (status == 3);
-    ROS_INFO_STREAM("this was approximate so planned approximately is" << planned_approximately);
+//    ROS_INFO_STREAM("this was approximate so planned approximately is" << planned_approximately);
     if (planned_approximately || !first_time_planning_succeeded) {
 		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
     }
@@ -1712,8 +1719,19 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     */
     auto cur_velocity = drone->velocity().linear;
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
-    double height = max((cur_vel_mag/v_max__global)*drone_height__global, planner_drone_height_when_hovering);
-    double radius = max((cur_vel_mag/v_max__global)*drone_radius__global, planner_drone_radius_when_hovering);
+    double reduced_halo = 0; // used for the scenarios that the drone think it's so close to the obstacles that it thinks it's on obstacles.
+    						 // we pull back the halo to fix this dellusion
+    /*
+    if (planner_consecutive_failure_ctr > 4) {
+    	reduced_halo = pc_res_max + .25;
+    }
+	*/
+
+
+    double height = -1*correct_distance(cur_vel_mag, v_max__global, drone_height__global, planner_drone_height_when_hovering, 0);
+    double radius = -1*correct_distance(cur_vel_mag, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
+    	//    double height = max((cur_vel_mag/v_max__global)*drone_height__global, planner_drone_height_when_hovering - reduced_halo);
+ //   double radius = max((cur_vel_mag/v_max__global)*drone_radius__global, planner_drone_radius_when_hovering - reduced_halo);
 
 
 
@@ -1839,11 +1857,16 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     double reduced_halo = 0; // used for the scenarios that the drone think it's so close to the obstacles that it thinks it's on obstacles.
     						 // we pull back the halo to fix this dellusion
+    /*
     if (planner_consecutive_failure_ctr > 4) {
     	reduced_halo = pc_res_max + .25;
     }
-    double height = max((cur_vel_mag/v_max__global)*drone_height__global, planner_drone_height_when_hovering - reduced_halo);
-    double radius = max((cur_vel_mag/v_max__global)*drone_radius__global, planner_drone_radius_when_hovering - reduced_halo);
+    */
+    //double height = max((cur_vel_mag/v_max__global)*drone_height__global, planner_drone_height_when_hovering - reduced_halo);
+    //double radius = max((cur_vel_mag/v_max__global)*drone_radius__global, planner_drone_radius_when_hovering - reduced_halo);
+    double height = -1*correct_distance(cur_vel_mag, v_max__global, drone_height__global, planner_drone_height_when_hovering, 0);
+    double radius = -1*correct_distance(cur_vel_mag, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
+
 
     /*
     auto cur_velocity = drone->velocity().linear;
@@ -2033,7 +2056,8 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
 					last_unknown_pt_ctr  = pos1.pt_ctr;
 					first_unknown_collected = true;
         		}else{
-        			ROS_INFO_STREAM("closest uknown didn't change");
+        		;
+        			//ROS_INFO_STREAM("closest uknown didn't change");
         		}
         	}
         }
@@ -2263,7 +2287,7 @@ bool MotionPlanner::got_enough_budget_for_next_SA_itr(mavbench_msgs::planner_inf
 		traj_converted.push_back(point);
 	}
 	double budget_till_next_unknown = time_budgetter->calc_budget_till_closest_unknown(traj_converted, closest_unknown_point, drone_position);
-	ROS_ERROR_STREAM("================budget till next unknown"<< budget_till_next_unknown);
+	//ROS_ERROR_STREAM("================budget till next unknown"<< budget_till_next_unknown);
 
 	bool got_budget = budget_till_next_unknown > .6;
 	if (!got_budget){
@@ -2308,6 +2332,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	mavbench_msgs::planner_info &closest_unknown_way_point)
 {
 
+	ROS_INFO_STREAM("begining of smoothening");
     ros::Time smoothening_start_time = ros::Time::now();
 	// Variables for visualization for debugging purposes
 	double distance = 0.5; 

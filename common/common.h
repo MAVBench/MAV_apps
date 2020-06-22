@@ -67,6 +67,7 @@ void spin_around(Drone &drone);
 void scan_around(Drone &drone, int angle);
 
 
+double correct_distance( double cur_vel_mag, double max_vel, double max_drone_radius, double min_drone_radius, double distance);
 // Utility functions
 void modify_backward_traj(trajectory_t *traj, float backup_duration, float stay_in_place_duration_for_stop , float stay_in_place_duration_for_reverse, bool stop);
 

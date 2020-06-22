@@ -764,6 +764,11 @@ trajectory_t create_trajectory_from_msg(const mavbench_msgs::multiDOFtrajectory&
     return result;
 }
 
+
+double correct_distance( double cur_vel_mag, double max_vel, double max_drone_radius, double min_drone_radius, double distance){
+	return distance - max((cur_vel_mag/max_vel)*max_drone_radius, min_drone_radius);
+}
+
 // set the velocity of the trajectory after certain duration to zero
 // set the position of the trajectory waypoints after certain duratrion to the last point (immediately before the end of the duration)
 // set the the z velocity after certain duration  to -1 to come down and avoid moving out of the boundary
