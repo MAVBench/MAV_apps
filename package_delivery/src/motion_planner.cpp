@@ -479,7 +479,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
-    double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
+    double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
     bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
@@ -1036,7 +1036,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     double dist_to_closest_obs_recalculated =  max(dist_to_closest_obs - time_diff_duration*cur_vel_mag, 0.0);
-    double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
+    //double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
+    double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
     bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
     ROS_INFO_STREAM("renewed_v_max:" << renewed_v_max << "  v_max__golbal (current v_max):"<<v_max__global << " dist_to_closest_obs:"<<dist_to_closest_obs);

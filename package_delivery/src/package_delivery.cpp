@@ -24,10 +24,10 @@
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
 #include <profile_manager.h>
-#include <profile_manager/profiling_data_srv.h>
+//#include <profile_manager/profiling_data_srv.h>
 #include "package_delivery/point.h"
 #include <std_msgs/Header.h>
-
+//#include <profile_manager.h>
 
 
 using namespace std;
@@ -103,35 +103,48 @@ void trajectory_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
         ROS_ERROR("package_delivery: Trajectories arrived out of order! New seq: %d, old seq: %d", msg->trajectory_seq, normal_traj_msg.trajectory_seq);
 }
 
-
+#include <datacontainer.h>
 Drone *g_drone ;
-
-
+DataContainer profiling_container;
+ProfileManager *profile_manager_;
 
 void log_data_before_shutting_down()
 {
-
 	ROS_ERROR_STREAM("shutting down package delivery------------------");
-	std::string ns = ros::this_node::getName();
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
-
-
-    profiling_data_srv_inst.request.key = "mission_status";
+	//std::string ns = ros::this_node::getName();
+    //profile_manager::profiling_data_srv profiling_data_srv_inst;
+    int mission_status_encoded_in_digits;
+    //profiling_data_srv_inst.request.key = "mission_status";
     if (g_mission_status == "time_out") {
-        profiling_data_srv_inst.request.value = 0;
+    	mission_status_encoded_in_digits = 0;
+    	//profiling_data_srv_inst.request.value = 0;
     }else if (g_mission_status == "completed") {
-        profiling_data_srv_inst.request.value = 1;
+    	mission_status_encoded_in_digits = 1;
+    	//profiling_data_srv_inst.request.value = 1;
     }else {
-        profiling_data_srv_inst.request.value = 2;
+    	mission_status_encoded_in_digits = 2;
+    	//profiling_data_srv_inst.request.value = 2;
     }
 
+    profiling_container.capture("mission_status", "single", mission_status_encoded_in_digits, 1);
+    profiling_container.setStatsAndClear();
+
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + profiling_container.getStatsInString();
+    profile_manager_->verboseClientCall(profiling_data_verbose_srv_inst);
+
+
+
+
+    /*
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
             ROS_ERROR_STREAM("could not probe data using stats manager");
             ros::shutdown();
         }
     }
-    
+
     profiling_data_srv_inst.request.key = "img_to_pkgDel_commun_t";
     profiling_data_srv_inst.request.value = (((double)g_pt_cld_to_pkg_delivery_commun_acc)/1e9)/g_col_com_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
@@ -175,6 +188,7 @@ void log_data_before_shutting_down()
             ros::shutdown();
         }
     }
+    */
 }
 
 
@@ -395,6 +409,9 @@ int main(int argc, char **argv)
     signal(SIGINT, sigIntHandlerPrivate);
     ns = ros::this_node::getName();
 
+    //profile_manager_ = new ProfileManager();
+    profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
+
     //----------------------------------------------------------------- 
 	// *** F:DN variables	
 	//----------------------------------------------------------------- 
@@ -442,12 +459,12 @@ int main(int argc, char **argv)
         ROS_ERROR("Could not find service");
     }
 
-
+    /*
     ros::ServiceClient record_profiling_data_client = 
         nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
     ros::ServiceClient start_profiling_client = 
       nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
-
+	*/
     ros::ServiceClient goal_transmit_client =
       nh.serviceClient<package_delivery::point> ("goal_rcv");
     ros::ServiceClient goal_transmit_client_2 =
@@ -460,7 +477,7 @@ int main(int argc, char **argv)
     //start_profiling_srv_inst.request.key = "";
 
 
-	ProfileManager profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose");
+	//ProfileManager profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose");
 
 
     //----------------------------------------------------------------- 
@@ -487,7 +504,7 @@ int main(int argc, char **argv)
     //update_stats_file(stats_file_addr,"\n\n# NEW\n# Package delivery\n###\nTime: ");
     //log_time(stats_file_addr);
     //update_stats_file(stats_file_addr,"###\n");
-    profile_manager::profiling_data_srv profiling_data_srv_inst;
+    //profile_manager::profiling_data_srv profiling_data_srv_inst;
     
     ros::Time loop_start_t(0,0); 
     ros::Time loop_end_t(0,0); //if zero, it's not valid
@@ -522,9 +539,9 @@ int main(int argc, char **argv)
             start = get_start(drone);
             
             // signal the profiler to start profiling
-            profiling_data_srv_inst.request.key = "start_profiling";
-            profiling_data_srv_inst.request.value = 0;
-            profile_manager.clientCall(profiling_data_srv_inst);
+            //profiling_data_srv_inst.request.key = "start_profiling";
+            //profiling_data_srv_inst.request.value = 0;
+            //profile_manager.clientCall(profiling_data_srv_inst);
             spin_around(drone);
             next_state = waiting;
             package_delivery::point goal_srv_inst;
@@ -660,6 +677,8 @@ int main(int argc, char **argv)
         if (dist(drone.position(), goal) < distance_to_goal_margin){
         	if (reached_goal_ctr == 1) {
 
+        		g_mission_status  = "completed";
+        		log_data_before_shutting_down();
         		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
         		ros::shutdown();
         	}

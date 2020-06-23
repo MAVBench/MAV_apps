@@ -31,7 +31,7 @@ def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
-        print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+        #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
         results = dummy_output()
         failure_status = 2
         return results, failure_status
@@ -64,7 +64,7 @@ def run_optimizer(control):
                                                                                         # the max value
 
     if r_max_ < r_min_:
-        print("-------------------------------------------- bounds inverted -----------------------------------")
+        #print("-------------------------------------------- bounds inverted -----------------------------------")
         r_min_ = r_max_
     #r_gap_hat = 1 / r_gap
     r_max_hat = 1 / r_min_
@@ -136,7 +136,7 @@ def run_optimizer(control):
 
     if not results.success:
         if time_budget_left_to_distribute < front_end_latency: # don't have time for another round
-            print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+            #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
             failure_status = 2
         else:
             failure_status = 1
@@ -146,7 +146,7 @@ def run_optimizer(control):
     
 
 def control_callback(control):
-    print("---- runing the optimizer now")
+    #print("---- runing the optimizer now")
     results, failure_status = run_optimizer(control)  # failure status key: 1:no valid cofig, 2:not enough time
 
 
@@ -183,8 +183,6 @@ def control_callback(control):
                                                                                    # which results in an assertion error
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
         assert(om_to_pl_res >= pc_res), "om_to_pl_res should be >= pc_res"
-        if (om_to_pl_res > pc_res):
-            print("################## what I wanted")
         pc_vol_ideal = results.x[2]
         #pc_vol_ideal = 20000
         om_to_pl_vol_ideal = results.x[3]
@@ -215,7 +213,7 @@ def control_callback(control):
     rospy.set_param("ppl_vol_ideal", float(ppl_vol_ideal))
     rospy.set_param("optimizer_failure_status", failure_status)
     # time budgets (expected with the above knob settings)
-    print("printin the S_A_time_buget" + str(control.internal_states.sensor_to_actuation_time_budget_to_enforce))
+    #print("printin the S_A_time_buget" + str(control.internal_states.sensor_to_actuation_time_budget_to_enforce))
     rospy.set_param("sensor_to_actuation_time_budget_to_enforce", control.internal_states.sensor_to_actuation_time_budget_to_enforce)
     rospy.set_param("om_latency_expected", float(om_latency_expected))
     rospy.set_param("om_to_pl_latency_expected", float(om_to_pl_latency_expected))

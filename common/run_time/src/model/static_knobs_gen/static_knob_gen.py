@@ -65,8 +65,8 @@ def calculate_static_values():
     json_output_file.write("\t\t\"ppl_vol_ideal_max\": " + str(pp_pl_vol_desired)+", \n");
     json_output_file.write("\t\t\"budgetting_mode\": " + str("\"static\"")+",\n");
     json_output_file.write("\t\t\"use_pyrun\": " + str("false")+",\n");
-    json_output_file.write("\t\t\"knob_performance_modeling\": " + str("false")+"\n");
-    json_output_file.write("\t\t\"planner_drone_radius\": " + str(1.2)+"\n");
+    json_output_file.write("\t\t\"knob_performance_modeling\": " + str("false")+", \n");
+    json_output_file.write("\t\t\"planner_drone_radius\": " + str(1.2)+", \n");
     json_output_file.write("\t\t\"planner_drone_radius_when_hovering\": " + str(1.2)+"\n");
     json_output_file.write("}")
     json_output_file.close()
