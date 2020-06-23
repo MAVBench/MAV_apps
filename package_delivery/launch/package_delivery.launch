@@ -39,8 +39,8 @@
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
   <param name="planner_drone_radius" value="$(arg planner_drone_radius)"/>
-  <param name="planner_drone_radius_when_hovering" value=".75"/>
-  <param name="planner_drone_height_when_hovering" value=".75"/>
+  <arg name="planner_drone_radius_when_hovering" default=".75"/>
+  <param name="planner_drone_radius_when_hovering" value="$(arg planner_drone_radius_when_hovering)"/>
 
 
 
@@ -97,7 +97,7 @@
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
   <arg name="planner_min_freq" default=".0001"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
-  <arg name="distance_to_goal_margin" default="15"/> 
+  <arg name="distance_to_goal_margin" default="20"/> 
   <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>
   <param name="dist_to_closest_obs_calc_from_octomap" value="$(arg sensor_max_range)"/>
 
@@ -275,8 +275,11 @@
   <param name="ppl_vol_ideal" value="$(arg ppl_vol_ideal_max)"/>
 
   <arg name="expected_latency" default=".05" />   
-  <param name="om_latency_expected" value="$(arg expected_latency)"/>
-  <param name="om_to_pl_latency_expected" value="$(arg expected_latency)"/>
+  <arg name="om_latency_expected" default=".05" />   
+  <param name="om_latency_expected" value="$(arg om_latency_expected)"/>
+  
+  <arg name="om_to_pl_latency_expected" default=".05" />   
+  <param name="om_to_pl_latency_expected" value="$(arg om_to_pl_latency_expected)"/>
   <param name="ee_latency_expected" value="$(arg expected_latency)"/>
 
   <param name="x_coord_while_budgetting" value="0"/>

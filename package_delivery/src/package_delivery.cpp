@@ -416,7 +416,7 @@ int main(int argc, char **argv)
     bool delivering_mission_complete = false; //if true, we have delivered the 
                                               //pkg and successfully returned to origin
 
-    int reached_goal_ctr = 0;
+    int reached_goal_ctr = 1;
     int fail_ctr = 0;
     int fail_threshold = 50;
 

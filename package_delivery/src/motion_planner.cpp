@@ -480,7 +480,9 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
     double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
+    //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
     bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
+    //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
     //bool sub_optimal_v_max = false;
 
     planned_approximately = false; // for now setting to false, to see how much full approximate planning  following is effective
@@ -513,7 +515,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			replanning_reason = Last_plan_approximate;
 			replan = true;
 			ROS_ERROR_STREAM("approximate planning");
-		}else if (sub_optimal_v_max){
+		}else if (sub_optimal_v_max && budgetting_mode != "static"){
 			replanning_reason = Last_plan_approximate;
 			replan = true;
 			ROS_ERROR_STREAM("sub_optimal v_max");
@@ -1036,8 +1038,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     double dist_to_closest_obs_recalculated =  max(dist_to_closest_obs - time_diff_duration*cur_vel_mag, 0.0);
     double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
     bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
+    //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
     ROS_INFO_STREAM("renewed_v_max:" << renewed_v_max << "  v_max__golbal (current v_max):"<<v_max__global << " dist_to_closest_obs:"<<dist_to_closest_obs);
-    if (sub_optimal_v_max){
+    if (sub_optimal_v_max && budgetting_mode != "static"){
     	ros::param::set("v_max", renewed_v_max);
     	v_max__global = renewed_v_max;
     }
@@ -1281,6 +1284,13 @@ void MotionPlanner::motion_planning_initialize_params()
       ROS_FATAL_STREAM("Could not start motion_planning DEBUG_RQT not provided");
       return ;
     }
+
+
+	if(!ros::param::get("/budgetting_mode", budgetting_mode)){
+      ROS_FATAL_STREAM("Could not start motion_planning budgetting_mode not provided");
+      return ;
+    }
+
 
 	if(!ros::param::get("/voxel_type_to_publish", voxel_type_to_publish)){
       ROS_FATAL_STREAM("Could not start motion_planner voxel_type_to_publish not provided");

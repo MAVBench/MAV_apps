@@ -93,6 +93,8 @@ private:
     DataContainer profiling_container;
     bool measure_time_end_to_end;
     bool got_new_next_steps_since_last_attempted_plan = false; //only plan if you have recieved new next steps otherwise, we'll predict wrong
+    string budgetting_mode; //only plan if you have recieved new next steps otherwise, we'll predict wrong
+
 
     ros::Publisher motion_planning_debug_pub;
     // ***F:DN call back for octomap msgs

@@ -30,8 +30,8 @@ def calculate_static_values():
 
     om_res_desired = om_pl_res_desired=pp_pl_res_desired = .3
     om_vol_desired = 30000
-    om_pl_vol_desired = 2*30000
-    pp_pl_vol_desired = 2*30000
+    om_pl_vol_desired = 3*30000
+    pp_pl_vol_desired = 3*30000
     visibility_avg = 12.5 
 
     om_latency = calculate_fitted_value(om_popt, om_res_desired, om_vol_desired, typical_model)
@@ -51,7 +51,6 @@ def calculate_static_values():
     print("----------------------v_max" + str(velocity_to_budget_on))
 
     json_output_file = open("static_knobs.json", "w")  
-
     json_output_file.write("{\n")
     json_output_file.write("\t\t\"max_time_budget\": "+ str(max_time_budget)+",\n");
     json_output_file.write("\t\t\"om_latency_expected\": " + str(om_latency)+",\n");
@@ -63,9 +62,37 @@ def calculate_static_values():
     json_output_file.write("\t\t\"pc_vol_ideal_max\": " + str(om_vol_desired)+",\n");
     json_output_file.write("\t\t\"om_to_pl_res_max\": " + str(om_pl_res_desired)+",\n");
     json_output_file.write("\t\t\"om_to_pl_vol_ideal_max\": " + str(om_pl_vol_desired)+",\n");
-    json_output_file.write("\t\t\"ppl_vol_ideal_max\": " + str(pp_pl_vol_desired)+"\n");
+    json_output_file.write("\t\t\"ppl_vol_ideal_max\": " + str(pp_pl_vol_desired)+", \n");
+    json_output_file.write("\t\t\"budgetting_mode\": " + str("\"static\"")+",\n");
+    json_output_file.write("\t\t\"use_pyrun\": " + str("false")+",\n");
+    json_output_file.write("\t\t\"knob_performance_modeling\": " + str("false")+"\n");
+    json_output_file.write("\t\t\"planner_drone_radius\": " + str(1.2)+"\n");
+    json_output_file.write("\t\t\"planner_drone_radius_when_hovering\": " + str(1.2)+"\n");
     json_output_file.write("}")
     json_output_file.close()
+
+
+    script_output_file = open("script1.bash", "w")  
+    script_output_file.write("#!/bin/bash\n")
+    script_output_file.write("roslaunch package_delivery package_delivery.launch ")
+    script_output_file.write("max_time_budget:="+ str(max_time_budget)+" ");
+    script_output_file.write("om_latency_expected:=" + str(om_latency) + " ");
+    script_output_file.write("om_to_pl_latency_expected:=" + str(om_pl_latency) + " ");
+    script_output_file.write("ppl_latency_expected:=" + str(pp_pl_latency)+" ");
+    script_output_file.write("velocity_to_budget_on:=" + str(velocity_to_budget_on)+" ");
+    script_output_file.write("budgetting_mode:=" + str("\"static\"")+" ");
+    script_output_file.write("v_max:=" + str(velocity_to_budget_on)+" ");
+    script_output_file.write("use_pyrun:=" + str("false") + " ")
+    script_output_file.write("knob_performance_modeling:=" + str("false")+" ")
+    script_output_file.write("pc_res_max:=" + str(om_res_desired)+" ");
+    script_output_file.write("pc_vol_ideal_max:=" + str(om_vol_desired)+" ");
+    script_output_file.write("om_to_pl_res_max:=" + str(om_pl_res_desired)+" ");
+    script_output_file.write("om_to_pl_vol_ideal_max:=" + str(om_pl_vol_desired)+" ");
+    script_output_file.write("ppl_vol_ideal_max:="+ str(pp_pl_vol_desired) + " ");
+    script_output_file.write("planner_drone_radius:="+ str(1.2) + " ");
+    script_output_file.write("planner_drone_radius_when_hovering:="+ str(1.2) + " ");
+    script_output_file.close()
+
 
 
 
