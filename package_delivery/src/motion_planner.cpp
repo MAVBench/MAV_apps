@@ -593,6 +593,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		ppl_vol_actual = volume_explored_in_unit_cubes*pow(map_res, 3);
 		ppl_vol_unit_cube_actual = volume_explored_in_unit_cubes;
 		msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+		msg_for_follow_traj.ee_profiles.actual_time.smoothening_latency = 0;
 		msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 		msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
@@ -628,6 +629,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 	msg_for_follow_traj.controls = msg->controls;
 	msg_for_follow_traj.ee_profiles = msg->ee_profiles;
 	msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh = (ros::Time::now() - msg->ee_profiles.actual_time.om_pre_pub_time_stamp).toSec();
+
 
 	planner_consecutive_failure_ctr = msg->controls.inputs.planner_consecutive_failure_ctr;
 	//g_ppl_time_budget = msg->ee_profiles.expected_time.ppl_latency;
@@ -679,18 +681,26 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 	//if(!measure_time_end_to_end) profiling_container.capture("octomap_to_motion_planner_communication_overhead","end", ros::Time::now());
 
 	// -- deserialize the map
-	profiling_container.capture("octomap_deserialization_time", "start", ros::Time::now(), capture_size);
+	profiling_container.capture("OMDeserializationLatency", "start", ros::Time::now(), capture_size);
     octomap::AbstractOcTree * tree = octomap_msgs::msgToMap(msg->oct);
-    profiling_container.capture("octomap_deserialization_time", "end", ros::Time::now(), capture_size);
+    profiling_container.capture("OMDeserializationLatency", "end", ros::Time::now(), capture_size);
     // -- cast the map
     profiling_container.capture("octomap_dynamic_casting", "start", ros::Time::now(), capture_size);
     octree = dynamic_cast<octomap::OcTree*> (tree);
     profiling_container.capture("octomap_dynamic_casting", "end", ros::Time::now(), capture_size);
 //    octree->setResolution(msg->controls.cmds.om_to_pl_res):
 
+
+
+    msg_for_follow_traj.ee_profiles.time_stats.OMtoPlComOHLatency = msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh;
+
+    msg_for_follow_traj.ee_profiles.time_stats.OMDeserializationLatency = profiling_container.findDataByName("OMDeserializationLatency")->values.back() +
+			profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
+    msg_for_follow_traj.ee_profiles.time_stats.OMtoPlTotalLatency = msg_for_follow_traj.ee_profiles.time_stats.OMtoPlComOHLatency + msg->ee_profiles.time_stats.OMSerializationLatency + msg_for_follow_traj.ee_profiles.time_stats.OMDeserializationLatency;
+
     msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_latency =  msg->ee_profiles.actual_time.om_serialization_time +
     		msg_for_follow_traj.ee_profiles.actual_time.om_to_pl_ros_oh +
-    		profiling_container.findDataByName("octomap_deserialization_time")->values.back() +
+    		profiling_container.findDataByName("OMDeserializationLatency")->values.back() +
 			profiling_container.findDataByName("octomap_dynamic_casting")->values.back();
 
 
@@ -716,12 +726,12 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 					msg->controls.cmds.om_to_pl_res, capture_size);
 			profiling_container.capture("om_to_pl_vol_actual_knob_modeling", "single",
 					msg->ee_profiles.actual_cmds.om_to_pl_vol, capture_size);
-			profiling_container.capture("octomap_deserialization_time_knob_modeling", "single",
-					profiling_container.findDataByName("octomap_deserialization_time")->values.back(), capture_size);
+			profiling_container.capture("OMDeserializationLatency_knob_modeling", "single",
+					profiling_container.findDataByName("OMDeserializationLatency")->values.back(), capture_size);
 			profiling_container.capture("octomap_dynamic_casting_knob_modeling", "single",
 					profiling_container.findDataByName("octomap_dynamic_casting")->values.back(), capture_size);
 			double octomap_to_planner_com_overhead_knob_modeling = profiling_container.findDataByName("octomap_dynamic_casting_knob_modeling")->values.back() +
-					profiling_container.findDataByName("octomap_deserialization_time_knob_modeling")->values.back() +
+					profiling_container.findDataByName("OMDeserializationLatency_knob_modeling")->values.back() +
 					profiling_container.findDataByName("octomap_to_motion_planner_serialization_to_reception_knob_modeling")->values.back();
 			profiling_container.capture("octomap_to_planner_com_overhead_knob_modeling", "single",
 					octomap_to_planner_com_overhead_knob_modeling, capture_size);
@@ -737,7 +747,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
-    		debug_data.octomap_deserialization_time = profiling_container.findDataByName("octomap_deserialization_time")->values.back();
+    		debug_data.OMDeserializationLatency = profiling_container.findDataByName("OMDeserializationLatency")->values.back();
     		if (!measure_time_end_to_end){
     			debug_data.octomap_to_motion_planner_communication_overhead = profiling_container.findDataByName("octomap_to_motion_planner_communication_overhead")->values.back();
     		}
@@ -1045,6 +1055,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     	ros::param::set("v_max", renewed_v_max);
     	v_max__global = renewed_v_max;
     }
+    ros::Time smoothening_start_time_stamp_ = ros::Time::now();
 
     smooth_path = smoothen_the_shortest_path(piecewise_path, octree, 
                                     Eigen::Vector3d(req.twist.linear.x,
@@ -1078,7 +1089,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
 			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
 			msg_for_follow_traj.closest_unknown_point.planning_status = "smoothening_failed";
-			//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+			msg_for_follow_traj.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 //			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
@@ -1102,6 +1113,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
         res.multiDOFtrajectory.closest_unknown_point= msg_for_follow_traj.closest_unknown_point;
         //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+		res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
@@ -1120,7 +1132,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     got_new_next_steps_since_last_attempted_plan = false;
     res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
     res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
-    res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+    //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
+	res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
     //res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
     //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 	res.multiDOFtrajectory.ee_profiles.control_flow_path = 2;
@@ -2042,11 +2055,21 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
     bool first_unknown_collected = false; // to only allow writing into the closest_unknown_way_point once
     graph::node *end_ptr = new graph::node();
     ROS_INFO_STREAM("map_res is "<<map_res);
+    int resolution_ratio = (int)((map_res)/octree->getResolution());
+    int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
+    auto last_key = octree->coordToKey(octomap::point3d(-100, -100, -100), depth_to_look_at);
     for (int i = 0; i < traj->points.size() - 1; ++i) {
         auto& pos1 = traj->points[i];
         auto& pos2 = traj->points[i+1];
         graph::node n1 = {pos1.x, pos1.y, pos1.z};
         graph::node n2 = {pos2.x, pos2.y, pos2.z};
+		auto this_key = octree->coordToKey(octomap::point3d(n1.x, n1.y, n1.z), depth_to_look_at);
+		if (i == 0 || this_key != last_key ){ // skip if you can
+			last_key = this_key;
+		}else{
+			continue;
+		}
+
         if (collision(octree, n1, n2, closest_unknown_point, end_ptr)) {
         	// TODO: this is not unknown anymore, but nevertheless should be used to determine the budget
         	closest_obstacle_on_path_way_point.x = pos1.x;

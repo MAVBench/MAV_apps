@@ -1,0 +1,20 @@
+float32 depthToPCConversionLatency
+float32 runDiagnosticsLatency
+float32 runTimeLatency
+float32 sequencerLatency
+float32 PCFilteringLatency
+
+float32 PCtoOMComOHLatency
+float32 PCDeserializationLatency
+float32 PCtoOMTotalLatency
+float32 OMFilterOutOfRangeLatency
+float32 insertScanLatency
+float32 OMFilteringLatency
+float32 OMSerializationLatency
+
+float32 OMtoPlComOHLatency
+float32 OMDeserializationLatency
+float32 OMtoPlTotalLatency
+
+
+

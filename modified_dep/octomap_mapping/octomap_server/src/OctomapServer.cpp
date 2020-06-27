@@ -409,8 +409,6 @@ int last_volume = 0;
 double last_res = .6;
 //void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
 void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::ConstPtr& pcl_aug_data){
-	//ros::param::get("/voxel_type_to_publish", voxel_type_to_publish);
-	//m_octree->clear();
 	pc_vol_actual = 0;
 	pc_vol_maximum_underestimated = true;
 	om_to_pl_vol_maximum_underestimated = true;
@@ -454,6 +452,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	octomap_aug_data.controls = pcl_aug_data->controls;
 	octomap_aug_data.ee_profiles = pcl_aug_data->ee_profiles;
 	octomap_aug_data.ee_profiles.actual_time.pc_to_om_ros_oh =  (ros::Time::now() - pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp).toSec();
+	octomap_aug_data.ee_profiles.time_stats.PCtoOMComOHLatency =  (ros::Time::now() - pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp).toSec();
 	//ROS_INFO_STREAM("pc_to_om_overhead is"<< octomap_aug_data.ee_profiles.actual_time.pc_to_om_ros_oh);
 
 	// -- this is only for knob performance modeling,
@@ -498,15 +497,17 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	// ground filtering in base frame
 	PCLPointCloud pc; // input cloud for filtering and ground-detection
 
-	profiling_container.capture(std::string("point_cloud_deserialization"), "start", ros::Time::now(), capture_size);
+	profiling_container.capture(std::string("PCDeserializationLatency"), "start", ros::Time::now(), capture_size);
 
 	sensor_msgs::PointCloud2 cloud_ = *cloud;
 	cloud_.fields[0].count = 1;
 	pcl::fromROSMsg(cloud_, pc);
-	profiling_container.capture(std::string("point_cloud_deserialization"), "end", ros::Time::now(), capture_size);
-	//ROS_INFO_STREAM(std::string("octomap deserialization time")<<this->profiling_container.findDataByName("point_cloud_deserialization")->values.back());
+	profiling_container.capture(std::string("PCDeserializationLatency"), "end", ros::Time::now(), capture_size);
+	octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency =  profiling_container.findDataByName("PCDeserializationLatency")->values.back();
+	octomap_aug_data.ee_profiles.time_stats.PCtoOMTotalLatency =  octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency  + octomap_aug_data.ee_profiles.time_stats.PCtoOMComOHLatency;
 
-	profiling_container.capture("octomap_filter", "start", ros::Time::now(), capture_size); //collect data
+
+	profiling_container.capture("OMFilterOutOfRangeLatency", "start", ros::Time::now(), capture_size); //collect data
 	tf::StampedTransform sensorToWorldTf;
 	try {
 		m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
@@ -582,19 +583,20 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
     pc_ground.header = pc.header;
     pc_nonground.header = pc.header;
   }
-  profiling_container.capture("octomap_filter", "end", ros::Time::now(), capture_size);
-  //ROS_INFO_STREAM("octomap filter time"<<this->profiling_container.findDataByName("octomap_filter")->values.back());
+  profiling_container.capture("OMFilterOutOfRangeLatency", "end", ros::Time::now(), capture_size);
+  octomap_aug_data.ee_profiles.time_stats.OMFilterOutOfRangeLatency =  profiling_container.findDataByName("OMFilterOutOfRangeLatency")->values.back();
 
 
   //profiling_container.capture("sensor_volume_to_digest", "single", pcl_aug_data->controls.inputs.sensor_volume_to_digest, capture_size);
 
   //m_octree->clear(); // blah
-  //m_octree =new OcTree(m_res); //blah
-  profiling_container.capture("insertScan", "start", ros::Time::now(), capture_size);
+  profiling_container.capture("insertScanLatency", "start", ros::Time::now(), capture_size);
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
   ros::param::set("cur_tree_total_volume", m_octree->getRoot()->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
 
-  profiling_container.capture("insertScan", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("insertScanLatency", "end", ros::Time::now(), capture_size);
+  octomap_aug_data.ee_profiles.time_stats.insertScanLatency=  profiling_container.findDataByName("insertScanLatency")->values.back();
+
   profiling_container.capture("perceived_closest_obstacle", "single", dist_to_closest_obs, capture_size);
 
   //ROS_INFO_STREAM("octomap insertCloud time"<<this->profiling_container.findDataByName("octomap_insertCloud")->values.back());
@@ -641,7 +643,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 
   if (DEBUG_RQT) {
 	  	debug_data.header.stamp = ros::Time::now();
-	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScan")->values.back();
+	    debug_data.octomap_insertScan = profiling_container.findDataByName("insertScanLatency")->values.back();
 	  	debug_data.octomap_insertCloud_minus_publish_all = profiling_container.findDataByName("octomap_insertCloud_minus_publish_all")->values.back();
 	  	debug_data.octomap_publish_all = profiling_container.findDataByName("octomap_publish_all")->values.back();
 	  	debug_data.pc_vol_actual = profiling_container.findDataByName("pc_vol_actual")->values.back();
@@ -652,8 +654,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 //	  	debug_data.octomap_serialization_low_res_time =  profiling_container.findDataByName("octomap_serialization_low_res_time")->values.back();
 //	  	debug_data.high_res_map_volume =  profiling_container.findDataByName("high_res_map_volume")->values.back();
 //	  	debug_data.low_res_map_volume =  profiling_container.findDataByName("low_res_map_volume")->values.back();
-	  	if (filterOctoMap) { debug_data.octomap_filtering_time =  profiling_container.findDataByName("octomap_filtering_time")->values.back();}
-	  	else{debug_data.octomap_filtering_time =  0;}
+	  	if (filterOctoMap) { debug_data.OMFilteringLatency =  profiling_container.findDataByName("OMFilteringLatency")->values.back();}
+	  	else{debug_data.OMFilteringLatency =  0;}
 	  	octomap_debug_pub.publish(debug_data);
   }
 }
@@ -769,7 +771,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   // all other points: free on ray, occupied on endpoint:
   for (PCLPointCloud::const_iterator it = nonground.begin(); it != nonground.end(); ++it){
 	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
-	bool time_exceeded = (ros::Time::now() - pc_pre_pub_time).toSec() > om_latency_expected;
+	//bool time_exceeded = (ros::Time::now() - pc_pre_pub_time).toSec() > om_latency_expected;
+	bool time_exceeded = false;
 	if (pc_vol_actual >= pc_vol_ideal || time_exceeded){
     	/*
     	double error = (pc_vol_actual - pc_vol_ideal)/pc_vol_ideal;
@@ -1750,7 +1753,7 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   float volume_to_communicate = 0;
   Octomap map;
   map.header.frame_id = m_worldFrameId;
-  profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
+  profiling_container.capture("OMFilteringLatency", "start", ros::Time::now(), capture_size);
  // ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
 //  ros::param::get("/om_to_pl_res", om_to_pl_res);
   //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
@@ -1825,10 +1828,10 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
   }else{
 	  m_octree_shrunk = m_octree;
   }
-  profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("OMFilteringLatency", "end", ros::Time::now(), capture_size);
 
 
-  profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("OMFilteringLatency", "end", ros::Time::now(), capture_size);
   double volume_communicated_in_unit_cubes = 0;
   // serialize
    if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_res_original, lower_res_map_depth)){
@@ -1855,7 +1858,8 @@ void OctomapServer::publishFilteredByVolumeBinaryOctoMap(const ros::Time& rostim
 void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Time& rostime, point3d sensorOrigin) {
 
   ros::param::get("/MapToTransferSideLength", MapToTransferSideLength);
- // ros::param::get("/om_to_pl_res", om_to_pl_res);
+  profiling_container.capture("OMFilteringLatency", "start", ros::Time::now(), capture_size);
+  // ros::param::get("/om_to_pl_res", om_to_pl_res);
 //  ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
   //ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
  if (om_to_pl_res < m_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<m_res);} assert(om_to_pl_res >= m_res || fabs(om_to_pl_res - m_res) <.1); // <./1 is ther because of how sometimes floating points are treated
@@ -1958,7 +1962,6 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   Octomap map;
   map.header.frame_id = m_worldFrameId;
   //map.header.stamp = rostime;
-  profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
   // create a smaller tree (comparing to the tree maintained for octomap), to reduce the communication (serialization, OM->MP and deserealization) overhead
   OcTreeT* m_octree_shrunk = new OcTreeT(m_octree->getResolution());
   m_octree_shrunk->setProbHit(m_octree->getProbHit());
@@ -2084,16 +2087,18 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   //if (cntr_total > 0){
   //ROS_INFO_STREAM("----------- percentage skipedd"<<(float)cntr_to_cnt/cntr_total<< " total"<<cntr_total<< " skipped"<<cntr_to_cnt);
   //}
-  profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("OMFilteringLatency", "end", ros::Time::now(), capture_size);
+  octomap_aug_data.ee_profiles.time_stats.OMFilteringLatency =  profiling_container.findDataByName("OMFilteringLatency")->values.back();
+
   double volume_communicated_in_unit_cubes = 0;
   // serialize
   profiling_container.capture("octomap_serialization_time", "start", ros::Time::now(), capture_size);
   if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes,m_res_original, lower_res_map_depth)){
 	  int serialization_length = ros::serialization::serializationLength(map);
 	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
-	  map.header.stamp = rostime;
-
-	  octomap_aug_data.header.stamp = rostime;
+	  //map.header.stamp = rostime;
+	  map.header.stamp = ros::Time::now();
+	  octomap_aug_data.header.stamp = ros::Time::now();
 	  octomap_aug_data.oct = map;
 	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.space_stats.pc_vol_maxium_underestimated = pc_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
@@ -2102,6 +2107,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
 	  profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
+	  octomap_aug_data.ee_profiles.time_stats.OMSerializationLatency = profiling_container.findDataByName("octomap_serialization_time")->values.back();
+	  octomap_aug_data.ee_profiles.actual_time.om_serialization_time=  profiling_container.findDataByName("octomap_serialization_time")->values.back();
 	  m_binaryMapPub.publish(octomap_aug_data);
   }
   else
@@ -2139,7 +2146,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
   Octomap map;
   map.header.frame_id = m_worldFrameId;
   //map.header.stamp = rostime;
-  profiling_container.capture("octomap_filtering_time", "start", ros::Time::now(), capture_size);
+  profiling_container.capture("OMFilteringLatency", "start", ros::Time::now(), capture_size);
   // create a smaller tree (comparing to the tree maintained for octomap), to reduce the communication (serialization, OM->MP and deserealization) overhead
   OcTreeT* m_octree_shrunk = new OcTreeT(m_octree->getResolution());
   m_octree_shrunk->setProbHit(m_octree->getProbHit());
@@ -2223,7 +2230,7 @@ void OctomapServer::publishFilteredBinaryOctoMap(const ros::Time& rostime, point
 	  //delete m_octree_shrunk_node;
   }
 
-  profiling_container.capture("octomap_filtering_time", "end", ros::Time::now(), capture_size);
+  profiling_container.capture("OMFilteringLatency", "end", ros::Time::now(), capture_size);
   double volume_communicated_in_unit_cubes = 0;
   // serialize
   if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes, m_res_original, lower_res_map_depth)){

@@ -37,6 +37,7 @@ float g_v_max;
 double p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
 double g_grace_period = 0; // How much time the drone will wait for a new path to be calculated when a collision is near, before pumping the breaks
 double g_time_to_come_to_full_stop = 0;
+ros::Time first_cmd_time;
 double g_fly_trajectory_time_out;
 long long g_planning_time_including_ros_overhead_acc  = 0;
 float g_max_yaw_rate;
@@ -307,6 +308,28 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 		debug_data.slack.actual.data_flow = actual_total_slack;
 		debug_data.slack.actual.control_flow = 0;
 	}
+
+	profiling_container->capture("depthToPCConversionLatency", "single", msg->ee_profiles.time_stats.depthToPCConversionLatency, 1);
+	profiling_container->capture("runDiagnosticsLatency","single",msg->ee_profiles.time_stats.runDiagnosticsLatency, 1);
+	profiling_container->capture("runTimeLatency","single", msg->ee_profiles.time_stats.runTimeLatency, 1);
+	profiling_container->capture("sequencerLatency","single", msg->ee_profiles.time_stats.sequencerLatency, 1);
+	profiling_container->capture("PCFilteringLatency","single", msg->ee_profiles.time_stats.PCFilteringLatency, 1);
+
+	profiling_container->capture("PCtoOMComOHLatency","single", msg->ee_profiles.time_stats.PCtoOMComOHLatency, 1);
+	profiling_container->capture("PCDeserializationLatency","single", msg->ee_profiles.time_stats.PCDeserializationLatency, 1);
+	profiling_container->capture("PCtoOMTotalLatency","single", msg->ee_profiles.time_stats.PCtoOMTotalLatency, 1);
+	profiling_container->capture("OMFilterOutOfRangeLatency","single", msg->ee_profiles.time_stats.OMFilterOutOfRangeLatency, 1);
+	profiling_container->capture("insertScanLatency","single", msg->ee_profiles.time_stats.insertScanLatency, 1);
+	profiling_container->capture("OMFilteringLatency","single", msg->ee_profiles.time_stats.OMFilteringLatency, 1);
+	profiling_container->capture("OMSerializationLatency","single", msg->ee_profiles.time_stats.OMSerializationLatency, 1);
+	profiling_container->capture("OMtoPlComOHLatency","single", msg->ee_profiles.time_stats.OMtoPlComOHLatency, 1);
+	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
+	profiling_container->capture("OMtoPlTotalLatency","single", msg->ee_profiles.time_stats.OMtoPlTotalLatency, 1);
+	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
+	profiling_container->capture("smoothening_latency","single", msg->ee_profiles.actual_time.smoothening_latency, 1);
+	profiling_container->capture("ppl_latency","single", msg->ee_profiles.actual_time.ppl_latency, 1);
+	profiling_container->capture("control_flow","single", msg->ee_profiles.control_flow_path, 1);
+	profiling_container->capture("time_cmd_received","single", (ros::Time::now() - first_cmd_time).toSec(), 1);
 
 
 
@@ -642,6 +665,29 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 		debug_data.slack.actual.data_flow = actual_total_slack;
 		debug_data.slack.actual.control_flow = 0;
 	}
+
+
+	profiling_container->capture("depthToPCConversionLatency", "single", msg->ee_profiles.time_stats.depthToPCConversionLatency, 1);
+	profiling_container->capture("runDiagnosticsLatency","single",msg->ee_profiles.time_stats.runDiagnosticsLatency, 1);
+	profiling_container->capture("runTimeLatency","single", msg->ee_profiles.time_stats.runTimeLatency, 1);
+	profiling_container->capture("sequencerLatency","single", msg->ee_profiles.time_stats.sequencerLatency, 1);
+	profiling_container->capture("PCFilteringLatency","single", msg->ee_profiles.time_stats.PCFilteringLatency, 1);
+
+	profiling_container->capture("PCtoOMComOHLatency","single", msg->ee_profiles.time_stats.PCtoOMComOHLatency, 1);
+	profiling_container->capture("PCDeserializationLatency","single", msg->ee_profiles.time_stats.PCDeserializationLatency, 1);
+	profiling_container->capture("PCtoOMTotalLatency","single", msg->ee_profiles.time_stats.PCtoOMTotalLatency, 1);
+	profiling_container->capture("OMFilterOutOfRangeLatency","single", msg->ee_profiles.time_stats.OMFilterOutOfRangeLatency, 1);
+	profiling_container->capture("insertScanLatency","single", msg->ee_profiles.time_stats.insertScanLatency, 1);
+	profiling_container->capture("OMFilteringLatency","single", msg->ee_profiles.time_stats.OMFilteringLatency, 1);
+	profiling_container->capture("OMSerializationLatency","single", msg->ee_profiles.time_stats.OMSerializationLatency, 1);
+	profiling_container->capture("OMtoPlComOHLatency","single", msg->ee_profiles.time_stats.OMtoPlComOHLatency, 1);
+	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
+	profiling_container->capture("OMtoPlTotalLatency","single", msg->ee_profiles.time_stats.OMtoPlTotalLatency, 1);
+	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
+	profiling_container->capture("smoothening_latency","single", msg->ee_profiles.actual_time.smoothening_latency, 1);
+	profiling_container->capture("ppl_latency","single", msg->ee_profiles.actual_time.ppl_latency, 1);
+	profiling_container->capture("control_flow","single", msg->ee_profiles.control_flow_path, 1);
+	profiling_container->capture("time_cmd_received","single", (ros::Time::now() - first_cmd_time).toSec(), 1);
 }
 
 
@@ -774,7 +820,6 @@ void initialize_global_params() {
 }
 
 
-
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "follow_trajectory", ros::init_options::NoSigintHandler);
@@ -786,6 +831,7 @@ int main(int argc, char **argv)
     double p_vz = p_vz_original;
     initialize_global_params();
 
+    first_cmd_time = ros::Time::now();
     // Initialize the drone
     std::string localization_method;
     std::string ip_addr;

@@ -16,3 +16,5 @@ float32 motion_planning_smoothening_volume_explored
 float32 motion_planning_potential_distance_to_explore
 float32 collision_func
 float32 octomap_to_motion_planner_serialization_to_reception_knob_modeling
+float32 OMDeserializationLatency
+

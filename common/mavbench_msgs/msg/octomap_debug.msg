@@ -23,4 +23,4 @@ float32 octomap_filtering_time
 float32 octomap_space_volume_digested
 float32 octomap_volume_communicated
 float32 integrated_volume_tracking_error
-
+float32 OMFilteringLatency

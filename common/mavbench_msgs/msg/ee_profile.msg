@@ -1,6 +1,7 @@
 mavbench_msgs/ee_time_profile actual_time
 mavbench_msgs/ee_time_profile expected_time
 mavbench_msgs/ee_space_profile space_stats
+mavbench_msgs/ee_time_stats time_stats
 
 mavbench_msgs/control_cmd actual_cmds
 mavbench_msgs/control_cmd expected_cmds
