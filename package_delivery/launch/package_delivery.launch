@@ -89,6 +89,10 @@
   <arg name="sensor_max_range" default="25" />
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
+  
+  <arg name="sequencer_sampling_rate" default="1"/> 
+  <param name="sequencer_sampling_rate" value="$(arg sequencer_sampling_rate)"/>
+  
   <!-- arg name="sensor_to_actuation_time_budget_to_enforce" default="3"/--> 
   <arg name="max_time_budget" default="15" />   
   <param name="max_time_budget" value="$(arg max_time_budget)"/>

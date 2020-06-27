@@ -184,7 +184,6 @@ def control_callback(control):
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
         assert(om_to_pl_res >= pc_res), "om_to_pl_res should be >= pc_res"
         pc_vol_ideal = results.x[2]
-        #pc_vol_ideal = 20000
         om_to_pl_vol_ideal = results.x[3]
         ppl_vol_ideal = results.x[4]
         # expected time budgets

@@ -84,6 +84,7 @@ geometry_msgs::PointStamped unknown_point_converted_to_pc_coord; // by default i
 float sensor_max_range;
 double point_cloud_max_z;
 string gap_statistic_mode = "avg";
+int sequencer_sampling_rate;
 class PointCloudXyzNodelet : public nodelet::Nodelet
 {
   // Subscriptions
@@ -187,9 +188,6 @@ void PointCloudXyzNodelet::onInit()
   ros::NodeHandle& nh         = getNodeHandle();
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   it_.reset(new image_transport::ImageTransport(nh));
-
-
-
 
 
 
@@ -397,6 +395,16 @@ void PointCloudXyzNodelet::onInit()
     	return ;
 
     }
+
+    if(!ros::param::get("/sequencer_sampling_rate", sequencer_sampling_rate)){
+    	ROS_FATAL_STREAM("Could not start point cloud sequencer_sampling_rate not provided");
+    	exit(0);
+    	return ;
+
+    }
+
+
+
 
    if(!ros::param::get("/knob_performance_modeling_for_pc_om", knob_performance_modeling_for_pc_om)){
     	ROS_FATAL_STREAM("Could not start point cloud knob_performance_modeling_for_pc_om not provided");
@@ -1313,9 +1321,50 @@ void filterByVolume(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msg
 */
 
 // -- filter based on the desired volume to maintain
-void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
-		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points,  int grid_volume_row_size, float diagnostic_resolution)
+
+void filterByResolutionByHashing(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best, double resolution, int num_points) {
+  // map of whether a point has been seen (rounded by resolution)
+  std::unordered_set<double> seen;
+  //seen.clear();
+  double last_hashed_point = 0;
+  double last_x, last_y, last_z, this_x, this_y, this_z;
+  double volume_to_digest_partial = 0; // accumulats the depth values, which is then multipled by a square of resolution side size
+  double last_rounded_x, last_rounded_y, last_rounded_z;
+
+  for (int i = 0; i < num_points; i++){
+	this_x = *(cloud_x + i);
+	this_y = *(cloud_y + i);
+	this_z = *(cloud_z + i);
+	  double rounded_x = round_to_resolution(this_x, resolution);
+      double rounded_y = round_to_resolution(this_y, resolution);
+      double rounded_z = round_to_resolution(this_z, resolution);
+      double hashed_point = point_hash_xyz(rounded_x, rounded_y, rounded_z);
+
+      if (hashed_point != last_hashed_point){
+		  if (seen.find(hashed_point) == seen.end()) {
+			  seen.insert(hashed_point);
+			  xs_best.push_back(this_x);
+			  ys_best.push_back(this_y);
+			  zs_best.push_back(this_z);
+		  }
+		  last_hashed_point = hashed_point;
+      }
+  }
+}
+
+
+
+
+
+//void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::PointCloud2Iterator<float> &cloud_y, sensor_msgs::PointCloud2Iterator<float> &cloud_z,
+//		std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs, int num_points,  int grid_volume_row_size, float diagnostic_resolution)
+//{
+
+void sequencer(std::vector<float> &xs,  std::vector<float> &ys, std::vector<float> &zs,
+    std::vector<float> &xs_best,  std::vector<float> &ys_best, std::vector<float> &zs_best,   int grid_volume_row_size, float diagnostic_resolution)
 {
+
 	//int num_radius_buckets = 10*sensor_max_range;
 	int num_radius_buckets = 10*sensor_max_range;
 	//double radius_volume[num_radius_buckets];
@@ -1342,49 +1391,38 @@ void sequencer(sensor_msgs::PointCloud2Iterator<float> &cloud_x, sensor_msgs::Po
 	bool first_itr = true;
 	double total_volume = 0;
 
-    for (int i = 0; i < num_points; i++){
-    	this_x = *(cloud_x + i);
-    	this_y = *(cloud_y + i);
-    	this_z = *(cloud_z + i);
-    	// -- project x,y,z if they are outside of the sensor range
-    	double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
-    	if (norm > sensor_max_range + .5){
-    	//		  this_x = (sensor_max_range/norm)*this_x;
-    	//		  this_y = (sensor_max_range/norm)*this_y;
-    			  this_z = (sensor_max_range/norm)*this_z;
+	int radius_bucket, previous_radius_bucket;
+
+	for (int i = 0; i < xs.size(); i++){
+    	this_x = xs[i] ;
+    	this_y = ys[i] ;
+    	this_z = zs[i] ;
+    	if ((i % sequencer_sampling_rate) == 0 && (i==0)) {
+    		// -- project x,y,z if they are outside of the sensor range
+    		double norm = sqrt(this_z*this_z + this_y*this_y + this_x*this_x);
+    		if (norm > sensor_max_range + .5){
+    			//		  this_x = (sensor_max_range/norm)*this_x;
+    			//		  this_y = (sensor_max_range/norm)*this_y;
+    			this_z = (sensor_max_range/norm)*this_z;
+    		}
+    		radius_bucket = (int) (std::pow(std::pow(this_x - unknown_point_converted_to_pc_coord.point.x, 2) +
+    				std::pow(this_y-unknown_point_converted_to_pc_coord.point.y, 2), 0.5) / bucket_width);
+
+    		// updating upper bound
+    		radius_bucket = min(num_radius_buckets-1, radius_bucket);
+    		previous_radius_bucket = radius_bucket;
+    	}else{
+    		radius_bucket = previous_radius_bucket;
     	}
-    	//reactivate this after you collectred data
-    	int radius_bucket = (int) (std::pow(std::pow(this_x - unknown_point_converted_to_pc_coord.point.x, 2) +
-    			std::pow(this_y-unknown_point_converted_to_pc_coord.point.y, 2), 0.5) / bucket_width);
-
-    	// updating upper bound
-    	radius_bucket = min(num_radius_buckets-1, radius_bucket);
-
-//    		int radius_bucket = (int) (std::pow(std::pow(this_x , 2) +
- //   			std::pow(this_y, 2), 0.5) / bucket_width);
-
-
-
-
-    	//radius_volume[radius_bucket] += (1.0/3)*fabs(this_x-last_x)*fabs(this_y - last_row_y)*this_z;
-    	// using the gridded approach
-    	//int x_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_x, diagnostic_resolution) + (int)grid_volume_row_size/2;
-    	//int y_index = ((int)1/diagnostic_resolution)*round_to_resolution(this_y, diagnostic_resolution) + (int)grid_volume_row_size/2;
-    	//radius_volume[radius_bucket] += (1.0/3)*pow(diagnostic_resolution, 2)*gridded_volume[x_index][y_index];
     	radius_points[radius_bucket].push_back(i);
-    	//radius_points_valid[radius_bucket] = true;
-    	//gridded_volume[x_index][y_index] = 0;
     }
 
     for (int bucket_number= 0; bucket_number < num_radius_buckets; bucket_number++){
     	for (int pt_idx= 0; pt_idx< radius_points[bucket_number].size(); pt_idx++){
     		int idx = (radius_points[bucket_number])[pt_idx];
-    		xs.push_back(*(cloud_x+ idx));
-			ys.push_back(*(cloud_y+ idx));
-			zs.push_back(*(cloud_z+ idx));
-//			double temp_zs = *(cloud_z+idx);
-//			double temp_xs = *(cloud_x+idx);
-//			double temp_ys = *(cloud_y+idx);
+    		xs_best.push_back(*(xs.begin()+ idx));
+			ys_best.push_back(*(ys.begin()+ idx));
+			zs_best.push_back(*(zs.begin()+ idx));
     	}
     }
 
@@ -2167,24 +2205,29 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
 
    if (om_to_pl_res < pc_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<pc_res);} assert(om_to_pl_res >= pc_res);
 
-  // -- start filtering
-  profiling_container->capture("sequencerLatency", "start", ros::Time::now(), capture_size);
-  // policty to prevent runtime being the bottleneck
-  if (cur_vel_mag < .8*v_max_max){ // only if not high speed, sequence
-	  sequencer(cloud_x, cloud_y, cloud_z, xs, ys, zs,  n_points, grid_size, diagnostic_resolution);
-  }
-  profiling_container->capture("sequencerLatency", "end", ros::Time::now(), capture_size);
-  //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, pc_vol_ideal, n_points);
+    //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, pc_vol_ideal, n_points);
   //filterByNumOfPoints(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_num_points);
 
   // filter based on resolution
+  profiling_container->capture("PCFilteringLatency", "start", ros::Time::now(), capture_size);
+  //if (cur_vel_mag > .8*v_max_max){ filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res, n_points);}
+  //else {filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res);}
+  filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs, ys, zs,  pc_res, n_points);
+  profiling_container->capture("PCFilteringLatency", "end", ros::Time::now(), capture_size);
+
+
   std::vector<float> xs_best;
   std::vector<float> ys_best;
   std::vector<float> zs_best;
-  profiling_container->capture("PCFilteringLatency", "start", ros::Time::now(), capture_size);
-  if (cur_vel_mag > .8*v_max_max){ filterByResolutionByHashing(cloud_x, cloud_y, cloud_z, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res, n_points);}
-  else {filterByResolutionByHashing(xs, ys, zs, xs_best, ys_best, zs_best, point_cloud_num_points, point_cloud_max_z, pc_res);}
-  profiling_container->capture("PCFilteringLatency", "end", ros::Time::now(), capture_size);
+  // -- start filtering
+  profiling_container->capture("sequencerLatency", "start", ros::Time::now(), capture_size);
+  // policty to prevent runtime being the bottleneck
+  //if (cur_vel_mag < .8*v_max_max){ // only if not high speed, sequence
+  sequencer(xs, ys, zs, xs_best, ys_best, zs_best,  grid_size, diagnostic_resolution);
+  //}
+  profiling_container->capture("sequencerLatency", "end", ros::Time::now(), capture_size);
+
+
 
   // reset point cloud and load in filtered in points
   sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
