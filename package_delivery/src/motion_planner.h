@@ -55,6 +55,7 @@
 #include <octomap_msgs/conversions.h>
 
 #include <datacontainer.h>
+#include <filterqueue.h>
 #include <iostream>
 #include <vector>
 
@@ -284,6 +285,10 @@ private:
     int planner_consecutive_failure_ctr = 0;
     float dist_to_closest_obs;
     ros::Time dist_to_closest_obs_time_stamp;
+    FilterQueue *vmax_filter_queue;
+
+    double  renewed_v_max = v_max_max;
+    bool sub_optimal_v_max = false;
 
 
     // The following block of variables only exist for debugging purposes

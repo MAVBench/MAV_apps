@@ -9,16 +9,35 @@ import time
 import numpy as np
 import math
 from optimizer_settings import *
-rt_max = 10  # this is actually set in the roslaunch file
+rt_max = 5  # this is actually set in the roslaunch file
 drone_radius = 3
 import time
 obs_dist_min_calc_from_octomap = 100
-
+import copy
 class dummy_output:
     def __init__(self):
         self.success = False
+class SmartQueue:
+    def __init__(self, size):
+        self.storage = []
+        self.size = size 
 
+    def push(self, value): 
+        self.storage.append(value)
+        if len(self.storage) > self.size:
+            storage = copy.deepcopy(self.storage[1:])
+            self.storage = storage
+
+    def reduce(self, mode):
+        if mode == "min":
+            return min(self.storage)
+        elif mode == "max":
+            return max(self.storage)
+        elif mode == "avg":
+            return avg(self.storage)
+r_max_queue = SmartQueue(20)
 def run_optimizer(control):
+    global r_max_queue 
     rt_max = control.inputs.max_time_budget 
     """ 
     print("gap_statistics_max" + str(control.inputs.gap_statistics_max))
@@ -62,6 +81,9 @@ def run_optimizer(control):
     r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
     r_max_ = (2 ** math.floor(math.log(round(r_max_ /r_min_static, 2), 2))) * r_min_static  # must get the floor otherwise, when converting (after solving), when we get the floor, we might go over
                                                                                         # the max value
+
+    r_max_queue.push(r_max_)
+    r_max_ = r_max_queue.reduce("min")
 
     if r_max_ < r_min_:
         #print("-------------------------------------------- bounds inverted -----------------------------------")

@@ -1,39 +1,24 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(package_delivery)
+project(filter_queue)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
-set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
-set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
+#set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
+#set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
+
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
-  image_transport
   roscpp
   std_msgs
   geometry_msgs
-  sensor_msgs
   tf
-  octomap_ros
-  octomap_msgs
-  octomap_server
-  message_generation
-  trajectory_msgs
-  mav_trajectory_generation
-  mav_trajectory_generation_ros
-  nlopt
-  minkindr_conversions
-  mavbench_msgs
-  future_collision
-  data_collection
-  filter_queue
-  profile_manager
-  )
+)
 
+set (CMAKE_CXX_STANDARD 11)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -68,21 +53,18 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 # add_message_files(
-#   FILES
-#   multiDOF.msg
-#   multiDOF_array.msg
-#   BoolPlusHeader.msg
+#  FILES
+#  multiDOF.msg
+#  multiDOF_array.msg
+#  BoolPlusHeader.msg
 # )
 
 ## Generate services in the 'srv' folder
-
-add_definitions(-DROS)
-
-add_service_files(
-  FILES
-  get_trajectory.srv
-  point.srv
-  )
+# add_service_files(
+#   FILES
+#   get_trajectory.srv
+#   follow_trajectory_status_srv.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -92,13 +74,12 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-  trajectory_msgs
-  mavbench_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#   geometry_msgs
+#   trajectory_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -130,13 +111,14 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
-find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(ompl REQUIRED)
 
-    #  INCLUDE_DIRS include
-#  LIBRARIES mavbench
-#  DEPENDS system_lib
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES filter_queue
+  CATKIN_DEPENDS roscpp std_msgs
+  DEPENDS system_lib
+)
 
 ###########
 ## Build ##
@@ -146,16 +128,12 @@ set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${CATKIN_DEVEL_PREFIX}/include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${OCTOMAP_INCLUDE_DIRS}
-  ${common_utility_include} 
-  ${common_utility_include}/profile_manager/include
-  ${common_utility_include}/run_time/include
-  $ENV{AirSim_base_dir}/AirLib/include
 )
 
 link_directories(
@@ -194,36 +172,9 @@ link_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-
-### Package-Delivery executables
-
-
-add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/run_time/src/TimeBudgetter.cpp  ${common_utility_src}/run_time/src/SensorActuatorModel.cpp)
-add_dependencies(occupancy_map_node future_collision package_delivery_generate_messages_cpp)
-target_link_libraries(occupancy_map_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand)
-
-add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
-    ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/run_time/src/TimeBudgetter.cpp  ${common_utility_src}/run_time/src/SensorActuatorModel.cpp)
-add_dependencies(package_delivery package_delivery_generate_messages_cpp)
-target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
-
-### Scanning executables
-
-add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
-    ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/scanning.cpp ${common_utility_src}/timer.cpp  ${common_utility_src}/run_time/src/TimeBudgetter.cpp  ${common_utility_src}/run_time/src/SensorActuatorModel.cpp )
-add_dependencies(scanning package_delivery_generate_messages_cpp)
-target_link_libraries(scanning ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
-
-add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp
-    ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/run_time/src/TimeBudgetter.cpp  ${common_utility_src}/run_time/src/SensorActuatorModel.cpp)
-add_dependencies(motion_planner_node package_delivery_generate_messages_cpp)
-target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand )
-
-# add_executable(obstacle_avoidance_test ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
-#      ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/obstacle_avoidance_test.cpp ${common_utility_src}/timer.cpp)
-# add_dependencies(obstacle_avoidance_test obstacle_avoidance_test_generate_messages_cpp)
-# target_link_libraries(obstacle_avoidance_test ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
-
+add_definitions(-DROS)
+add_library(filter_queue src/filterqueue.cpp) 
+target_link_libraries(filter_queue ${catkin_LIBRARIES}) 
 
 #############
 ## Install ##
@@ -240,18 +191,18 @@ target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES} 
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS filter_queue
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

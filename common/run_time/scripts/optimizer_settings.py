@@ -11,7 +11,7 @@ depth_img_latency = .1
 front_end_latency = run_diagnostics + filtering + depth_img_latency # this is all for runtime
 #front_end_latency = 0 
 
-pc_to_om_oh = .7
+pc_to_om_oh = .3
 runtime_latency = .2 # this does include point cloud intro (i.e, generating point cloud and running diagnostics)
 pc_outro = .1 # filtering and such
 follow_trajectory_latency = .1

@@ -47,6 +47,7 @@
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation_ros/include/mav_trajectory_generation_ros/ros_visualization.h"
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
+#include "filterqueue.h"
 double follow_trajectory_loop_rate;
 double follow_trajectory_worse_case_latency;
 ros::Time ppl_start_time;
@@ -254,6 +255,8 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 		profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose")
 		{
 
+
+	vmax_filter_queue = new FilterQueue(5);
 	motion_planning_initialize_params();
     g_goal_pos.x = g_goal_pos.y = g_goal_pos.z = nan("");
 	// Create a new callback queue
@@ -478,10 +481,16 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	auto cur_velocity = drone->velocity().linear;
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
-    double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
-    double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
+    //double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
+    double dist_to_closest_obs_recalculated =  dist_to_closest_obs;
+    double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
-    bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
+    vmax_filter_queue->push(renewed_v_max_temp);
+    cout<<"renewd_v_max_before"<<renewed_v_max<<endl;
+    renewed_v_max = vmax_filter_queue->reduce("min");
+    cout<<"renewd_v_max_after"<<renewed_v_max<<endl;
+
+    sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
     //bool sub_optimal_v_max = false;
 
@@ -1047,8 +1056,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     double dist_to_closest_obs_recalculated =  max(dist_to_closest_obs - time_diff_duration*cur_vel_mag, 0.0);
     //double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
-    double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
-    bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
+    //double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
+    //bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
     ROS_INFO_STREAM("renewed_v_max:" << renewed_v_max << "  v_max__golbal (current v_max):"<<v_max__global << " dist_to_closest_obs:"<<dist_to_closest_obs);
     if (sub_optimal_v_max && budgetting_mode != "static"){
