@@ -9,6 +9,8 @@ import time
 import numpy as np
 import math
 from optimizer_settings import *
+from system_profiler import mapping
+import psutil
 rt_max = 5  # this is actually set in the roslaunch file
 drone_radius = 3
 import time
@@ -35,7 +37,7 @@ class SmartQueue:
             return max(self.storage)
         elif mode == "avg":
             return avg(self.storage)
-r_max_queue = SmartQueue(20)
+r_max_queue = SmartQueue(5)
 def run_optimizer(control):
     global r_max_queue 
     rt_max = control.inputs.max_time_budget 
@@ -50,7 +52,7 @@ def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
-        #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+        print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
         results = dummy_output()
         failure_status = 2
         return results, failure_status
@@ -165,13 +167,28 @@ def run_optimizer(control):
     else:
         failure_status = 0
     return results, failure_status
+
+
+def control_callback_for_crun(control):
+    if budgetting_mode == "static":
+        all_cpu_percents = psutil.cpu_percent(percpu=True)[1:4]
+        cpu_utilization_last_round = sum(all_cpu_percents[1:4]) / len(all_cpu_percents[1:4])
+        rospy.set_param("cpu_utilization_for_last_decision", float(cpu_utilization_last_round))
     
 
 def control_callback(control):
     #print("---- runing the optimizer now")
+    # getting utilization of the last decision 
+    all_cpu_percents = psutil.cpu_percent(percpu=True)[1:4]
+    cpu_utilization_last_round = sum(all_cpu_percents[1:4])/len(all_cpu_percents[1:4])
+    rospy.set_param("cpu_utilization_for_last_decision", float(cpu_utilization_last_round) )
+    #memory_utilization_last_round = psutil.virtual_memory().percent
+    #rospy.set_param("memory_utilization_for_last_decision", float(memory_utilization_last_round) )
+    #print(memory_utilization_last_round)
+
+    #collect_sys_prof.publish
+
     results, failure_status = run_optimizer(control)  # failure status key: 1:no valid cofig, 2:not enough time
-
-
     # some default values
     #pc_res = r_min_static
     #om_to_pl_res = om_to_pl_res_min
@@ -266,7 +283,11 @@ if __name__ == '__main__':
     #opt_obj.opt()
     rospy.init_node('runtime_thread_python', anonymous=True)
     rospy.Subscriber("control_to_pyrun", control, control_callback)
-    rate = rospy.Rate(20) # 10hz
+    rospy.Subscriber("control_to_crun", control, control_callback_for_crun)
+
+    time.sleep(2)
+    mapping.map_processes()
+    rate = rospy.Rate(10) # 10hz
     rt_max = rospy.get_param("max_time_budget")
     drone_radius = rospy.get_param("planner_drone_radius")
     v_max = max(rospy.get_param("om_to_pl_vol_ideal_max"), rospy.get_param("ppl_vol_ideal_max"))

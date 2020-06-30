@@ -17,4 +17,5 @@ float32 OMDeserializationLatency
 float32 OMtoPlTotalLatency
 
 
-
+float32 cpu_utilization_for_last_decision
+float32 cache_misses

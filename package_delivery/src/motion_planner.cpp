@@ -127,7 +127,6 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     og::SimpleSetup ss(space);
 
 
-
 	bool SA_time_exceeded = ((SA_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
 	bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
 	if (SA_time_exceeded){ //|| ppl_time_exceeded){
@@ -184,7 +183,9 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 		return result;
 	}
 
+    //ROS_INFO_STREAM("insie before solved");
 	solved = ss.solve(planner_termination_obj);
+    ROS_INFO_STREAM("after solved");
 	//if (knob_performance_modeling_for_piecewise_planner){
     //}else
 	//ob::PlannerStatus solved = ss.solve(planner_termination_func(volume_explored_in_unit_cubes, ppl_vol_idealInUnitCube));
@@ -486,9 +487,9 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
     vmax_filter_queue->push(renewed_v_max_temp);
-    cout<<"renewd_v_max_before"<<renewed_v_max<<endl;
+    //cout<<"renewd_v_max_before"<<renewed_v_max<<endl;
     renewed_v_max = vmax_filter_queue->reduce("min");
-    cout<<"renewd_v_max_after"<<renewed_v_max<<endl;
+    //cout<<"renewd_v_max_after"<<renewed_v_max<<endl;
 
     sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
@@ -647,8 +648,6 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 
 	deadline_setting_time = msg->ee_profiles.actual_time.deadline_setting_time_stamp;
 	SA_time_budget_to_enforce= msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce;
-	//ROS_INFO_STREAM("1111 00000000000000000000000000000000000000 budget to impose on ppl"<< SA_time_budget_to_enforce/2);
-
 
 	 dist_to_closest_obs = msg->dist_to_closest_obs;
 	 dist_to_closest_obs_time_stamp = msg->dist_to_closest_obs_time_stamp;
@@ -773,6 +772,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     if (!shouldReplan(msg->oct) && !knob_performance_modeling_for_piecewise_planner){
     	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(map_res, 3);
     	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
+    	ROS_INFO_STREAM("don't need to replan");
     	return;
     }
     last_unknown_pt_ctr = 0;
@@ -786,21 +786,14 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     profiling_container.capture("motion_planning_time_total", "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
     bool planning_succeeded = this->motion_plan_end_to_end(msg->header.stamp, g_goal_pos);
     profiling_container.capture("motion_planning_time_total", "end", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+    /*
     if (unknown_budget_failed){
-    	/*
-    	auto vel = drone->velocity();
-    	if (drone->velocity().linear.x < .1 && drone->velocity().linear.y <.1 && drone->velocity().linear.z <.1){
-    		spin_around(*drone);
-    		closest_unknown_pub.publish(closest_unknown_way_point);
-    	}else{
-    		closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
-    	}
-    */
     	debug_data.motion_planning_collision_check_volume_explored = volume_explored_in_unit_cubes*pow(map_res, 3);
     	debug_data.motion_planning_potential_distance_to_explore = potential_distance_to_explore;
     	unknown_budget_failed = false;
     	return;
     }
+    */
     //ROS_INFO_STREAM("motion_Planning_time_total"<<profiling_container.findDataByName("motion_planning_time_total")->values.back());
 
     if (knob_performance_modeling_for_piecewise_planner){
@@ -897,7 +890,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     g_ppl_time_budget = (SA_time_budget_to_enforce - (ros::Time::now() - deadline_setting_time).toSec())/3;  // distribute the rest of the budget between smoothening and ppl
 	g_smoothening_budget = g_ppl_time_budget;
 
-   ROS_INFO_STREAM("--budget to impose on ppl"<< SA_time_budget_to_enforce/2);
+   //ROS_INFO_STREAM("--budget to impose on ppl"<< SA_time_budget_to_enforce/2);
 
     //bool time_exceeded = false;
     bool SA_time_exceeded = ((SA_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
@@ -1059,7 +1052,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     //double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
     //bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
-    ROS_INFO_STREAM("renewed_v_max:" << renewed_v_max << "  v_max__golbal (current v_max):"<<v_max__global << " dist_to_closest_obs:"<<dist_to_closest_obs);
+    //ROS_INFO_STREAM("renewed_v_max:" << renewed_v_max << "  v_max__golbal (current v_max):"<<v_max__global << " dist_to_closest_obs:"<<dist_to_closest_obs);
     if (sub_optimal_v_max && budgetting_mode != "static"){
     	ros::param::set("v_max", renewed_v_max);
     	v_max__global = renewed_v_max;
@@ -1073,10 +1066,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
                                     Eigen::Vector3d(req.acceleration.linear.x,
                                                     req.acceleration.linear.y,
                                                     req.acceleration.linear.z), closest_unknown_way_point);
+    /*
     if (unknown_budget_failed){
     	return false;
     }
-
+	*/
 
     profiling_container.capture("motion_planning_smoothening_time", "end", ros::Time::now(), capture_size);
     if (DEBUG_RQT) {
@@ -1114,6 +1108,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.append = false;
         res.multiDOFtrajectory.reverse = false;
         res.multiDOFtrajectory.stop = true;
+        ROS_INFO_STREAM("asking FT to stop");
         res.multiDOFtrajectory.planning_status = "smoothening_failed"; //profiling
         notified_failure = true;
         if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
@@ -2063,7 +2058,7 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
     mavbench_msgs::planner_info closest_unknown_point;
     bool first_unknown_collected = false; // to only allow writing into the closest_unknown_way_point once
     graph::node *end_ptr = new graph::node();
-    ROS_INFO_STREAM("map_res is "<<map_res);
+    //ROS_INFO_STREAM("map_res is "<<map_res);
     int resolution_ratio = (int)((map_res)/octree->getResolution());
     int depth_to_look_at = 16 - (int)log2((double)resolution_ratio);
     auto last_key = octree->coordToKey(octomap::point3d(-100, -100, -100), depth_to_look_at);
@@ -2375,7 +2370,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	mavbench_msgs::planner_info &closest_unknown_way_point)
 {
 
-	ROS_INFO_STREAM("begining of smoothening");
+	//ROS_INFO_STREAM("begining of smoothening");
     ros::Time smoothening_start_time = ros::Time::now();
 	// Variables for visualization for debugging purposes
 	double distance = 0.5; 
@@ -2424,7 +2419,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     ros::Duration smoothening_time_so_far;
     //blah reactive the bellow after data collection
     g_smoothening_budget = (SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec();  // whatever is left of the budget
-    ROS_INFO_STREAM("--------------- remaning time is "<< g_smoothening_budget);
+//    ROS_INFO_STREAM("--------------- remaning time is "<< g_smoothening_budget);
     //g_smoothening_budget = min(3.0,  SA_time_budget_to_enforce - (ros::Time::now() - deadline_setting_time).toSec());
 
 	bool first_unknown_collected = false;
@@ -2616,8 +2611,9 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				 closest_obstacle_on_path_way_point.planning_status = "smoothener_failed";
 				 closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
 			 }
-			 unknown_budget_failed= true;
-    		 return smooth_trajectory();
+			 //unknown_budget_failed= true;
+			 ROS_INFO_STREAM("sending empty trajectory");
+			 return smooth_trajectory();
 		 }
 		 if (col){
 			 continue;

@@ -110,6 +110,8 @@ int main(int argc, char** argv){
     exit(-1);
   }
 
+//  ros::Rate loop_rate(.1);
+
   OctomapServer server;
   ros::spinOnce();
 
@@ -148,6 +150,7 @@ int main(int argc, char** argv){
      g_accumulate_loop_time += (((loop_end_t - loop_start_t).toSec())*1e9);
      g_main_loop_ctr++;
   
+     //loop_rate.sleep();
   }
   return 0;
 }

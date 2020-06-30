@@ -299,7 +299,10 @@
     <param name="dummy_val" value="2.0" />
     <param name="rate" value="5" />
   </node>
-  
+ <!--node pkg="run_time" type="sys_prof.py" name="sys_prof" output="screen"/-->
+ 
+
+
 
 
 
@@ -322,41 +325,12 @@
   <param name="point_cloud_density_reduction" value="$(arg point_cloud_density_reduction)"/>
 
     <!-- Nodelet manager for this pipeline -->
-    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
-        <!-- remap from="/points" to="/cloud_in" / -->
+    <!--node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager_" output="screen"-->
+    <node pkg="depth_image_proc_with_spin" type="depth_image_proc_with_spin" name="depth_transforms_manager_" output="screen">
+    <remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
     </node>
 
-	<!-- Convert to point cloud -->
-	<node pkg="nodelet" type="nodelet" name="cloudify"
-	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond" output="screen">
-
-		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
-		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
-    </node>
-
-    <comment>
-    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager_2" output="screen">
-        <!-- remap from="/points" to="/cloud_in" / -->
-    </node>
-
-	<node pkg="nodelet" type="nodelet" name="cloudify_2"
- 	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager_2 --no-bond" output="screen">
-
-		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
-		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
-		<!-- Input: Rectified depth image -->
-		<remap from="image_rect" to="/Airsim/depth_back"/>
-		<remap from="points" to="/points_back"/>
-    </node>
-    </comment>
     
-    <comment> 
-    <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
-		<param name="panic_distance" value=".1"/>
-    </node>
-    </comment>
-    
-
   <!-- ========================= Octomap (Occupancy Map)============================ -->
   <arg name="octomap_lower_resolution_volume_width" default="20" />
   <arg name="octomap_lower_resolution_volume_height" default="20" />

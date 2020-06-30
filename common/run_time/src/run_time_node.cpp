@@ -227,7 +227,7 @@ void closest_unknown_callback(const mavbench_msgs::planner_info::ConstPtr& msg){
 	if (isnan(closest_unknown_point.x) ||
 			isnan(closest_unknown_point.y) ||
 			isnan(closest_unknown_point.z) ){
-		ROS_INFO_STREAM("================================== closest_uknown_is not defined");
+//		ROS_INFO_STREAM("================================== closest_uknown_is not defined");
 		closest_unknown_point = closest_unknown_point_upper_bound;
 	}
 }

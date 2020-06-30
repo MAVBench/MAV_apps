@@ -330,8 +330,9 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("ppl_latency","single", msg->ee_profiles.actual_time.ppl_latency, 1);
 	profiling_container->capture("control_flow","single", msg->ee_profiles.control_flow_path, 1);
 	profiling_container->capture("time_cmd_received","single", (ros::Time::now() - first_cmd_time).toSec(), 1);
-
-
+	profiling_container->capture("cpu_utilization_for_last_decision","single", msg->ee_profiles.time_stats.cpu_utilization_for_last_decision, 1);
+	profiling_container->capture("cache_misses","single", msg->ee_profiles.time_stats.cache_misses, 1);
+	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
 
 }
 
@@ -519,6 +520,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     } else if (msg->stop ) {// !optimizer_succeeded){
     	fly_backward = false;
     	stop = true;
+    	//ROS_INFO_STREAM("follow trajectory stopping");
     }
     else if (trajectory.empty() && !new_trajectory.empty()) {
     	ROS_INFO_STREAM("traj empty but new traj not empty");
@@ -688,6 +690,9 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("ppl_latency","single", msg->ee_profiles.actual_time.ppl_latency, 1);
 	profiling_container->capture("control_flow","single", msg->ee_profiles.control_flow_path, 1);
 	profiling_container->capture("time_cmd_received","single", (ros::Time::now() - first_cmd_time).toSec(), 1);
+	profiling_container->capture("cpu_utilization_for_last_decision","single", msg->ee_profiles.time_stats.cpu_utilization_for_last_decision, 1);
+	profiling_container->capture("cache_misses","single", msg->ee_profiles.time_stats.cache_misses, 1);
+	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
 }
 
 

@@ -85,13 +85,13 @@ int main(int argc, char** argv)
     MotionPlanner mp (nullptr, &drone);
     mp_ptr = &mp;
     double cnt = 1;
-    //ros::Rate my_rate(cnt);
+    ros::Rate loop_rate(30);
     //my_rate.sleep();
     ros::Duration(1).sleep();
     while (ros::ok()) {
     	mp.spinOnce();
     	//auto loop_rate = set_rate(&drone, trav_dis_before_replanning, planner_min_freq, planner_max_freq, v_max);
-    	//loop_rate.sleep();
+    	loop_rate.sleep();
     }
 }
 

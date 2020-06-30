@@ -180,6 +180,9 @@ class PointCloudXyzNodelet : public nodelet::Nodelet
   double max_time_budget;
   double standard_max_time_budget;
   int N_CAMERAS = 1;
+  double follow_trajectory_loop_rate, follow_trajectory_worse_case_latency;
+  ros::Time deadline_setting_time_stamp;
+
 };
 double g_planner_drone_radius;
 
@@ -218,6 +221,8 @@ void PointCloudXyzNodelet::onInit()
         exit(-1);
 	}
 
+    ros::param::get("/follow_trajectory_loop_rate", follow_trajectory_loop_rate);
+    follow_trajectory_worse_case_latency = 2*(1/follow_trajectory_loop_rate);
 
 
 
@@ -1928,7 +1933,8 @@ vector<std::string> camera_topic_seen;
 void PointCloudXyzNodelet::cameraCb(const sensor_msgs::ImageConstPtr& depth_msg,
                                     const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
-    for (int i = 0; i < N_CAMERAS; ++i) {
+    //double slack = ((sensor_to_actuation_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time_stamp).toSec());  // whatever is left of the budget
+	for (int i = 0; i < N_CAMERAS; ++i) {
         std::string camera_topic = "camera_" + camera_names[i];
         if (depth_msg->header.frame_id == camera_topic){ //&& !has_seen_this_topic_before ) {
             depth_qs[i].push(depth_msg);
@@ -1952,6 +1958,8 @@ double blah_ctr = 0;
 ros::Time last_time = ros::Time::now();
 void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
+
+
 	profiling_container->capture("entire_point_cloud_depth_callback", "start", ros::Time::now());
 	bool knob_performance_modeling = false;
 	ros::param::get("/knob_performance_modeling", knob_performance_modeling);
@@ -1966,6 +1974,13 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
     	return;
 	}
 
+    /*
+    double slack = ((sensor_to_actuation_time_budget_to_enforce/2 - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time_stamp).toSec());  // whatever is left of the budget
+	if (slack > 0){
+		ROS_INFO_STREAM("can go to sleep for "<<slack<<" seconds");
+		ros::Duration(slack).sleep();
+	}
+	*/
 
   img_capture_time_stamp = ros::Time::now();
   ros::param::get("/sensor_max_range", sensor_max_range);
@@ -2186,7 +2201,7 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
   // -- get knobs from the py_run.
   // the reason that I have used param::get is because didn't want to push all of this into a msg
    ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce);
-   ROS_INFO_STREAM("============ sensor_to_actuation_time_budget is "<< sensor_to_actuation_time_budget_to_enforce);
+   //ROS_INFO_STREAM("============ sensor_to_actuation_time_budget is "<< sensor_to_actuation_time_budget_to_enforce);
    ros::param::get("/om_latency_expected", om_latency_expected);
    ros::param::get("/om_to_pl_latency_expected", om_to_pl_latency_expected);
    ros::param::get("/ppl_latency_expected", ppl_latency_expected);
@@ -2196,12 +2211,12 @@ void PointCloudXyzNodelet::depthCb(const sensor_msgs::CameraInfoConstPtr& info_m
    ros::param::get("/y_coord_while_budgetting", y_coord_while_budgetting);
    ros::param::get("/vel_mag_while_budgetting", vel_mag_while_budgetting);
    ros::param::get("/pc_res", pc_res);
-   ROS_INFO_STREAM("pc res passed to pc"<<pc_res);
+   //ROS_INFO_STREAM("pc res passed to pc"<<pc_res);
    ros::param::get("/pc_vol_ideal", pc_vol_ideal);
    ros::param::get("/om_to_pl_res", om_to_pl_res);
    ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
    ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
-   ros::Time deadline_setting_time_stamp = ros::Time::now(); // this is not entirely accurate, since this needs to be set in the run time, however, it'll be a pain to pass the time msg around, so we approximate
+   deadline_setting_time_stamp = ros::Time::now(); // this is not entirely accurate, since this needs to be set in the run time, however, it'll be a pain to pass the time msg around, so we approximate
 
    if (om_to_pl_res < pc_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<pc_res);} assert(om_to_pl_res >= pc_res);
 

@@ -38,7 +38,9 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "OMDeserializationLatency",
 "OMtoPlTotalLatency",
 "smoothening_latency",
-"ppl_latency"]
+"ppl_latency",
+"ee_latency",
+"cpu_utilization_for_last_decision"]
 
 # parse  data
 result_dict = parse_stat_file_flattened(input_filepath, metrics_to_collect_easy, metrics_to_collect_hard)
@@ -49,7 +51,7 @@ runTimeLatency = result_dict[ "runTimeLatency"]
 sequencerLatency = result_dict["sequencerLatency"]
 PCFilteringLatency = result_dict["PCFilteringLatency"]
 PCtoOMComOHLatency = result_dict["PCtoOMComOHLatency"]
-PCDeserializationLatency = result_dic=["PCDeserializationLatency"]
+PCDeserializationLatency = result_dict["PCDeserializationLatency"]
 PCtoOMTotalLatency = result_dict["PCtoOMTotalLatency"]
 OMFilterOutOfRangeLatency = result_dict["OMFilterOutOfRangeLatency"]
 insertScanLatency = result_dict["insertScanLatency"]
@@ -60,9 +62,8 @@ OMDeserializationLatency = result_dict["OMDeserializationLatency"]
 OMtoPlTotalLatency =  result_dict["OMtoPlTotalLatency"]
 ppl_latency= result_dict["ppl_latency"]
 smoothening_latency=  result_dict["smoothening_latency"]
-
-
-
+end_to_end_latency =  result_dict["ee_latency"]
+cpu_utilization_for_last_decision = result_dict["cpu_utilization_for_last_decision"][1:] + [100]
 #width = 10.0/len(depthToPCConversionLatency)
 x = range(0, len(runDiagnosticsLatency))
 #y = np.vstack([y1, y2, y3])
@@ -76,7 +77,25 @@ data_list
 fig, ax = plt.subplots()
 ax.stackplot(x, *data_list, labels=labels, colors = col)
 ax.legend(loc='upper left')
+output_file = "time_breakdown" + ".png"
+#plt.show()
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
 plt.show()
+
+
+fig, ax = plt.subplots()
+ax.plot(x, end_to_end_latency, label=" en_to_end_latency")
+ax.plot(x, cpu_utilization_for_last_decision, label="cpu_utilization ")
+ax.legend(loc='upper left')
+output_file = "utilization" + ".png"
+#plt.show()
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
+plt.show()
+
+
+
 """
 fig, ax = plt.subplots()
 ax.stackplot(x, y)
@@ -139,7 +158,4 @@ else:
 ax.legend(loc='best', fontsize="small")
 output_file = "knob_performance_modeling" + ".png"
 """
-#plt.show()
-plt.savefig(result_folder+"/"+output_file)
-plt.close(fig)
 
