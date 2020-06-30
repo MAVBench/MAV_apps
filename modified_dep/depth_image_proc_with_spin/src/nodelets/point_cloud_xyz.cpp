@@ -66,6 +66,7 @@ using namespace std;
 #include <Drone.h>
 //#define N_CAMERAS 6
 
+
 const std::string camera_names[] = {
     "front",
     "back",
@@ -169,12 +170,10 @@ class PointCloudXyz
 
   // Profiling
   //void sigIntHandlerPrivate(int signo);
-  void log_data_before_shutting_down();
+  //void log_data_before_shutting_down();
   ~PointCloudXyz();
   void inform_pc_done_cb(std_msgs::Bool);
   void closest_unknown_callback(mavbench_msgs::planner_info);
-  ProfileManager *profile_manager_;
-  DataContainer *profiling_container;
   double max_time_budget;
   double standard_max_time_budget;
   int N_CAMERAS = 1;
@@ -186,6 +185,9 @@ class PointCloudXyz
     double follow_trajectory_loop_rate, follow_trajectory_worse_case_latency;
     ros::Time deadline_setting_time_stamp;
 	string planning_status;
+  ProfileManager *profile_manager_;
+  DataContainer *profiling_container;
+
 };
 double g_planner_drone_radius;
 
@@ -255,12 +257,13 @@ void PointCloudXyz::closest_unknown_callback(const mavbench_msgs::planner_info m
 }
 
  PointCloudXyz::~PointCloudXyz(){
-     log_data_before_shutting_down(); 
+     ;//log_data_before_shutting_down();
  }
 
  void PointCloudXyz::inform_pc_done_cb(std_msgs::Bool msg){
 ;
-	log_data_before_shutting_down();
+
+//log_data_before_shutting_down();
  }
 
 
@@ -282,28 +285,9 @@ void PointCloudXyz::connectCb()
   }
 }
 
+/*
 void PointCloudXyz::log_data_before_shutting_down(){
     //std::string ns = ros::this_node::getName();
-
-    /*
-    profiling_data_srv_inst.request.key = "img_to_cloud_commun_t";
-    profiling_data_srv_inst.request.value = (((double)img_to_pt_cloud_acc)/1e9)/pt_cld_ctr;
-    
-    if (!profile_manager_client.call(profiling_data_srv_inst)){ 
-        ROS_ERROR_STREAM("could not probe data using stats manager in point cloud");
-        ros::shutdown();
-    }
-    
-    profiling_data_srv_inst.request.key = "pt_cloud_generation_kernel";
-    profiling_data_srv_inst.request.value = (((double)pt_cld_generation_acc)/1e9)/pt_cld_ctr;
-    if (ros::service::waitForService("/record_profiling_data", 10)){ 
-        if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager in point cloud");
-            ros::shutdown();
-        }
-    }
-	*/
-
     profiling_container->setStatsAndClear();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
@@ -312,6 +296,9 @@ void PointCloudXyz::log_data_before_shutting_down(){
     profile_manager_->verboseClientCall(profiling_data_verbose_srv_inst);
 
 }
+*/
+
+
 
 
 /*
@@ -322,6 +309,8 @@ void PointCloudXyz::sigIntHandlerPrivate(int signo){
     //exit(0);
 }
 */
+
+
 
 
 
@@ -2372,13 +2361,38 @@ void PointCloudXyz::onInit()
 } // namespace depth_image_proc
 
 
+depth_image_proc::PointCloudXyz  *pc;
+
+void log_data_before_shutting_down() {
+	profile_manager::profiling_data_srv profiling_data_srv_inst;
+    profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
+    pc->profiling_container->setStatsAndClear();
+    profiling_data_verbose_srv_inst.request.key = ros::this_node::getName()+"_verbose_data";
+    profiling_data_verbose_srv_inst.request.value = "\n" + pc->profiling_container->getStatsInString();
+    pc->profile_manager_->verboseClientCall(profiling_data_verbose_srv_inst);
+}
+
+void sigIntHandlerPrivate(int signo) {
+    if (signo == SIGINT) {
+    	std_msgs::Bool msg;
+    	msg.data = true;
+    	//server_ptr->inform_pc_done_pub.publish(msg); // -- informing point cloud to publish its profiling results. This is a hack, because I can't get the nodelet to register the sigInt
+    	log_data_before_shutting_down();
+    	ros::shutdown();
+    }
+    exit(0);
+}
+
 
 int main(int argc, char** argv) {
    
-    ros::init(argc, argv, "depth_image_proc_with_spin");
+    ros::init(argc, argv, "depth_image_proc_with_spin", ros::init_options::NoSigintHandler);
     ros::NodeHandle nh("~");
     //std::string mapFilename(""), mapFilenameParam("");
     //signal(SIGINT, sigIntHandlerPrivate);
+    signal(SIGINT, sigIntHandlerPrivate);
+
+
 
     //----------------------------------------------------------------- 
 	// *** F:DN variables	
@@ -2391,13 +2405,14 @@ int main(int argc, char** argv) {
      //Drone drone(ip_addr.c_str(), port, localization_method);
     
     ros::Duration(3).sleep(); // -- need this to prevent octomap from running before imgPublisher/point cloud
-    depth_image_proc::PointCloudXyz  *pc    = new depth_image_proc::PointCloudXyz();
+    pc    = new depth_image_proc::PointCloudXyz();
     pc->onInit(); 
     ros::Rate loop_rate(10);
     while (ros::ok()) {
     	double slack = ((pc->sensor_to_actuation_time_budget_to_enforce/2 - pc->follow_trajectory_worse_case_latency) - (ros::Time::now() - pc->deadline_setting_time_stamp).toSec());  // whatever is left of the budget
     	if (slack > 0 && (pc->planning_status == "no_need_to_replan")){ // if we need to plan, continously collect data because we don't know when the planning is gonna be done
-    		ros::Duration(slack).sleep();
+    		//ros::Duration(slack).sleep();
+    		;
     	}
     	pc->spinOnce();//
     }
