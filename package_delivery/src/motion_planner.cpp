@@ -461,6 +461,7 @@ void MotionPlanner::runtime_failure_cb(const mavbench_msgs::runtime_failure_msg 
     closest_unknown_way_point.z = nan("");
     closest_unknown_way_point.planning_status = "runtime_failure";
 	closest_unknown_pub.publish(closest_unknown_way_point);
+	ros::param::set("/set_closest_unknown_point", true);
 	traj.closest_unknown_point = closest_unknown_way_point;
     traj_pub.publish(traj);
     runtime_failure_last_time = true;
@@ -590,6 +591,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				replan = false;
 				closest_unknown_way_point.planning_status = "no_need_to_replan";
 				closest_unknown_pub.publish(closest_unknown_way_point);
+				ros::param::set("/set_closest_unknown_point", true);
 				msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 				ROS_ERROR_STREAM(" not collision detected");
 			}
@@ -939,7 +941,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 		closest_unknown_way_point.planning_status = "ppl_failed";
 		closest_unknown_pub.publish(closest_unknown_way_point);
-    	msg_for_follow_traj.ee_profiles.control_flow_path = 1;
+		ros::param::set("/set_closest_unknown_point", true);
+		msg_for_follow_traj.ee_profiles.control_flow_path = 1;
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
     	if (notified_failure){ //so we won't fly backward multiple times
     		//std_msgs::Header msg_for_follow_traj;
@@ -1081,6 +1084,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     debug_data.motion_planning_smoothening_volume_explored = volume_explored_in_unit_cubes*pow(map_res,3);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
     closest_unknown_pub.publish(closest_unknown_way_point);
+	ros::param::set("/set_closest_unknown_point", true);
     if (smooth_path.empty()) {
 		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
     	msg_for_follow_traj.ee_profiles.control_flow_path = 1.5;
@@ -2611,6 +2615,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				 closest_obstacle_on_path_way_point.planning_status = "smoothener_failed";
 				 closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
 			 }
+			 ros::param::set("/set_closest_unknown_point", true);
 			 //unknown_budget_failed= true;
 			 ROS_INFO_STREAM("sending empty trajectory");
 			 return smooth_trajectory();

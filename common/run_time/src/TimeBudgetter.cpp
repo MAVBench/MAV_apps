@@ -150,7 +150,7 @@ double TimeBudgetter::calc_budget_till_closest_unknown(trajectory_t traj, multiD
 
 
 
-
+bool first_stuff = false;
 // calcSamplingTime helper (called recursively)
 void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin, std::deque<multiDOFpoint>::iterator trajEnd,
 		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency, multiDOFpoint closest_unknown_point, double distance_error){
@@ -164,7 +164,12 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 
 	double sensor_range = calc_dist(point, closest_unknown_point) + distance_error;
 	sensor_range -= drone_radius;
-
+	/*
+	if (first_stuff){
+		ROS_INFO_STREAM("sensor_range"<<sensor_range);
+		first_stuff = false;
+	}
+	*/
 	// blah change the sensor_Range value after data collection
 	//sensor_range = 25;
 	/*
@@ -246,7 +251,7 @@ std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double la
 		velocity_error = velocity_magnitude - cur_velocity_mag;
 	}
 	*/
-
+	first_stuff = true;
 	while (trajRollingItrBegin < trajItrEnd){
 		calcSamplingTimeHelper(trajRollingItrBegin, trajItrEnd, trajItr, nextSampleTime, latency, closest_unknown_point, distance_error);
 		thisSampleTime += nextSampleTime;

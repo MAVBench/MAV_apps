@@ -16,26 +16,30 @@ def get_ros_processes(ignore_list):
     return ros_process_list_filtered
 
 
-def map_processes():
+def map_processes(num_of_processors):
     #process_ignore_list = ["profile_manager", "rosmaster", "rosout", "grep"]
     # setting affinity 
     ros_processes =  get_ros_processes([])
-    ros_processes_to_consider = ["occupancy_map", "depth_transforms", "motion_planner", "follow_trajectory" ]
+    ros_processes_to_consider = ["occupancy_map", "depth_transforms", "motion_planner", "follow_trajectory", "run_time_thread", "optimizer_node"]
     print("---- setting affitinies")
+    task_for_navigation = str(hex((0b1<<num_of_processors) -1))
+    task_for_sensors = str(hex((0b1<<num_of_processors) + 0))
+    task_for_misc = str(hex((0b1<<num_of_processors+1)))
+    
     for process in ros_processes:
         assigned = False
         pid = process.split()[1]
         if "img" in process:
-            os.system("taskset -p " +  " 0x01 " + str(pid)) 
+            os.system("taskset -p " +  task_for_sensors + " " +  str(pid)) 
         else:
             for process_to_consider in ros_processes_to_consider:
                 if process_to_consider in process:
                     pid = process.split()[1]
-                    os.system("taskset -p " + " 0xe " + str(pid)) 
+                    os.system("taskset -p " + task_for_navigation + " "+ str(pid)) 
                     assigned = True
                     break
             if not assigned:
-                    os.system("taskset -p " + " 0x10 " + str(pid)) 
+                    os.system("taskset -p " + task_for_misc +" " + str(pid)) 
 
     
     # affinities

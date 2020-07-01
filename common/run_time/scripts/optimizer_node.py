@@ -16,6 +16,26 @@ drone_radius = 3
 import time
 obs_dist_min_calc_from_octomap = 100
 import copy
+from profiler import *
+
+num_of_processors = 1
+
+
+def collect_hw_counters():
+    try:
+        events= [['SYSTEMWIDE:PERF_COUNT_HW_INSTRUCTIONS'],
+                ['PERF_COUNT_HW_BRANCH_INSTRUCTIONS','PERF_COUNT_HW_BRANCH_MISSES'],
+                ['PERF_COUNT_SW_PAGE_FAULTS']]
+        perf= Profiler(program_args= ['/bin/ls','/'], events_groups=events)
+        data= perf.run(sample_period= 0.01)
+        print(data)
+    except RuntimeError as e:
+        print(e.args[0])
+    
+
+
+
+
 class dummy_output:
     def __init__(self):
         self.success = False
@@ -52,7 +72,7 @@ def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
-        print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+        print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
         results = dummy_output()
         failure_status = 2
         return results, failure_status
@@ -97,8 +117,9 @@ def run_optimizer(control):
     r_max_list = [r_max_hat] * 2
 
     # --- determine the volume
-    v_sensor_max = control.inputs.sensor_volume_to_digest
-    v_tree_max = max(control.inputs.cur_tree_total_volume, v_min) + v_sensor_max#, v_sensor_max)
+    v_sensor_max = 2*control.inputs.sensor_volume_to_digest
+    #print("v sensor max is" + str(v_sensor_max))
+    v_tree_max = max(max(control.inputs.cur_tree_total_volume, v_min) + v_sensor_max, 100000)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, v_sensor_max)
 
@@ -136,9 +157,17 @@ def run_optimizer(control):
         #G = np.array([[-1,1,0,0,0], [0,0,1,-1,0], [0,0,1,0,0], [-1,0,0,0,0]])
         #d = np.array([0, 0, v_sensor_max, -r_gap_hat])
         # -- w/o r_gap as the constraint (PS: moved the gap constraint directly into the boundary conditions)
-        G = np.array([[-1,1,0,0,0], [0,0,3*planning_failure_cntr_coeff,-1,0], [0,0,0, planning_failure_cntr_coeff,-3], [0,0,1,0,0]])
-        d = np.array([0, 0, 0, (r_max_/r_min_static)*v_sensor_max])
 
+        if (control.internal_states.drone_point_while_budgetting.vel_mag < .2):
+            pc_om_map_ratio = 1
+        else:
+            pc_om_map_ratio = .3
+
+
+        G = np.array([[-1,1,0,0,0], [0,0,planning_failure_cntr_coeff,-pc_om_map_ratio,0], [0,0,0, planning_failure_cntr_coeff,-3], [0,0,1,0,0]])
+        d = np.array([0, 0, 0, (r_max_/r_min_static)*v_sensor_max])
+       
+            
         opt = Opt(method="var5_rhat_volmax",
                   Q=Q,
                   r_min=r_min_list,
@@ -171,17 +200,17 @@ def run_optimizer(control):
 
 def control_callback_for_crun(control):
     if budgetting_mode == "static":
-        all_cpu_percents = psutil.cpu_percent(percpu=True)[1:4]
-        cpu_utilization_last_round = sum(all_cpu_percents[1:4]) / len(all_cpu_percents[1:4])
+        all_cpu_percents = psutil.cpu_percent(percpu=True)[0:num_of_processors]
+        cpu_utilization_last_round = sum(all_cpu_percents[0:num_of_processors]) / num_of_processors
         rospy.set_param("cpu_utilization_for_last_decision", float(cpu_utilization_last_round))
     
 
 def control_callback(control):
-    #print("---- runing the optimizer now")
-    # getting utilization of the last decision 
-    all_cpu_percents = psutil.cpu_percent(percpu=True)[1:4]
-    cpu_utilization_last_round = sum(all_cpu_percents[1:4])/len(all_cpu_percents[1:4])
-    rospy.set_param("cpu_utilization_for_last_decision", float(cpu_utilization_last_round) )
+    all_cpu_percents = psutil.cpu_percent(percpu=True)[0:num_of_processors]
+    cpu_utilization_last_round = sum(all_cpu_percents[0:num_of_processors]) / num_of_processors
+    rospy.set_param("cpu_utilization_for_last_decision", float(cpu_utilization_last_round))
+    #collect_hw_counters()
+    
     #memory_utilization_last_round = psutil.virtual_memory().percent
     #rospy.set_param("memory_utilization_for_last_decision", float(memory_utilization_last_round) )
     #print(memory_utilization_last_round)
@@ -223,6 +252,7 @@ def control_callback(control):
         om_to_pl_res = (2 ** math.ceil(math.log(round(r1/om_to_pl_res_min, 2), 2)))*om_to_pl_res_min
         assert(om_to_pl_res >= pc_res), "om_to_pl_res should be >= pc_res"
         pc_vol_ideal = results.x[2]
+        #print("pc_vol_ideal" + str(pc_vol_ideal))
         om_to_pl_vol_ideal = results.x[3]
         ppl_vol_ideal = results.x[4]
         # expected time budgets
@@ -244,8 +274,9 @@ def control_callback(control):
     ee_latency_expected = om_latency_expected + om_to_pl_latency_expected + pl_to_ppl_ratio*ppl_latency_expected + back_end_latency 
     # set the knobs
     rospy.set_param("pc_res", float(pc_res))
+    #rospy.set_param("pc_res", float(.3))
     rospy.set_param("pc_vol_ideal", float(pc_vol_ideal))
-    #rospy.set_param("pc_vol_ideal", 11000)
+    #rospy.set_param("pc_vol_ideal", 78000)
     rospy.set_param("om_to_pl_res", float(om_to_pl_res))
     rospy.set_param("om_to_pl_vol_ideal", float(om_to_pl_vol_ideal))
     rospy.set_param("ppl_vol_ideal", float(ppl_vol_ideal))
@@ -279,6 +310,7 @@ def control_callback(control):
     """
 
 if __name__ == '__main__':
+    global num_of_processors 
     #op_obj = Opt()
     #opt_obj.opt()
     rospy.init_node('runtime_thread_python', anonymous=True)
@@ -286,10 +318,11 @@ if __name__ == '__main__':
     rospy.Subscriber("control_to_crun", control, control_callback_for_crun)
 
     time.sleep(2)
-    mapping.map_processes()
     rate = rospy.Rate(10) # 10hz
     rt_max = rospy.get_param("max_time_budget")
     drone_radius = rospy.get_param("planner_drone_radius")
+    num_of_processors = rospy.get_param("number_of_processors")
+    mapping.map_processes(num_of_processors)
     v_max = max(rospy.get_param("om_to_pl_vol_ideal_max"), rospy.get_param("ppl_vol_ideal_max"))
     v_min = rospy.get_param("pc_vol_ideal_min")
     budgetting_mode = rospy.get_param("budgetting_mode")

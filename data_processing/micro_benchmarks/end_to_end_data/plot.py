@@ -96,66 +96,6 @@ plt.show()
 
 
 
-"""
-fig, ax = plt.subplots()
-ax.stackplot(x, y)
-plt.show()width = .36
-
-labels = range(0, len(depthToPCConversionLatency))
-#x = plt.subplots()
-fig, ax=plt.subplots()
-ax.bar(labels, runDiagnosticsLatency, width,  label='runDiagnosticsLatency')
-ax.bar(labels, runTimeLatency, width,  bottom=runDiagnosticsLatency, label ="runTimeLatency")
-ax.bar(labels, OMtoPlTotalLatency, width,  bottom=runTimeLatency, label ="OMtoPlTotalLatency")
-ax.bar(labels, insertScanLatency, width,  bottom=OMtoPlTotalLatency, label ="insertScan")
-
-ax.set_ylabel('latency breakdown')
-ax.set_title('time progression progression')
-ax.legend()
-
-"""
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#fig = plt.figure()
-"""
-ax = fig.add_subplot(111, projection='3d')
-
-# -- for point cloud/octomap (data_1/stats.json_om)
-if stage_of_interest == "pc_om_estimation": print(len(pc_res)) print(len(pc_vol_estimated)) print(len(octomap_volume_digested)) ax.scatter(pc_vol_estimated[1000:], octomap_volume_digested[1000:])#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs) #ax.scatter(pc_res[100:], pc_vol_estimated[100:], octomap_volume_digested[100:])#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs) print(pc_res) print(pc_vol_estimated) print(octomap_volume_digested) elif stage_of_interest == "pc_om": print(pc_res) print(octomap_integeration_response_time)
-    ax.scatter(pc_res, pc_vol_actual, octomap_integeration_response_time)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
-elif stage_of_interest == "om_to_pl":
-    ax.scatter(om_to_pl_res, om_to_pl_vol_actual, octomap_to_motion_planner_serialization_to_reception_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
-    #ax.scatter(om_to_pl_res, potential_volume_to_explore_knob_modeling, octomap_to_planner_com_overhead_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
-elif stage_of_interest == "pp_pl":
-    ax.scatter(om_to_pl_res[:-2], ppl_vol_actual_knob_modeling, piecewise_planner_time_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
-else:
-    print("stage of interest:" + stage_of_interest + "not defined")
-    system.exit(0)
-
-# plot
-if (stage_of_interest == "pc_om_estimation"):
-    ax.set_xlabel('pc_vol_estimation')
-    ax.set_ylabel('octomap_volume_digested')
-    ax.set_ylabel('resolution')
-else:
-    ax.set_xlabel('resolution')
-    ax.set_ylabel('estimated volume')
-    ax.set_zlabel('response time (s)');
-ax.legend(loc='best', fontsize="small")
-output_file = "knob_performance_modeling" + ".png"
-"""
 

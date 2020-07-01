@@ -234,6 +234,8 @@
 
 
   <!-- ========================= Run Time ()  ============================ -->
+  <arg name="number_of_processors" default="4" />   
+  <param name="number_of_processors" value="$(arg number_of_processors)"/>
   <arg name="reactive_runtime" default="true" />   
   <arg name="budgetting_mode" default="manual" />    
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
@@ -294,11 +296,15 @@
   <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
   <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
  <!-- ========================= Performance Modeling ()  ============================ -->
-   <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
-  <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen">
+ 
+  <arg name="runtime_launch_prefix" default="echo rur3dd1|sudo -S" /> 
+  <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
+    <!-- comment--> 
+  <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen"> 
     <param name="dummy_val" value="2.0" />
     <param name="rate" value="5" />
   </node>
+  <!-- /comment -->
  <!--node pkg="run_time" type="sys_prof.py" name="sys_prof" output="screen"/-->
  
 

@@ -66,7 +66,8 @@ using namespace std;
 #include <Drone.h>
 //#define N_CAMERAS 6
 
-
+bool set_closest_unknown_point = false;
+bool got_first_unknown = false;
 const std::string camera_names[] = {
     "front",
     "back",
@@ -194,7 +195,6 @@ double g_planner_drone_radius;
 
 
 bool got_new_closest_unknown = true;
-bool got_first_unknown = false;
 geometry_msgs::PointStamped closest_unknown_point;
 geometry_msgs::PointStamped closest_unknown_point_upper_bound; // used if closest_uknown is inf, that's there is not unknown
 
@@ -1919,6 +1919,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 	  return;
   }
 
+  ros::param::set("set_closest_unknown_point", false);
   // -- get knobs from the py_run.
   // the reason that I have used param::get is because didn't want to push all of this into a msg
    ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce);
@@ -2409,11 +2410,20 @@ int main(int argc, char** argv) {
     pc->onInit(); 
     ros::Rate loop_rate(10);
     while (ros::ok()) {
+    	/*
     	double slack = ((pc->sensor_to_actuation_time_budget_to_enforce/2 - pc->follow_trajectory_worse_case_latency) - (ros::Time::now() - pc->deadline_setting_time_stamp).toSec());  // whatever is left of the budget
     	if (slack > 0 && (pc->planning_status == "no_need_to_replan")){ // if we need to plan, continously collect data because we don't know when the planning is gonna be done
-    		//ros::Duration(slack).sleep();
+    		ros::Duration(slack).sleep();
     		;
     	}
-    	pc->spinOnce();//
+    	*/
+    	ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
+    	if (set_closest_unknown_point || !got_first_unknown){
+    		//cout<<"got the new unknown so spinning"<<endl;
+    		pc->spinOnce();//
+    	}else{
+    		//cout<<"din't got unknown ====NOT spinning"<<endl;
+    		loop_rate.sleep();
+    	}
     }
 }
