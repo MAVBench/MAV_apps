@@ -68,6 +68,8 @@ using namespace std;
 
 bool set_closest_unknown_point = false;
 bool got_first_unknown = false;
+string design_mode;
+string budgetting_mode;
 const std::string camera_names[] = {
     "front",
     "back",
@@ -1687,7 +1689,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
     }
 
 
-    if ((got_first_unknown && !got_new_closest_unknown) && !knob_performance_modeling){
+    if ((got_first_unknown && !got_new_closest_unknown) && !knob_performance_modeling && design_mode=="serial"){
     	return;
 	}
 
@@ -2282,6 +2284,15 @@ void PointCloudXyz::onInit()
 
     }
 
+    if(!ros::param::get("/design_mode", design_mode)){
+    	ROS_FATAL_STREAM("Could not start point cloud design_mode not provided");
+    	exit(0);
+    	return ;
+
+    }
+
+
+
     if(!ros::param::get("/sequencer_sampling_rate", sequencer_sampling_rate)){
     	ROS_FATAL_STREAM("Could not start point cloud sequencer_sampling_rate not provided");
     	exit(0);
@@ -2315,6 +2326,17 @@ void PointCloudXyz::onInit()
     	return ;
 
     }
+
+
+    if(!ros::param::get("/budgetting_mode", budgetting_mode)){
+    	ROS_FATAL_STREAM("Could not start point cloud budgetting_mode not provided");
+    	exit(0);
+    	return ;
+
+    }
+
+
+
 
 
     if (knob_performance_modeling){
@@ -2417,12 +2439,18 @@ int main(int argc, char** argv) {
     		;
     	}
     	*/
-    	ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
-    	if (set_closest_unknown_point || !got_first_unknown){
-    		//cout<<"got the new unknown so spinning"<<endl;
-    		pc->spinOnce();//
-    	}else{
-    		//cout<<"din't got unknown ====NOT spinning"<<endl;
+
+    	if (budgetting_mode=="dynamic" && design_mode =="serial") {
+			ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
+			if (set_closest_unknown_point || !got_first_unknown){
+				//cout<<"got the new unknown so spinning"<<endl;
+				pc->spinOnce();//
+			}else{
+				//cout<<"din't got unknown ====NOT spinning"<<endl;
+				loop_rate.sleep();
+			}
+    	}else{ // if static
+			pc->spinOnce();//
     		loop_rate.sleep();
     	}
     }

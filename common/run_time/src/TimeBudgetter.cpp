@@ -7,11 +7,12 @@
 
 #include "TimeBudgetter.h"
 bool first_itr = true; // only for debugging
-TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget, double  drone_radius)
+TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget, double  drone_radius, string design_mode)
 			:sensorActuatorModel_(maxSensorRange, maxVelocity, accelerationCoeffs),
 			timeIncr_(timeIncr),
 			max_time_budget(max_time_budget),
-			drone_radius(drone_radius){}
+			drone_radius(drone_radius),
+			design_mode(design_mode){}
 
 
 
@@ -93,12 +94,12 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double sensorRang
 }
 */
 
-double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, string mode="no_pipelining", double sensor_range=25){
+double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, string design_mode="serial", double sensor_range=25){
 	//double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, this->sensorActuatorModel_.maxSensorRange(), this->sensorActuatorModel_.accelerationCoeffs());
 	double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensor_range, this->sensorActuatorModel_.accelerationCoeffs());
 
 	double next_sampling_time;
-	if (mode == "no_pipelining"){ // this assumes that latency is equal to 1/throughput
+	if (design_mode == "serial"){ // this assumes that latency is equal to 1/throughput
 		next_sampling_time = response_time;  // at this I belive, we just have the entire time
 											 // to dedicate for budget (but remember to remove decision making time
 											 // of this iteration and next iteration from it)
@@ -139,7 +140,7 @@ double TimeBudgetter::calc_budget_till_closest_unknown(multiDOFpoint cur_point, 
 	double velocity_magnitude = get_velocity_projection_mag(cur_point, closest_unknown_point);
 	double sensor_range = calc_dist(cur_point, closest_unknown_point);
 	double latency = 0;
-	return calcSamplingTimeFixV(velocity_magnitude, latency, "no_pipelineing", sensor_range);
+	return calcSamplingTimeFixV(velocity_magnitude, latency, design_mode, sensor_range);
 }
 
 
@@ -182,7 +183,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		ROS_INFO_STREAM("fucked up");
 	}
 	*/
-	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, "no_pipelineing", sensor_range);
+	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, design_mode, sensor_range);
 	double potentialBudgetTillNextSample;  // a place holder that gets updated
 	std::deque<multiDOFpoint>::iterator trajItrTemp =  trajBegin;  //pointing to the sample point we are considering at the moment
 
@@ -204,7 +205,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		velocity_magnitude = get_velocity_projection_mag(point, closest_unknown_point);
 		//velocity_magnitude -= velocity_error;
 		sensor_range = calc_dist(point, closest_unknown_point);
-		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, "no_pipelining", sensor_range);
+		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, design_mode, sensor_range);
 		if (potentialBudgetTillNextSample <= 0) {
 			//std::cout<<"-- shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
 			trajItrTemp +=1;

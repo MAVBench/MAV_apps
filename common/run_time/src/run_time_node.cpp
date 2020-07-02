@@ -35,7 +35,7 @@
 #include <mavbench_msgs/planner_info.h>
 #include <common.h>
 #include "coord.h"
-
+string design_mode;
 using namespace std;
 std::string ip_addr__global;
 double g_sensor_max_range, g_sampling_interval, g_v_max, g_planner_drone_radius;
@@ -213,7 +213,7 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 		return max_time_budget;
 	}
 
-	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
+	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius, design_mode);
 	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", sensor_range);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
 	return time_budget;
@@ -322,7 +322,10 @@ void initialize_global_params() {
 		ROS_FATAL_STREAM("Could not start run_time_node sampling_interval not provided");
         exit(-1);
 	}
-
+	if(!ros::param::get("/design_mode", design_mode)){
+		ROS_FATAL_STREAM("Could not start run_time_node sampling_interval not provided");
+        exit(-1);
+	}
 
 	if(!ros::param::get("/DEBUG_VIS", DEBUG_VIS)){
 		ROS_FATAL_STREAM("Could not start run_time_node DEBUG_VIS not provided");
@@ -1030,7 +1033,7 @@ int main(int argc, char **argv)
 	{
 		ros::spinOnce();
 
-    	time_budgetter = new TimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
+    	time_budgetter = new TimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius, design_mode);
 
     	//bool is_empty = callback_queue_1.empty();
     	//bool is_empty_2 = callback_queue_2.empty();
