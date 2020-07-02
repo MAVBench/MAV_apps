@@ -21,6 +21,13 @@
 #include <mavbench_msgs/planner_info.h>
 using namespace std;
 
+int planning_success_ctr = 0;
+int planning_ctr = 0;
+int decision_ctr = 0;
+int runtime_failure_ctr = 0;
+int traj_gen_failure_ctr  = 0;
+
+
 // Trajectories
 trajectory_t trajectory;
 trajectory_t reverse_trajectory;
@@ -104,7 +111,12 @@ double distance(const P1& p1, const P2& p2) {
 
 void log_data_before_shutting_down()
 {
-    std::cout << "\n\nMax velocity reached by drone: " << g_max_velocity_reached << "\n" << std::endl;
+	profiling_container->capture("decision_ctr", "single", decision_ctr, 1);
+	profiling_container->capture("planning_ctr", "single", planning_ctr, 1);
+	profiling_container->capture("planning_success_ctr", "single",planning_success_ctr , 1);
+	profiling_container->capture("runtime_failure_ctr", "single",runtime_failure_ctr, 1);
+	profiling_container->capture("traj_gen_failure_ctr", "single",traj_gen_failure_ctr, 1);
+	std::cout << "\n\nMax velocity reached by drone: " << g_max_velocity_reached << "\n" << std::endl;
     profiling_container->setStatsAndClear();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
@@ -215,6 +227,8 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 //call back function to receive timing msgs_from_mp. Using this, we reset the vector because this means
 //that we have already made a decision to not make a traj for those imgs
 void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::ConstPtr& msg) {
+
+
 	closest_unknown_point = msg->closest_unknown_point;
 	erase_up_to_msg(msg->header, "timing_msgs_from_mp_callback");
     if (msg->planning_status == "first_time_planning") {
@@ -252,9 +266,11 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	debug_data.slack.actual.control_flow =  -1;
 	debug_data.slack.actual.total = -1;
 
+	/*
 	if (!debug_data.controls.cmds.log_control_data){
 		return;
 	}
+	*/
 
 
 	// calculate the error
@@ -274,13 +290,14 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 
 	// space
 	// space error is caused by the enforcement (operators)
-	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res)/msg->ee_profiles.expected_cmds.pc_res;
-	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
-	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
-	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
+	//debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res)/msg->ee_profiles.expected_cmds.pc_res;
+	//debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
+	//debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
+	//debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
 
 	if (msg->ee_profiles.control_flow_path >= 1) { // up to  smootheing planning success
-		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol)/msg->ee_profiles.expected_cmds.ppl_vol;
+;
+		//	debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol)/msg->ee_profiles.expected_cmds.ppl_vol;
 	}
 	// slack
 	// forced is caused by dataflow control
@@ -308,6 +325,22 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 		debug_data.slack.actual.data_flow = actual_total_slack;
 		debug_data.slack.actual.control_flow = 0;
 	}
+
+	if (msg->closest_unknown_point.planning_status == "no_planning_needed") {
+		;
+	}else {
+		if (msg->closest_unknown_point.planning_status == "success") {
+			planning_success_ctr +=1;
+		}else if (msg->closest_unknown_point.planning_status == "runtime_failure") {
+			runtime_failure_ctr +=1;
+		}else{
+			traj_gen_failure_ctr +=1;
+		}
+		planning_ctr +=1;
+	}
+	decision_ctr +=1 ;
+
+
 
 	profiling_container->capture("depthToPCConversionLatency", "single", msg->ee_profiles.time_stats.depthToPCConversionLatency, 1);
 	profiling_container->capture("runDiagnosticsLatency","single",msg->ee_profiles.time_stats.runDiagnosticsLatency, 1);
@@ -489,6 +522,7 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 
 void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, Drone * drone)
 {
+
 	//for profiling SA
 	erase_up_to_msg(msg->header, "callback_trajectory"); //erase the predecessors of the msg that currently reside in the timing_msgs_vec
 	closest_unknown_point = msg->closest_unknown_point;
@@ -608,11 +642,27 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	debug_data.slack.actual.total = -1;
 
 
+	if (msg->closest_unknown_point.planning_status == "no_planning_needed") {
+		;
+	}else {
+		if (msg->closest_unknown_point.planning_status == "success") {
+			planning_success_ctr +=1;
+		}else if (msg->closest_unknown_point.planning_status == "runtime_failure") {
+			runtime_failure_ctr +=1;
+		}else{
+			traj_gen_failure_ctr +=1;
+		}
+		planning_ctr +=1;
+	}
+	decision_ctr +=1 ;
+
+
+
+	/*
 	if (!debug_data.controls.cmds.log_control_data){
 		return;
 	}
-
-
+	*/
 
 	// calculate the error
 	// time error is caused by a combination of models(governer) and enforcement(operators)
@@ -631,15 +681,16 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 	// space
 	// space error is caused by the enforcement (operators)
-	debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res)/msg->ee_profiles.expected_cmds.pc_res;
-	debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
-	debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
-	debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
+	//debug_data.error.space.pc_res= fabs(msg->ee_profiles.actual_cmds.pc_res-  msg->ee_profiles.expected_cmds.pc_res)/msg->ee_profiles.expected_cmds.pc_res;
+	//debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
+	//debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
+	//debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
 
 
 
 	if (msg->ee_profiles.control_flow_path >= 1) { // up to  smootheing planning success
-		debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol)/msg->ee_profiles.expected_cmds.ppl_vol;
+;
+		///	debug_data.error.space.ppl_vol = fabs(msg->ee_profiles.actual_cmds.ppl_vol -  msg->ee_profiles.expected_cmds.ppl_vol)/msg->ee_profiles.expected_cmds.ppl_vol;
 	}
 	// slack
 	// forced is caused by dataflow control
@@ -1082,8 +1133,8 @@ int main(int argc, char **argv)
         debug_data.stop = stop;
         debug_data.header.stamp = ros::Time::now();
         debug_data.replanning_reason = replanning_reason;
-        //debug_data.planning_failure_short_time = (planning_status == 0) ;
-        //debug_data.planning_failure_inital_state = (planning_status == 1);
+        //debug_data.traj_gen_failure_short_time = (planning_status == 0) ;
+        //debug_data.traj_gen_failure_inital_state = (planning_status == 1);
         //debug_data.planning_success = (planning_status == 2);
         debug_data.vel_magnitude = profiling_container->findDataByName("velocity")->values.back();
         debug_data.entire_follow_trajectory = profiling_container->findDataByName("entire_follow_trajectory")->values.back();

@@ -214,7 +214,7 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 	}
 
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius, design_mode);
-	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, "no_pipelining", sensor_range);
+	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, design_mode, sensor_range);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
 	return time_budget;
 }

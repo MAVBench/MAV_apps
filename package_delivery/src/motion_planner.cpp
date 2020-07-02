@@ -589,7 +589,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			} else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
 				replanning_reason = No_need_to_plan;
 				replan = false;
-				closest_unknown_way_point.planning_status = "no_need_to_replan";
+				closest_unknown_way_point.planning_status = "no_planning_needed";
 				closest_unknown_pub.publish(closest_unknown_way_point);
 				ros::param::set("/set_closest_unknown_point", true);
 				msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
@@ -939,6 +939,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
     if (piecewise_path.empty() || (status == 3 && !take_approximate) || (status == 0)) {
 		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
+		msg_for_follow_traj.closest_unknown_point.planning_status = "ppl_failed";
 		closest_unknown_way_point.planning_status = "ppl_failed";
 		closest_unknown_pub.publish(closest_unknown_way_point);
 		ros::param::set("/set_closest_unknown_point", true);
@@ -1124,6 +1125,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 		res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+		res.multiDOFtrajectory.closest_unknown_point.planning_status = "smoothening_failed";
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
@@ -1139,6 +1141,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     res.multiDOFtrajectory.planning_status = "success";
     got_new_next_steps_since_last_attempted_plan = false;
     res.multiDOFtrajectory.controls = msg_for_follow_traj.controls;
+    res.multiDOFtrajectory.closest_unknown_point= msg_for_follow_traj.closest_unknown_point;
+    res.multiDOFtrajectory.closest_unknown_point.planning_status = "success";
     res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
     //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 	res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
@@ -2687,7 +2691,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		}
 	}
 
-	closest_unknown_way_point.planning_status = "planning_succeeded";
+	closest_unknown_way_point.planning_status = "success";
 	/*
 	cout<<"--------------------------"<<endl;
 	cout<<"====================== modified"<<endl;

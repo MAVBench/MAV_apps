@@ -234,9 +234,9 @@
 
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="number_of_processors" default="4" />   
+  <arg name="number_of_processors" default="1" />   
   <param name="number_of_processors" value="$(arg number_of_processors)"/>
-   <arg name="design_mode" default="parallel" />   
+   <arg name="design_mode" default="serial" />   
   <param name="design_mode" value="$(arg design_mode)"/>
   
   
