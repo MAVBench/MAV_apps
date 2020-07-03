@@ -1903,6 +1903,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  if (om_to_pl_vol_ideal <= tree_total_volume){
 	 om_to_pl_vol_maximum_underestimated = false;
  }
+ //ROS_INFO_STREAM("total volume is"<<tree_total_volume);
  while (true){
 	 om_to_pl_vol_actual = 0;
 	 octomap_block_vec.clear();
@@ -1927,10 +1928,11 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 			 if (std::find(octomap_block_vec.begin(), octomap_block_vec.end(),m_octree_block) !=octomap_block_vec.end()) {
 				 continue;
 			 }
-			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
+			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
 			 octomap_block_vec.push_back(m_octree_block);
 		 }
 	 }
+	 //ROS_INFO_STREAM("om_to_pl_vol_actual"<<om_to_pl_vol_actual);
 	 // -- if exceed the threshold, break
 	 error = fabs(om_to_pl_vol_ideal - om_to_pl_vol_actual)/om_to_pl_vol_ideal;
 	 if (error < .05 || binary_search_cntr > binary_search_cntr_threshold) {

@@ -257,7 +257,7 @@ MotionPlanner::MotionPlanner(octomap::OcTree * octree_, Drone * drone_):
 		{
 
 
-	vmax_filter_queue = new FilterQueue(5);
+	vmax_filter_queue = new FilterQueue(3);
 	motion_planning_initialize_params();
     g_goal_pos.x = g_goal_pos.y = g_goal_pos.z = nan("");
 	// Create a new callback queue

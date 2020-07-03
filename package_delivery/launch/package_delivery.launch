@@ -25,7 +25,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="8"/> 
+  <arg name="v_max" default="7"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="3"/>
@@ -234,7 +234,7 @@
 
 
   <!-- ========================= Run Time ()  ============================ -->
-  <arg name="number_of_processors" default="1" />   
+  <arg name="number_of_processors" default="4" />   
   <param name="number_of_processors" value="$(arg number_of_processors)"/>
    <arg name="design_mode" default="serial" />   
   <param name="design_mode" value="$(arg design_mode)"/>

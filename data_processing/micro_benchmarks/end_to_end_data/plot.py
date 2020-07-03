@@ -45,7 +45,11 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "traj_gen_failure_ctr",
 "planning_ctr",
 "decision_ctr",
-"runtime_failure_ctr"
+"runtime_failure_ctr",
+"octomap_volume_integrated",
+"om_to_pl_volume",
+"ppl_volume",
+"time_cmd_received"
 ]
 
 # parse  data
@@ -70,8 +74,13 @@ ppl_latency= result_dict["ppl_latency"]
 smoothening_latency=  result_dict["smoothening_latency"]
 end_to_end_latency =  result_dict["ee_latency"]
 cpu_utilization_for_last_decision = result_dict["cpu_utilization_for_last_decision"][1:] + [100]
+octomap_volume_integrated = result_dict["octomap_volume_integrated"]
+om_to_pl_volume = result_dict["om_to_pl_volume"]
+ppl_volume = result_dict["ppl_volume"]
+time_cmd_received = result_dict["time_cmd_received"]
+
 #width = 10.0/len(depthToPCConversionLatency)
-x = range(0, len(runDiagnosticsLatency))
+x = time_cmd_received;#range(0, len(runDiagnosticsLatency))
 #y = np.vstack([y1, y2, y3])
 #y= np.vstack([runDiagnosticsLatency, runTimeLatency, OMtoPlTotalLatency, insertScanLatency])
 labels = ["runDiagnosticsLatency", "runTimeLatency", "sequencerLatency", "PCFilteringLatency", "PCtoOMTotalLatency", "OMFilterOutOfRangeLatency",   "insertScanLatency", 
@@ -91,10 +100,23 @@ plt.show()
 
 
 fig, ax = plt.subplots()
-ax.plot(x, end_to_end_latency, label=" en_to_end_latency")
+ax.plot(x, end_to_end_latency, label=" end_to_end_latency")
 ax.plot(x, cpu_utilization_for_last_decision, label="cpu_utilization ")
 ax.legend(loc='upper left')
 output_file = "utilization" + ".png"
+#plt.show()
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
+plt.show()
+
+
+fig, ax = plt.subplots()
+ax.plot(x, octomap_volume_integrated, label="octomap_volume")
+ax.plot(x, ppl_volume, label="ppl_volume")
+ax.plot(x, om_to_pl_volume, label="om_to_pl_volume")
+ax.legend(loc='upper left')
+ax.set_yscale('log')
+output_file = "volume" + ".png"
 #plt.show()
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
@@ -106,7 +128,9 @@ plt.show()
 
 
 
+
 # ------- making the piechart
+ax.set_yscale('linear')
 group_names=['replanning', 'assessing']
 group_size=[int(result_dict["planning_ctr"][0]), int(result_dict["decision_ctr"][0]) - int(result_dict["planning_ctr"][0])]
 subgroup_names=['runtime failure cnt', 'traj gen failure cnt', 'planning success cnt', 'assessing']

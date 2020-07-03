@@ -366,7 +366,9 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("cpu_utilization_for_last_decision","single", msg->ee_profiles.time_stats.cpu_utilization_for_last_decision, 1);
 	profiling_container->capture("cache_misses","single", msg->ee_profiles.time_stats.cache_misses, 1);
 	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
-
+	profiling_container->capture("octomap_volume_integrated","single",  msg->ee_profiles.actual_cmds.pc_vol, 1);
+	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
+	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 }
 
 /*
@@ -744,6 +746,19 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("cpu_utilization_for_last_decision","single", msg->ee_profiles.time_stats.cpu_utilization_for_last_decision, 1);
 	profiling_container->capture("cache_misses","single", msg->ee_profiles.time_stats.cache_misses, 1);
 	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
+
+	profiling_container->capture("octomap_volume_integrated","single",  msg->ee_profiles.actual_cmds.pc_vol, 1);
+	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
+	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
+
+	//debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
+	//debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
+	//debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;
+
+
+
+
+
 }
 
 

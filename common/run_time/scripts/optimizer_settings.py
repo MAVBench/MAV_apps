@@ -5,15 +5,15 @@ pl_to_ppl_ratio = 2  # this is there because we set the smoothening time equal t
 # since we don't have knobs for smoothening (so we haven't included it as a stage)
 
 # latency of the stages we didn't include in the optimizer formulation
-run_diagnostics = .15
-filtering = .400
+run_diagnostics = .05
+filtering = .200
 depth_img_latency = .1
 front_end_latency = run_diagnostics + filtering + depth_img_latency # this is all for runtime
 #front_end_latency = 0 
 
-pc_to_om_oh = .3
-runtime_latency = .2 # this does include point cloud intro (i.e, generating point cloud and running diagnostics)
-pc_outro = .1 # filtering and such
+pc_to_om_oh = .02
+runtime_latency = .05 # this does include point cloud intro (i.e, generating point cloud and running diagnostics)
+pc_outro = .01 # filtering and such
 follow_trajectory_latency = .1
 back_end_latency = runtime_latency + pc_outro +  pc_to_om_oh + follow_trajectory_latency 
 #misc_latency = front_end_latency + back_end_latency # time of the stages not included in the controller
