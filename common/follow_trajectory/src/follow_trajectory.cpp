@@ -776,9 +776,6 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 		profiling_container->capture("pl_to_ft_totalLatency","single",  0, 1);
 	}
 
-
-
-
 	//debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
 	//debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
 	//debug_data.error.space.om_to_pl_vol = fabs(msg->ee_profiles.actual_cmds.om_to_pl_vol -  msg->ee_profiles.expected_cmds.om_to_pl_vol)/msg->ee_profiles.expected_cmds.om_to_pl_vol;

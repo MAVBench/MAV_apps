@@ -1892,7 +1892,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  // -- expand MapToTransferSideLength untill you hit the volume target
  int upper_bound_MapToTransferSideLength  = int(max(map_max_length, (float) (1.2*m_maxRange))) + 1; // adding one, because later, when converting from float to int, we are essentially rounding down
  int lower_bound_MapToTransferSideLength  = 5;
- int binary_search_cntr_threshold = 60;
+ int binary_search_cntr_threshold = 9;
  int binary_search_cntr= 0;
  double error = INFINITY;
  MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
