@@ -2096,8 +2096,8 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   // serialize
   profiling_container.capture("octomap_serialization_time", "start", ros::Time::now(), capture_size);
   if (binaryMapToMsgModified(*m_octree_shrunk, map, volume_communicated_in_unit_cubes,m_res_original, lower_res_map_depth)){
-	  int serialization_length = ros::serialization::serializationLength(map);
-	  profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
+	  //int serialization_length = ros::serialization::serializationLength(map);
+	  //profiling_container.capture("octomap_serialization_load_in_BW", "single", (double) serialization_length, capture_size);
 	  //map.header.stamp = rostime;
 	  map.header.stamp = ros::Time::now();
 	  octomap_aug_data.header.stamp = ros::Time::now();
@@ -2105,6 +2105,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.space_stats.pc_vol_maxium_underestimated = pc_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_vol_maxium_underestimated = om_to_pl_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
+	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_datamovement = ros::serialization::serializationLength(map);
 	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();

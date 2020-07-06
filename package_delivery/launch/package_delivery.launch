@@ -239,7 +239,16 @@
    <arg name="design_mode" default="serial" />   
   <param name="design_mode" value="$(arg design_mode)"/>
   
+  <arg name="hw_sampling_method" default="decision_based" />   
+  <param name="hw_sampling_method" value="$(arg hw_sampling_method)"/>
+  <!-- arg name="hw_sampling_method" default="time_based" /-->   
   
+  <arg name="time_sampling_rate" default=".5" />   
+  <param name="time_sampling_rate" value="$(arg time_sampling_rate)"/>
+  <arg name="decision_sampling_rate" default="10" />   
+  <param name="decision_sampling_rate" value="$(arg time_sampling_rate)"/>
+
+
   <arg name="reactive_runtime" default="true" />   
   <arg name="budgetting_mode" default="manual" />    
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
@@ -266,7 +275,7 @@
  <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
  <arg name="pc_vol_ideal_min" default="2900" />   
  <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
- <arg name="pc_vol_ideal_max" default="50000" />   
+ <arg name="pc_vol_ideal_max" default="700000" />   
  <param name="pc_vol_ideal_max" value="$(arg pc_vol_ideal_max)"/>
  <arg name="om_to_pl_vol_ideal_max" default="5000000" />   
  <param name="om_to_pl_vol_ideal_max" value="$(arg om_to_pl_vol_ideal_max)"/>
@@ -308,6 +317,7 @@
     <param name="dummy_val" value="2.0" />
     <param name="rate" value="5" />
   </node>
+ <node pkg="run_time" type="collect_perf_counters.py" name="collect_perf_counters" output="screen"/>
   <!-- /comment -->
  <!--node pkg="run_time" type="sys_prof.py" name="sys_prof" output="screen"/-->
  
@@ -350,7 +360,7 @@
 
   <arg name="gridSliceCountPerSide" default="2" />
   <arg name="gridMode" default="3d" />
-  <arg name="voxel_type_to_publish" default="occupied" />
+  <arg name="voxel_type_to_publish" default="free" />
  
   <param name="voxel_type_to_publish" value="$(arg voxel_type_to_publish)" />
   <param name="occupancy_max_z" value="$(arg point_cloud_max_z)" />

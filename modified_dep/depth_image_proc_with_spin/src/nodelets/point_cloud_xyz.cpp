@@ -84,6 +84,8 @@ namespace depth_image_proc {
 namespace enc = sensor_msgs::image_encodings;
 geometry_msgs::PointStamped unknown_point_converted_to_pc_coord; // by default it's set to 0,0  (basically same as the pc cetner unless modified)
 																 // this is used to calculate the bucket radius (and also the maximum bucket radius)
+double PERF_COUNT_HW_INSTRUCTIONS;
+double LLC_REFERENCES, CACHE_REFERENCES;
 
 float sensor_max_range;
 double point_cloud_max_z;
@@ -1900,6 +1902,9 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   ros::param::get("/log_control_data", log_control_data);
   ros::param::get("/cpu_utilization_for_last_decision", cpu_utilization_for_last_decision);
   ros::param::get("/cache_misses", cache_misses);
+  ros::param::get("/PERF_COUNT_HW_INSTRUCTIONS", PERF_COUNT_HW_INSTRUCTIONS);
+  ros::param::get("/LLC_REFERENCES", LLC_REFERENCES);
+  ros::param::get("/CACHE_REFERENCES", CACHE_REFERENCES);
   //ROS_INFO_STREAM("cpu_utizliation_for_last_Decitions"<< cpu_utilization_for_last_decision<<" %");
 
 
@@ -1914,6 +1919,15 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 	  rtf_msg.controls.cmds.optimizer_succeeded = optimizer_succeeded;
 	  rtf_msg.controls.cmds.optimizer_failure_status = optimizer_failure_status;
 	  rtf_msg.controls.cmds.log_control_data = log_control_data;
+	  rtf_msg.ee_profiles.time_stats.runDiagnosticsLatency = profiling_container->findDataByName("runDiagnosticsLatency")->values.back();
+	  rtf_msg.ee_profiles.time_stats.depthToPCConversionLatency= profiling_container->findDataByName("depthToPCConversionLatency")->values.back();
+	  rtf_msg.ee_profiles.time_stats.runTimeLatency = profiling_container->findDataByName("runTimeLatency")->values.back();
+	  rtf_msg.ee_profiles.time_stats.cpu_utilization_for_last_decision = cpu_utilization_for_last_decision;
+	  rtf_msg.ee_profiles.time_stats.cache_misses = cache_misses;
+	  rtf_msg.ee_profiles.time_stats.PERF_COUNT_HW_INSTRUCTIONS = PERF_COUNT_HW_INSTRUCTIONS;
+	  rtf_msg.ee_profiles.time_stats.LLC_REFERENCES = LLC_REFERENCES;
+	  rtf_msg.ee_profiles.time_stats.CACHE_REFERENCES = CACHE_REFERENCES;
+	  rtf_msg.ee_profiles.actual_time.img_capture_time_stamp = img_capture_time_stamp;
 	  runtime_failure_pub.publish(rtf_msg);
 	  debug_data.header.stamp = ros::Time::now();
 	  debug_data.optimizer_failure_status = optimizer_failure_status;
@@ -1974,12 +1988,22 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   sensor_msgs::PointCloud2Iterator<float> new_x(*cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> new_y(*cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> new_z(*cloud_msg, "z");
-
+/*
   for(size_t i=0; i<xs_best.size(); ++i, ++new_x, ++new_y, ++new_z){
       *new_x = xs_best[i];
       *new_y = ys_best[i];
       *new_z = zs_best[i];
   }
+*/
+   for(size_t i=0; i<xs_best.size(); ++i, ++new_x, ++new_y, ++new_z){
+      *new_x = xs_best[i];
+      *new_y = ys_best[i];
+      *new_z = zs_best[i];
+  }
+
+
+
+
   mavbench_msgs::point_cloud_aug pcl_aug_data;
   pcl_aug_data.header = cloud_msg->header;
   pcl_aug_data.pcl = *cloud_msg;
@@ -2006,9 +2030,9 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   pcl_aug_data.ee_profiles.time_stats.PCFilteringLatency= profiling_container->findDataByName("PCFilteringLatency")->values.back();
   pcl_aug_data.ee_profiles.time_stats.cpu_utilization_for_last_decision = cpu_utilization_for_last_decision;
   pcl_aug_data.ee_profiles.time_stats.cache_misses = cache_misses;
-
-
-
+  pcl_aug_data.ee_profiles.time_stats.PERF_COUNT_HW_INSTRUCTIONS = PERF_COUNT_HW_INSTRUCTIONS;
+  pcl_aug_data.ee_profiles.time_stats.LLC_REFERENCES = LLC_REFERENCES;
+  pcl_aug_data.ee_profiles.time_stats.CACHE_REFERENCES = CACHE_REFERENCES;
   // -- for profiling purposes
   double pc_vol_estimated = 0;
   pcl_aug_data.ee_profiles.space_stats.pc_vol_estimated = pc_vol_estimated; // this is the estimation not the actual. Note that the actuall value can not be determined
@@ -2033,6 +2057,9 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   pcl_aug_data.ee_profiles.actual_time.pc_pre_pub_time_stamp = ros::Time::now();
   pcl_aug_data.ee_profiles.actual_time.img_capture_time_stamp = img_capture_time_stamp;
   pcl_aug_data.ee_profiles.actual_time.deadline_setting_time_stamp = deadline_setting_time_stamp;
+  pcl_aug_data.ee_profiles.space_stats.pc_to_om_datamovement= ros::serialization::serializationLength(pcl_aug_data.pcl);
+
+
 
   if (DEBUG_VIS){
 	  pub_point_cloud_.publish (*cloud_msg);

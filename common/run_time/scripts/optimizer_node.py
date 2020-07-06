@@ -309,6 +309,7 @@ def control_callback(control):
     rospy.set_param("new_control_data", True)
     """
 
+num_of_processors  = 0
 if __name__ == '__main__':
     global num_of_processors 
     #op_obj = Opt()

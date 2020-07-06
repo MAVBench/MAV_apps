@@ -29,9 +29,9 @@ def calculate_static_values():
 
 
     om_res_desired = om_pl_res_desired=pp_pl_res_desired = .3
-    om_vol_desired = 30000
-    om_pl_vol_desired = 3*30000
-    pp_pl_vol_desired = 3*30000
+    om_vol_desired = 50000
+    om_pl_vol_desired = 3*50000
+    pp_pl_vol_desired = 3*50000
     visibility_avg = 12.5 
 
     om_latency = calculate_fitted_value(om_popt, om_res_desired, om_vol_desired, typical_model)

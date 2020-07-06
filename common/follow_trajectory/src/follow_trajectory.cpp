@@ -7,6 +7,7 @@
 #include "common.h"
 #include "Drone.h"
 #include <std_msgs/Bool.h>
+#include <std_msgs/Time.h>
 #include <profile_manager/profiling_data_srv.h>
 #include <profile_manager/start_profiling_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
@@ -365,10 +366,15 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("time_cmd_received","single", (ros::Time::now() - first_cmd_time).toSec(), 1);
 	profiling_container->capture("cpu_utilization_for_last_decision","single", msg->ee_profiles.time_stats.cpu_utilization_for_last_decision, 1);
 	profiling_container->capture("cache_misses","single", msg->ee_profiles.time_stats.cache_misses, 1);
+	profiling_container->capture("PERF_COUNT_HW_INSTRUCTIONS","single", msg->ee_profiles.time_stats.PERF_COUNT_HW_INSTRUCTIONS/1000000, 1);
+	profiling_container->capture("LLC_REFERENCES","single", msg->ee_profiles.time_stats.LLC_REFERENCES/1000000, 1);
+	profiling_container->capture("CACHE_REFERENCES","single", msg->ee_profiles.time_stats.CACHE_REFERENCES/1000000, 1);
 	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
 	profiling_container->capture("octomap_volume_integrated","single",  msg->ee_profiles.actual_cmds.pc_vol, 1);
 	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
+	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
+	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
 }
 
 /*
@@ -745,11 +751,18 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("time_cmd_received","single", (ros::Time::now() - first_cmd_time).toSec(), 1);
 	profiling_container->capture("cpu_utilization_for_last_decision","single", msg->ee_profiles.time_stats.cpu_utilization_for_last_decision, 1);
 	profiling_container->capture("cache_misses","single", msg->ee_profiles.time_stats.cache_misses, 1);
+	profiling_container->capture("PERF_COUNT_HW_INSTRUCTIONS","single", msg->ee_profiles.time_stats.PERF_COUNT_HW_INSTRUCTIONS/1000000, 1);
+	profiling_container->capture("LLC_REFERENCES","single", msg->ee_profiles.time_stats.LLC_REFERENCES/1000000, 1);
+	profiling_container->capture("CACHE_REFERENCES","single", msg->ee_profiles.time_stats.CACHE_REFERENCES/1000000, 1);
 	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
 
 	profiling_container->capture("octomap_volume_integrated","single",  msg->ee_profiles.actual_cmds.pc_vol, 1);
 	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
+	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
+	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
+
+
 
 	//debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
 	//debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
@@ -902,7 +915,11 @@ int main(int argc, char **argv)
     double p_vz = p_vz_original;
     initialize_global_params();
 
+    ros::Publisher first_cmd_time_pub = n.advertise<std_msgs::Time>("/first_cmd_time_received_topic", 1);
     first_cmd_time = ros::Time::now();
+    std_msgs::Time first_cmd_time_msg;
+    first_cmd_time_msg.data = first_cmd_time;
+    //first_cmd_time_pub.publish(first_cmd_time_msg);
     // Initialize the drone
     std::string localization_method;
     std::string ip_addr;
@@ -951,7 +968,13 @@ int main(int argc, char **argv)
     bool knob_performance_modeling_for_piecewise_planner = false;
     ros::Rate loop_rate(g_follow_trajectory_loop_rate);
     ros::Time last_time_following = ros::Time::now();
+    //bool first_itr = false;
+    int first_itr_ctr = 0; // for sending the first_cmd_time. right now we send it mutliple times, because it wasn't working when sending only once
     while (ros::ok()) {
+    	if ((ros::Time::now() - first_cmd_time_msg.data).toSec() < 15){
+    		first_cmd_time_pub.publish(first_cmd_time_msg);
+    	}
+
     	profiling_container->capture("entire_follow_trajectory", "start", ros::Time::now(), g_capture_size);
     	ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
 

@@ -454,6 +454,7 @@ void MotionPlanner::runtime_failure_cb(const mavbench_msgs::runtime_failure_msg 
     traj.reverse = false;
     traj.stop = true;
     traj.controls = msg.controls;
+    traj.ee_profiles = msg.ee_profiles;
     trajectory_seq_id++;
     mavbench_msgs::planner_info closest_unknown_way_point;
     closest_unknown_way_point.x = nan("");
