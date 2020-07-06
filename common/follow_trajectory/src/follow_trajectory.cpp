@@ -230,6 +230,8 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::ConstPtr& msg) {
 
 
+
+	auto pl_to_ft_totalLatency = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 	closest_unknown_point = msg->closest_unknown_point;
 	erase_up_to_msg(msg->header, "timing_msgs_from_mp_callback");
     if (msg->planning_status == "first_time_planning") {
@@ -375,6 +377,11 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
 	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
+	if (msg->closest_unknown_point.planning_status != "runtime_failure") {
+		profiling_container->capture("pl_to_ft_totalLatency","single",  pl_to_ft_totalLatency, 1);
+	}else{
+		profiling_container->capture("pl_to_ft_totalLatency","single",  0, 1);
+	}
 }
 
 /*
@@ -530,6 +537,8 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 
 void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, Drone * drone)
 {
+
+	auto pl_to_ft_totalLatency = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 
 	//for profiling SA
 	erase_up_to_msg(msg->header, "callback_trajectory"); //erase the predecessors of the msg that currently reside in the timing_msgs_vec
@@ -761,6 +770,12 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
 	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
+	if (msg->closest_unknown_point.planning_status != "runtime_failure") {
+		profiling_container->capture("pl_to_ft_totalLatency","single",  pl_to_ft_totalLatency, 1);
+	}else{
+		profiling_container->capture("pl_to_ft_totalLatency","single",  0, 1);
+	}
+
 
 
 

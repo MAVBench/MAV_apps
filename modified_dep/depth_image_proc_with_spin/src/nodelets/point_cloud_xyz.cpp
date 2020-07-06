@@ -1995,12 +1995,14 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
       *new_z = zs_best[i];
   }
 */
-   for(size_t i=0; i<xs_best.size(); ++i, ++new_x, ++new_y, ++new_z){
+
+  profiling_container->capture("PCLocalSerializationLatency", "start", ros::Time::now(), capture_size);
+  for(size_t i=0; i<xs_best.size(); ++i, ++new_x, ++new_y, ++new_z){
       *new_x = xs_best[i];
       *new_y = ys_best[i];
       *new_z = zs_best[i];
   }
-
+  profiling_container->capture("PCLocalSerializationLatency", "end", ros::Time::now(), capture_size);
 
 
 
@@ -2028,6 +2030,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   pcl_aug_data.ee_profiles.time_stats.runTimeLatency = profiling_container->findDataByName("runTimeLatency")->values.back();
   pcl_aug_data.ee_profiles.time_stats.sequencerLatency= profiling_container->findDataByName("sequencerLatency")->values.back();
   pcl_aug_data.ee_profiles.time_stats.PCFilteringLatency= profiling_container->findDataByName("PCFilteringLatency")->values.back();
+  pcl_aug_data.ee_profiles.time_stats.PCLocalSerializationLatency= profiling_container->findDataByName("PCLocalSerializationLatency")->values.back();
   pcl_aug_data.ee_profiles.time_stats.cpu_utilization_for_last_decision = cpu_utilization_for_last_decision;
   pcl_aug_data.ee_profiles.time_stats.cache_misses = cache_misses;
   pcl_aug_data.ee_profiles.time_stats.PERF_COUNT_HW_INSTRUCTIONS = PERF_COUNT_HW_INSTRUCTIONS;

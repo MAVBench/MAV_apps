@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('../../common_utils')
 from data_parsing import *
 import seaborn as sns
-col = sns.color_palette("Paired", 11)
+col = sns.color_palette("Paired", 111111)
 stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl", "pc_om_estimation"]
 
 hw_sampling_method = "decision_based"
@@ -43,6 +43,7 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "OMtoPlTotalLatency",
 "smoothening_latency",
 "ppl_latency",
+"pl_to_ft_totalLatency",
 "ee_latency",
 "cpu_utilization_for_last_decision",
 "planning_success_ctr",
@@ -81,6 +82,8 @@ OMDeserializationLatency = result_dict["OMDeserializationLatency"]
 OMtoPlTotalLatency =  result_dict["OMtoPlTotalLatency"]
 ppl_latency= result_dict["ppl_latency"]
 smoothening_latency=  result_dict["smoothening_latency"]
+pl_to_ft_total_latency =  [0] + result_dict["pl_to_ft_totalLatency"][1:]
+
 end_to_end_latency =  result_dict["ee_latency"]
 cpu_utilization_for_last_decision = result_dict["cpu_utilization_for_last_decision"][1:] + [100]
 octomap_volume_integrated = result_dict["octomap_volume_integrated"]
@@ -96,11 +99,12 @@ pc_to_om_datamovement = result_dict["pc_to_om_datamovement"]
 om_to_pl_datamovement = result_dict["om_to_pl_datamovement"]
 
 x = time_cmd_received;#range(0, len(runDiagnosticsLatency))
-labels = ["runDiagnosticsLatency", "runTimeLatency", "sequencerLatency", "PCFilteringLatency", "PCtoOMTotalLatency", "OMFilterOutOfRangeLatency",   "insertScanLatency", 
-        "OMtoPlTotalLatency", "ppl_latency", "smoothening_latency"]
+labels = ["depthToPCConversionLatency", "runDiagnosticsLatency", "runTimeLatency", "sequencerLatency", "PCFilteringLatency", "PCtoOMTotalLatency", "OMFilterOutOfRangeLatency",   "insertScanLatency", "OMFilteringLatency", 
+        "OMtoPlTotalLatency", "ppl_latency", "smoothening_latency", "pl_to_ft_total_latency"]
 
-data_list = [runDiagnosticsLatency, runTimeLatency, sequencerLatency, PCFilteringLatency, PCtoOMTotalLatency, OMFilterOutOfRangeLatency, insertScanLatency,
-        OMtoPlTotalLatency, ppl_latency, smoothening_latency]
+data_list = [depthToPCConversionLatency, runDiagnosticsLatency, runTimeLatency, sequencerLatency, PCFilteringLatency, PCtoOMTotalLatency, OMFilterOutOfRangeLatency, insertScanLatency,
+        OMFilteringLatency,
+        OMtoPlTotalLatency, ppl_latency, smoothening_latency, pl_to_ft_total_latency]
 fig, ax = plt.subplots()
 ax.stackplot(x, *data_list, labels=labels, colors = col)
 ax.legend(loc='best')

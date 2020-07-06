@@ -67,6 +67,8 @@ def calculate_static_values():
     json_output_file.write("\t\t\"use_pyrun\": " + str("false")+",\n");
     json_output_file.write("\t\t\"knob_performance_modeling\": " + str("false")+", \n");
     json_output_file.write("\t\t\"planner_drone_radius\": " + str(1.2)+", \n");
+    json_output_file.write("\t\t\"capture_size\": " + str(1)+", \n");
+    json_output_file.write("\t\t\"DEBUG_VIS\": " + str("false")+", \n");
     json_output_file.write("\t\t\"planner_drone_radius_when_hovering\": " + str(1.2)+"\n");
     json_output_file.write("}")
     json_output_file.close()
@@ -90,6 +92,8 @@ def calculate_static_values():
     script_output_file.write("om_to_pl_vol_ideal_max:=" + str(om_pl_vol_desired)+" ");
     script_output_file.write("ppl_vol_ideal_max:="+ str(pp_pl_vol_desired) + " ");
     script_output_file.write("planner_drone_radius:="+ str(1.2) + " ");
+    script_output_file.write("capture_size:="+ str(1) + " ");
+    script_output_file.write("DEBUG_VIS:="+ str("false") + " ");
     script_output_file.write("planner_drone_radius_when_hovering:="+ str(1.2) + " ");
     script_output_file.close()
 

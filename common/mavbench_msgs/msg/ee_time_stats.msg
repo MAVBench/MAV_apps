@@ -3,6 +3,8 @@ float32 runDiagnosticsLatency
 float32 runTimeLatency
 float32 sequencerLatency
 float32 PCFilteringLatency
+float32 PCLocalSerializationLatency
+
 
 float32 PCtoOMComOHLatency
 float32 PCDeserializationLatency
@@ -15,6 +17,7 @@ float32 OMSerializationLatency
 float32 OMtoPlComOHLatency
 float32 OMDeserializationLatency
 float32 OMtoPlTotalLatency
+float32 pl_pre_pub_time_stamp
 
 
 float32 cpu_utilization_for_last_decision

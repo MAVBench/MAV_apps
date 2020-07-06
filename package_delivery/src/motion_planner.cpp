@@ -1007,6 +1007,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     	res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
         res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
+        res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
@@ -1034,6 +1035,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
     volume_explored_in_unit_cubes = 0;
 
+    auto ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
     draw_piecewise(piecewise_path, status, &piecewise_traj_markers);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
 
@@ -1098,6 +1100,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			if (!measure_time_end_to_end) { msg_for_follow_traj.header.stamp = ros::Time::now(); }
 			else{ msg_for_follow_traj.header.stamp = req.header.stamp; }
 			msg_for_follow_traj.closest_unknown_point.planning_status = "smoothening_failed";
+			msg_for_follow_traj.ee_profiles.actual_time.ppl_latency= ppl_latency;
 			msg_for_follow_traj.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 //			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
@@ -1123,7 +1126,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
         res.multiDOFtrajectory.closest_unknown_point= msg_for_follow_traj.closest_unknown_point;
         //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
-		res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
+        res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = ppl_latency;
+        res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 		res.multiDOFtrajectory.closest_unknown_point.planning_status = "smoothening_failed";
@@ -1145,9 +1149,12 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     res.multiDOFtrajectory.closest_unknown_point= msg_for_follow_traj.closest_unknown_point;
     res.multiDOFtrajectory.closest_unknown_point.planning_status = "success";
     res.multiDOFtrajectory.ee_profiles = msg_for_follow_traj.ee_profiles;
+    res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = ppl_latency;
     //res.multiDOFtrajectory.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 	res.multiDOFtrajectory.ee_profiles.actual_time.smoothening_latency = (ros::Time::now() - smoothening_start_time_stamp_).toSec();
-    //res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
+    res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
+    //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
+	//res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
     //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 	res.multiDOFtrajectory.ee_profiles.control_flow_path = 2;
     traj_pub.publish(res.multiDOFtrajectory);

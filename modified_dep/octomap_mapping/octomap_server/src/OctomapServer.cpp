@@ -504,7 +504,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	pcl::fromROSMsg(cloud_, pc);
 	profiling_container.capture(std::string("PCDeserializationLatency"), "end", ros::Time::now(), capture_size);
 	octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency =  profiling_container.findDataByName("PCDeserializationLatency")->values.back();
-	octomap_aug_data.ee_profiles.time_stats.PCtoOMTotalLatency =  octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency  + octomap_aug_data.ee_profiles.time_stats.PCtoOMComOHLatency;
+	octomap_aug_data.ee_profiles.time_stats.PCtoOMTotalLatency = octomap_aug_data.ee_profiles.time_stats.PCLocalSerializationLatency + octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency  + octomap_aug_data.ee_profiles.time_stats.PCtoOMComOHLatency;
 
 
 	profiling_container.capture("OMFilterOutOfRangeLatency", "start", ros::Time::now(), capture_size); //collect data
