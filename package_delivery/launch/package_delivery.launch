@@ -41,6 +41,8 @@
   <param name="planner_drone_radius" value="$(arg planner_drone_radius)"/>
   <arg name="planner_drone_radius_when_hovering" default=".75"/>
   <param name="planner_drone_radius_when_hovering" value="$(arg planner_drone_radius_when_hovering)"/>
+  <arg name="planner_drone_height_when_hovering" default=".75"/>
+  <param name="planner_drone_height_when_hovering" value="$(arg planner_drone_height_when_hovering)"/>
 
 
 
@@ -77,7 +79,11 @@
   <param name="knob_performance_modeling_for_piecewise_planner" value="$(arg knob_performance_modeling_for_piecewise_planner)"/> 
   <arg name="map_to_transfer_side_length_step_size" default="30" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <param name="map_to_transfer_side_length_step_size" value="$(arg map_to_transfer_side_length_step_size)"/> 
- 
+  <arg name="perf_iterative_cntr" default="3" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
+  <param name="perf_iterative_cntr" value="$(arg perf_iterative_cntr)"/> 
+
+
+
   <!-- ===================================================================== -->
   <!-- ============================Run Time================================= -->
   <!-- ===================================================================== -->
@@ -271,15 +277,15 @@
  <param name="pc_res_max" value="$(arg pc_res_max)"/>
  <arg name="pc_res_steps" default="5" />   
  <param name="pc_res_steps" value="$(arg pc_res_steps)"/>
- <arg name="num_of_res_to_try" default="4" />   
+ <arg name="num_of_res_to_try" default="5" />   
  <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
  <arg name="pc_vol_ideal_min" default="2900" />   
  <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
- <arg name="pc_vol_ideal_max" default="700000" />   
+ <arg name="pc_vol_ideal_max" default="70000" />   
  <param name="pc_vol_ideal_max" value="$(arg pc_vol_ideal_max)"/>
  <arg name="om_to_pl_vol_ideal_max" default="5000000" />   
  <param name="om_to_pl_vol_ideal_max" value="$(arg om_to_pl_vol_ideal_max)"/>
- <arg name="ppl_vol_ideal_max" default="8000000" />   
+ <arg name="ppl_vol_ideal_max" default="200000" />   
  <param name="ppl_vol_ideal_max" value="$(arg ppl_vol_ideal_max)"/>
  <!--arg name="pc_res" default=".3" /-->   
   <param name="pc_res" value="$(arg pc_res_max)"/>

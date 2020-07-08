@@ -27,11 +27,12 @@ metrics_to_collect_hard = ["octomap_exposed_resolution", "point_cloud_estimated_
         "piecewise_planner_time_knob_modeling", "piecewise_planner_resolution_knob_modeling", "piecewise_planner_volume_explored_knob_modeling",
         "piecewise_planner_time_knob_modeling", "octomap_to_motion_planner_serialization_to_reception_knob_modeling", "octomap_insertCloud_minus_publish_all",
         "octomap_to_planner_com_overhead_knob_modeling", "pc_res", "pc_vol_actual", 
-        "om_to_pl_res_knob_modeling", "om_to_pl_vol_actual_knob_modeling", "ppl_vol_actual_knob_modeling", ]
+        "om_to_pl_res_knob_modeling", "om_to_pl_vol_actual_knob_modeling", "ppl_vol_actual_knob_modeling", "PCtoOMTotalLatency"]
 
 # parse  data
 result_dic = parse_stat_file_flattened(input_filepath, metrics_to_collect_easy, metrics_to_collect_hard)
-#result_dic = filter_based_on_key_value(result_dic, "pc_res", 1.200000, "in")
+#result_dic = filter_based_on_key_value(result_dic, "om_to_pl_res_knob_modeling", 0.600000, "in")
+#print(result_dic)
 #write_results_to_csv(result_dic, output_all_csv_filepath)
 octomap_exposed_resolution = result_dic["octomap_exposed_resolution"]
 point_cloud_estimated_volume  = result_dic["point_cloud_estimated_volume"]
@@ -43,6 +44,7 @@ pc_vol_estimated = result_dic["pc_vol_estimated"]
 
 
 octomap_integeration_response_time = result_dic["octomap_insertCloud_minus_publish_all"]
+PCtoOMTotalLatency = result_dic["PCtoOMTotalLatency"]
 resolution_to_explore_knob_modeling = result_dic["resolution_to_explore_knob_modeling"]
 piecewise_planner_resolution_knob_modeling = result_dic["piecewise_planner_resolution_knob_modeling"]
 potential_volume_to_explore_knob_modeling= result_dic["potential_volume_to_explore_knob_modeling"]
@@ -51,7 +53,6 @@ piecewise_planner_volume_explored_knob_modeling = result_dic["piecewise_planner_
 octomap_to_motion_planner_serialization_to_reception_knob_modeling = result_dic["octomap_to_motion_planner_serialization_to_reception_knob_modeling"]
 octomap_to_planner_com_overhead_knob_modeling = result_dic["octomap_to_planner_com_overhead_knob_modeling"]
 pc_res = result_dic["pc_res"]
-print(pc_res)
 pc_vol_actual = result_dic["pc_vol_actual"]
 om_to_pl_res = result_dic["om_to_pl_res_knob_modeling"]
 om_to_pl_vol_actual = result_dic["om_to_pl_vol_actual_knob_modeling"]
@@ -70,23 +71,52 @@ ax = fig.add_subplot(111, projection='3d')
 
 # -- for point cloud/octomap (data_1/stats.json_om)
 if stage_of_interest == "pc_om_estimation":
-    print(len(pc_res))
-    print(len(pc_vol_estimated))
-    print(len(octomap_volume_digested))
+    #print(len(pc_res))
+    #print(len(pc_vol_estimated))
+    #print(len(octomap_volume_digested))
     ax.scatter(pc_vol_estimated[1000:], octomap_volume_digested[1000:])#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     #ax.scatter(pc_res[100:], pc_vol_estimated[100:], octomap_volume_digested[100:])#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
-    print(pc_res)
-    print(pc_vol_estimated)
-    print(octomap_volume_digested)
+    #print(pc_res)
+    #print(pc_vol_estimated)
+    #print(octomap_volume_digested)
 elif stage_of_interest == "pc_om":
-    print(pc_res)
-    print(octomap_integeration_response_time)
-    ax.scatter(pc_res, pc_vol_actual, octomap_integeration_response_time)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    #print(pc_res)
+    #print(octomap_integeration_response_time)
+    total_time_list = [] 
+    for idx in range(0, len(octomap_integeration_response_time)):
+        total_time_list.append(octomap_integeration_response_time[idx] + PCtoOMTotalLatency[idx])
+
+    #print(len(total_time_list))
+    #print(len(pc_res))
+    #print(len(pc_vol_actual))
+    ax.scatter(pc_res, pc_vol_actual, total_time_list)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 elif stage_of_interest == "om_to_pl":
-    ax.scatter(om_to_pl_res, om_to_pl_vol_actual, octomap_to_motion_planner_serialization_to_reception_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    om_to_pl_res_filtered = [] 
+    om_to_pl_vol_actual_filtered = [] 
+    octomap_to_motion_planner_serialization_to_reception_knob_modeling_filtered = [] 
+    for idx in range(0, len(om_to_pl_vol_actual)):
+            if (om_to_pl_vol_actual[idx] < 1e8):
+                om_to_pl_res_filtered.append(om_to_pl_res[idx])
+                om_to_pl_vol_actual_filtered.append(om_to_pl_vol_actual[idx])
+                octomap_to_motion_planner_serialization_to_reception_knob_modeling_filtered.append(octomap_to_motion_planner_serialization_to_reception_knob_modeling[idx])
+    ax.scatter(om_to_pl_res_filtered, om_to_pl_vol_actual_filtered, octomap_to_motion_planner_serialization_to_reception_knob_modeling_filtered)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     #ax.scatter(om_to_pl_res, potential_volume_to_explore_knob_modeling, octomap_to_planner_com_overhead_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 elif stage_of_interest == "pp_pl":
-    ax.scatter(om_to_pl_res[:-2], ppl_vol_actual_knob_modeling, piecewise_planner_time_knob_modeling)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    print(len(om_to_pl_res))
+    print(len(ppl_vol_actual_knob_modeling))
+    print(len(piecewise_planner_time_knob_modeling))
+    print(om_to_pl_res) 
+    om_to_pl_res_filtered = [] 
+    ppl_vol_actual_knob_modeling_filtered = [] 
+    piecewise_planner_time_knob_modeling_filtered= [] 
+    for idx in range(0, min(len(om_to_pl_res), len(piecewise_planner_time_knob_modeling))):
+        if (piecewise_planner_time_knob_modeling[idx] < 30):
+            om_to_pl_res_filtered.append(om_to_pl_res[idx])
+            ppl_vol_actual_knob_modeling_filtered.append(ppl_vol_actual_knob_modeling[idx])
+            piecewise_planner_time_knob_modeling_filtered.append(piecewise_planner_time_knob_modeling[idx])
+    print(len(om_to_pl_res_filtered))
+    print(len(ppl_vol_actual_knob_modeling_filtered))
+    ax.scatter(om_to_pl_res_filtered, ppl_vol_actual_knob_modeling_filtered, piecewise_planner_time_knob_modeling_filtered)#, zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 else:
     print("stage of interest:" + stage_of_interest + "not defined")
     system.exit(0)

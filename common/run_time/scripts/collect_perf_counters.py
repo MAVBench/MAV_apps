@@ -15,7 +15,7 @@ import time
 import copy
 from profiler import *
 import json
-#from system_profiler import mapping
+from system_profiler import mapping
 
 import os
 events_to_collect = ["cache-misses", "instructions"]
@@ -122,7 +122,11 @@ if __name__ == '__main__':
     for cpu_id in range(0, number_of_cpus):
         perf_list.append(Profiler(events_groups=events))
         perf_list[cpu_id].start_counters(0, cpu_id)
-    
+
+    num_of_processors = rospy.get_param("number_of_processors")
+    budgetting_mode = rospy.get_param("budgetting_mode")
+    mapping.map_processes(num_of_processors, budgetting_mode)
+
     # iterate and collect
     while not rospy.is_shutdown():
         # ------- sample if time is reached

@@ -1958,6 +1958,11 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 
    if (om_to_pl_res < pc_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<pc_res);} assert(om_to_pl_res >= pc_res);
 
+   if (knob_performance_modeling){
+	   sensor_to_actuation_time_budget_to_enforce = 4000; //something really big
+   }
+
+
     //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, pc_vol_ideal, n_points);
   //filterByNumOfPoints(cloud_x, cloud_y, cloud_z, xs, ys, zs, n_points, point_cloud_num_points);
 

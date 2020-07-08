@@ -453,11 +453,14 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	octomap_aug_data.ee_profiles = pcl_aug_data->ee_profiles;
 	octomap_aug_data.ee_profiles.actual_time.pc_to_om_ros_oh =  (ros::Time::now() - pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp).toSec();
 	octomap_aug_data.ee_profiles.time_stats.PCtoOMComOHLatency =  (ros::Time::now() - pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp).toSec();
+	//profiling_container.capture("octomap_publish_all", "single", , capture_size);
+
 	//ROS_INFO_STREAM("pc_to_om_overhead is"<< octomap_aug_data.ee_profiles.actual_time.pc_to_om_ros_oh);
 
 	// -- this is only for knob performance modeling,
 	// -- the idea is that since, we don't want the pressure on compute for processing octomap impacts the octomap to planning
 	// -- communication, we simply send the map over and return, without integrating any new information
+
 	if (knob_performance_modeling){
 		ros::param::get("/knob_performance_modeling_for_om_to_pl", knob_performance_modeling_for_om_to_pl);
 		ros::param::get("/knob_performance_modeling_for_om_to_pl_no_interference", knob_performance_modeling_for_om_to_pl_no_interference);
@@ -492,7 +495,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 		ROS_INFO_STREAM("point_cloud_to_octomap_communication_overhead"<<this->profiling_container.findDataByName("point_cloud_to_octomap_communication_time")->values.back());
 	}
 
-	profiling_container.capture(std::string("octomap_insertCloud_minus_publish_all"), "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
+
 
 	// ground filtering in base frame
 	PCLPointCloud pc; // input cloud for filtering and ground-detection
@@ -505,7 +508,8 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	profiling_container.capture(std::string("PCDeserializationLatency"), "end", ros::Time::now(), capture_size);
 	octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency =  profiling_container.findDataByName("PCDeserializationLatency")->values.back();
 	octomap_aug_data.ee_profiles.time_stats.PCtoOMTotalLatency = octomap_aug_data.ee_profiles.time_stats.PCLocalSerializationLatency + octomap_aug_data.ee_profiles.time_stats.PCDeserializationLatency  + octomap_aug_data.ee_profiles.time_stats.PCtoOMComOHLatency;
-
+	profiling_container.capture(std::string("PCtoOMTotalLatency"), "single", octomap_aug_data.ee_profiles.time_stats.PCtoOMTotalLatency, capture_size); // @suppress("Invalid arguments")
+	profiling_container.capture(std::string("octomap_insertCloud_minus_publish_all"), "start", ros::Time::now(), capture_size); // @suppress("Invalid arguments")
 
 	profiling_container.capture("OMFilterOutOfRangeLatency", "start", ros::Time::now(), capture_size); //collect data
 	tf::StampedTransform sensorToWorldTf;
@@ -770,7 +774,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   profiling_container.capture("octomap_calc_hash", "start", ros::Time::now(), capture_size);
   // all other points: free on ray, occupied on endpoint:
   for (PCLPointCloud::const_iterator it = nonground.begin(); it != nonground.end(); ++it){
-	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
+	pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res, 3);
 	//bool time_exceeded = (ros::Time::now() - pc_pre_pub_time).toSec() > om_latency_expected;
 	bool time_exceeded = false;
 	if (pc_vol_actual >= pc_vol_ideal || time_exceeded){

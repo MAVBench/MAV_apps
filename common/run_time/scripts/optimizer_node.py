@@ -144,13 +144,22 @@ def run_optimizer(control):
         [9.78020632e-01 -7.03707300e-01   4.03608560e+00   1.36792938e-07]
         [2.31901204e-03 -2.72136219e-02 -7.21721385e-01 -7.93304493e-06]
         """
+        """
         Q = np.array([[-0.01420042, 9.78020632e-01,  pl_to_ppl_ratio*2.31901204e-03],
                       [ 0.01081166 , -7.03707300e-01 , pl_to_ppl_ratio*-2.72136219e-02],
                       [-0.00413957, 4.03608560e+00 ,  pl_to_ppl_ratio*-7.21721385e-01],
                       [-0.00029888, 1.36792938e-07,  pl_to_ppl_ratio*-7.93304493e-06]])
+        """
+        Q = np.array([[0.00524626 , 1.44560156e-06,  pl_to_ppl_ratio*1.98113709e-02],
+                      [-0.00355227 ,  -1.74231236e-06, pl_to_ppl_ratio*-4.03797137e-02],
+                      [0.00126292,  4.02383524e-07,  pl_to_ppl_ratio*6.16302710e-02],
+                      [0.00084077, 1.11044414e-01,  pl_to_ppl_ratio*7.57338509e-05]])
 
-
-
+        """
+        [0.00524626 -0.00355227  0.00126292  0.00084077]
+        [1.44560156e-06 -1.74231236e-06  4.02383524e-07  1.11044414e-01]
+        [1.98113709e-02 -4.03797137e-02  6.16302710e-02  7.57338509e-05]
+        """
         # Constraint matrices #
 
         #  --  w/ r_gap  as constraint
@@ -323,7 +332,7 @@ if __name__ == '__main__':
     rt_max = rospy.get_param("max_time_budget")
     drone_radius = rospy.get_param("planner_drone_radius")
     num_of_processors = rospy.get_param("number_of_processors")
-    mapping.map_processes(num_of_processors)
+    #mapping.map_processes(num_of_processors)
     v_max = max(rospy.get_param("om_to_pl_vol_ideal_max"), rospy.get_param("ppl_vol_ideal_max"))
     v_min = rospy.get_param("pc_vol_ideal_min")
     budgetting_mode = rospy.get_param("budgetting_mode")

@@ -20,7 +20,7 @@ def calculate_model_error(coeffs, res, vol, latency, typical_model, mode="normal
 	for res_, vol_, latency_ in tuple_vals:
 		absolute_error = abs(typical_model.calc_poly(res_, vol_, tuple(coeffs)) - latency_)
 		if mode == "absolute": error_list.append(absolute_error)
-		elif mode == "normalized": error_list.append(absolute_error/latency_)
+		elif mode == "normalized": error_list.append(absolute_error/max(latency_, 1))
 		max_abs_error = max(absolute_error, max_abs_error)
 		
 	avg_error = sum(error_list)/len(error_list)
@@ -58,7 +58,31 @@ def collect_data():
     om_pl_res, om_pl_vol, om_pl_response_time_measured = om_pl_parser.parse_om_pl()
     pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = pp_pl_parser.parse_pp_pl()
 
-    return om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured
+    
+
+    # some filtering. This will change depending on the data that I have collected
+    om_pl_res_filterd = []
+    om_pl_vol_filterd = []
+    om_pl_response_time_measured_filterd = []
+    pp_pl_res_filterd = []
+    pp_pl_vol_filterd = []
+    pp_pl_response_time_measured_filterd = []
+    for idx in range(0, len(om_pl_vol)):
+        if (om_pl_vol[idx] < 1e8):
+            om_pl_res_filterd.append(om_pl_res[idx])
+            om_pl_vol_filterd.append(om_pl_vol[idx])
+            om_pl_response_time_measured_filterd.append(om_pl_response_time_measured[idx])
+
+    
+    for idx in range(0, min(len(pp_pl_res), len(pp_pl_response_time_measured))):
+        if (pp_pl_response_time_measured[idx] < 30 and pp_pl_vol[idx] < 1000000):
+            pp_pl_res_filterd.append(pp_pl_res[idx])
+            pp_pl_vol_filterd.append(pp_pl_vol[idx])
+            pp_pl_response_time_measured_filterd.append(pp_pl_response_time_measured[idx])
+    
+    
+    #return om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured
+    return om_res, om_vol, om_response_time_measured, om_pl_res_filterd, om_pl_vol_filterd, om_pl_response_time_measured_filterd, pp_pl_res_filterd, pp_pl_vol_filterd, pp_pl_response_time_measured_filterd
 
 
 def roborun_model_gen(om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured
@@ -123,8 +147,8 @@ if __name__ == '__main__':
     pp_pl_error, pp_pl_max_abs_error = calculate_model_error(pp_pl_popt, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured, typical_model, "normalized")
 
     print("avg om_error:" + str(om_error) + " max om_error:" + str(om_max_abs_error))
-    print("om_pl_error:" + str(om_pl_error) + " max om_pl_error" + str(om_pl_max_abs_error))
-    print("pp_pl_error:" + str(pp_pl_error) + " max pp_pl_error" + str(pp_pl_max_abs_error))
+    print("avg om_pl_error:" + str(om_pl_error) + " max om_pl_error" + str(om_pl_max_abs_error))
+    print("avg pp_pl_error:" + str(pp_pl_error) + " max pp_pl_error" + str(pp_pl_max_abs_error))
 
 
     # plot the measured vs fitterd 

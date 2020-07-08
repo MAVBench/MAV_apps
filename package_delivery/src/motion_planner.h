@@ -208,7 +208,7 @@ private:
 
 
     int last_unknown_pt_ctr;
-    double planner_min_freq, max_time_budget;
+    double planner_min_freq;
     ros::Time last_planning_time;
     bool failed_to_plan_last_time = false;
     bool planned_optimally = true; // if smoothener spits out suboptimal paths, use this to replan

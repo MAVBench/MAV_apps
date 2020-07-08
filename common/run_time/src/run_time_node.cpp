@@ -43,7 +43,7 @@ bool DEBUG_VIS;
 std::deque<double> MacroBudgets;
 bool reactive_runtime;
 string budgetting_mode;
-double max_time_budget;
+double max_time_budget, max_time_budget_performance_modeling, perf_iterative_cntr;
 bool knob_performance_modeling = false;
 bool knob_performance_modeling_for_pc_om = false;
 bool knob_performance_modeling_for_om_to_pl = false;
@@ -554,7 +554,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 	}
 
 	// -- piecewise planner
-	if (knob_performance_modeling_for_piecewise_planner && last_modification(20) ){
+	if (knob_performance_modeling_for_piecewise_planner && last_modification(perf_iterative_cntr*max_time_budget_performance_modeling) ){
 		//ros::Duration(20).sleep();  // -- sleep enough so that the change can get sampled // TODO: this needs to change according to the knobs, or set to the worst case scenario, but for now we keep it simple for fast data collection
 		if (static_ppl_vol_ideal < ppl_vol_ideal_min){
 			static_ppl_vol_ideal = ppl_vol_ideal_max; // -- reset the map size
@@ -577,7 +577,7 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 
 	// -- set the parameters
 	ros::param::set("pc_res", static_pc_res);
-    profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
+	profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
     profiling_container->capture("om_to_pl_res", "single", om_to_pl_res, g_capture_size);
     ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
 	ros::param::set("pc_vol_ideal", (static_pc_res/pc_res_max)*static_pc_vol_ideal);
@@ -1017,6 +1017,8 @@ int main(int argc, char **argv)
      */
     ros::Publisher runtime_debug_pub = n.advertise<mavbench_msgs::runtime_debug>("/runtime_debug", 1);
     ros::param::get("/max_time_budget", max_time_budget);
+    ros::param::get("/max_time_budget", max_time_budget_performance_modeling); // this never changes
+    ros::param::get("/perf_iterative_cntr", perf_iterative_cntr); // how mnay times to run the same configuration
 
 
     Drone drone(ip_addr.c_str(), port, localization_method);
@@ -1048,7 +1050,7 @@ int main(int argc, char **argv)
     	}
 		*/
 
-    	if(!got_new_input && budgetting_mode != "static"){
+    	if(!got_new_input && (budgetting_mode != "static") && (budgetting_mode != "performance_modeling")){
     		pub_rate.sleep();
     		continue;
     	}

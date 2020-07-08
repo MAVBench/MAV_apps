@@ -16,7 +16,7 @@ def get_ros_processes(ignore_list):
     return ros_process_list_filtered
 
 
-def map_processes(num_of_processors):
+def map_processes_data_collection(num_of_processors):
     #process_ignore_list = ["profile_manager", "rosmaster", "rosout", "grep"]
     # setting affinity 
     ros_processes =  get_ros_processes([])
@@ -52,6 +52,59 @@ def map_processes(num_of_processors):
         os.system("taskset -p " + str(pid))
 
 
+
+def map_processes_knob_modeling(num_of_processors):
+    #process_ignore_list = ["profile_manager", "rosmaster", "rosout", "grep"]
+    # setting affinity 
+    ros_processes =  get_ros_processes([])
+    ros_processes_to_consider = ["occupancy_map", "depth_transforms", "motion_planner", "follow_trajectory", "run_time_thread", "optimizer_node"]
+    print("---- setting affitinies")
+    pid_seen = []    
+    ctr = 0 
+    for process in ros_processes:
+        for process_to_consider in ros_processes_to_consider:
+            if process_to_consider in process:
+                print(process)
+                processor_id = str(hex((0b1<<ctr)))
+                pid = process.split()[1]
+                os.system("taskset -p " + processor_id + " "+ str(pid)) 
+                ctr +=1
+                pid_seen.append(pid)
+    
+    for process in ros_processes:
+        if "img" in process:
+            print(process)
+            pid = process.split()[1]
+            processor_id = str(hex((0b1<<ctr)))
+            os.system("taskset -p " + processor_id + " " +  str(pid)) 
+            pid_seen.append(pid)
+            ctr +=1 
+         
+    for process in ros_processes:
+        pid = process.split()[1]
+        if not (pid in pid_seen):
+            print(process)
+            processor_id = str(hex((0b1<<ctr)))
+            os.system("taskset -p " + processor_id + " " +  str(pid)) 
+     
+    print("------affitinies are:")
+    ros_processes =  get_ros_processes([])
+    for process in ros_processes:
+        print("======================") 
+        print("process name" + str(process.split()[-1].split("/")[-1]) )
+        pid = process.split()[1]
+        os.system("taskset -p " + str(pid))
+
+
+
+
+
+def map_processes(num_of_processors, budgetting_mode = "data_collection"):
+    if (budgetting_mode == "performance_modeling"):
+        map_processes_knob_modeling(num_of_processors)
+    else:
+        map_processes_data_collection(num_of_processors)
+    
 
 def collect_process_data():
     process_ignore_list = ["profile_manager", "rosmaster", "rosout", "grep"]

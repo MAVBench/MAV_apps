@@ -48,6 +48,7 @@
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 #include "filterqueue.h"
+double max_time_budget;
 double follow_trajectory_loop_rate;
 double follow_trajectory_worse_case_latency;
 ros::Time ppl_start_time;
@@ -92,6 +93,17 @@ bool planner_termination_func(){
 	return volume_explored_exceeded || time_exceeded || !explored_new_teritory;
 
 }
+
+bool planner_termination_func_knob_performance_modeling(){
+	bool volume_explored_exceeded = (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
+	//bool SA_time_exceeded = (SA_time_budget_to_enforce- (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+	bool ppl_time_exceeded = max_time_budget - ((ros::Time::now() - ppl_start_time).toSec()) < 0;
+	if (ppl_time_exceeded || volume_explored_exceeded){
+		cout<<" unit cube"<<volume_explored_in_unit_cubes<<endl;
+	}
+	return  volume_explored_exceeded || ppl_time_exceeded;// || ppl_time_exceeded;
+}
+
 
 bool planner_termination_func_2(){
 	//bool volume_explored_exceeded = (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube);
@@ -171,6 +183,10 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 
 	piecewise_planning = true;
 	auto planner_termination_obj = ompl::base::PlannerTerminationCondition(planner_termination_func_2);
+
+	if (knob_performance_modeling){
+		planner_termination_obj = ompl::base::PlannerTerminationCondition(planner_termination_func_knob_performance_modeling);
+	}
 	ob::PlannerStatus solved;
 
 
@@ -732,7 +748,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
 		// -- om to pl
 		if (knob_performance_modeling_for_om_to_pl){ // -- start collecting data when this is set
 			profiling_container.capture("octomap_to_motion_planner_serialization_to_reception_knob_modeling", "single",
-					(ros::Time::now() - msg->header.stamp).toSec(), capture_size);
+					msg_for_follow_traj.ee_profiles.time_stats.OMtoPlComOHLatency + msg->ee_profiles.time_stats.OMSerializationLatency + msg_for_follow_traj.ee_profiles.time_stats.OMDeserializationLatency, capture_size);
 			profiling_container.capture("om_to_pl_res_knob_modeling", "single",
 					msg->controls.cmds.om_to_pl_res, capture_size);
 			profiling_container.capture("om_to_pl_vol_actual_knob_modeling", "single",
