@@ -13,7 +13,7 @@ sequencer_latency = .01
 front_end_latency = depth_img_conversion + depth_img_latency + run_diagnostics # front end with respect to runtime
 #front_end_latency = 0 
 
-pc_to_om_oh = .02
+#pc_to_om_oh = .02
 runtime_latency = .05 # possibly change this 
 pc_outro = .01 # filtering and such
 follow_trajectory_latency = .05  # set this based on teh follow_trajectory_rate in launch file

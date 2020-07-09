@@ -15,9 +15,12 @@
 #include "motion_planner.h"
 
 octomap_server::OctomapServer* server_ptr;
-
+string clct_data_mode;
 
 void log_data_before_shutting_down() {
+	if (clct_data_mode =="only_end_to_end"){
+		return;
+	}
 	profile_manager::profiling_data_srv profiling_data_srv_inst;
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
     server_ptr->profiling_container.setStatsAndClear();
@@ -54,6 +57,8 @@ int main(int argc, char** argv)
     // Create a Drone object
     std::string ip_addr, localization_method;
     ros::param::get("/ip_addr", ip_addr);
+    ros::param::get("/clct_data_mode", clct_data_mode);
+
     uint16_t port = 41451;
     if(!ros::param::get("/localization_method", localization_method)) {
         ROS_FATAL("Could not start occupancy map node. Localization parameter missing!");

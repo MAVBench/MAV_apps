@@ -13,7 +13,7 @@ def get_value_easy_metrics(line):
 
 
 # parse and collect data
-def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_collect_hard):
+def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_collect_hard, stat_mode ="flattened"):
 
     # initialize the metric dictionary
     result_dic = OrderedDict()
@@ -37,7 +37,10 @@ def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_coll
                word_to_look_for_2 = '"' + metric + '"'
                if  word_to_look_for_1 in line_split_1:
                    value  = line_split_1[1].split(",")[0]
-                   result_dic[metric].append(float(value))
+                   if stat_mode == "flattened":
+                       result_dic[metric].append(float(value))
+                   else:
+                       result_dic[metric].append([float(value)])
                    metrics_to_collect_this_round.remove(metric)
                elif   word_to_look_for_2 in line_split_2:
                    if (len(line_split_2[1].split(",")[0].split('"')) < 2):
@@ -46,7 +49,10 @@ def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_coll
                    else:
                        value = line_split_2[1].split(",")[0].split('"')[1]
                    if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))): # avoid double counting
-                       result_dic[metric].append(float(value))
+                       if stat_mode == "flattened":
+                           result_dic[metric].append(float(value))
+                       else:
+                           result_dic[metric].append([float(value)])
                        metrics_to_collect_this_round.remove(metric)
                        if metric == "experiment_number":
                            if not(len(metrics_to_collect_this_round) == 0):
@@ -68,8 +74,12 @@ def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_coll
                            break
                        else:
                            values.append(float(el))
-                   if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))): # avoid double counting
+#                   if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))): # avoid double counting
+                   if stat_mode == "flattened":
                        result_dic[metric]+=values
+                   else:
+                       result_dic[metric] += [values]
+                   metrics_to_collect_this_round.remove(metric)
            idx +=1
 
     # sanity check by making sure all the data lists have the same size,
@@ -87,7 +97,7 @@ def parse_stat_file_flattened(filepath, metrics_to_collect_easy, metrics_to_coll
 
 
 
-
+"""
 # parse and collect data
 def parse_stat_file(filepath, metrics_to_collect_easy, metrics_to_collect_hard):
 
@@ -142,16 +152,6 @@ def parse_stat_file(filepath, metrics_to_collect_easy, metrics_to_collect_hard):
                    if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))): # avoid double counting
                        result_dic[metric].append(float(value))
                        metrics_to_collect_this_round.remove(metric)
-               """
-               elif   word_to_look_for_2 in line_split_2:
-                   if (len(line_split_2[1].split(",")[0].split('"')) < 2):
-                       value =  line_split_2[1].split(",")[0].split('"')[0].split()[0] # last element with no comma
-                   else:
-                       value = line_split_2[1].split(",")[0].split('"')[1]
-                   blah =    min(list(map(lambda val: len(val), list(result_dic.values()))))
-                   if not len(result_dic[metric]) > min(list(map(lambda val: len(val), list(result_dic.values())))):
-                       result_dic[metric].append(float(value))
-               """
            idx +=1
 
     # sanity check by making sure all the data lists have the same size,
@@ -167,6 +167,7 @@ def parse_stat_file(filepath, metrics_to_collect_easy, metrics_to_collect_hard):
 
     return result_dic
 
+"""
 
 # write results to to a cst file
 def write_results_to_csv(result_dic, file_path):
@@ -246,6 +247,21 @@ def filter_results(result_dic, metric_value_to_filter):
         for key, value in metric_value_to_filter.items():
             filter_based_on_key_value(key, value)
 
+
+def get_avg(data):
+    return (sum(data)/len(data))
+
+def get_std(data):
+    avg =  (sum(data)/len(data))
+    cnt = 0 
+    sum_ = 0
+    for el in data:
+        sum_ += (el - avg) ** 2
+        cnt += 1;
+    if not (cnt == 0) and not(cnt ==1): # if there was at least one value that wasn't inifinity
+        return math.sqrt(sum_/(cnt-1))
+    else:
+        return float("inf")
 
 # take the average of contegous data
 def avg_over_sequence(result_dic, seq_length):

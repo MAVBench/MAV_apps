@@ -244,7 +244,9 @@
   <param name="number_of_processors" value="$(arg number_of_processors)"/>
    <arg name="design_mode" default="serial" />   
   <param name="design_mode" value="$(arg design_mode)"/>
-  
+ <arg name="clct_data_mode" default="only_end_to_end" />   
+  <param name="clct_data_mode" value="$(arg clct_data_mode)"/>
+
   <arg name="hw_sampling_method" default="decision_based" />   
   <param name="hw_sampling_method" value="$(arg hw_sampling_method)"/>
   <!-- arg name="hw_sampling_method" default="time_based" /-->   

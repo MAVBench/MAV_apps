@@ -1,10 +1,10 @@
 {
-		"max_time_budget": 17.79058076989254,
-		"om_latency_expected": 6.270713536378901,
-		"om_to_pl_latency_expected": 0.8588743306752668,
-		"ppl_latency_expected": 3.120330967612791,
-		"velocity_to_budget_on": 0.5251541488996977,
-		"v_max": 0.5251541488996977,
+		"max_time_budget": 19.289782373384472,
+		"om_latency_expected": 7.11327755937003,
+		"om_to_pl_latency_expected": 0.591695448925222,
+		"ppl_latency_expected": 5.572404682544608,
+		"velocity_to_budget_on": 0.5861195364250512,
+		"v_max": 0.5861195364250512,
 		"pc_res_max": 0.3,
 		"pc_vol_ideal_max": 50000,
 		"om_to_pl_res_max": 0.3,
@@ -13,6 +13,9 @@
 		"budgetting_mode": "static",
 		"use_pyrun": false,
 		"knob_performance_modeling": false, 
-		"planner_drone_radius": 1.2, 
-		"planner_drone_radius_when_hovering": 1.2
+		"planner_drone_radius": 1, 
+		"capture_size": 1, 
+		"DEBUG_VIS": false, 
+		"design_mode": "pipelined", 
+		"planner_drone_radius_when_hovering": 1
 }

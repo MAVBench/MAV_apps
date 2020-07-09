@@ -28,7 +28,7 @@ def collect_hw_counters():
                 ['PERF_COUNT_SW_PAGE_FAULTS']]
         perf= Profiler(program_args= ['/bin/ls','/'], events_groups=events)
         data= perf.run(sample_period= 0.01)
-        print(data)
+        #print(data)
     except RuntimeError as e:
         print(e.args[0])
     
@@ -72,7 +72,7 @@ def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
-        print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
+        #print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
         results = dummy_output()
         failure_status = 2
         return results, failure_status
@@ -83,7 +83,7 @@ def run_optimizer(control):
     # we can also think of r_min as what regulates the intellignce (i.e, the lower r_min the more intelligence the decision
     # making since we have more free space to make decision based off of)
     # and max value for resolution indicates  that we can't not do worse than this
-    r_min_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_avg) #- drone_radius  # min to impose the worse case as the
+    r_min_temp = min(control.inputs.gap_statistics_avg/2, control.inputs.obs_dist_statistics_avg) #- drone_radius  # min to impose the worse case as the
 
     r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
     r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
@@ -150,10 +150,10 @@ def run_optimizer(control):
                       [-0.00413957, 4.03608560e+00 ,  pl_to_ppl_ratio*-7.21721385e-01],
                       [-0.00029888, 1.36792938e-07,  pl_to_ppl_ratio*-7.93304493e-06]])
         """
-        Q = np.array([[0.00524626 , 1.44560156e-06,  pl_to_ppl_ratio*1.98113709e-02],
-                      [-0.00355227 ,  -1.74231236e-06, pl_to_ppl_ratio*-4.03797137e-02],
-                      [0.00126292,  4.02383524e-07,  pl_to_ppl_ratio*6.16302710e-02],
-                      [0.00084077, 1.11044414e-01,  pl_to_ppl_ratio*7.57338509e-05]])
+        Q = np.array([[-0.00117776, 1.44560156e-06,  pl_to_ppl_ratio*1.98113709e-02],
+                      [0.00061975,  -1.74231236e-06, pl_to_ppl_ratio*-4.03797137e-02],
+                      [-0.00035994 ,  4.02383524e-07,  pl_to_ppl_ratio*6.16302710e-02],
+                      [-0.00375029, 1.11044414e-01,  pl_to_ppl_ratio*7.57338509e-05]])
 
         """
         [0.00524626 -0.00355227  0.00126292  0.00084077]

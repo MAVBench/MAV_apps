@@ -65,7 +65,7 @@ using namespace std;
 #include <mavbench_msgs/planner_info.h>
 #include <Drone.h>
 //#define N_CAMERAS 6
-
+string clct_data_mode;
 bool set_closest_unknown_point = false;
 bool got_first_unknown = false;
 string design_mode;
@@ -2124,7 +2124,10 @@ void PointCloudXyz::onInit()
   profiling_container = new DataContainer();
   profile_manager_ = new ProfileManager("client", "/record_profiling_data", "/record_profiling_data_verbose");
 
-    if(!ros::param::get("/ip_addr",ip_addr)){
+
+   ros::param::get("/clct_data_mode",clct_data_mode);
+
+  if(!ros::param::get("/ip_addr",ip_addr)){
 		ROS_FATAL_STREAM("Could not start run_time_node ip_addr not provided");
         exit(-1);
 	}
@@ -2422,6 +2425,10 @@ void PointCloudXyz::onInit()
 depth_image_proc::PointCloudXyz  *pc;
 
 void log_data_before_shutting_down() {
+	if (clct_data_mode =="only_end_to_end"){
+		return;
+	}
+
 	profile_manager::profiling_data_srv profiling_data_srv_inst;
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
     pc->profiling_container->setStatsAndClear();

@@ -16,7 +16,7 @@ class DataParser(object):
 		        "resolution_to_explore_knob_modeling", "piecewise_planner_time_knob_modeling", "piecewise_planner_resolution_knob_modeling", "piecewise_planner_volume_explored_knob_modeling",
 		        "piecewise_planner_time_knob_modeling", "octomap_to_motion_planner_serialization_to_reception_knob_modeling", "octomap_insertCloud_minus_publish_all",
 		        "octomap_to_planner_com_overhead_knob_modeling", "pc_vol_actual", "pc_res", "potential_volume_to_explore_knob_modeling",
-                        "piecewise_planner_resolution_knob_modeling", "ppl_vol_actual_knob_modeling", "om_to_pl_res_knob_modeling", "om_to_pl_vol_actual_knob_modeling"]
+                        "piecewise_planner_resolution_knob_modeling", "ppl_vol_actual_knob_modeling", "om_to_pl_res_knob_modeling", "om_to_pl_vol_actual_knob_modeling", "PCtoOMTotalLatency"]
 
 		self.indep_vars = ["piecewise_planning_budget", "perception_resolution",
 		                           "smoothening_budget", "experiment_number", "om_to_pl_res_knob_modeling"]
@@ -38,10 +38,16 @@ class DataParser(object):
 
         # Point cloud + Octomap data
 	def parse_om(self):
-		octomap_exposed_resolution = self.result_dic["pc_res"]
-		point_cloud_estimated_volume  = self.result_dic["pc_vol_actual"]
-		octomap_integration_response_time = self.result_dic["octomap_insertCloud_minus_publish_all"]
-		return (octomap_exposed_resolution, point_cloud_estimated_volume, octomap_integration_response_time)
+            octomap_exposed_resolution = self.result_dic["pc_res"]
+            point_cloud_estimated_volume  = self.result_dic["pc_vol_actual"]
+            octomap_integeration_response_time = self.result_dic["octomap_insertCloud_minus_publish_all"]
+            total_time_list = [] 
+            PCtoOMTotalLatency = self.result_dic["PCtoOMTotalLatency"]
+            for idx in range(0, len(octomap_integeration_response_time)):
+                total_time_list.append(octomap_integeration_response_time[idx] + PCtoOMTotalLatency[idx])
+
+
+            return (octomap_exposed_resolution, point_cloud_estimated_volume, total_time_list)
 
 	# Octomap to planner data
 	def parse_om_pl(self):

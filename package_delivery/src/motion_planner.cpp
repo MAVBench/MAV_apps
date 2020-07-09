@@ -48,6 +48,7 @@
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 #include "filterqueue.h"
+string clct_data_mode_;
 double max_time_budget;
 double follow_trajectory_loop_rate;
 double follow_trajectory_worse_case_latency;
@@ -1379,6 +1380,7 @@ void MotionPlanner::motion_planning_initialize_params()
 
 
 
+    ros::param::get("/clct_data_mode", clct_data_mode_);
     ros::param::get("/motion_planner/max_roadmap_size", max_roadmap_size__global);
     ros::param::get("/sampling_interval", sampling_interval__global);
     ros::param::get("/motion_planner/rrt_step_size", rrt_step_size__global);
@@ -1464,7 +1466,11 @@ void MotionPlanner::motion_planning_initialize_params()
 
 void MotionPlanner::log_data_before_shutting_down()
 {
-    // post processing for some statistics
+	if (clct_data_mode_ =="only_end_to_end"){
+		return;
+	}
+
+	// post processing for some statistics
 	int total_planning_count = profiling_container.findDataByName("planning_count")->values.back();
 	int approximate_planning_count = profiling_container.findDataByName("approximate_plans_count")->values.back();
 	int planning_failure_count = profiling_container.findDataByName("planning_failure_count")->values.back();

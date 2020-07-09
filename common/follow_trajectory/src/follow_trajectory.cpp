@@ -359,7 +359,6 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("OMFilteringLatency","single", msg->ee_profiles.time_stats.OMFilteringLatency, 1);
 	profiling_container->capture("OMSerializationLatency","single", msg->ee_profiles.time_stats.OMSerializationLatency, 1);
 	profiling_container->capture("OMtoPlComOHLatency","single", msg->ee_profiles.time_stats.OMtoPlComOHLatency, 1);
-	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
 	profiling_container->capture("OMtoPlTotalLatency","single", msg->ee_profiles.time_stats.OMtoPlTotalLatency, 1);
 	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
 	profiling_container->capture("smoothening_latency","single", msg->ee_profiles.actual_time.smoothening_latency, 1);
@@ -751,7 +750,6 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("OMFilteringLatency","single", msg->ee_profiles.time_stats.OMFilteringLatency, 1);
 	profiling_container->capture("OMSerializationLatency","single", msg->ee_profiles.time_stats.OMSerializationLatency, 1);
 	profiling_container->capture("OMtoPlComOHLatency","single", msg->ee_profiles.time_stats.OMtoPlComOHLatency, 1);
-	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
 	profiling_container->capture("OMtoPlTotalLatency","single", msg->ee_profiles.time_stats.OMtoPlTotalLatency, 1);
 	profiling_container->capture("OMDeserializationLatency","single", msg->ee_profiles.time_stats.OMDeserializationLatency, 1);
 	profiling_container->capture("smoothening_latency","single", msg->ee_profiles.actual_time.smoothening_latency, 1);

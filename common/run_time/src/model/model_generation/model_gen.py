@@ -157,21 +157,21 @@ if __name__ == '__main__':
     pp_pl_response_time_fitted =  calculate_fitted_values(pp_pl_popt , pp_pl_res, pp_pl_vol, typical_model)
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(om_res, om_vol, om_response_time_measured, c="orange")  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    ax = fig.add_subplot(111, projection='3d', title="pc_om")
+    ax.scatter(om_res, om_vol, om_response_time_measured, c="orange", label="pc_om")  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     ax.scatter(om_res, om_vol, om_response_time_fitted)  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 
 
     fig2 = plt.figure()
-    ax2 = fig2.add_subplot(111, projection='3d')
-    ax2.scatter(om_pl_res, om_pl_vol, om_pl_response_time_measured, c="orange")  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    ax2 = fig2.add_subplot(111, projection='3d', title="om_to_pl")
+    ax2.scatter(om_pl_res, om_pl_vol, om_pl_response_time_measured, c="orange", label="om_to_pl")  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     ax2.scatter(om_pl_res, om_pl_vol, om_pl_response_time_fitted)  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
 
 
 
     fig3 = plt.figure()
-    ax3 = fig3.add_subplot(111, projection='3d')
-    ax3.scatter(pp_pl_res, pp_pl_vol, pp_pl_response_time_measured, c="orange")  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
+    ax3 = fig3.add_subplot(111, projection='3d', title="ppl")
+    ax3.scatter(pp_pl_res, pp_pl_vol, pp_pl_response_time_measured, c="orange", label="ppl")  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     ax3.scatter(pp_pl_res, pp_pl_vol, pp_pl_response_time_fitted)  # , zdir='z', c=None, depthshade=True)#(, *args, **kwargs)
     plt.show(5)
 
