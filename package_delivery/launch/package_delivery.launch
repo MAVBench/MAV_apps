@@ -331,9 +331,6 @@
  
 
 
-
-
-
   <!-- =========================Point Cloud  ============================ -->
   <arg name="point_cloud_shard_cnt" default="1"/>
   <arg name="point_cloud_num_points" default="3000000"/>
@@ -427,10 +424,22 @@
     </node>
     ?>
 
+
+  <arg name="x_dist_to_sample_from__low_bound" default="-300"/>
+  <arg name="x_dist_to_sample_from__high_bound" default="300"/>
+  <arg name="y_dist_to_sample_from__low_bound" default="-300"/>
+  <arg name="y_dist_to_sample_from__high_bound" default="2000"/>
+  <arg name="goal_mode" default="launch_based"/>
+  <arg name="goal_x" default="30"/>
+  <arg name="goal_y" default="1400"/>
+  <arg name="goal_z" default="30"/>
+  <param name="goal_mode" value="$(arg goal_mode)"/>
+  <param name="goal_x" value="$(arg goal_x)"/>
+  <param name="goal_y" value="$(arg goal_y)"/>
+  <param name="goal_z" value="$(arg goal_z)"/>
   <!-- ========================= Path Planner (Planning)============================ -->
   <arg name="ppl_latency_expected" default="7"/>
   <arg name="smoothening_latency_expected" default="7"/>
-
   <param name="ppl_latency_expected" value="$(arg ppl_latency_expected)"/>
   <param name="smoothening_latency_expected" value="$(arg smoothening_latency_expected)"/>
   <!--group ns="motion_planner"-->
@@ -441,7 +450,7 @@
     <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/>
     <!-- param name="always_randomize_end_point" type="bool" value="$(arg micro_benchmark)"/-->
     <param name="always_randomize_end_point" type="bool" value="false"/>
-    <param name="nodes_to_add_to_roadmap" value="800"/>
+    <param name="nodes_to_add_to_roadmap" value="1800"/>
     <param name="max_dist_to_connect_at" value="10"/>
 
     <param name="v_max" value="$(arg v_max)"/>
@@ -449,15 +458,17 @@
     <param name="drone_height" value="$(arg planner_drone_height)"/>
     <param name="drone_radius" value="$(arg planner_drone_radius)"/>
 
-    <param name="max_roadmap_size" value="1600"/>
+    <param name="max_roadmap_size" value="2600"/>
 
     <param name="rrt_step_size" value="1.0"/>
     <param name="rrt_bias" value="10"/>
-
-    <param name="x_dist_to_sample_from__low_bound" value="-600"/>
-    <param name="x_dist_to_sample_from__high_bound" value="600"/>
-    <param name="y_dist_to_sample_from__low_bound" value="-800"/>
-    <param name="y_dist_to_sample_from__high_bound" value="800"/>
+   
+   <param name="x_dist_to_sample_from__low_bound" value="$(arg x_dist_to_sample_from__low_bound)"/>
+   <param name="x_dist_to_sample_from__high_bound" value="$(arg x_dist_to_sample_from__high_bound)"/>
+   <param name="y_dist_to_sample_from__low_bound" value="$(arg y_dist_to_sample_from__low_bound)"/>
+   <param name="y_dist_to_sample_from__high_bound" value="$(arg y_dist_to_sample_from__high_bound)"/>
+    
+        
     <param name="z_dist_to_sample_from__low_bound" value="0"/>
     <param name="z_dist_to_sample_from__high_bound" value="150"/>
 

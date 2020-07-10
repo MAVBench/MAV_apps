@@ -58,6 +58,7 @@ long long g_planning_time_including_ros_overhead_acc  = 0;
 int  g_planning_ctr = 0; 
 bool clct_data = true;
 ros::Time g_traj_time_stamp;
+string goal_mode;
 
 geometry_msgs::Vector3 panic_velocity;
 string ip_addr__global;
@@ -65,6 +66,7 @@ string localization_method;
 string stats_file_addr;
 string ns;
 std::string g_supervisor_mailbox; //file to write to when completed
+double goal_x, goal_y, goal_z;
 bool CLCT_DATA;
 bool DEBUG;
 
@@ -215,7 +217,29 @@ void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
 double distance_to_goal_margin;
 void package_delivery_initialize_params()
 {
-    if(!ros::param::get("/supervisor_mailbox",g_supervisor_mailbox))  {
+
+	if(!ros::param::get("/goal_mode",goal_mode))  {
+      ROS_FATAL_STREAM("Could not start mapping goal_mode not provided");
+      return ;
+    }
+
+	if(!ros::param::get("/goal_x",goal_x))  {
+      ROS_FATAL_STREAM("Could not start mapping goal_x not provided");
+      return ;
+    }
+
+	if(!ros::param::get("/goal_y",goal_y))  {
+      ROS_FATAL_STREAM("Could not start mapping goal_y not provided");
+      return ;
+    }
+
+	if(!ros::param::get("/goal_z",goal_z))  {
+      ROS_FATAL_STREAM("Could not start mapping goal_z not provided");
+      return ;
+    }
+
+
+	if(!ros::param::get("/supervisor_mailbox",g_supervisor_mailbox))  {
       ROS_FATAL_STREAM("Could not start mapping supervisor_mailbox not provided");
       return ;
     }
@@ -294,15 +318,21 @@ geometry_msgs::Point get_start(Drone& drone) {
 }
 
 
-geometry_msgs::Point get_goal() {
+geometry_msgs::Point get_goal(string mode="manual") {
     geometry_msgs::Point goal;
 
     // Get intended destination from user
     std::cout << "Please input your destination in x,y,z format." << std::endl;
     double input_x, input_y, input_z;
     std::cin >> input_x >> input_y >> input_z;
-    goal.x = input_x; goal.y = input_y; goal.z = input_z;
-
+    if (mode == "manual"){
+    	goal.x = input_x; goal.y = input_y; goal.z = input_z;
+    }else{
+    	goal.x = goal_x;
+    	goal.y = goal_y;
+    	goal.z = goal_z;
+    	cout<<goal.x<< " "<< goal.y <<" " <<goal.z<<endl;
+    }
     return goal;
 }
 
@@ -535,7 +565,7 @@ int main(int argc, char **argv)
         if (state == setup)
         {
             control_drone(drone);
-            goal = get_goal();
+            goal = get_goal(goal_mode);
             start = get_start(drone);
             
             // signal the profiler to start profiling
