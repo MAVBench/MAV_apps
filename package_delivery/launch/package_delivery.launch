@@ -264,6 +264,8 @@
   <arg name="gap_statistic_mode" default="avg" />   
   <arg name="use_pyrun" default="true" />   
   <param name="use_pyrun" value="$(arg use_pyrun)"/>
+  <arg name="pyrun_rcvd_models" default="false" />   
+  <param name="pyrun_rcvd_models" value="$(arg pyrun_rcvd_models)"/>
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
     <arg name="cur_tree_total_volume" default="8000" />   
   <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
@@ -428,15 +430,17 @@
   <arg name="x_dist_to_sample_from__low_bound" default="-300"/>
   <arg name="x_dist_to_sample_from__high_bound" default="300"/>
   <arg name="y_dist_to_sample_from__low_bound" default="-300"/>
-  <arg name="y_dist_to_sample_from__high_bound" default="2000"/>
+  <arg name="y_dist_to_sample_from__high_bound" default="1750"/>
   <arg name="goal_mode" default="launch_based"/>
-  <arg name="goal_x" default="30"/>
-  <arg name="goal_y" default="1400"/>
-  <arg name="goal_z" default="30"/>
-  <param name="goal_mode" value="$(arg goal_mode)"/>
+  <arg name="goal_x" default="0"/>
+  <arg name="goal_y" default="250"/>
+  <arg name="goal_z" default="20"/>
+  
   <param name="goal_x" value="$(arg goal_x)"/>
   <param name="goal_y" value="$(arg goal_y)"/>
   <param name="goal_z" value="$(arg goal_z)"/>
+  <param name="goal_mode" value="$(arg goal_mode)"/>
+  
   <!-- ========================= Path Planner (Planning)============================ -->
   <arg name="ppl_latency_expected" default="7"/>
   <arg name="smoothening_latency_expected" default="7"/>

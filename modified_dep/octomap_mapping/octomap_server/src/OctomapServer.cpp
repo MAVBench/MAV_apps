@@ -1276,6 +1276,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
   // TODO: estimate num occ. voxels for size of arrays (reserve)
   if (octomapSize <= 1){
     ROS_WARN("Nothing to publish, octree is empty");
+	ros::param::set("/set_closest_unknown_point", true);
     return;
   }
 

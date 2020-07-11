@@ -3,6 +3,10 @@
 import roslib
 import rospy
 import sys
+import os
+sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/data_processing/common_utils")
+sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/common/run_time/src/model/")
+sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/common/run_time/src/")
 from mavbench_msgs.msg import control
 from optimizer.opt import Opt
 import time
@@ -17,10 +21,14 @@ import time
 obs_dist_min_calc_from_octomap = 100
 import copy
 from profiler import *
-
+from data_parser  import DataParser
+from models import Model
 num_of_processors = 1
-
-
+from model_generation.model_gen import *
+om_popt = np.ndarray((2,2))
+om_pl_popt = np.ndarray((2,2))
+pp_pl_popt = np.ndarray((2,2))
+typical_model = Model(3, 1)
 def collect_hw_counters():
     try:
         events= [['SYSTEMWIDE:PERF_COUNT_HW_INSTRUCTIONS'],
@@ -32,7 +40,6 @@ def collect_hw_counters():
     except RuntimeError as e:
         print(e.args[0])
     
-
 
 
 
@@ -58,7 +65,9 @@ class SmartQueue:
         elif mode == "avg":
             return avg(self.storage)
 r_max_queue = SmartQueue(5)
+
 def run_optimizer(control):
+    cmd_rcvd_time = rospy.Time.now()
     global r_max_queue 
     rt_max = control.inputs.max_time_budget 
     """ 
@@ -123,6 +132,14 @@ def run_optimizer(control):
     #print("before anything"+ str(control.inputs.ppl_vol_min))
     ppl_vol_min = max(control.inputs.ppl_vol_min, v_sensor_max)
 
+
+    """
+    om_response_time_max = calculate_fitted_value(om_popt, r_min_, v_min_list[0], typical_model)
+    om_pl_response_time_max = calculate_fitted_value(om_pl_popt, r_min_, v_min_list[1], typical_model)
+    pp_pl_response_time_max = calculate_fitted_value(pp_pl_popt, r_min_, v_min_list[2], typical_model)
+    if om_response_time_max + om_pl_response_time_max + pp_pl_response_time_max > rt_d:
+        print("&&&&&&&&& ------------ this can not happend")
+    """
     for i in np.arange(1, 15, .1):
         v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]  # not that .9*v_sensor_max is there
                                                                         # because sometimes, we actually might have a smaller
@@ -130,7 +147,22 @@ def run_optimizer(control):
                                                                         # provide a volume as a min that is smaller
                                                                         # than what we can already see (v_sennsor_max)
         #v_max_list = [(2**i)*(r_max_/r_min_static)*v_sensor_max, (2**i)*(r_max_/r_min_static)*v_tree_max, (2**i)*max(v_max, ppl_vol_min)]
-        v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, ppl_vol_min)]
+        v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, 2*ppl_vol_min)]
+
+        # sanity check on response time 
+        global om_popt, om_pl_popt, pp_pl_popt, typical_model
+
+        v_min_list_copy = v_min_list[:]
+        while True:
+            om_response_time_min = calculate_fitted_value(om_popt, r_max_, v_min_list[0], typical_model)
+            om_pl_response_time_min = calculate_fitted_value(om_pl_popt, r_max_, v_min_list[1], typical_model)
+            pp_pl_response_time_min = calculate_fitted_value(pp_pl_popt, r_max_, v_min_list[2], typical_model)
+            if om_response_time_min + om_pl_response_time_min + pp_pl_response_time_min < rt_d:
+                break
+            v_min_list = [.99*v_min_list[0] , v_min_list[1], .9*v_min_list[2]]
+            #print(v_min_list) 
+            #print(rt_d)
+            #print("&&&&&&&&& ------------ this can not happend")
 
 
         """
@@ -172,10 +204,14 @@ def run_optimizer(control):
         else:
             pc_om_map_ratio = .3
 
-
+        
         G = np.array([[-1,1,0,0,0], [0,0,planning_failure_cntr_coeff,-pc_om_map_ratio,0], [0,0,0, planning_failure_cntr_coeff,-3], [0,0,1,0,0]])
         d = np.array([0, 0, 0, (r_max_/r_min_static)*v_sensor_max])
-       
+        if r_min_ == r_max_:
+            G = np.array([[0, 0, planning_failure_cntr_coeff, -pc_om_map_ratio, 0],
+                          [0, 0, 0, planning_failure_cntr_coeff, -3], [0, 0, 1, 0, 0]])
+            d = np.array([0, 0, (r_max_/r_min_static)*v_sensor_max])
+
             
         opt = Opt(method="var5_rhat_volmax",
                   Q=Q,
@@ -193,11 +229,24 @@ def run_optimizer(control):
         profile = True
         tol = 1e-12
         results = opt.opt(profile=profile, rt_d=rt_d_, x0=x0, tol=tol, verbose=False)
+        """
+        if not results.success:
+            print("v_min_list" + str(v_min_list))
+            print("v_min_list_copy" + str(v_min_list_copy))
+            print("v_max_list" + str(v_max_list))
+            print("om_vol must be < " + str(pc_om_map_ratio / planning_failure_cntr_coeff) + " om_to_pl")
+            print("om_to_pl < " + str(3) + "*ppl_pl_vol")
+            print("om_vol < " + str(r_max_ / r_min_static * v_sensor_max))
+            print("v_sensor_max" + str(v_sensor_max))
+            print("rmin_list" + str(r_min_list))
+            print("rmax_hat" + str(r_max_list))
+            print("rt_d" + str(rt_d_))
+         """
         if results.success:
             break
 
     if not results.success:
-        if time_budget_left_to_distribute < front_end_latency: # don't have time for another round
+        if (time_budget_left_to_distribute - ((rospy.Time.now() - cmd_rcvd_time).to_sec())) < front_end_latency: # don't have time for another round
             #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
             failure_status = 2
         else:
@@ -218,6 +267,9 @@ def control_callback(control):
     all_cpu_percents = psutil.cpu_percent(percpu=True)[0:num_of_processors]
     cpu_utilization_last_round = sum(all_cpu_percents[0:num_of_processors]) / num_of_processors
     rospy.set_param("cpu_utilization_for_last_decision", float(cpu_utilization_last_round))
+
+    
+    
     #collect_hw_counters()
     
     #memory_utilization_last_round = psutil.virtual_memory().percent
@@ -321,6 +373,16 @@ def control_callback(control):
 num_of_processors  = 0
 if __name__ == '__main__':
     global num_of_processors 
+    global om_popt, om_pl_popt, pp_pl_popt,typical_model
+
+    result_folder = os.getenv('base_dir') + "/src/MAV_apps/common/run_time/src/knob_performance_modeling_all/data_1"
+    om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data(result_folder)
+    # colecting models model 
+    om_popt, om_pl_popt, pp_pl_popt, typical_model = roborun_model_gen(om_res, om_vol, om_response_time_measured,
+                                                                       om_pl_res, om_pl_vol,
+                                                                       om_pl_response_time_measured, pp_pl_res,
+                                                                       pp_pl_vol,
+                                                                       pp_pl_response_time_measured)  # for error calculation
     #op_obj = Opt()
     #opt_obj.opt()
     rospy.init_node('runtime_thread_python', anonymous=True)
@@ -339,6 +401,10 @@ if __name__ == '__main__':
     r_min_static = rospy.get_param("pc_res_max") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_steps = rospy.get_param("num_of_res_to_try") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_max_static = (2 ** r_steps) * r_min_static
+
+    rospy.set_param("pyrun_rcvd_models", True) # this is a signal to everyone else to start their run
+
+
     while not rospy.is_shutdown():
         #rt_max = rospy.get_param("max_time_budget")
         drone_radius = rospy.get_param("planner_drone_radius")

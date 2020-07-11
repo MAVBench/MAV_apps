@@ -58,7 +58,7 @@ double TimeBudgetter::calc_budget(const mavbench_msgs::multiDOFtrajectory msg, s
 	else if (macro_time_budgets.size() >= 1){
 		//time_budgetting_failed = false;
 		time_budget = min(max_time_budget, macro_time_budgets[1]);
-		time_budget -= time_budget*.3;
+		time_budget -= time_budget*.2;
 	}
 	return time_budget;
 }

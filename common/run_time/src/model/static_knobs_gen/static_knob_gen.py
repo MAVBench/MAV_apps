@@ -22,7 +22,8 @@ def calculate_static_values():
     drone_radius = 1
     drone_radius_when_hovering =  drone_radius  # set it equal to each other to avoid sub_vmax optimization
     # collect data 
-    om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data()
+    result_folder = "../../knob_performance_modeling_all/data_1" 
+    om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data(result_folder)
 
     # colecting models model 
     om_popt, om_pl_popt, pp_pl_popt, typical_model = roborun_model_gen(om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol,
@@ -48,6 +49,8 @@ def calculate_static_values():
 
     max_time_budget = om_latency + om_pl_latency + 2*pp_pl_latency + pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency
 
+    #max_time_budget = pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency + .1 + .1 + .1
+    
     velocity_to_budget_on = calc_v_max(max_time_budget, visibility_avg - drone_radius, .1439, .8016)
     print("----om_latency:" + str(om_latency))
     print("--------om_pl_latency:" + str(om_pl_latency))

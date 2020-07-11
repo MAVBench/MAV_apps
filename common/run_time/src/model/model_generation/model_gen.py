@@ -5,7 +5,7 @@ sys.path.append('../../../../../data_processing/common_utils')
 #from calc_sampling_time import *
 from utils import *
 
-from model import Model
+from models import Model
 from data_parser import DataParser
 import matplotlib.pyplot as plt
 
@@ -39,9 +39,8 @@ def calculate_fitted_values(coeffs, res, vol, typical_model):
     return result_list
 
 
-def collect_data():
+def collect_data(result_folder):
     # Location of JSON data relative to current location
-    result_folder = '../../knob_performance_modeling_all/data_1'
 
     # File names with data
     om_fname = 'stats.json_om'
@@ -127,7 +126,8 @@ def roborun_model_gen(om_res, om_vol, om_response_time_measured, om_pl_res, om_p
 ## May want to convert this to using absolute paths to make life easier ##
 if __name__ == '__main__':
     # collect data 
-    om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data()
+    result_folder = '../../knob_performance_modeling_all/data_1'
+    om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data(result_folder)
 
     # colecting models model 
     om_popt, om_pl_popt, pp_pl_popt, typical_model = roborun_model_gen(om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol,

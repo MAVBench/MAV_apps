@@ -1,7 +1,7 @@
 #!/bin/bash
 sleep 10
 echo f 0 0 3 10
-sleep 3
+sleep 12
 echo c
 sleep 3
-echo 0 1400 30
+echo 30 480 35

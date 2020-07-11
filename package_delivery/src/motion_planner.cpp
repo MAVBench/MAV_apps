@@ -1072,6 +1072,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     double dist_to_closest_obs_recalculated =  max(dist_to_closest_obs - time_diff_duration*cur_vel_mag, 0.0);
+    //double dist_to_closest_obs_recalculated =  max(dist_to_closest_obs *cur_vel_mag, 0.0);
     //double renewed_v_max = v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min);
     //double renewed_v_max = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
     //bool sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
@@ -2423,7 +2424,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Setup optimizer
 	mav_trajectory_generation::Vertex::Vector vertices;
 	const int dimension = 3;
-	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP;
+	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::ACCELERATION;
 	
 	// Convert roadmap path to optimizer's path format
 	mav_trajectory_generation::Vertex start_v(dimension), end_v(dimension);

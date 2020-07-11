@@ -67,6 +67,7 @@ using namespace std;
 //#define N_CAMERAS 6
 string clct_data_mode;
 bool set_closest_unknown_point = false;
+bool pyrun_rcvd_models = false;
 bool got_first_unknown = false;
 string design_mode;
 string budgetting_mode;
@@ -1713,40 +1714,44 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
       raw_cloud_msgs[i] = PointCloud::Ptr(new PointCloud);
   }
   // convert images to point cloud one at at time
-  for (int i = 0; i < N_CAMERAS; ++i) {
-      if (measure_time_end_to_end){ 
-        raw_cloud_msgs[i]->header = depth_msgs[i]->header;
-      }else{
-          raw_cloud_msgs[i]->header = depth_msgs[i]->header;
-          raw_cloud_msgs[i]->header.stamp = ros::Time::now();
-      }
+  try {
+	  for (int i = 0; i < N_CAMERAS; ++i) {
+		  if (measure_time_end_to_end){
+			  raw_cloud_msgs[i]->header = depth_msgs[i]->header;
+		  }else{
+			  raw_cloud_msgs[i]->header = depth_msgs[i]->header;
+			  raw_cloud_msgs[i]->header.stamp = ros::Time::now();
+		  }
 
-      raw_cloud_msgs[i]->height = depth_msgs[i]->height;
-      raw_cloud_msgs[i]->width  = depth_msgs[i]->width;
-      raw_cloud_msgs[i]->is_dense = false;
-      raw_cloud_msgs[i]->is_bigendian = false;
+		  raw_cloud_msgs[i]->height = depth_msgs[i]->height;
+		  raw_cloud_msgs[i]->width  = depth_msgs[i]->width;
+		  raw_cloud_msgs[i]->is_dense = false;
+		  raw_cloud_msgs[i]->is_bigendian = false;
 
-      sensor_msgs::PointCloud2Modifier pcd_modifier(*raw_cloud_msgs[i]);
-      pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
+		  sensor_msgs::PointCloud2Modifier pcd_modifier(*raw_cloud_msgs[i]);
+		  pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
 
-      // Update camera model
-      model_.fromCameraInfo(info_msg);
+		  // Update camera model
+		  model_.fromCameraInfo(info_msg);
 
-      if (depth_msgs[i]->encoding == enc::TYPE_16UC1)
-      {
-        convert<uint16_t>(depth_msgs[i], raw_cloud_msgs[i], model_);
-      }
-      else if (depth_msgs[i]->encoding == enc::TYPE_32FC1)
-      {
-        convert<float>(depth_msgs[i], raw_cloud_msgs[i], model_);
-      }
-      else
-      {
-        //NODELET_ERROR_THROTTLE(5, "Depth image has unsupported encoding [%s]", depth_msgs[i]->encoding.c_str());
-        return;
-      }
+		  if (depth_msgs[i]->encoding == enc::TYPE_16UC1)
+		  {
+			  convert<uint16_t>(depth_msgs[i], raw_cloud_msgs[i], model_);
+		  }
+		  else if (depth_msgs[i]->encoding == enc::TYPE_32FC1)
+		  {
+			  convert<float>(depth_msgs[i], raw_cloud_msgs[i], model_);
+		  }
+		  else
+		  {
+			  //NODELET_ERROR_THROTTLE(5, "Depth image has unsupported encoding [%s]", depth_msgs[i]->encoding.c_str());
+			  return;
+		  }
+	  }
   }
-
+  catch(...){
+	  return;
+  }
   int n_points_cam = raw_cloud_msgs[0]->height * raw_cloud_msgs[0]->width;
   int n_points = N_CAMERAS * n_points_cam;
 
@@ -2473,6 +2478,7 @@ int main(int argc, char** argv) {
     pc    = new depth_image_proc::PointCloudXyz();
     pc->onInit(); 
     ros::Rate loop_rate(10);
+    ros::Time last_time_ran_pc = ros::Time::now();
     while (ros::ok()) {
     	/*
     	double slack = ((pc->sensor_to_actuation_time_budget_to_enforce/2 - pc->follow_trajectory_worse_case_latency) - (ros::Time::now() - pc->deadline_setting_time_stamp).toSec());  // whatever is left of the budget
@@ -2484,9 +2490,12 @@ int main(int argc, char** argv) {
 
     	if (budgetting_mode=="dynamic" && design_mode =="serial") {
 			ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
-			if (set_closest_unknown_point || !got_first_unknown){
+			ros::param::get("/pyrun_rcvd_models", pyrun_rcvd_models);
+			auto ran_pc_since_last_time = (ros::Time::now() - last_time_ran_pc).toSec();
+			if ((set_closest_unknown_point || !got_first_unknown || (ran_pc_since_last_time > 20)) && pyrun_rcvd_models){
 				//cout<<"got the new unknown so spinning"<<endl;
 				pc->spinOnce();//
+				last_time_ran_pc = ros::Time::now();
 			}else{
 				//cout<<"din't got unknown ====NOT spinning"<<endl;
 				loop_rate.sleep();
