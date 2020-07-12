@@ -46,6 +46,7 @@ void output_steps_taken_to_a_file(Drone *drone){
 
 
 geometry_msgs::Twist drone_vel;
+geometry_msgs::Point drone_pose;
 double drone_vel_mag;
 ros::Time start_deceleration_time;
 
@@ -116,8 +117,10 @@ bool control_drone_for_motion_models(Drone& drone)
 			bool vel_small = false;
 			bool vel_neg = false;
 			drone_vel = drone.velocity();
-			   drone_vel_mag= (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
-			   drone.fly_velocity(0, -10, 0, YAW_UNCHANGED, 3);
+			auto drone_init_pose = drone.pose().position;
+			drone_vel_mag= (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+			geometry_msgs::Point cur_pos;
+			drone.fly_velocity(0, -10, 0, YAW_UNCHANGED, 3);
 			   start_deceleration_time = ros::Time::now();
 			   	while(true){
 			   		drone_vel = drone.velocity();
@@ -125,12 +128,15 @@ bool control_drone_for_motion_models(Drone& drone)
 			   		vel_mag_vec.push_back(cur_vel_mag);
 			   		if (cur_vel_mag < .1){
 			   			drone.fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
-			   			ROS_INFO_STREAM("----------------------------deceleration time "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag);
+			   			cur_pos = drone.pose().position;
+			   			ROS_INFO_STREAM("----------------------------deceleration time "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag << " distance traveled"<<drone_init_pose.y - cur_pos.y);
 			   			vel_small = true;
 			   		}
 			   		if (drone_vel.linear.y<0){
 			   			drone.fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
-			   			ROS_INFO_STREAM("----------------------------deceleration time based onvel "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag);
+			   			cur_pos = drone.pose().position;
+			   			ROS_INFO_STREAM("----------------------------deceleration time  based on val"<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag << " distance traveled"<<drone_init_pose.y - cur_pos.y);
+
 			   			vel_neg = true;
 			   		}
 			   		if (vel_small || vel_neg){

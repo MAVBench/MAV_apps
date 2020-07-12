@@ -89,7 +89,7 @@ int SA_response_time_capture_ctr = 0; //counting the number of response_time cap
     									  // planning response time, since there is a big lag from the beginning of the
     									  // game execution and first planning which will skew the results
 
-
+ros::Time last_img_capture;
 bool manual_control = false;
 string this_response_time_collected_type;
 
@@ -371,6 +371,7 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("LLC_REFERENCES","single", msg->ee_profiles.time_stats.LLC_REFERENCES/1000000, 1);
 	profiling_container->capture("CACHE_REFERENCES","single", msg->ee_profiles.time_stats.CACHE_REFERENCES/1000000, 1);
 	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
+	profiling_container->capture("blind_latency","single", -1*(last_img_capture - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
 	profiling_container->capture("octomap_volume_integrated","single",  msg->ee_profiles.actual_cmds.pc_vol, 1);
 	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
@@ -381,6 +382,8 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	}else{
 		profiling_container->capture("pl_to_ft_totalLatency","single",  0, 1);
 	}
+
+	last_img_capture = msg->ee_profiles.actual_time.img_capture_time_stamp;
 }
 
 /*
@@ -780,7 +783,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("LLC_REFERENCES","single", msg->ee_profiles.time_stats.LLC_REFERENCES/1000000, 1);
 	profiling_container->capture("CACHE_REFERENCES","single", msg->ee_profiles.time_stats.CACHE_REFERENCES/1000000, 1);
 	profiling_container->capture("ee_latency","single", (ros::Time::now() - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
-
+	profiling_container->capture("blind_latency","single", -1*(last_img_capture - msg->ee_profiles.actual_time.img_capture_time_stamp).toSec(), 1);
 	profiling_container->capture("octomap_volume_integrated","single",  msg->ee_profiles.actual_cmds.pc_vol, 1);
 	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
@@ -791,6 +794,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	}else{
 		profiling_container->capture("pl_to_ft_totalLatency","single",  0, 1);
 	}
+	last_img_capture = msg->ee_profiles.actual_time.img_capture_time_stamp;
 
 	//debug_data.error.space.pc_vol= fabs(msg->ee_profiles.actual_cmds.pc_vol -  msg->ee_profiles.expected_cmds.pc_vol)/msg->ee_profiles.expected_cmds.pc_vol;
 	//debug_data.error.space.om_to_pl_res = fabs(msg->ee_profiles.actual_cmds.om_to_pl_res -  msg->ee_profiles.expected_cmds.om_to_pl_res)/msg->ee_profiles.expected_cmds.om_to_pl_res;
@@ -938,6 +942,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     signal(SIGINT, sigIntHandlerPrivate);
 
+    last_img_capture = ros::Time::now();
     double p_vx = p_vx_original;
     double p_vy = p_vy_original;
     double p_vz = p_vz_original;

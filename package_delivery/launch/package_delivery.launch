@@ -436,8 +436,8 @@
   <arg name="y_dist_to_sample_from__low_bound" default="-300"/>
   <arg name="y_dist_to_sample_from__high_bound" default="1750"/>
   <arg name="goal_mode" default="launch_based"/>
-  <arg name="goal_x" default="500"/>
-  <arg name="goal_y" default="500"/>
+  <arg name="goal_x" default="100"/>
+  <arg name="goal_y" default="100"/>
   <arg name="goal_z" default="20"/>
   
   <param name="goal_x" value="$(arg goal_x)"/>

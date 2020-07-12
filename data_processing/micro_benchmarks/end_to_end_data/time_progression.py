@@ -45,6 +45,7 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "ppl_latency",
 "pl_to_ft_totalLatency",
 "ee_latency",
+    "blind_latency",
 "cpu_utilization_for_last_decision",
 "planning_success_ctr",
 "traj_gen_failure_ctr",
@@ -85,6 +86,7 @@ smoothening_latency=  result_dict["smoothening_latency"]
 pl_to_ft_total_latency =  [0] + result_dict["pl_to_ft_totalLatency"][1:]
 
 end_to_end_latency =  result_dict["ee_latency"]
+blind_latency =  result_dict["blind_latency"]
 cpu_utilization_for_last_decision = result_dict["cpu_utilization_for_last_decision"][1:] + [100]
 octomap_volume_integrated = result_dict["octomap_volume_integrated"]
 om_to_pl_volume = result_dict["om_to_pl_volume"]
@@ -114,6 +116,23 @@ plt.ylabel("sensor to act latency(s)")
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
 
+
+# response time
+x = time_cmd_received;#range(0, len(runDiagnosticsLatency))
+labels = ["ee_latency", "blind_latency"]
+data_list = [end_to_end_latency[2:], blind_latency[2:]]
+fig, ax = plt.subplots()
+ax.stackplot(x[2:], *data_list, labels=labels, colors = col)
+ax.legend(loc='best')
+output_file = "response_time_breakdown" + ".png"
+plt.xlabel("mission progression (s)")
+plt.ylabel("response time components (s)")
+plt.yticks(np.arange(0, 5, .2))
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
+
+
+
 # utilization
 fig, axs = plt.subplots(2)
 #axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
@@ -128,6 +147,24 @@ axs[0].legend(loc='best')
 output_file = "utilization" + ".png"
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
+
+
+
+
+
+fig, axs = plt.subplots()
+#axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
+axs.set_yscale('linear')
+axs.plot(x, end_to_end_latency)
+axs.set(xlabel="mission  progression (s)", ylabel=" end to end latency(s)")
+axs.legend(loc='best')
+output_file = "ee_latency" + ".png"
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
+
+
+
+
 
 
 
