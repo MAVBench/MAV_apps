@@ -44,6 +44,125 @@ void output_steps_taken_to_a_file(Drone *drone){
 }
 
 
+
+geometry_msgs::Twist drone_vel;
+double drone_vel_mag;
+ros::Time start_deceleration_time;
+
+
+
+bool control_drone_for_motion_models(Drone& drone)
+{
+	cout << "Initialize drone:\n";
+	cout << "\ta: arm\n";
+	cout << "\td: disarm\n";
+	cout << "\tt h: takeoff to h m\n";
+	cout << "\tl: land\n";
+	cout << "\tf x y z d: fly at (x,y,z) m/s for d s\n";
+	cout << "\tfz x y z d: fly at (x,y) m/s for d s, holding height z m\n";
+	cout << "\ty x: set yaw to x\n";
+	cout << "\tyz x z: set yaw to x degrees, holding height z m\n";
+	cout << "\tp: print pitch, roll, yaw, height\n";
+	cout << "\tb: print battery stats\n";
+	cout << "\tc: complete drone setup and continue\n";
+	cout << "\ts: sleep for 5 seconds\n";
+	cout << "\tr: rotate slowly\n";
+    cout << "\tCtrl-c/q: quit\n";
+
+	std::string cmd("");
+
+	while(cmd != "c") {
+		cin >> cmd;
+        if (cmd == "q") {
+          //LOG_TIME(package_delivery);
+          cout << "bye~" << endl;
+          ros::shutdown();
+          exit(0);
+          return true;
+        }
+
+
+        if (cmd == "a") {
+            drone.arm();
+        }
+        else if (cmd == "d") {
+			drone.disarm();
+		} else if (cmd == "t") {
+			double height;
+			cin >> height;
+			if (!drone.takeoff(height))
+                return false; // Take-off has failed
+		} else if (cmd == "l") {
+			drone.land();
+		} else if (cmd == "f") {
+			double x,y,z,d;
+			cin >> x >> y >> z >> d;
+			drone.fly_velocity(x, y, z, YAW_UNCHANGED, d);
+        } else if (cmd == "fz") {
+			double x,y,z,d;
+			cin >> x >> y >> z >> d;
+			drone.fly_velocity_at_z(x, y, z, YAW_UNCHANGED, d);
+		} else if (cmd == "y") {
+			double x;
+			cin >> x;
+			drone.set_yaw(x);
+		} else if (cmd == "yz") {
+			double y, z;
+			cin >> y >> z;
+			drone.set_yaw_at_z(y, z);
+		} else if (cmd == "s"){
+			std::vector<double> vel_mag_vec;
+			vel_mag_vec.reserve(10000);
+			bool vel_small = false;
+			bool vel_neg = false;
+			drone_vel = drone.velocity();
+			   drone_vel_mag= (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+			   drone.fly_velocity(0, -10, 0, YAW_UNCHANGED, 3);
+			   start_deceleration_time = ros::Time::now();
+			   	while(true){
+			   		drone_vel = drone.velocity();
+			   		double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+			   		vel_mag_vec.push_back(cur_vel_mag);
+			   		if (cur_vel_mag < .1){
+			   			drone.fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
+			   			ROS_INFO_STREAM("----------------------------deceleration time "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag);
+			   			vel_small = true;
+			   		}
+			   		if (drone_vel.linear.y<0){
+			   			drone.fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
+			   			ROS_INFO_STREAM("----------------------------deceleration time based onvel "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag);
+			   			vel_neg = true;
+			   		}
+			   		if (vel_small || vel_neg){
+			   			break;
+			   		}
+			   	}
+			   	for (auto el: vel_mag_vec){
+			   		cout<<el<<" -- ";
+			   	}
+			   	exit(0);
+		}else if(cmd == "p"){
+			while(true){
+				drone_vel = drone.velocity();
+				double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+				if (cur_vel_mag < .1){
+					break;
+				}
+			}
+			ROS_INFO_STREAM("deceleration time "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag);
+			exit(0);
+		}
+       else if (cmd != "c") {
+			cout << "Unknown command" << endl;
+            // ros::shutdown();
+            // exit(0);
+		}
+	}
+    return true;
+}
+
+
+
 bool control_drone(Drone& drone)
 {
 	cout << "Initialize drone:\n";

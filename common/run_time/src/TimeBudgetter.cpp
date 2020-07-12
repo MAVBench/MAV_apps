@@ -99,7 +99,7 @@ double TimeBudgetter::calcSamplingTimeFixV(double velocityMag, double latency, s
 	double response_time = this->sensorActuatorModel_.worseCaseResponeTime(velocityMag, sensor_range, this->sensorActuatorModel_.accelerationCoeffs());
 
 	double next_sampling_time;
-	if (design_mode == "serial"){ // this assumes that latency is equal to 1/throughput
+	if (design_mode == "serial" || design_mode == "pipelined"){ // this assumes that latency is equal to 1/throughput
 		next_sampling_time = response_time;  // at this I belive, we just have the entire time
 											 // to dedicate for budget (but remember to remove decision making time
 											 // of this iteration and next iteration from it)
@@ -186,6 +186,10 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 	double BudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, design_mode, sensor_range);
 	double potentialBudgetTillNextSample;  // a place holder that gets updated
 	std::deque<multiDOFpoint>::iterator trajItrTemp =  trajBegin;  //pointing to the sample point we are considering at the moment
+	if (first_stuff){
+		//ROS_INFO_STREAM("===========what the hell "<<BudgetTillNextSample << " sensor range was "<< sensor_range << " velocity mag"<< velocity_magnitude);
+		first_stuff = false;
+	}
 
 	// corener case
 	if (BudgetTillNextSample <= 0) {
@@ -258,7 +262,12 @@ std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double la
 		thisSampleTime += nextSampleTime;
 		this->SamplingTimes_.push_back(thisSampleTime);
 		trajRollingItrBegin = trajItr;
+		if (first_itr){
+			;
+			//ROS_INFO_STREAM("nextSampleTime is "<<nextSampleTime);
+		}
 		first_itr = false;
+
 	}
 	return this->SamplingTimes_;
 }

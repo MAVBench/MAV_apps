@@ -34,7 +34,7 @@ def calculate_static_values():
     om_vol_desired = 50000
     om_pl_vol_desired = 3*50000
     pp_pl_vol_desired = 3*50000
-    visibility_avg = 12.5 
+    visibility_avg = 25.5 
     
     pc_filtering = .210
     sequencer_latency = .01

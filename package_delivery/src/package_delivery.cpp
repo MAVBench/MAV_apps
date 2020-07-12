@@ -59,7 +59,7 @@ int  g_planning_ctr = 0;
 bool clct_data = true;
 ros::Time g_traj_time_stamp;
 string goal_mode;
-
+bool collect_dec_data; // collect deceleration data
 geometry_msgs::Vector3 panic_velocity;
 string ip_addr__global;
 string localization_method;
@@ -217,6 +217,10 @@ void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
 double distance_to_goal_margin;
 void package_delivery_initialize_params()
 {
+	if(!ros::param::get("/collect_dec_data", collect_dec_data))  {
+      ROS_FATAL_STREAM("Could not start mapping collect_dec_data not provided");
+      return ;
+    }
 
 	if(!ros::param::get("/goal_mode",goal_mode))  {
       ROS_FATAL_STREAM("Could not start mapping goal_mode not provided");
@@ -564,7 +568,11 @@ int main(int argc, char **argv)
         loop_start_t = ros::Time::now();
         if (state == setup)
         {
-            control_drone(drone);
+        	if (collect_dec_data){
+        		control_drone_for_motion_models(drone);
+        		exit(0);
+        	}
+        	control_drone(drone);
             goal = get_goal(goal_mode);
             start = get_start(drone);
             

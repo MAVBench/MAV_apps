@@ -883,7 +883,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  tree_max_z = max(tree_max_z, coordinate_om.z());
 
 	  update_closest_obstacle(coordinate_om_to_pl, sensor_origin_corrected);
-
 	  //auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), true);
 	  //lower resolution map handling
 	  //ros::Time low_res_start = ros::Time::now() ;

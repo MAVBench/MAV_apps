@@ -769,6 +769,22 @@ double correct_distance( double cur_vel_mag, double max_vel, double max_drone_ra
 	return distance - max((cur_vel_mag/max_vel)*max_drone_radius, min_drone_radius);
 }
 
+
+
+void clear_traj(trajectory_t *traj, float backup_duration, float stay_in_place_duration_for_stop , float stay_in_place_duration_for_reverse, bool stop){
+	double fly_down_vel = 2;
+	double time = 0;
+	int ctr = 0;
+	int sign = 1;
+	double duration_incr = traj->front().duration;
+	double first_point_x = traj->front().x;
+	double first_point_y = traj->front().y;
+	double first_point_z = traj->front().z;
+	float stay_still_duration = 0;
+	traj->clear();
+}
+
+
 // set the velocity of the trajectory after certain duration to zero
 // set the position of the trajectory waypoints after certain duratrion to the last point (immediately before the end of the duration)
 // set the the z velocity after certain duration  to -1 to come down and avoid moving out of the boundary

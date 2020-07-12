@@ -488,7 +488,6 @@ void MotionPlanner::runtime_failure_cb(const mavbench_msgs::runtime_failure_msg 
 double updated_budget_till_next_unknown;
 bool got_updated_budget = false;
 
-
 double calculate_budget(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, std::deque<multiDOFpoint> *traj_);
 
 // determine whether it's time to replan
@@ -502,15 +501,16 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     //double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
-    double dist_to_closest_obs_recalculated =  dist_to_closest_obs;
-    double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/sensor_max_range)*(v_max_max - v_max_min), v_max_min);
+    double dist_to_closest_obs_recalculated =  min((double)dist_to_closest_obs, sensor_max_range/1.5); // only consider half
+    double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/(sensor_max_range/1.5))*(v_max_max - v_max_min), v_max_min);
+    cout<<"distance to closest obstacle: " << dist_to_closest_obs << "  dist_to closest obst recalculated:"<< dist_to_closest_obs_recalculated<< " renewd_v_max_temp:" << renewed_v_max_temp<< endl;
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
     vmax_filter_queue->push(renewed_v_max_temp);
     //cout<<"renewd_v_max_before"<<renewed_v_max<<endl;
     renewed_v_max = vmax_filter_queue->reduce("min");
     //cout<<"renewd_v_max_after"<<renewed_v_max<<endl;
 
-    sub_optimal_v_max = (renewed_v_max >  1.5*v_max__global) || (renewed_v_max <  v_max__global/1.5);
+    sub_optimal_v_max = (renewed_v_max >  min(1.5*v_max__global, v_max_max)) || (renewed_v_max <  v_max__global/1.5);
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
     //bool sub_optimal_v_max = false;
 

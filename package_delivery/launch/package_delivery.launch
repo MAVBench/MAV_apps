@@ -25,7 +25,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="7"/> 
+  <arg name="v_max" default="5"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="3"/>
@@ -96,6 +96,10 @@
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
   
+  <arg name="collect_dec_data" default="false" />
+  <param name="collect_dec_data" value="$(arg collect_dec_data)"/>
+
+
   <arg name="sequencer_sampling_rate" default="1"/> 
   <param name="sequencer_sampling_rate" value="$(arg sequencer_sampling_rate)"/>
   
@@ -432,8 +436,8 @@
   <arg name="y_dist_to_sample_from__low_bound" default="-300"/>
   <arg name="y_dist_to_sample_from__high_bound" default="1750"/>
   <arg name="goal_mode" default="launch_based"/>
-  <arg name="goal_x" default="0"/>
-  <arg name="goal_y" default="250"/>
+  <arg name="goal_x" default="500"/>
+  <arg name="goal_y" default="500"/>
   <arg name="goal_z" default="20"/>
   
   <param name="goal_x" value="$(arg goal_x)"/>

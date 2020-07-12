@@ -2488,9 +2488,13 @@ int main(int argc, char** argv) {
     	}
     	*/
 
-    	if (budgetting_mode=="dynamic" && design_mode =="serial") {
+		ros::param::get("/pyrun_rcvd_models", pyrun_rcvd_models);
+		if (!pyrun_rcvd_models){
+			loop_rate.sleep();
+			continue;
+		}
+		if (budgetting_mode=="dynamic" && design_mode =="serial") {
 			ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
-			ros::param::get("/pyrun_rcvd_models", pyrun_rcvd_models);
 			auto ran_pc_since_last_time = (ros::Time::now() - last_time_ran_pc).toSec();
 			if ((set_closest_unknown_point || !got_first_unknown || (ran_pc_since_last_time > 20)) && pyrun_rcvd_models){
 				//cout<<"got the new unknown so spinning"<<endl;

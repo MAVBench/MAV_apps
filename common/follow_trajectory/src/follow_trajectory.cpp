@@ -533,6 +533,23 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 	}
 }
 
+void emergency_stop(Drone *drone){
+	auto drone_vel = drone->velocity();
+	//drone->fly_velocity(max(-10*drone_vel.linear.x, -10.0), max(-10*drone_vel.linear.y, -10.0), max(-10*drone_vel.linear.z, -10.0), YAW_UNCHANGED, 1);
+	//drone->fly_velocity(max(-10*drone_vel.linear.x, -10.0), max(-10*drone_vel.linear.y, -10.0), max(-10*drone_vel.linear.z, -10.0), YAW_UNCHANGED, 1);
+	drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
+	//start_deceleration_time = ros::Time::now();
+	while(true){
+		drone_vel = drone->velocity();
+		double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+		if (cur_vel_mag < 1){
+			drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
+			//ROS_INFO_STREAM("----------------------------deceleration time "<<(ros::Time::now() - start_deceleration_time).toSec()<< " for velocity:"  << drone_vel_mag);
+			break;
+		}
+	}
+
+}
 
 void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, Drone * drone)
 {
@@ -570,6 +587,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     } else if (msg->stop ) {// !optimizer_succeeded){
     	fly_backward = false;
     	stop = true;
+        //emergency_stop(drone);
     	//ROS_INFO_STREAM("follow trajectory stopping");
     }
     else if (trajectory.empty() && !new_trajectory.empty()) {
@@ -1070,9 +1088,9 @@ int main(int argc, char **argv)
         		backed_up = true;
         		forward_traj = &reverse_trajectory;
         		rev_traj = &trajectory;
-
         		modify_backward_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
-
+        		// get rid of clear traj if you want to add back ward motion
+        		//clear_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
         		trajectory_t blah = *forward_traj;
         		yaw_strategy = face_backward;
         		//max_velocity = 3;
@@ -1081,6 +1099,8 @@ int main(int argc, char **argv)
 
          if (trajectory_done(*forward_traj)){
             loop_rate.sleep();
+            //mavbench_msgs::multiDOFpoint mdp_msg;
+        	//next_steps_pub.publish(mdp_msg);
             continue;
         }
 

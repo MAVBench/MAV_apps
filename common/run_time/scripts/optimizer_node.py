@@ -70,6 +70,8 @@ def run_optimizer(control):
     cmd_rcvd_time = rospy.Time.now()
     global r_max_queue 
     rt_max = control.inputs.max_time_budget 
+    cur_vel_mag = rospy.get_param("velocity_to_budget_on")
+    print("====cur vel amg " + str(cur_vel_mag)) 
     """ 
     print("gap_statistics_max" + str(control.inputs.gap_statistics_max))
     print("gap_statistics_avg" + str(control.inputs.gap_statistics_avg))
@@ -81,7 +83,7 @@ def run_optimizer(control):
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
-        #print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
+        print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
         results = dummy_output()
         failure_status = 2
         return results, failure_status
@@ -247,7 +249,7 @@ def run_optimizer(control):
 
     if not results.success:
         if (time_budget_left_to_distribute - ((rospy.Time.now() - cmd_rcvd_time).to_sec())) < front_end_latency: # don't have time for another round
-            #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+            print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
             failure_status = 2
         else:
             failure_status = 1

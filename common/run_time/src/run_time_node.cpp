@@ -1063,7 +1063,7 @@ int main(int argc, char **argv)
     	drone_vel = drone.velocity();
     	cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
     	drone_position = drone.position();
-    	//ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
+    	ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
 
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
@@ -1135,6 +1135,9 @@ int main(int argc, char **argv)
     			auto marker = get_marker(closest_unknown_point);
     			closest_unknown_marker_pub.publish(marker);
     		}
+
+    		//ROS_INFO_STREAM("closest uknown distance:"<< calc_dist(drone_position, closest_unknown_point));
+
     		if (DEBUG_RQT){
     			debug_data.header.stamp = ros::Time::now();
     			debug_data.closest_unknown_distance = calc_dist(drone_position, closest_unknown_point);

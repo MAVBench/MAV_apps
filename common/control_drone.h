@@ -32,4 +32,4 @@
 #include <string>
 
 bool control_drone(Drone& drone);
-
+bool control_drone_for_motion_models(Drone& drone);

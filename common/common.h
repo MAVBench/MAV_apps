@@ -70,7 +70,7 @@ void scan_around(Drone &drone, int angle);
 double correct_distance( double cur_vel_mag, double max_vel, double max_drone_radius, double min_drone_radius, double distance);
 // Utility functions
 void modify_backward_traj(trajectory_t *traj, float backup_duration, float stay_in_place_duration_for_stop , float stay_in_place_duration_for_reverse, bool stop);
-
+void clear_traj(trajectory_t *traj, float backup_duration, float stay_in_place_duration_for_stop , float stay_in_place_duration_for_reverse, bool stop);
 trajectory_t shift_trajectory(const trajectory_t &traj, Drone *drone);
 float distance(float x, float y, float z);
 double calc_vec_magnitude(double x, double y, double z);
