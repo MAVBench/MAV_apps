@@ -71,7 +71,7 @@ def run_optimizer(control):
     global r_max_queue 
     rt_max = control.inputs.max_time_budget 
     cur_vel_mag = rospy.get_param("velocity_to_budget_on")
-    print("====cur vel amg " + str(cur_vel_mag)) 
+    #print("====cur vel amg " + str(cur_vel_mag)) 
     """ 
     print("gap_statistics_max" + str(control.inputs.gap_statistics_max))
     print("gap_statistics_avg" + str(control.inputs.gap_statistics_avg))

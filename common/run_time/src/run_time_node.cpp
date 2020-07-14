@@ -1,44 +1,53 @@
-#include "ros/ros.h"
-#include <std_msgs/String.h>
-//#include "template_library.hpp"
-#include <sstream>
-#include <iostream>
-#include <chrono>
-#include <math.h>
-#include <iterator>
-#include <chrono>
-#include <thread>
-//#include "controllers/DroneControllerBase.hpp"
-//#include "common/Common.hpp"
-#include <fstream>
-#include <cstdlib>
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <common.h>
+#include <coord.h>
+#include <datacontainer.h>
+#include <datat.h>
+#include <Drone.h>
 #include <geometry_msgs/Point.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
-#include <trajectory_msgs/MultiDOFJointTrajectory.h>
-#include <stdio.h>
-#include <time.h>
-#include "std_msgs/Bool.h"
-#include <signal.h>
-#include <cstring>
-#include <string>
+#include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3.h>
+#include <mavbench_msgs/control.h>
+#include <mavbench_msgs/control_input.h>
+#include <mavbench_msgs/control_internal_states.h>
 #include <mavbench_msgs/multiDOFpoint.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
-#include "TimeBudgetter.h"
-#include <Drone.h>
-#include <datacontainer.h>
-#include <profile_manager.h>
-#include <mavbench_msgs/runtime_debug.h>
-#include <mavbench_msgs/control.h>
-#include "package_delivery/point.h"
 #include <mavbench_msgs/planner_info.h>
-#include <common.h>
-#include "coord.h"
+#include <mavbench_msgs/runtime_debug.h>
+#include <package_delivery/point.h>
+#include <profile_manager/profiling_data_srv.h>
+#include <profile_manager/profiling_data_verbose_srv.h>
+#include <profile_manager.h>
+#include <ros/duration.h>
+#include <ros/init.h>
+#include <ros/node_handle.h>
+#include <ros/param.h>
+#include <ros/publisher.h>
+#include <ros/rate.h>
+#include <ros/service_server.h>
+#include <ros/this_node.h>
+#include <ros/time.h>
+#include <rosconsole/macros_generated.h>
+#include <signal.h>
+#include <std_msgs/Header.h>
+#include <TimeBudgetter.h>
+#include <visualization_msgs/Marker.h>
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <deque>
+#include <iostream>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
+
 string design_mode;
 using namespace std;
 std::string ip_addr__global;
-double g_sensor_max_range, g_sampling_interval, g_v_max, g_planner_drone_radius;
+double g_sensor_max_range, g_sampling_interval, g_v_max, g_planner_drone_radius, g_planner_drone_radius_when_hovering, vmax_max;
 bool DEBUG_VIS;
 std::deque<double> MacroBudgets;
 bool reactive_runtime;
@@ -214,6 +223,8 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 	}
 
 	TimeBudgetter time_budgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius, design_mode);
+
+	time_budgetter.set_params(vmax_max,g_planner_drone_radius, g_planner_drone_radius_when_hovering);
 	double time_budget = time_budgetter.calcSamplingTimeFixV(velocityMag, 0.0, design_mode, sensor_range);
 //	ROS_INFO_STREAM("---- calc budget directly"<< time_budget);
 	return time_budget;
@@ -265,6 +276,8 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	}
 	*/
 
+	double velocity_magnitude = time_budgetter->get_velocity_projection_mag(traj[0], closest_unknown_point);
+	time_budgetter->set_params(vmax_max,g_planner_drone_radius, g_planner_drone_radius_when_hovering);
 	double time_budget = time_budgetter->calc_budget(*msg, &traj, closest_unknown_point, drone_position);
 	if (time_budget == -10){
 			time_budgetting_failed = true;
@@ -288,7 +301,6 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	control.internal_states.drone_point_while_budgetting.x = drone_position.x;
 	control.internal_states.drone_point_while_budgetting.y = drone_position.y;
 	control.internal_states.drone_point_while_budgetting.z = drone_position.z;
-	double velocity_magnitude = time_budgetter->get_velocity_projection_mag(traj[0], closest_unknown_point);
 	control.internal_states.drone_point_while_budgetting.vel_mag = velocity_magnitude;
 
 
@@ -338,10 +350,23 @@ void initialize_global_params() {
         exit(-1);
 	}
 
+	if(!ros::param::get("/v_max", vmax_max)) {
+		ROS_FATAL_STREAM("Could not start run_time_node v_max not provided");
+		exit(-1);
+	}
+
+
 	if(!ros::param::get("/planner_drone_radius", g_planner_drone_radius)) {
 		ROS_FATAL_STREAM("Could not start run_time_node planner_drone_radius not provided");
         exit(-1);
 	}
+
+	if(!ros::param::get("/planner_drone_radius_when_hovering", g_planner_drone_radius_when_hovering)) {
+		ROS_FATAL_STREAM("Could not start planner_drone_radius_when_hovering not provided");
+        exit(-1);
+	}
+
+
 
 
 
@@ -1063,7 +1088,7 @@ int main(int argc, char **argv)
     	drone_vel = drone.velocity();
     	cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
     	drone_position = drone.position();
-    	ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
+    	//ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
 
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
@@ -1123,6 +1148,7 @@ int main(int argc, char **argv)
     			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
     			double sensor_range = closest_unknown_point_distance;
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
+    			//ROS_INFO_STREAM(" right here with time of budget of " <<time_budget);
     			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
     		}
@@ -1136,7 +1162,7 @@ int main(int argc, char **argv)
     			closest_unknown_marker_pub.publish(marker);
     		}
 
-    		//ROS_INFO_STREAM("closest uknown distance:"<< calc_dist(drone_position, closest_unknown_point));
+    		ROS_INFO_STREAM("closest uknown distance:"<< calc_dist(drone_position, closest_unknown_point) << " budget "<<control.internal_states.sensor_to_actuation_time_budget_to_enforce << " velocity" << cur_vel_mag);
 
     		if (DEBUG_RQT){
     			debug_data.header.stamp = ros::Time::now();

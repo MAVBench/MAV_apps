@@ -21,14 +21,14 @@
 #include <mavbench_msgs/response_time_capture.h>
 #include <mavbench_msgs/planner_info.h>
 using namespace std;
-
+int planning_failure_since_last_success = 0;
 int planning_success_ctr = 0;
 int planning_ctr = 0;
 int decision_ctr = 0;
 int runtime_failure_ctr = 0;
 int traj_gen_failure_ctr  = 0;
 
-
+geometry_msgs::Twist vel_before_stop;
 // Trajectories
 trajectory_t trajectory;
 trajectory_t reverse_trajectory;
@@ -43,6 +43,7 @@ mavbench_msgs::planner_info closest_unknown_point;
 // Parameters
 float g_v_max;
 double p_vx_original, p_vy_original, p_vz_original, I_px, I_py, I_pz, d_px, d_py, d_pz; // I and P factor for the PID controller in follow_trajectory function
+bool use_emergency_stop;
 double g_grace_period = 0; // How much time the drone will wait for a new path to be calculated when a collision is near, before pumping the breaks
 double g_time_to_come_to_full_stop = 0;
 ros::Time first_cmd_time;
@@ -334,10 +335,13 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	}else {
 		if (msg->closest_unknown_point.planning_status == "success") {
 			planning_success_ctr +=1;
+			planning_failure_since_last_success = 0;
 		}else if (msg->closest_unknown_point.planning_status == "runtime_failure") {
+			planning_failure_since_last_success +=1;
 			runtime_failure_ctr +=1;
 		}else{
 			traj_gen_failure_ctr +=1;
+			planning_failure_since_last_success +=1;
 		}
 		planning_ctr +=1;
 	}
@@ -539,8 +543,35 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 void emergency_stop(Drone *drone){
 	auto drone_vel = drone->velocity();
 	//drone->fly_velocity(max(-10*drone_vel.linear.x, -10.0), max(-10*drone_vel.linear.y, -10.0), max(-10*drone_vel.linear.z, -10.0), YAW_UNCHANGED, 1);
-	//drone->fly_velocity(max(-10*drone_vel.linear.x, -10.0), max(-10*drone_vel.linear.y, -10.0), max(-10*drone_vel.linear.z, -10.0), YAW_UNCHANGED, 1);
-	drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
+	double x_stop = -10*drone_vel.linear.x;
+	if (x_stop < -1) {
+		x_stop = max(x_stop, -5.0);
+	}else{
+		x_stop = min(x_stop, +5.0);
+	}
+
+	double y_stop = -10*drone_vel.linear.y;
+	if (y_stop < -1) {
+		y_stop = max(y_stop, -5.0);
+	}else{
+		y_stop = min(y_stop, +5.0);
+	}
+
+	double z_stop = -10*drone_vel.linear.z;
+	if (z_stop < -1) {
+		z_stop = max(z_stop, -5.0);
+	}else{
+		z_stop = min(z_stop, +5.0);
+	}
+	drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
+	double vel_before_stop_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+	if (vel_before_stop_mag > .5){ // only register if you were in motion
+		vel_before_stop =  drone_vel;
+	}
+
+	ROS_INFO_STREAM(" -------- stopping with "<<x_stop << " " << y_stop << " " << z_stop<<endl);
+
+	//drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
 	//start_deceleration_time = ros::Time::now();
 	while(true){
 		drone_vel = drone->velocity();
@@ -551,16 +582,20 @@ void emergency_stop(Drone *drone){
 			break;
 		}
 	}
-
+	double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
+	ROS_INFO_STREAM("velocity values ------"<<-1*vel_before_stop.linear.x/scale<< " " << -1*vel_before_stop.linear.y/scale << " " << -1*vel_before_stop.linear.z/scale);
+	if (scale != 0 && vel_before_stop_mag> .5){
+		ROS_INFO_STREAM("send int emergency stop with "<<-1*vel_before_stop.linear.x/scale<<" " << 1*vel_before_stop.linear.y/scale<< " " <<-1*vel_before_stop.linear.z/scale);
+		//drone->fly_velocity(-1*vel_before_stop.linear.x/scale, -1*vel_before_stop.linear.y/scale, -1*vel_before_stop.linear.z/scale, 1);
+	}
 }
-
+int empty_traj_ctr = 0;
 void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, Drone * drone)
 {
 
 	auto pl_to_ft_totalLatency = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 
-	//for profiling SA
-	erase_up_to_msg(msg->header, "callback_trajectory"); //erase the predecessors of the msg that currently reside in the timing_msgs_vec
+	//for profiling SA erase_up_to_msg(msg->header, "callback_trajectory"); //erase the predecessors of the msg that currently reside in the timing_msgs_vec
 	closest_unknown_point = msg->closest_unknown_point;
     // Check for trajectories that arrive out of order
 	if (msg->trajectory_seq < trajectory_seq) {
@@ -579,6 +614,18 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     }
 
     trajectory_t new_trajectory = create_trajectory_from_msg(*msg);
+    /*
+    if (new_trajectory.empty()) {
+    	empty_traj_ctr +=1;
+    	ROS_INFO_STREAM("dslkfjasdlkfjlkdsjfl kjasdlfkj sk tmpey teraj");
+    }
+    if (empty_traj_ctr >= 3){
+    	double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
+    	drone->fly_velocity(vel_before_stop.linear.x/scale, vel_before_stop.linear.y/scale, vel_before_stop.linear.z/scale, 2);
+    	ROS_INFO_STREAM("calling drone with velocikty"<<vel_before_stop.linear.x/scale<< " "<< vel_before_stop.linear.y/scale<< " " << vel_before_stop.linear.z/scale);
+    	empty_traj_ctr = 0;
+    }
+    */
 
 //    bool optimizer_succeeded;
  //   ros::param::get("/optimizer_succeeded", optimizer_succeeded);
@@ -590,7 +637,9 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     } else if (msg->stop ) {// !optimizer_succeeded){
     	fly_backward = false;
     	stop = true;
-        //emergency_stop(drone);
+    	if (use_emergency_stop){
+    		emergency_stop(drone);
+    	}
     	//ROS_INFO_STREAM("follow trajectory stopping");
     }
     else if (trajectory.empty() && !new_trajectory.empty()) {
@@ -684,10 +733,13 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	}else {
 		if (msg->closest_unknown_point.planning_status == "success") {
 			planning_success_ctr +=1;
+			planning_failure_since_last_success = 0;
 		}else if (msg->closest_unknown_point.planning_status == "runtime_failure") {
 			runtime_failure_ctr +=1;
+			planning_failure_since_last_success += 1;
 		}else{
 			traj_gen_failure_ctr +=1;
+			planning_failure_since_last_success += 1;
 		}
 		planning_ctr +=1;
 	}
@@ -834,6 +886,7 @@ void initialize_global_params() {
 	ros::param::get("d_px", d_px);
 	ros::param::get("d_py", d_py);
 	ros::param::get("d_pz", d_pz);
+	ros::param::get("/use_emergency_stop", use_emergency_stop);
 
 	ros::param::get("PID_correction_time", PID_correction_time);
 
@@ -1008,6 +1061,17 @@ int main(int argc, char **argv)
     		first_cmd_time_pub.publish(first_cmd_time_msg);
     	}
 
+
+    	if (use_emergency_stop){
+			if (planning_failure_since_last_success >= 3) {
+					double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
+					if (scale != 0){
+						drone.fly_velocity(-1*vel_before_stop.linear.x/scale, -1*vel_before_stop.linear.y/scale, -1*vel_before_stop.linear.z/scale, 2);
+					}
+			planning_failure_since_last_success  = 0;
+			}
+    	}
+
     	profiling_container->capture("entire_follow_trajectory", "start", ros::Time::now(), g_capture_size);
     	ros::param::get("/knob_performance_modeling_for_piecewise_planner", knob_performance_modeling_for_piecewise_planner);
 
@@ -1094,9 +1158,11 @@ int main(int argc, char **argv)
         		forward_traj = &reverse_trajectory;
         		rev_traj = &trajectory;
         		modify_backward_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
+        		if (use_emergency_stop){
+					clear_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
+					rev_traj = forward_traj;
+        		}
         		// get rid of clear traj if you want to add back ward motion
-        		//clear_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
-        		trajectory_t blah = *forward_traj;
         		yaw_strategy = face_backward;
         		//max_velocity = 3;
         	}
@@ -1104,8 +1170,10 @@ int main(int argc, char **argv)
 
          if (trajectory_done(*forward_traj)){
             loop_rate.sleep();
-            //mavbench_msgs::multiDOFpoint mdp_msg;
-        	//next_steps_pub.publish(mdp_msg);
+            if (use_emergency_stop){
+            	mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj, &drone);
+            	next_steps_pub.publish(trajectory_msg);
+            }
             continue;
         }
 

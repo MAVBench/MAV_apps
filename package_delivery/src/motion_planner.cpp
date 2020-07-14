@@ -113,6 +113,34 @@ bool planner_termination_func_2(){
 	return  SA_time_exceeded;// || ppl_time_exceeded;
 }
 
+
+
+void emergency_stop(Drone *drone){
+	auto drone_vel = drone->velocity();
+	double x_stop = -10*drone_vel.linear.x;
+	if (x_stop < -1) {
+		x_stop = max(x_stop, -5.0);
+	}else{
+		x_stop = min(x_stop, +5.0);
+	}
+
+	double y_stop = -10*drone_vel.linear.y;
+	if (y_stop < -1) {
+		y_stop = max(y_stop, -5.0);
+	}else{
+		y_stop = min(y_stop, +5.0);
+	}
+
+	double z_stop = -10*drone_vel.linear.z;
+	if (z_stop < -1) {
+		z_stop = max(z_stop, -5.0);
+	}else{
+		z_stop = min(z_stop, +5.0);
+	}
+	drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
+}
+
+
 template<class PlannerType>
 MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Point start, geometry_msgs::Point goal, octomap::OcTree * octree, int& status)
 {
@@ -144,6 +172,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 	bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
 	if (SA_time_exceeded){ //|| ppl_time_exceeded){
 		status = 0;
+		emergency_stop(drone);
 		piecewise_planning = false;
 		return result;
 	}
@@ -197,6 +226,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
 	if (SA_time_exceeded){// || ppl_time_exceeded){
 		status = 0;
 		piecewise_planning = false;
+		emergency_stop(drone);
 		return result;
 	}
 
@@ -237,9 +267,15 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
     		ROS_INFO("Solution found Approximately!");
     	}
         //ss.simplifySolution();
-
+    	bool first_state = true;
         for (auto state : ss.getSolutionPath().getStates()) {
-            const auto *pos = state->as<ob::RealVectorStateSpace::StateType>();
+        	if (first_state){ // skip this round, casuse we are always getting the wrong in the future coordinates
+        		first_state = false;
+        		auto pos = drone->position();
+        		result.push_back({pos.x, pos.y, pos.z});
+        		continue;
+        	}
+        	const auto *pos = state->as<ob::RealVectorStateSpace::StateType>();
 
             double x = pos->values[0];
             double y = pos->values[1];
@@ -501,8 +537,8 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     //double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
-    double dist_to_closest_obs_recalculated =  min((double)dist_to_closest_obs, sensor_max_range/1.5); // only consider half
-    double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/(sensor_max_range/1.5))*(v_max_max - v_max_min), v_max_min);
+    double dist_to_closest_obs_recalculated =  min((double)dist_to_closest_obs, sensor_max_range); // only consider half
+    double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/(sensor_max_range))*(v_max_max - v_max_min), v_max_min);
     cout<<"distance to closest obstacle: " << dist_to_closest_obs << "  dist_to closest obst recalculated:"<< dist_to_closest_obs_recalculated<< " renewd_v_max_temp:" << renewed_v_max_temp<< endl;
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
     vmax_filter_queue->push(renewed_v_max_temp);
@@ -518,7 +554,8 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
     if (SA_time_exceeded){
 		replanning_reason = Collision_detected;
-    	replan = true;
+		emergency_stop(drone);
+		replan = true;
     }if(!first_time_planning_succeeded) {
 		msg_for_follow_traj.closest_unknown_point.planning_status = "first_time_planning";
 		//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
@@ -544,12 +581,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			replanning_reason = Last_plan_approximate;
 			replan = true;
 			ROS_ERROR_STREAM("approximate planning");
-		}else if (sub_optimal_v_max && budgetting_mode != "static"){
-			replanning_reason = Last_plan_approximate;
-			replan = true;
-			ROS_ERROR_STREAM("sub_optimal v_max");
-		}
-		else if( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
+		}		else if( (ros::Time::now() - this->last_planning_time).toSec() > (float)1/planner_min_freq) {
 			replanning_reason = Min_freq_passed;
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
 			replan = true;
@@ -580,6 +612,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				point_of_interest.z = closest_unknown_way_point.z;
 			}
 
+
 			multiDOFpoint cur_point;
 			cur_point.x = drone->position().x;
 			cur_point.y = drone->position().y;
@@ -601,10 +634,21 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				replanning_reason = Collision_detected;
 				//ROS_INFO_STREAM("there is a collision");
 				profiling_container.capture("replanning_due_to_collision_ctr", "counter", 0, capture_size); // @suppress("Invalid arguments")
+
+				bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
+				if (SA_time_exceeded) {
+					emergency_stop(drone);
+				}
+
 				//ROS_ERROR_STREAM("collision comming, so replan");
 				ROS_ERROR_STREAM(" collision detected");
 				replan = true;
-			} else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
+			} else if (sub_optimal_v_max && budgetting_mode != "static"){
+				replanning_reason = Last_plan_approximate;
+				replan = true;
+				ROS_ERROR_STREAM("sub_optimal v_max");
+			}
+			else{ //this case is for profiling. We send this over to notify the follow trajectory that we made a decision not to plan
 				replanning_reason = No_need_to_plan;
 				replan = false;
 				closest_unknown_way_point.planning_status = "no_planning_needed";
@@ -917,6 +961,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 
     bool ppl_time_exceeded = ((ros::Time::now() - ppl_start_time).toSec() > g_ppl_time_budget);
     if (SA_time_exceeded){// || ppl_time_exceeded){
+		emergency_stop(drone);
     	status = 0;
     } else {
     //while((piecewise_path.empty() || status == 3 || !got_enough_budget_for_next_SA_itr(piecewise_path) || !ppl_inbound_check(piecewise_path))){
@@ -1326,7 +1371,8 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 	g_next_steps_msg = *msg;
 	next_steps_msg_size  = msg->points.size();
 	if (!next_steps_msg_size){
-		ROS_INFO_STREAM("msg sizees are 00000000000000000000");
+		;
+		//ROS_INFO_STREAM("msg sizees are 00000000000000000000");
 	}
 }
 
@@ -2306,6 +2352,9 @@ bool MotionPlanner::got_enough_budget_for_next_SA_itr(piecewise_trajectory& piec
 		closest_unknown_point.x = closest_unknown_way_point.x;
 		closest_unknown_point.y = closest_unknown_way_point.y;
 		closest_unknown_point.z = closest_unknown_way_point.z;
+
+
+		time_budgetter->set_params(v_max_max, drone_radius__global, planner_drone_radius_when_hovering);
 		double budget_till_next_unknown = time_budgetter->calc_budget_till_closest_unknown(cur_point, closest_unknown_point);
 		/*
 		if (budget_till_next_unknown < (map_res/2)){
@@ -2424,7 +2473,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Setup optimizer
 	mav_trajectory_generation::Vertex::Vector vertices;
 	const int dimension = 3;
-	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::ACCELERATION;
+	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::VELOCITY;
 	
 	// Convert roadmap path to optimizer's path format
 	mav_trajectory_generation::Vertex start_v(dimension), end_v(dimension);
@@ -2433,18 +2482,79 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
    	//start_v.addConstraint(mav_trajectory_generation::derivative_order::ACCELERATION, Eigen::Vector3d(3, 0, 0));
     start_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z));
     
-    end_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z));
-   	end_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
+    //end_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z));
+   	//end_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
     ///Eigen::Vector3d(piecewise_path.front().x, piecewise_path.front().y, piecewise_path.front().z));
     //end_v.makeStartOrEnd(Eigen::Vector3d(piecewise_path.back().x, piecewise_path.back().y, piecewise_path.back().z), derivative_to_optimize);
 
 	vertices.push_back(start_v);
-	for (auto it = piecewise_path.begin()+1; it+1 != piecewise_path.end(); ++it) {
+	auto size = piecewise_path.end() - piecewise_path.begin();
+	graph::node prev_constrained_pt;
+	prev_constrained_pt.x = piecewise_path.begin()->x;
+	prev_constrained_pt.y = piecewise_path.begin()->y;
+	prev_constrained_pt.z = piecewise_path.begin()->z;
+
+
+    piecewise_trajectory piecewise_path_new;
+    piecewise_path_new.push_back(prev_constrained_pt);
+
+	auto end_pt = piecewise_path.end() - 1;
+	bool first_ = true;
+	double dist_to_add_constraints =  20000; // every this meter, we add a velocity constraint to make the path agile
+	int ctr = 0;
+	for (auto it = piecewise_path.begin()+1; it != piecewise_path.end(); ++it) {
 		mav_trajectory_generation::Vertex v(dimension);
+
+		// add constraints to keep velocity high
+		//this is wrong double check auto dist_to_end_pt =  calc_vec_magnitude(it->x - end_pt->x,  prev_constrained_pt.y - end_pt->y, it->z - end_pt->z);
+		auto dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - prev_constrained_pt.x,  it->y - prev_constrained_pt.y, it->z - prev_constrained_pt.z);
+		multiDOFpoint vec_to_prev_constrained_pt_norm;
+		vec_to_prev_constrained_pt_norm.x  = (it->x - prev_constrained_pt.x)/dist_to_prev_constrained_pt;
+		vec_to_prev_constrained_pt_norm.y  = (it->y - prev_constrained_pt.y)/dist_to_prev_constrained_pt;
+		vec_to_prev_constrained_pt_norm.z  = (it->z - prev_constrained_pt.z)/dist_to_prev_constrained_pt;
+		//if ((dist_to_prev_constrained_pt > dist_to_add_constraints) && (dist_to_end_pt < dist_to_add_constraints)){
+		if (dist_to_prev_constrained_pt > dist_to_add_constraints){
+			for (int i =0; i<(double)dist_to_prev_constrained_pt/dist_to_add_constraints; i++) {
+				mav_trajectory_generation::Vertex new_v(dimension);
+				//v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global/sqrt(2),v_max__global/sqrt(2),0));
+				new_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(prev_constrained_pt.x + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x ,
+						prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y, prev_constrained_pt.z + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z));
+				//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,v_max__global*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
+				new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,v_max__global*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
+				ROS_INFO_STREAM("00000000000000000000 addd cosntraintes of speed "<<v_max__global*vec_to_prev_constrained_pt_norm.x<< " "<< v_max__global*vec_to_prev_constrained_pt_norm.y<< " " <<v_max__global*vec_to_prev_constrained_pt_norm.z);
+				ROS_INFO_STREAM("11111111111 addd cosntraintes of speed "<<prev_constrained_pt.z +(i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z);
+				vertices.push_back(new_v);
+//				piecewise_path.insert(piecewise_path.begin()+ctr+1, prev_constrained_pt);
+				//piecewise_path_new.push_back(Eiprev_constrained_pt);
+				graph::node temp_node;
+				temp_node.x = (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x ;
+				temp_node.y = (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y;
+				temp_node.z = (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z;
+				piecewise_path_new.push_back(temp_node);
+				ctr +=1;
+
+			}
+		}
+
 		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
+		if ((it+1) == piecewise_path.end()) {
+			v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
+		}
 		vertices.push_back(v);
+
+		ctr+=1;
+		prev_constrained_pt.x = it->x;
+		prev_constrained_pt.y = it->y;
+		prev_constrained_pt.z = it->z;
+		piecewise_path_new.push_back(prev_constrained_pt);
 	}
-	vertices.push_back(end_v);
+	//vertices.push_back(end_v);
+
+	//prev_constrained_pt.x = (piecewise_path.end()-1)->x;
+	//prev_constrained_pt.y = (piecewise_path.end()-1)->y;
+	//prev_constrained_pt.z = (piecewise_path.end()-1)->z;
+	//piecewise_path_new.push_back(prev_constrained_pt);
+	piecewise_path = piecewise_path_new; // replace the old piecewise path with new augmented one
 
 	// Parameters used to calculate how quickly the drone can move between vertices
 	const double magic_fabian_constant = 6.5; // A tuning parameter.
@@ -2476,7 +2586,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 		first_unknown_collected = false;
 		col = false;
-		auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
+		//ROS_INFO_STREAM(" =---------------- with velocity setting shit"<< v_max__global);
+		auto segment_times = estimateSegmentTimes(vertices, 2*v_max__global - 1, 2*a_max__global, magic_fabian_constant);
 		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
 		opt.solveLinear();
 

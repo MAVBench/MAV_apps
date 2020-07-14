@@ -338,7 +338,9 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
 		float d_px, float d_py, float d_pz, bool reset_PID) {
 		//debug_follow_trajectory_data& debug_data) {
 
-    trajectory_t reversed_commands;
+
+	//max_speed = min(max_speed, (float)6.5);
+	trajectory_t reversed_commands;
     double max_speed_so_far = 0;
 
     // I controller

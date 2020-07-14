@@ -44,6 +44,10 @@ def fit_func_2(x, y, deg):
     a, b, c = np.polyfit(x, y, deg)
     return a,b,c
 
+def calc_next_stample_time_fix_a(v, visibility, a, latency):
+    return (2*a*visibility - v**2)/(2*a*v)
 
 
+#print(calc_next_stample_time(3.5, 10, .1439, .8016, 0))
+#print(ok(3.5, 10, .1439, .8016, 0))
 

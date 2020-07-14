@@ -25,7 +25,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="5"/> 
+  <arg name="v_max" default="5.5"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="3"/>
@@ -109,7 +109,7 @@
   <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg max_time_budget)"/>
   <arg name="velocity_to_budget_on" default=".1"/> 
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
-  <arg name="planner_min_freq" default=".0001"/> 
+  <arg name="planner_min_freq" default=".00001"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
   <arg name="distance_to_goal_margin" default="20"/> 
   <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>
@@ -432,19 +432,21 @@
 
 
   <arg name="x_dist_to_sample_from__low_bound" default="-300"/>
-  <arg name="x_dist_to_sample_from__high_bound" default="300"/>
-  <arg name="y_dist_to_sample_from__low_bound" default="-300"/>
-  <arg name="y_dist_to_sample_from__high_bound" default="1750"/>
+  <arg name="x_dist_to_sample_from__high_bound" default="600"/>
+  <arg name="y_dist_to_sample_from__low_bound" default="-350"/>
+  <arg name="y_dist_to_sample_from__high_bound" default="1500"/>
   <arg name="goal_mode" default="launch_based"/>
-  <arg name="goal_x" default="100"/>
-  <arg name="goal_y" default="100"/>
-  <arg name="goal_z" default="20"/>
+  <arg name="goal_x" default="300"/>
+  <arg name="goal_y" default="1000"/>
+  <arg name="goal_z" default="50"/>
   
   <param name="goal_x" value="$(arg goal_x)"/>
   <param name="goal_y" value="$(arg goal_y)"/>
   <param name="goal_z" value="$(arg goal_z)"/>
   <param name="goal_mode" value="$(arg goal_mode)"/>
   
+  <arg name="use_emergency_stop" default="true"/>
+  <param name="use_emergency_stop" value="$(arg use_emergency_stop)"/>
   <!-- ========================= Path Planner (Planning)============================ -->
   <arg name="ppl_latency_expected" default="7"/>
   <arg name="smoothening_latency_expected" default="7"/>

@@ -14,6 +14,7 @@ public:
 
 	double calc_budget_till_closest_unknown(multiDOFpoint cur_point, multiDOFpoint closest_unknown_point);
 	double calc_budget_till_closest_unknown(trajectory_t traj, multiDOFpoint closest_unknown_point, coord drone_position);
+	//void TimeBudgetter::setRadius(double radius_);
 
 	double calcSamplingTimeFixV(double velocityMag , double sensorRange, std::vector<double> acceleartionCoeffs, double latency);
 	//double calcSamplingTimeFixV(double velocityMag, double sensorRange, double latency);
@@ -26,6 +27,7 @@ public:
 	double calc_magnitude(double x, double y, double z);
 	double inline get_velocity_projection_mag(multiDOFpoint cur_point, multiDOFpoint closest_unknown);
 	double calc_budget(const mavbench_msgs::multiDOFtrajectory msg, std::deque<multiDOFpoint> *traj, multiDOFpoint closest_unknown_point, coord drone_position);
+	void set_params(double v_max__global_, double drone_radius__global_, double planner_drone_radius_when_hovering_);
 
 
 	virtual ~TimeBudgetter();
@@ -37,6 +39,10 @@ private:
 	double max_time_budget;
 	double drone_radius;
 	string design_mode;// = "serial";
+	double v_max__global;
+	double drone_radius__global;
+	double planner_drone_radius_when_hovering;
+
 };
 
 #endif /* TIMEBUDGETTER_H_ */

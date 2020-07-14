@@ -5,14 +5,25 @@
  *      Author: reddi-rtx
  */
 
-#include "TimeBudgetter.h"
+#include <coord.h>
+#include <mavbench_msgs/multiDOFpoint.h>
+#include <mavbench_msgs/multiDOFtrajectory.h>
+#include <TimeBudgetter.h>
+#include <cmath>
+#include <deque>
+#include <string>
+
 bool first_itr = true; // only for debugging
 TimeBudgetter::TimeBudgetter(double maxSensorRange, double maxVelocity, std::vector<double> accelerationCoeffs, double timeIncr, double max_time_budget, double  drone_radius, string design_mode)
 			:sensorActuatorModel_(maxSensorRange, maxVelocity, accelerationCoeffs),
 			timeIncr_(timeIncr),
 			max_time_budget(max_time_budget),
 			drone_radius(drone_radius),
-			design_mode(design_mode){}
+			design_mode(design_mode){
+	v_max__global = 0;
+	drone_radius__global = drone_radius;
+	planner_drone_radius_when_hovering = drone_radius;
+}
 
 
 
@@ -21,7 +32,11 @@ double TimeBudgetter::calc_magnitude(double x, double y, double z) {
   return std::sqrt(x*x + y*y + z*z);
 }
 
-
+void TimeBudgetter::set_params(double v_max__global_, double drone_radius__global_, double planner_drone_radius_when_hovering_){
+	v_max__global = v_max__global_;
+	drone_radius__global = drone_radius__global_;
+	planner_drone_radius_when_hovering = planner_drone_radius_when_hovering_;
+}
 
 void convertMavBenchMultiDOFtoMultiDOF(mavbench_msgs::multiDOFpoint copy_from, multiDOFpoint &copy_to){
     	copy_to.vx = copy_from.vx;
@@ -45,6 +60,7 @@ double TimeBudgetter::calc_budget(const mavbench_msgs::multiDOFtrajectory msg, s
 	}
 
 
+
 	double latency = 1.55; //TODO: get this from follow trajectory
 	//TimeBudgetter MacrotimeBudgetter(maxSensorRange, maxVelocity, accelerationCoeffs, TimeIncr, max_time_budget, g_planner_drone_radius);
 	//double sensor_range_calc;
@@ -52,13 +68,13 @@ double TimeBudgetter::calc_budget(const mavbench_msgs::multiDOFtrajectory msg, s
 	double time_budget;
 	if (msg.points.size() < 2 || macro_time_budgets.size() < 2){
 		//time_budgetting_failed = true;
-		ROS_INFO_STREAM("failed to time budgget");
+		//ROS_INFO_STREAM("failed to time budgget");
 		time_budget = -10;
 	}
 	else if (macro_time_budgets.size() >= 1){
 		//time_budgetting_failed = false;
 		time_budget = min(max_time_budget, macro_time_budgets[1]);
-		time_budget -= time_budget*.2;
+		time_budget -= time_budget*.4;
 	}
 	return time_budget;
 }
@@ -151,6 +167,13 @@ double TimeBudgetter::calc_budget_till_closest_unknown(trajectory_t traj, multiD
 
 
 
+
+// calcSamplingTime helper (called recursively)
+/*
+void TimeBudgetter::setRadius(double radius_){
+	drone_radius = radius_;
+}
+*/
 bool first_stuff = false;
 // calcSamplingTime helper (called recursively)
 void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin, std::deque<multiDOFpoint>::iterator trajEnd,
@@ -164,7 +187,9 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 	//velocity_magnitude -= velocity_error;
 
 	double sensor_range = calc_dist(point, closest_unknown_point) + distance_error;
-	sensor_range -= drone_radius;
+	//sensor_range -= drone_radius;
+	double radius = -1*correct_distance(velocity_magnitude, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
+	sensor_range -=radius;
 	/*
 	if (first_stuff){
 		ROS_INFO_STREAM("sensor_range"<<sensor_range);
@@ -209,6 +234,8 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		velocity_magnitude = get_velocity_projection_mag(point, closest_unknown_point);
 		//velocity_magnitude -= velocity_error;
 		sensor_range = calc_dist(point, closest_unknown_point);
+		double radius = -1*correct_distance(velocity_magnitude, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
+		sensor_range -=radius;
 		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, design_mode, sensor_range);
 		if (potentialBudgetTillNextSample <= 0) {
 			//std::cout<<"-- shoudn't get sample time less than zero; probaly went over the v limit"<<std::endl;
@@ -263,8 +290,8 @@ std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double la
 		this->SamplingTimes_.push_back(thisSampleTime);
 		trajRollingItrBegin = trajItr;
 		if (first_itr){
-			;
 			//ROS_INFO_STREAM("nextSampleTime is "<<nextSampleTime);
+	;
 		}
 		first_itr = false;
 

@@ -25,7 +25,9 @@ double SensorActuatorModel::worseCaseResponeTime(double velocityMag,  double sen
 	if (accelerationCoeffs.size() == 2) { // linear model
 		double m = accelerationCoeffs[0]; // m: line slope
 		double b = accelerationCoeffs[1]; //b: line offset
-		time_budget = (pow(velocityMag, 2.0) - 2*m*sensorRange*velocityMag - 2*b*sensorRange)/(-2*m*pow(velocityMag, 2.0) - 2*b*velocityMag);
+		//time_budget = (pow(velocityMag, 2.0) - 2*m*sensorRange*velocityMag - 2*b*sensorRange)/(-2*m*pow(velocityMag, 2.0) - 2*b*velocityMag);
+		time_budget  = (sensorRange -0.05494*pow(velocityMag,2) - 0.3549*(velocityMag)+ 0.2038)/velocityMag;
+
 	}else{
 		cout<<"does not support non-linear acceleation models"<<endl;
 		throw;
