@@ -43,7 +43,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+Drone *drone;
 string design_mode;
 using namespace std;
 std::string ip_addr__global;
@@ -276,6 +276,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	}
 	*/
 
+    drone_position = drone->position();
 	double velocity_magnitude = time_budgetter->get_velocity_projection_mag(traj[0], closest_unknown_point);
 	time_budgetter->set_params(vmax_max,g_planner_drone_radius, g_planner_drone_radius_when_hovering);
 	double time_budget = time_budgetter->calc_budget(*msg, &traj, closest_unknown_point, drone_position);
@@ -1046,11 +1047,11 @@ int main(int argc, char **argv)
     ros::param::get("/perf_iterative_cntr", perf_iterative_cntr); // how mnay times to run the same configuration
 
 
-    Drone drone(ip_addr.c_str(), port, localization_method);
+    drone = new Drone(ip_addr.c_str(), port, localization_method);
 
-    closest_unknown_point.x = drone.position().x  + g_sensor_max_range/3;
-    closest_unknown_point.y = drone.position().y + g_sensor_max_range/3;
-    closest_unknown_point.z = drone.position().z + g_sensor_max_range/3;
+    closest_unknown_point.x = drone->position().x  + g_sensor_max_range/3;
+    closest_unknown_point.y = drone->position().y + g_sensor_max_range/3;
+    closest_unknown_point.z = drone->position().z + g_sensor_max_range/3;
 
     //Drone drone(ip_addr__global.c_str(), port);
 	ros::Rate pub_rate(50);
@@ -1085,9 +1086,9 @@ int main(int argc, char **argv)
     	}
     	*/
     	got_new_input = false;
-    	drone_vel = drone.velocity();
+    	drone_vel = drone->velocity();
     	cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
-    	drone_position = drone.position();
+    	drone_position = drone->position();
     	//ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
 
 
@@ -1128,18 +1129,18 @@ int main(int argc, char **argv)
     	}else{
     		ros::param::get("/v_max", g_v_max);
     		maxVelocity = g_v_max;
-    		closest_unknown_point_upper_bound.x = drone.position().x  + g_sensor_max_range/pow(3,.5);
-    		closest_unknown_point_upper_bound.y = drone.position().y + g_sensor_max_range/pow(3, .5);
-    		closest_unknown_point_upper_bound.z = drone.position().z + g_sensor_max_range/pow(3, .5);
+    		closest_unknown_point_upper_bound.x = drone->position().x  + g_sensor_max_range/pow(3,.5);
+    		closest_unknown_point_upper_bound.y = drone->position().y + g_sensor_max_range/pow(3, .5);
+    		closest_unknown_point_upper_bound.z = drone->position().z + g_sensor_max_range/pow(3, .5);
 
     		if (goal_known && !isnan(closest_unknown_point.x)){
-    			double direct_length = calc_vec_magnitude(drone.position().x - g_goal_pos.x, drone.position().y - g_goal_pos.y, drone.position().z - g_goal_pos.z);
+    			double direct_length = calc_vec_magnitude(drone->position().x - g_goal_pos.x, drone->position().y - g_goal_pos.y, drone->position().z - g_goal_pos.z);
     			double volume_of_direct_distance_to_goal = 3.4*pow(planner_drone_radius, 2)*direct_length;
     			control.inputs.ppl_vol_min = float(ppl_vol_min_coeff*volume_of_direct_distance_to_goal);
     		}else{
-    			closest_unknown_point.x = drone.position().x  + g_sensor_max_range/pow(3,.5);
-    			closest_unknown_point.y = drone.position().y + g_sensor_max_range/pow(3, .5);
-    			closest_unknown_point.z = drone.position().z + g_sensor_max_range/pow(3, .5);
+    			closest_unknown_point.x = drone->position().x  + g_sensor_max_range/pow(3,.5);
+    			closest_unknown_point.y = drone->position().y + g_sensor_max_range/pow(3, .5);
+    			closest_unknown_point.z = drone->position().z + g_sensor_max_range/pow(3, .5);
     			control.inputs.ppl_vol_min = 0;
     		}
 

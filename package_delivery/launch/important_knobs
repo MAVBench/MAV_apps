@@ -1,0 +1,24 @@
+<!-- for tunning the PID controller in follow trajectory-->
+<param name="p_vx" value="3"/>
+<param name="p_vy" value="3"/>
+<param name="p_vz" value=".5"/>
+<param name="I_px" value="0.0"/>
+<param name="I_py" value="0.0"/>
+<param name="I_pz" value="0"/>
+<param name="d_px" value="0"/>
+<param name="d_py" value="0"/>
+<param name="d_pz" value="0"/>
+  
+<!-- drone max velocity> 
+<arg name="a_max" default="6"/> 
+<arg name="v_max" default="13"/> 
+
+
+
+<arg name="planning_resolution" default="0.65"/>
+
+
+
+<!-- budgets -->
+<arg name="planning_budget" default="0.3"/>
+

@@ -1,5 +1,4 @@
 <launch>
-
   <!-- ===================================================================== -->
   <!-- ========================== Hardware in the Loop====================== -->
   <!-- ===================================================================== -->
@@ -24,32 +23,21 @@
   <!-- ===================================================================== -->
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
-  <arg name="a_max" default="4"/> 
-  <arg name="v_max" default="4.5"/> 
+  <arg name="a_max" default="2"/> 
+  <arg name="v_max" default="10"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
-  <arg name="planner_drone_radius" default="3"/>
+  <arg name="planner_drone_radius" default="2"/>
   <arg name="planner_drone_height" default="1.2"/>
   <arg name="max_yaw_rate" default="90"/>
   <arg name="max_yaw_rate_during_flight" default="90"/>
   <param name="v_max" value="$(arg v_max)"/>
-  <param name="v_max_max" value="$(arg v_max)"/>
-  <param name="v_max_min" value="1.5"/>
   <param name="a_max" value="$(arg a_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
-  <param name="planner_drone_radius" value="$(arg planner_drone_radius)"/>
-  <arg name="planner_drone_radius_when_hovering" default="1.25"/>
-  <param name="planner_drone_radius_when_hovering" value="$(arg planner_drone_radius_when_hovering)"/>
-  <arg name="planner_drone_height_when_hovering" default="1.25"/>
-  <param name="planner_drone_height_when_hovering" value="$(arg planner_drone_height_when_hovering)"/>
-
-
-
 
   <!-- sensor information --> 
-  <arg name="all_front" default="false"/>	
-  <arg name="sphere_view" default="true"/>	
+  <arg name="all_front" default="true"/>	
   <!-- Set the localization method /-->
   <!--arg name="localization_method" default="orb_slam2_rgbd"/-->
   <!--arg name="localization_method" default="vins_mono" /-->
@@ -58,32 +46,6 @@
   <param name="localization_method" value="$(arg localization_method)" />
 
   
-  <arg name="capture_size" default="600" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="capture_size" value="$(arg capture_size)"/> 
-  
-  
-  <!-- ===================================================================== -->
-  <!-- ========================= Performance Modeling ============================ -->
-  <!-- ===================================================================== -->
-  <arg name="knob_performance_modeling" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="knob_performance_modeling" value="$(arg knob_performance_modeling)"/> 
-  <arg name="knob_performance_modeling_for_pc_om" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="knob_performance_modeling_for_pc_om" value="$(arg knob_performance_modeling_for_pc_om)"/> 
-  <arg name="point_cloud_num_points_step_size" default="3000" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="point_cloud_num_points_step_size" value="$(arg point_cloud_num_points_step_size)"/> 
-  <arg name="knob_performance_modeling_for_om_to_pl" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="knob_performance_modeling_for_om_to_pl" value="$(arg knob_performance_modeling_for_om_to_pl)"/> 
-  <arg name="knob_performance_modeling_for_om_to_pl_no_interference" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="knob_performance_modeling_for_om_to_pl_no_interference" value="$(arg knob_performance_modeling_for_om_to_pl_no_interference)"/> 
-  <arg name="knob_performance_modeling_for_piecewise_planner" default="false" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="knob_performance_modeling_for_piecewise_planner" value="$(arg knob_performance_modeling_for_piecewise_planner)"/> 
-  <arg name="map_to_transfer_side_length_step_size" default="30" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="map_to_transfer_side_length_step_size" value="$(arg map_to_transfer_side_length_step_size)"/> 
-  <arg name="perf_iterative_cntr" default="3" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
-  <param name="perf_iterative_cntr" value="$(arg perf_iterative_cntr)"/> 
-
-
-
   <!-- ===================================================================== -->
   <!-- ============================Run Time================================= -->
   <!-- ===================================================================== -->
@@ -92,30 +54,11 @@
   <!-- used in follow trajectory for slicing the way points generated by smoothener -->
   <!-- should be less than sampling_time -->
   
-  <arg name="sensor_max_range" default="25" />
   <arg name="sampling_interval" default=".2"/> 
   <param name="sampling_interval" value="$(arg sampling_interval)"/>
-  
-  <arg name="collect_dec_data" default="false" />
-  <param name="collect_dec_data" value="$(arg collect_dec_data)"/>
-
-
-  <arg name="sequencer_sampling_rate" default="1"/> 
-  <param name="sequencer_sampling_rate" value="$(arg sequencer_sampling_rate)"/>
-  
-  <!-- arg name="sensor_to_actuation_time_budget_to_enforce" default="3"/--> 
-  <arg name="max_time_budget" default="15" />   
-  <param name="max_time_budget" value="$(arg max_time_budget)"/>
-  <param name="sensor_to_actuation_time_budget_to_enforce" value="$(arg max_time_budget)"/>
-  <arg name="velocity_to_budget_on" default=".1"/> 
-  <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
-  <arg name="planner_min_freq" default=".00001"/> 
+  <arg name="planner_min_freq" default=".01"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
-  <arg name="distance_to_goal_margin" default="30"/> 
-  <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>
-  <param name="dist_to_closest_obs_calc_from_octomap" value="$(arg sensor_max_range)"/>
-
-
+  
   
   <comment> 
   <!-- orb slam location--> 
@@ -126,16 +69,11 @@
   <!-- ===========================Profiling ================================ -->
   <!-- ===================================================================== -->
   <!-- profiling params --> 
+  <arg name="capture_size" default="1" /> <!-- determines the sampling size, can be usefully to set it to 1, when we want to look at every value -->
   <arg name="DEBUG_RQT" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 
-  <arg name="DEBUG_VIS" default="true" /> <!-- determines whether to use RQT for debugging or not -->
-  <param name="DEBUG_VIS" value="$(arg DEBUG_VIS)"/> 
-
-  <arg name="SPACE_PROFILING" default="false" /> <!-- determines whether to use RQT for debugging or not -->
-  <param name="SPACE_PROFILING" value="$(arg SPACE_PROFILING)"/> 
-
-
+  <param name="capture_size" value="$(arg capture_size)"/> 
   <arg name="measure_time_end_to_end" default="true" />
   <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/> 
 
@@ -210,7 +148,6 @@
   </comment>
 
  
-  <param name="num_cameras" value="6"/>
 
   <!-- ========================= Sensors ============================ -->
   <node pkg="airsim_img_publisher" type="airsim_imgPublisher" name="airsim_imgPublisher" output="screen">
@@ -222,7 +159,6 @@
 
       <!-- RGB camera parameters (parameters when calibrated) -->
       <param name="all_front" value="$(arg all_front)"/>	
-      <param name="sphere_view" value="$(arg sphere_view)"/>	
       <param name="Fx" value="256"/>
       <param name="Fy" value="256"/>
       <param name="cx" value="256"/>
@@ -243,155 +179,61 @@
   </node>
 
 
-  <!-- ========================= Run Time ()  ============================ -->
-  <arg name="number_of_processors" default="4" />   
-  <param name="number_of_processors" value="$(arg number_of_processors)"/>
-   <arg name="design_mode" default="serial" />   
-  <param name="design_mode" value="$(arg design_mode)"/>
- <arg name="clct_data_mode" default="only_end_to_end" />   
-  <param name="clct_data_mode" value="$(arg clct_data_mode)"/>
-
-  <arg name="hw_sampling_method" default="decision_based" />   
-  <param name="hw_sampling_method" value="$(arg hw_sampling_method)"/>
-  <!-- arg name="hw_sampling_method" default="time_based" /-->   
-  
-  <arg name="time_sampling_rate" default=".5" />   
-  <param name="time_sampling_rate" value="$(arg time_sampling_rate)"/>
-  <arg name="decision_sampling_rate" default="10" />   
-  <param name="decision_sampling_rate" value="$(arg time_sampling_rate)"/>
-
-
-  <arg name="reactive_runtime" default="true" />   
-  <arg name="budgetting_mode" default="manual" />    
-  <param name="reactive_runtime" value="$(arg reactive_runtime)"/>
-  <param name="budgetting_mode" value="$(arg budgetting_mode)"/>
-  <arg name="gap_statistic_mode" default="avg" />   
-  <arg name="use_pyrun" default="true" />   
-  <param name="use_pyrun" value="$(arg use_pyrun)"/>
-  <arg name="pyrun_rcvd_models" default="false" />   
-  <param name="pyrun_rcvd_models" value="$(arg pyrun_rcvd_models)"/>
-  <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
-    <arg name="cur_tree_total_volume" default="8000" />   
-  <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
-  <arg name="ppl_vol_min_coeff" default="100" />   
-  <param name="ppl_vol_min_coeff" value="$(arg ppl_vol_min_coeff)"/>
-  <arg name="ppl_time_budget" default="5" />   
-  <param name="ppl_time_budget" value="$(arg ppl_time_budget)"/>
-  <arg name="smoothening_budget" default="5" />   
-  <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
-
-  <!-- fixed knob values --> 
- <arg name="pc_res_max" default=".3" />   
- <param name="pc_res_max" value="$(arg pc_res_max)"/>
- <arg name="pc_res_steps" default="4" />   
- <param name="pc_res_steps" value="$(arg pc_res_steps)"/>
- <arg name="num_of_res_to_try" default="5" />   
- <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
- <arg name="pc_vol_ideal_min" default="2900" />   
- <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
- <arg name="pc_vol_ideal_max" default="70000" />   
- <param name="pc_vol_ideal_max" value="$(arg pc_vol_ideal_max)"/>
- <arg name="om_to_pl_vol_ideal_max" default="5000000" />   
- <param name="om_to_pl_vol_ideal_max" value="$(arg om_to_pl_vol_ideal_max)"/>
- <arg name="ppl_vol_ideal_max" default="200000" />   
- <param name="ppl_vol_ideal_max" value="$(arg ppl_vol_ideal_max)"/>
- <!--arg name="pc_res" default=".3" /-->   
-  <param name="pc_res" value="$(arg pc_res_max)"/>
-  <param name="pc_res_delete_later" value="$(arg pc_res_max)"/>
-  <!-- arg name="om_to_pl_res" default="" /-->   
-  <param name="om_to_pl_res" value="$(arg pc_res_max)"/>
-  <!--arg name="pc_vol_ideal" default="80000" /-->   
-  <param name="pc_vol_ideal" value="$(arg pc_vol_ideal_max)"/>
-  <!-- arg name="om_to_pl_vol_ideal" default= /-->   
-  <param name="om_to_pl_vol_ideal" value="$(arg om_to_pl_vol_ideal_max)"/>
-  <!--arg name="ppl_vol_ideal" default="600000" /-->   
-  <param name="ppl_vol_ideal" value="$(arg ppl_vol_ideal_max)"/>
-
-  <arg name="expected_latency" default=".05" />   
-  <arg name="om_latency_expected" default=".05" />   
-  <param name="om_latency_expected" value="$(arg om_latency_expected)"/>
-  
-  <arg name="om_to_pl_latency_expected" default=".05" />   
-  <param name="om_to_pl_latency_expected" value="$(arg om_to_pl_latency_expected)"/>
-  <param name="ee_latency_expected" value="$(arg expected_latency)"/>
-
-  <param name="x_coord_while_budgetting" value="0"/>
-  <param name="y_coord_while_budgetting" value="0"/>
-  <param name="vel_mag_while_budgetting" value="0"/>
-
-  
-  <!-- param name="ppl_latency_expected" value="$(arg expected_latency)"/-->
-  <!-- param name="smoothening_latency_expected" value="$(arg expected_budgets)"/-->
- <!-- ========================= Performance Modeling ()  ============================ -->
- 
-  <arg name="runtime_launch_prefix" default="echo rur3dd1|sudo -S" /> 
-  <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
-    <!-- comment--> 
-  <node pkg="run_time" type="optimizer_node.py" name="optimizer_node" output="screen"> 
-    <param name="dummy_val" value="2.0" />
-    <param name="rate" value="5" />
-  </node>
- <node pkg="run_time" type="collect_perf_counters.py" name="collect_perf_counters" output="screen"/>
-  <!-- /comment -->
- <!--node pkg="run_time" type="sys_prof.py" name="sys_prof" output="screen"/-->
- 
-
-
   <!-- =========================Point Cloud  ============================ -->
   <arg name="point_cloud_shard_cnt" default="1"/>
-  <arg name="point_cloud_num_points" default="3000000"/>
-  <arg name="point_cloud_num_points_filtering_mode" default="radius"/>
-  <arg name="point_cloud_width" default="50"/>
-  <arg name="point_cloud_height" default="50"/>
+  <arg name="point_cloud_width" default="25"/>
+  <arg name="point_cloud_height" default="25"/>
   <arg name="point_cloud_density_reduction" default="1"/> <!-- 1 means no density reduction. Higher means more reduction -->
-  <!--arg name="om_res" default=".15"/--> <!-- OM voxels size-->
-  <arg name="point_cloud_max_z" default="400.0" />
-
-  <param name="point_cloud_max_z" value="$(arg point_cloud_max_z)" />
+  <arg name="perception_resolution" default="0.3"/> <!-- OM voxels size-->
+  <arg name="perception_lower_resolution" default="0.3"/> <!-- OM voxels size-->
+  <arg name="point_cloud_resolution" default="0.3"/> <!-- minimum the distance between pc points-->
+  
   <param name="point_cloud_shard_cnt" value="$(arg point_cloud_shard_cnt)" />
-  <param name="point_cloud_num_points" value="$(arg point_cloud_num_points)" />
-  <param name="point_cloud_num_points_filtering_mode" value="$(arg point_cloud_num_points_filtering_mode)" />
+  <param name="point_cloud_resolution" value="$(arg point_cloud_resolution)" />
   <param name="point_cloud_width" value="$(arg point_cloud_width)"/>
   <param name="point_cloud_height" value="$(arg point_cloud_height)"/>
   <param name="point_cloud_density_reduction" value="$(arg point_cloud_density_reduction)"/>
-
-    <!-- Nodelet manager for this pipeline -->
-    <!--node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager_" output="screen"-->
-    <node pkg="depth_image_proc_with_spin" type="depth_image_proc_with_spin" name="depth_transforms_manager_" output="screen">
-    <remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
+  <!-- Nodelet manager for this pipeline -->
+    <node pkg="nodelet" type="nodelet" args="manager" name="depth_transforms_manager" output="screen">
+        <!-- remap from="/points" to="/cloud_in" / -->
     </node>
 
+	<!-- Convert to point cloud -->
+	<node pkg="nodelet" type="nodelet" name="cloudify"
+	args="load depth_image_proc/point_cloud_xyz depth_transforms_manager --no-bond" output="screen">
+
+		<!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+		<remap from="rgb/camera_info" to="/Airsim/camera_info"/> 
+		<!-- Input: Rectified depth image -->
+		<remap from="image_rect" to="/Airsim/depth_front"/>
+
+    </node>
     
+    <comment> 
+    <node pkg="package_delivery" type="panic_pcl" name="panic_pcl" output="screen">
+		<param name="panic_distance" value=".1"/>
+    </node>
+    </comment>
+    
+
   <!-- ========================= Octomap (Occupancy Map)============================ -->
-  <arg name="octomap_lower_resolution_volume_width" default="20" />
-  <arg name="octomap_lower_resolution_volume_height" default="20" />
-  <arg name="octomap_lower_resolution_volume_length" default="20" />
-  <arg name="filterOctoMap" default="true" /> 
-  <arg name="MapToTransferSideLength" default="30" /> 
-
-  <arg name="gridSliceCountPerSide" default="2" />
-  <arg name="gridMode" default="3d" />
-  <arg name="voxel_type_to_publish" default="free" />
- 
-  <param name="voxel_type_to_publish" value="$(arg voxel_type_to_publish)" />
-  <param name="occupancy_max_z" value="$(arg point_cloud_max_z)" />
-  <param name="om_res" value=".15" />
-  <param name="lower_resolution_relative_volume_width" value="$(arg octomap_lower_resolution_volume_width)" />
-  <param name="lower_resolution_relative_volume_height" value="$(arg octomap_lower_resolution_volume_height)" />
-  <param name="lower_resolution_relative_volume_length" value="$(arg octomap_lower_resolution_volume_length)" /> 
-  <param name="gridMode" value="$(arg gridMode)" /> 
-  <param name="MapToTransferSideLength" value="$(arg MapToTransferSideLength)" /> 
-  <param name="filterOctoMap" value="$(arg filterOctoMap)" /> 
-  <param name="gridSliceCountPerSide" value="$(arg gridSliceCountPerSide)" /> 
-
+  <arg name="sensor_max_range" default="24" />
+  <arg name="octomap_lower_resolution_volume_width" default="50" />
+  <arg name="octomap_lower_resolution_volume_height" default="50" />
+  <arg name="octomap_lower_resolution_volume_length" default="50" />
+  
   <param name="sensor_max_range" value="$(arg sensor_max_range)"/>
   <!-- node pkg="package_delivery" type="future_collision" name="future_collision" output="screen" -->
   <!-- node pkg="octomap_server" type="octomap_server_node" name="octomap_server" output="screen"-->
   <!-- group ns="occupancy_map_node" -->
-   
   <node pkg="package_delivery" type="occupancy_map_node" name="occupancy_map_node" output="screen">
 	<param name="capture_size" value="$(arg capture_size)"/>
     <!--param name="map_file" type="string" value="/home/reddi-rtx/Downloads/octomap_base.ot" /-->
+        <param name="resolution" value="$(arg perception_resolution)" />
+        <param name="lower_resolution" value="$(arg perception_lower_resolution)" />
+        <param name="lower_resolution_relative_volume_width" value="$(arg octomap_lower_resolution_volume_width)" />
+        <param name="lower_resolution_relative_volume_height" value="$(arg octomap_lower_resolution_volume_height)" />
+        <param name="lower_resolution_relative_volume_length" value="$(arg octomap_lower_resolution_volume_length)" />
         <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 		<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
 		<param name="frame_id" type="string" value="world" />
@@ -403,7 +245,7 @@
         <param name="data_collection_iteration_freq_OM" value="$(arg data_collection_iteration_freq)"/>
         
         <!-- data source to integrate (PointCloud2) -->
-		<remap from="cloud_in" to="/points_aug" />
+		<remap from="cloud_in" to="/points" />
 
 		<!-- Filter ground for binary occupancy map -->
 		<param name="base_frame_id" value="world" />
@@ -411,9 +253,9 @@
 		<param name="ground_filter_plane_distance" value="1.00" />
 		<param name="ground_filter/distance" value="0.50" /> -->
 	    <param name="pointcloud_min_z" type="double" value="-2.0" />
-	    <param name="pointcloud_max_z" type="double" value="$(arg point_cloud_max_z)" />
+	    <param name="pointcloud_max_z" type="double" value="100.0" />
 	    <param name="occupancy_min_z" type="double" value="-2.00" />
-	    <param name="occupancy_max_z" type="double" value="$(arg point_cloud_max_z)" />
+	    <param name="occupancy_max_z" type="double" value="100.0" />
 		<!-- <param name="ground_filter_plane_distance" value="0.07" />
 		<param name="ground_filter/distance" value="0.04" />
 		<param name="ground_filter/angle" value="0.4" /> -->
@@ -430,30 +272,11 @@
     </node>
     ?>
 
-
-  <arg name="x_dist_to_sample_from__low_bound" default="-300"/>
-  <arg name="x_dist_to_sample_from__high_bound" default="600"/>
-  <arg name="y_dist_to_sample_from__low_bound" default="-350"/>
-  <arg name="y_dist_to_sample_from__high_bound" default="2500"/>
-  <arg name="goal_mode" default="launch_based"/>
-  <arg name="goal_x" default="150"/>
-  <arg name="goal_y" default="400"/>
-  <arg name="goal_z" default="50"/>
-  <arg name ="distance_to_goal" default="10000"/>
-  <param name="distance_to_goal" value="$(arg distance_to_goal)"/>
-
-  <param name="goal_x" value="$(arg goal_x)"/>
-  <param name="goal_y" value="$(arg goal_y)"/>
-  <param name="goal_z" value="$(arg goal_z)"/>
-  <param name="goal_mode" value="$(arg goal_mode)"/>
-  
-  <arg name="use_emergency_stop" default="true"/>
-  <param name="use_emergency_stop" value="$(arg use_emergency_stop)"/>
   <!-- ========================= Path Planner (Planning)============================ -->
-  <arg name="ppl_latency_expected" default="7"/>
-  <arg name="smoothening_latency_expected" default="7"/>
-  <param name="ppl_latency_expected" value="$(arg ppl_latency_expected)"/>
-  <param name="smoothening_latency_expected" value="$(arg smoothening_latency_expected)"/>
+  <arg name="piecewise_planning_budget" default=".5"/>
+  <arg name="smoothening_budget" default=".7"/>
+  <param name="piecewise_planning_budget" value="$(arg piecewise_planning_budget)"/>
+  <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
   <!--group ns="motion_planner"-->
   <node pkg="package_delivery" type="motion_planner_node" name="motion_planner" output="screen" launch-prefix="$(arg my_launch_prefix)">
     <param name="trav_dis_before_replanning" value="1"/>
@@ -462,7 +285,7 @@
     <param name="measure_time_end_to_end" value="$(arg measure_time_end_to_end)"/>
     <!-- param name="always_randomize_end_point" type="bool" value="$(arg micro_benchmark)"/-->
     <param name="always_randomize_end_point" type="bool" value="false"/>
-    <param name="nodes_to_add_to_roadmap" value="1800"/>
+    <param name="nodes_to_add_to_roadmap" value="800"/>
     <param name="max_dist_to_connect_at" value="10"/>
 
     <param name="v_max" value="$(arg v_max)"/>
@@ -470,25 +293,23 @@
     <param name="drone_height" value="$(arg planner_drone_height)"/>
     <param name="drone_radius" value="$(arg planner_drone_radius)"/>
 
-    <param name="max_roadmap_size" value="2600"/>
+    <param name="max_roadmap_size" value="1600"/>
 
     <param name="rrt_step_size" value="1.0"/>
     <param name="rrt_bias" value="10"/>
-   
-   <param name="x_dist_to_sample_from__low_bound" value="$(arg x_dist_to_sample_from__low_bound)"/>
-   <param name="x_dist_to_sample_from__high_bound" value="$(arg x_dist_to_sample_from__high_bound)"/>
-   <param name="y_dist_to_sample_from__low_bound" value="$(arg y_dist_to_sample_from__low_bound)"/>
-   <param name="y_dist_to_sample_from__high_bound" value="$(arg y_dist_to_sample_from__high_bound)"/>
-    
-        
+
+    <param name="x_dist_to_sample_from__low_bound" value="-200"/>
+    <param name="x_dist_to_sample_from__high_bound" value="200"/>
+    <param name="y_dist_to_sample_from__low_bound" value="-100"/>
+    <param name="y_dist_to_sample_from__high_bound" value="550"/>
     <param name="z_dist_to_sample_from__low_bound" value="0"/>
-    <param name="z_dist_to_sample_from__high_bound" value="150"/>
+    <param name="z_dist_to_sample_from__high_bound" value="80"/>
 
     <!-- options for motion_planning core --> 
     <!-- param name="motion_planning_core" value="PRM"/-->
     <!--param name="motion_planning_core" value="RRT"/-->
     <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
-    <param name="motion_planning_core" value="OMPL-RRTStar"/>
+    <param name="motion_planning_core" value="OMPL-RRTConnect"/>
     <!-- param name="motion_planning_core" value="OMPL-RRT"/-->
   </node>
     
@@ -502,11 +323,11 @@
     
   <!-- ========================= Follow Trajectory (Control)============================ -->
   
-  <arg name="stay_in_place_duration_for_reverse" default="20"/>
-  <arg name="backup_duration" default=".5"/>
+  <arg name="stay_in_place_duration_for_reverse" default="3"/>
+  <arg name="backup_duration" default="2"/>
   <arg name="fly_trajectory_time_out" default=".2"/> 
   <arg name="follow_trajectory_loop_rate" default="20"/>   <!-- in Hz-->
-  <arg name="stay_in_place_duration_for_stop" default="5"/>
+  <arg name="stay_in_place_duration_for_stop" default="3"/>
   <param name="p_vx" value="2"/>
   <param name="p_vy" value="2"/>
   <param name="p_vz" value="2"/>
@@ -560,7 +381,12 @@
      <node pkg="gps_publisher" type="gps_publisher" name="gps_publisher" />
   </group>
 
-    <!-- ========================= Profiler (Profiling)  ============================ -->
+  <!-- ========================= Run Time ()  ============================ -->
+  <node pkg="run_time" type="run_time_thread" name="run_time_thread" output="screen"/>
+
+
+  
+  <!-- ========================= Profiler (Profiling)  ============================ -->
   <!-- node pkg="control_drone" type="probe_thread" name="probe_thread" output="screen"/-->
 
   <node pkg="profile_manager" type="profile_manager_node" name="profile_manager" output="screen">
@@ -572,11 +398,11 @@
    <group if="$(arg DEBUG)">
    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find package_delivery)/extras/rvizConfig.rviz"/>
    </group>
-
-    
+   
    <group if="$(arg DEBUG_RQT)">
    <node pkg="rqt_plot" type="rqt_plot" name="rqt_plot" />
    </group>
+    
 
 
 </launch>

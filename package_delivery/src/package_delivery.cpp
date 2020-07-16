@@ -493,9 +493,10 @@ int main(int argc, char **argv)
         ROS_ERROR("Could not find service");
     }
 
-    /*
-    ros::ServiceClient record_profiling_data_client = 
-        nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
+
+//    ros::ServiceClient record_profiling_data_client =
+ //       nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data");
+   /*
     ros::ServiceClient start_profiling_client = 
       nh.serviceClient<profile_manager::start_profiling_srv>("/start_profiling");
 	*/
@@ -507,8 +508,8 @@ int main(int argc, char **argv)
 
 
 
-    //profile_manager::start_profiling_srv start_profiling_srv_inst;
-    //start_profiling_srv_inst.request.key = "";
+    profile_manager::start_profiling_srv start_profiling_srv_inst;
+    start_profiling_srv_inst.request.key = "";
 
 
 	//ProfileManager profile_manager("client", "/record_profiling_data", "/record_profiling_data_verbose");
@@ -573,7 +574,12 @@ int main(int argc, char **argv)
         		exit(0);
         	}
         	control_drone(drone);
-            goal = get_goal(goal_mode);
+            if(!g_start_profiling) {
+            	profile_manager::profiling_data_srv profiling_data_srv_inst;
+            	profiling_data_srv_inst.request.key = "start_profiling";
+            	profile_manager_->clientCall(profiling_data_srv_inst);
+            }
+        	goal = get_goal(goal_mode);
             start = get_start(drone);
             
             // signal the profiler to start profiling
@@ -712,7 +718,8 @@ int main(int argc, char **argv)
         }
     	*/
         // get rid of this later, I just pulled it out for a hack
-        if (dist(drone.position(), goal) < distance_to_goal_margin){
+
+        if (dist(drone.position(), goal) < distance_to_goal_margin || drone.getFlightStats().collision_count>1){
         	if (reached_goal_ctr == 1) {
 
         		g_mission_status  = "completed";

@@ -49,8 +49,10 @@ def calculate_static_values():
 
     max_time_budget = om_latency + om_pl_latency + 2*pp_pl_latency + pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency
 
-    #max_time_budget = pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency + .1 + .1 + .1
+    #max_time_budget = pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency + .2 + .2 + .2 + .1
+    max_time_budget = 2.2
     
+
     velocity_to_budget_on = calc_v_max(max_time_budget, visibility_avg - drone_radius, .1439, .8016)
     print("----om_latency:" + str(om_latency))
     print("--------om_pl_latency:" + str(om_pl_latency))

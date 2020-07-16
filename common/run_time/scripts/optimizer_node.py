@@ -29,6 +29,7 @@ om_popt = np.ndarray((2,2))
 om_pl_popt = np.ndarray((2,2))
 pp_pl_popt = np.ndarray((2,2))
 typical_model = Model(3, 1)
+distance_to_goal = 1000
 def collect_hw_counters():
     try:
         events= [['SYSTEMWIDE:PERF_COUNT_HW_INSTRUCTIONS'],
@@ -80,10 +81,10 @@ def run_optimizer(control):
     """ 
     #print("rt_max" + str(rt_max)) 
     # -- determine the response time destired (rt_d)
-    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - back_end_latency# the second run_time_latency is for the following iteration
+    time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - (back_end_latency + front_end_latency)# the second run_time_latency is for the following iteration
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
-        print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
+        #print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
         results = dummy_output()
         failure_status = 2
         return results, failure_status
@@ -101,14 +102,18 @@ def run_optimizer(control):
     r_min_ = r_min_temp
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
     r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
-
-    if control.inputs.planner_consecutive_failure_ctr > 2:  # this is for the scenarios where we are surrounded by free space, but the goal is not
-        r_min_temp = r_max_temp = r_min_static 
-        planning_failure_cntr_coeff = 2
-    if control.inputs.planner_consecutive_failure_ctr > 4:  # this is for the scenarios where we are surrounded by free space, but the goal is not
-        planning_failure_cntr_coeff = 4 
-    else:
+    global distance_to_goal
+    if distance_to_goal < 40:
+        r_min_temp = r_max_temp = min(4*r_min_static, r_min_temp, r_max_temp)
         planning_failure_cntr_coeff = 1
+    else:
+        if control.inputs.planner_consecutive_failure_ctr > 2:  # this is for the scenarios where we are surrounded by free space, but the goal is not
+            r_min_temp = r_max_temp = r_min_static 
+            planning_failure_cntr_coeff = 2
+        if control.inputs.planner_consecutive_failure_ctr > 4:  # this is for the scenarios where we are surrounded by free space, but the goal is not
+            planning_failure_cntr_coeff = 4 
+        else:
+            planning_failure_cntr_coeff = 1
     # r_gap_max, we can't actually see any gaps
     r_max_temp = max(r_max_temp, r_min_static)  # not lower than r_min_static
     r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
@@ -132,7 +137,7 @@ def run_optimizer(control):
     #print("v sensor max is" + str(v_sensor_max))
     v_tree_max = max(max(control.inputs.cur_tree_total_volume, v_min) + v_sensor_max, 100000)
     #print("before anything"+ str(control.inputs.ppl_vol_min))
-    ppl_vol_min = max(control.inputs.ppl_vol_min, v_sensor_max)
+    ppl_vol_min = max(max(control.inputs.ppl_vol_min, v_sensor_max), 100000)
 
 
     """
@@ -249,7 +254,7 @@ def run_optimizer(control):
 
     if not results.success:
         if (time_budget_left_to_distribute - ((rospy.Time.now() - cmd_rcvd_time).to_sec())) < front_end_latency: # don't have time for another round
-            print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
+            #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
             failure_status = 2
         else:
             failure_status = 1
@@ -376,6 +381,7 @@ num_of_processors  = 0
 if __name__ == '__main__':
     global num_of_processors 
     global om_popt, om_pl_popt, pp_pl_popt,typical_model
+    global distance_to_goal
 
     result_folder = os.getenv('base_dir') + "/src/MAV_apps/common/run_time/src/knob_performance_modeling_all/data_1"
     om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data(result_folder)
@@ -410,4 +416,5 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         #rt_max = rospy.get_param("max_time_budget")
         drone_radius = rospy.get_param("planner_drone_radius")
+        distance_to_goal = rospy.get_param("distance_to_goal")
         rate.sleep()

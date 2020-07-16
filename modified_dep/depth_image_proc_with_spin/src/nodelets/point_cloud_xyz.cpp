@@ -1853,7 +1853,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   // average of averages
    gap_statistics_max = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_max);
    gap_statistics_min = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_min);
-  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - g_planner_drone_radius;
+  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - 3*g_planner_drone_radius;
   double obs_dist_statistics_avg_from_pc = (obs_dist_statistics_avg_from_pc_total / n_points); // dont need to subtract drone_radius already been taken care of since, we get it from camera frames
 
   mavbench_msgs::control control;
@@ -1873,12 +1873,19 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 
   // policty to extend the maximum time budget if we the current time can not afford it
   if (control.inputs.planner_consecutive_failure_ctr > 1){
-	  control.inputs.max_time_budget = standard_max_time_budget + control.inputs.planner_consecutive_failure_ctr*5;
+	  control.inputs.max_time_budget = standard_max_time_budget + control.inputs.planner_consecutive_failure_ctr*30;
   }else{
 	  control.inputs.max_time_budget = standard_max_time_budget;
   }
   profiling_container->capture("runDiagnosticsLatency", "end", ros::Time::now());
 
+  /*
+  if (control.inputs.planner_consecutive_failure_ctr >= 3){
+	ros::param::set("/motion_planner/motion_planning_core", "OMPL-RRT");
+  }else{
+	ros::param::set("/motion_planner/motion_planning_core", "OMPL-RRTStar");
+  }
+	*/
 
   // ---------------------------------
   // calling the runtime

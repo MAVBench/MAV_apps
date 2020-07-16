@@ -74,7 +74,8 @@ double TimeBudgetter::calc_budget(const mavbench_msgs::multiDOFtrajectory msg, s
 	else if (macro_time_budgets.size() >= 1){
 		//time_budgetting_failed = false;
 		time_budget = min(max_time_budget, macro_time_budgets[1]);
-		time_budget -= time_budget*.4;
+		time_budget -= time_budget*.3;
+		//ROS_INFO_STREAM("time budget"<<time_budget);
 	}
 	return time_budget;
 }
@@ -178,7 +179,7 @@ bool first_stuff = false;
 // calcSamplingTime helper (called recursively)
 void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin, std::deque<multiDOFpoint>::iterator trajEnd,
 		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency, multiDOFpoint closest_unknown_point, double distance_error){
-	multiDOFpoint point = *(trajBegin);
+	multiDOFpoint point = *(trajBegin + 1);
 	multiDOFpoint projection;
 
 	//velocity_project_mag = get_velocity_projection_mag(point, closest_unknown_point);
@@ -186,16 +187,15 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 	double velocity_magnitude = get_velocity_projection_mag(point, closest_unknown_point);
 	//velocity_magnitude -= velocity_error;
 
-	double sensor_range = calc_dist(point, closest_unknown_point) + distance_error;
+	distance_error = 0;
+	double sensor_range = calc_dist(point, closest_unknown_point) - distance_error;
 	//sensor_range -= drone_radius;
 	double radius = -1*correct_distance(velocity_magnitude, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
 	sensor_range -=radius;
-	/*
 	if (first_stuff){
-		ROS_INFO_STREAM("sensor_range"<<sensor_range);
+		ROS_INFO_STREAM("sensor_range"<<sensor_range << " distnace error"<<distance_error);
 		first_stuff = false;
 	}
-	*/
 	// blah change the sensor_Range value after data collection
 	//sensor_range = 25;
 	/*

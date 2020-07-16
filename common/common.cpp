@@ -17,7 +17,7 @@
 #include <deque>
 #include <iostream>
 #include <vector>
-
+int clock_speed = 1;
 using namespace std;
 
 static const int angular_vel = 15;
@@ -645,7 +645,7 @@ double follow_trajectory(Drone& drone, trajectory_t * traj,
         reversed_commands.push_front(rev_point);
 
         // Update trajectory
-        traj->front().duration -= flight_time;
+        traj->front().duration -= flight_time/clock_speed;
         traj->front().x = target_x;
         traj->front().y = target_y;
         traj->front().z = target_z;

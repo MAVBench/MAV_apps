@@ -563,7 +563,7 @@ void emergency_stop(Drone *drone){
 	}else{
 		z_stop = min(z_stop, +5.0);
 	}
-	drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
+	//drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
 	double vel_before_stop_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
 	if (vel_before_stop_mag > .5){ // only register if you were in motion
 		vel_before_stop =  drone_vel;
