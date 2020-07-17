@@ -27,7 +27,7 @@ int planning_ctr = 0;
 int decision_ctr = 0;
 int runtime_failure_ctr = 0;
 int traj_gen_failure_ctr  = 0;
-
+double backward_time = 2;
 geometry_msgs::Twist vel_before_stop;
 // Trajectories
 trajectory_t trajectory;
@@ -539,9 +539,18 @@ void micro_benchmark_func(int micro_benchmark_number, int replanning_reason, Dro
 		}
 	}
 }
-
+bool stop_detected = false;
+trajectory_t reverse_traj_to_follow;
 void emergency_stop(Drone *drone){
+	stop_detected = true;
 	auto drone_vel = drone->velocity();
+	double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+	if (cur_vel_mag > .1) { // basically the first time that we recieve the emergency stop
+		reverse_traj_to_follow = reverse_trajectory;
+
+	}
+
+	drone_vel = drone->velocity();
 	//drone->fly_velocity(max(-10*drone_vel.linear.x, -10.0), max(-10*drone_vel.linear.y, -10.0), max(-10*drone_vel.linear.z, -10.0), YAW_UNCHANGED, 1);
 	double x_stop = -10*drone_vel.linear.x;
 	if (x_stop < -1) {
@@ -563,14 +572,24 @@ void emergency_stop(Drone *drone){
 	}else{
 		z_stop = min(z_stop, +5.0);
 	}
-	//drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
 	double vel_before_stop_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
 	if (vel_before_stop_mag > .5){ // only register if you were in motion
 		vel_before_stop =  drone_vel;
 	}
+	drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
+    ros::Duration(.4).sleep();
 
-	ROS_INFO_STREAM(" -------- stopping with "<<x_stop << " " << y_stop << " " << z_stop<<endl);
-
+	drone_vel = drone->velocity();
+	cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+	while (cur_vel_mag > .2){
+		if((drone_vel.linear.x * x_stop < 0) || (drone_vel.linear.y * y_stop) < 0 || (drone_vel.linear.z * z_stop) < 0){ //if any hasn't corrected yet
+			drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, .5);
+			ros::Duration(.1).sleep();
+		}
+		drone_vel = drone->velocity();
+		cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+	}
+	/*
 	//drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
 	//start_deceleration_time = ros::Time::now();
 	while(true){
@@ -582,6 +601,7 @@ void emergency_stop(Drone *drone){
 			break;
 		}
 	}
+	*/
 	double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
 	ROS_INFO_STREAM("velocity values ------"<<-1*vel_before_stop.linear.x/scale<< " " << -1*vel_before_stop.linear.y/scale << " " << -1*vel_before_stop.linear.z/scale);
 	if (scale != 0 && vel_before_stop_mag> .5){
@@ -1063,12 +1083,31 @@ int main(int argc, char **argv)
 
 
     	if (use_emergency_stop){
-			if (planning_failure_since_last_success >= 3) {
-					double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
+    		if (planning_failure_since_last_success >= 3) {
+    			ROS_INFO_STREAM("here not for backing up");
+    			double time_ = 0;
+    			for (auto &point: reverse_traj_to_follow){
+					if (time_ > backward_time){
+						break;
+					}
+					if (isnan(point.vx) || isnan(point.vy) || isnan(point.vz) ){
+						point.vx = 0;
+						point.vy = 0;
+						point.vz = 0;
+					}
+					drone.fly_velocity(point.vx, point.vy, point.vz, point.duration);
+					ROS_INFO_STREAM("time is "<< "time");
+					time_ += point.duration;
+					ros::Duration(point.duration).sleep();
+    			}
+					/*
+				double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
 					if (scale != 0){
 						drone.fly_velocity(-1*vel_before_stop.linear.x/scale, -1*vel_before_stop.linear.y/scale, -1*vel_before_stop.linear.z/scale, 2);
 					}
-			planning_failure_since_last_success  = 0;
+			*/
+    			reverse_traj_to_follow.clear();
+    			planning_failure_since_last_success  = 0;
 			}
     	}
 
@@ -1148,6 +1187,23 @@ int main(int argc, char **argv)
         }
 		*/
 
+        if (!stop) {
+        	forward_traj = &trajectory;
+        	rev_traj = &reverse_trajectory;
+        }else{
+        	forward_traj = &reverse_trajectory;
+        	rev_traj = &trajectory;
+        	modify_backward_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
+        	if (use_emergency_stop){
+        		clear_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
+        		trajectory.clear(); //clear the trajectories so we won't continue iterating till we have a trajectory
+        		rev_traj = forward_traj;
+        	}
+        	// get rid of clear traj if you want to add back ward motion
+        	yaw_strategy = face_backward;
+        }
+
+        /*
         if (new_trajectory_since_backed_up || !backed_up){
         	if (!fly_backward && !stop) {
         		forward_traj = &trajectory;
@@ -1167,16 +1223,20 @@ int main(int argc, char **argv)
         		//max_velocity = 3;
         	}
         }
-
+	*/
          if (trajectory_done(*forward_traj)){
             loop_rate.sleep();
             if (use_emergency_stop){
             	mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj, &drone);
             	next_steps_pub.publish(trajectory_msg);
+            	if (!stop_detected){
+            		ros::param::set("/appx_goal_reached", true);
+            	}
             }
+            stop_detected = false;
             continue;
         }
-
+        stop_detected = false;
         //bool check_position = (ros::Time::now() - last_new_trajectory_time).toSec() < PID_correction_time;
         bool check_position = true; //always check position now
 

@@ -111,7 +111,7 @@
   <param name="velocity_to_budget_on" value="$(arg velocity_to_budget_on)"/>
   <arg name="planner_min_freq" default=".00001"/> 
   <arg name="planner_max_freq" default="10"/>   <!-- currently not used -->
-  <arg name="distance_to_goal_margin" default="30"/> 
+  <arg name="distance_to_goal_margin" default="50"/> 
   <param name="distance_to_goal_margin" value="$(arg distance_to_goal_margin)"/>
   <param name="dist_to_closest_obs_calc_from_octomap" value="$(arg sensor_max_range)"/>
 
@@ -436,11 +436,16 @@
   <arg name="y_dist_to_sample_from__low_bound" default="-350"/>
   <arg name="y_dist_to_sample_from__high_bound" default="2500"/>
   <arg name="goal_mode" default="launch_based"/>
-  <arg name="goal_x" default="150"/>
-  <arg name="goal_y" default="800"/>
+  <arg name="goal_x" default="200"/>
+  <arg name="goal_y" default="347"/>
   <arg name="goal_z" default="50"/>
   <arg name ="distance_to_goal" default="10000"/>
   <param name="distance_to_goal" value="$(arg distance_to_goal)"/>
+
+    <arg name ="appx_goal_reached" default="false"/>
+  <param name="appx_goal_reached" value="$(arg appx_goal_reached)"/>
+
+
 
   <param name="goal_x" value="$(arg goal_x)"/>
   <param name="goal_y" value="$(arg goal_y)"/>

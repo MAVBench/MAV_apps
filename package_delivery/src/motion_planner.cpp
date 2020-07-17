@@ -48,6 +48,7 @@
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 #include "filterqueue.h"
+bool appx_goal_reached = false;
 double budget_left;
 string clct_data_mode_;
 double max_time_budget;
@@ -117,7 +118,9 @@ bool planner_termination_func_2(){
 
 
 
-void emergency_stop(Drone *drone){
+
+
+void emergency_stop_2(Drone *drone){
 	auto drone_vel = drone->velocity();
 	double x_stop = -10*drone_vel.linear.x;
 	if (x_stop < -1) {
@@ -140,6 +143,25 @@ void emergency_stop(Drone *drone){
 		z_stop = min(z_stop, +5.0);
 	}
 	drone->fly_velocity(x_stop, y_stop, z_stop, YAW_UNCHANGED, .5);
+
+	ros::Duration(.4).sleep();
+
+	drone_vel = drone->velocity();
+	double cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+	while (cur_vel_mag > .2){
+		if((drone_vel.linear.x * x_stop < 0) || (drone_vel.linear.y * y_stop) < 0 || (drone_vel.linear.z * z_stop) < 0){ //if any hasn't corrected yet
+			drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, .5);
+			ros::Duration(.1).sleep();
+		}
+		drone_vel = drone->velocity();
+		cur_vel_mag = (double) calc_vec_magnitude(drone_vel.linear.x, drone_vel.linear.y, drone_vel.linear.z);
+	}
+	drone->fly_velocity(0, 0, 0, YAW_UNCHANGED, 10);
+}
+
+void emergency_stop(Drone *drone){
+	return;
+	emergency_stop_2(drone);
 }
 
 bool is_SA_budget_exceeded(){
@@ -543,6 +565,9 @@ double calculate_budget(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, 
 
 // determine whether it's time to replan
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
+
+	ros::param::get("/appx_goal_reached", appx_goal_reached);
+
 	bool replan;
 	//std_msgs::Header msg_for_follow_traj;
     //mavbench_msgs::response_time_capture msg_for_follow_traj;
@@ -602,7 +627,9 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
 			replan = true;
 		}
-		else if (next_steps_msg_size == 0 && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
+		else if (appx_goal_reached && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
+			//emergency_stop_2(drone);
+            ros::param::set("/appx_goal_reached", false);
 			ROS_INFO_STREAM("==============================================================         now it's zero----------------------------=================================");
 			ROS_INFO_STREAM("==============================================================         now it's zero----------------------------================================="<< dist(drone->position(), g_goal_pos));
 			ROS_INFO_STREAM("==============================================================         now ----------------------------=================================");
@@ -2567,10 +2594,10 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		vec_to_prev_constrained_pt_norm.y  = (it->y - prev_constrained_pt.y)/dist_to_prev_constrained_pt;
 		vec_to_prev_constrained_pt_norm.z  = (it->z - prev_constrained_pt.z)/dist_to_prev_constrained_pt;
 		//if ((dist_to_prev_constrained_pt > dist_to_add_constraints) && (dist_to_end_pt < dist_to_add_constraints)){
-		double x[10] = {.35, .35,.35,.35,.35,.35,.35,.35,.35};
+		double x[10] = {.35, .35,.35,.35,.35,.35,.35,.35,.35, .35};
 		graph::node temp_node;
 		if (dist_to_prev_constrained_pt > dist_to_add_constraints){
-			for (int i =0; i<(int)(dist_to_prev_constrained_pt/dist_to_add_constraints); i++) {
+			for (int i =0; i<(int)(dist_to_prev_constrained_pt/dist_to_add_constraints) - 1; i++) {
 				mav_trajectory_generation::Vertex new_v(dimension);
 				//v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global/sqrt(2),v_max__global/sqrt(2),0));
 				new_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(prev_constrained_pt.x + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x ,
@@ -2620,7 +2647,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	//prev_constrained_pt.z = (piecewise_path.end()-1)->z;
 	//piecewise_path_new.push_back(prev_constrained_pt);
 	piecewise_path = piecewise_path_new; // replace the old piecewise path with new augmented one
-	ROS_INFO_STREAM("time segments seize"<< segment_times.size()<< " path size"<< piecewise_path.size());
+	//ROS_INFO_STREAM("time segments seize"<< segment_times.size()<< " path size"<< piecewise_path.size());
 
 	// Parameters used to calculate how quickly the drone can move between vertices
 	const double magic_fabian_constant = 6.5; // A tuning parameter.
@@ -2647,6 +2674,15 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool break_all = false;
 	do {
 
+		for (auto el : segment_times){
+			if (el < .001) {
+				ROS_INFO_STREAM("the unthinkable happend and one of the segment times are zero;");
+				for (auto el : segment_times){
+						ROS_INFO_STREAM(" "<<el);
+					}
+					break;
+			}
+		}
 		smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
 		if(smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
 			emergency_stop(drone);
