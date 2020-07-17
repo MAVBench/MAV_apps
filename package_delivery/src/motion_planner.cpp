@@ -48,7 +48,10 @@
 #include "../../deps/mav_trajectory_generation/mav_visualization/include/mav_visualization/helpers.h"
 #include "../../deps/mav_trajectory_generation/mav_trajectory_generation/include/mav_trajectory_generation/motion_defines.h"
 #include "filterqueue.h"
+#include <chrono>
+#include <future>
 bool appx_goal_reached = false;
+
 double budget_left;
 string clct_data_mode_;
 double max_time_budget;
@@ -2533,8 +2536,6 @@ bool  MotionPlanner::ppl_inbound_check(piecewise_trajectory& piecewise_path){
 	return true;
 }
 
-
-
 MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piecewise_trajectory& piecewise_path, octomap::OcTree* octree, Eigen::Vector3d initial_velocity, Eigen::Vector3d initial_acceleration,
 	mavbench_msgs::planner_info &closest_unknown_way_point)
 {
@@ -2659,6 +2660,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool col;
     int smoothening_ctr = 0;	
     ros::Duration smoothening_time_so_far;
+    float smoothening_time_left;
     //blah reactive the bellow after data collection
     g_smoothening_budget = (SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec();  // whatever is left of the budget
 //    ROS_INFO_STREAM("--------------- remaning time is "<< g_smoothening_budget);
@@ -2694,16 +2696,38 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		//auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
 
 		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
-		opt.solveLinear();
 
+        // launching opt.solveLinear async
+        std::future<void> smoothener_future = std::async(std::launch::async,
+                [&opt]() {
+                    opt.solveLinear();
+                }
+        );
+
+        std::future_status smoothener_result_status;
 		smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
-		if(smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
-			emergency_stop(drone);
-			break;}
+        smoothening_time_left = ros::Duration(g_smoothening_budget).toSec() - smoothening_time_so_far.toSec();
+        // wait until g_smoothening_budget before giving up
+        // on smoothening result
+        smoothener_result_status = smoothener_future.wait_for(
+                std::chrono::duration<float, std::ratio<1, 1>>(smoothening_time_left)
+        );
+
+        // we timed out and solveLinear did not complete in time
+        if (smoothener_result_status == std::future_status::timeout ||
+                // the async never started altogether; this shouldn't happen
+                smoothener_result_status == std::future_status::deferred) {
+            // give up and stop drone
+		    //smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
+            //ROS_INFO_STREAM("ran out of budget in smoothener! time so far " << smoothening_time_so_far.toSec() << " time left " << smoothening_time_left);
+            break;
+        }
+        //ROS_INFO_STREAM("smoothener working");
+        // draining the future value
+        smoothener_future.get();
 
 		mav_trajectory_generation::Segment::Vector segments;
 		opt.getSegments(&segments);
-
 
 		smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
 		if(smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
