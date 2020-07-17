@@ -43,6 +43,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+ros::Time last_time_sent_budgets;
 Drone *drone;
 string design_mode;
 using namespace std;
@@ -69,6 +70,7 @@ double planner_consecutive_failure_ctr = 0;
 
 
 coord drone_position;
+coord last_drone_position;
 geometry_msgs::Twist drone_vel;
 ProfileManager *profile_manager_client;
 mavbench_msgs::control control;
@@ -241,6 +243,7 @@ void closest_unknown_callback(const mavbench_msgs::planner_info::ConstPtr& msg){
 //		ROS_INFO_STREAM("================================== closest_uknown_is not defined");
 		closest_unknown_point = closest_unknown_point_upper_bound;
 	}
+	//ROS_INFO_STREAM("unknown coordinats"<<msg->x << " "<<msg->y<< " " << msg->z);
 }
 
 
@@ -792,6 +795,13 @@ double inline calc_dist(coord point1, multiDOFpoint point) {
 }
 
 
+double inline calc_dist(coord point1, coord point) {
+    	double dx = point1.x - point.x;
+    	double dy = point1.y - point.y;
+    	double dz = point1.z - point.z;
+    	return std::sqrt(dx*dx + dy*dy + dz*dz);
+}
+
 
 void log_data_before_shutting_down()
 {
@@ -1056,6 +1066,7 @@ int main(int argc, char **argv)
     //Drone drone(ip_addr__global.c_str(), port);
 	ros::Rate pub_rate(50);
 	//string state = "waiting_for_pc";
+	last_drone_position = drone_position;
 	bool new_control_data;
 	while (ros::ok())
 	{
@@ -1153,7 +1164,6 @@ int main(int argc, char **argv)
     			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
     		}
-
     		control_to_pyrun.publish(control);
     		//state = "waiting_for_py_run";
     		time_budgetting_failed  = false;
@@ -1163,15 +1173,19 @@ int main(int argc, char **argv)
     			closest_unknown_marker_pub.publish(marker);
     		}
 
-    		ROS_INFO_STREAM("closest uknown distance:"<< calc_dist(drone_position, closest_unknown_point) << " budget "<<control.internal_states.sensor_to_actuation_time_budget_to_enforce << " velocity" << cur_vel_mag);
+    		auto time_between_budgettings = (ros::Time::now() - last_time_sent_budgets).toSec();
+    		last_time_sent_budgets = ros::Time::now();
+    		//ROS_INFO_STREAM("closest uknown distance:"<< calc_dist(drone_position, closest_unknown_point) << " budget "<<control.internal_states.sensor_to_actuation_time_budget_to_enforce << " velocity" << cur_vel_mag << " time between budgettins"<< time_between_budgettings);
 
     		if (DEBUG_RQT){
     			debug_data.header.stamp = ros::Time::now();
     			debug_data.closest_unknown_distance = calc_dist(drone_position, closest_unknown_point);
     			debug_data.cur_velocity = cur_vel_mag;
+    			debug_data.distance_travelled = calc_dist(drone_position, last_drone_position);
     			debug_data.sensor_to_actuation_time_budget_to_enforce = control.internal_states.sensor_to_actuation_time_budget_to_enforce;
     			runtime_debug_pub.publish(debug_data);
     		}
+    		//last_drone_position = drone_position;
     	}
 	}
 

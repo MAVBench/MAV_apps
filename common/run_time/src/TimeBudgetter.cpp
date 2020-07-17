@@ -179,7 +179,7 @@ bool first_stuff = false;
 // calcSamplingTime helper (called recursively)
 void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator trajBegin, std::deque<multiDOFpoint>::iterator trajEnd,
 		std::deque<multiDOFpoint>::iterator &trajItr, double &nextSamplingTime, double latency, multiDOFpoint closest_unknown_point, double distance_error){
-	multiDOFpoint point = *(trajBegin + 1);
+	multiDOFpoint point = *(trajBegin);
 	multiDOFpoint projection;
 
 	//velocity_project_mag = get_velocity_projection_mag(point, closest_unknown_point);
@@ -187,13 +187,13 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 	double velocity_magnitude = get_velocity_projection_mag(point, closest_unknown_point);
 	//velocity_magnitude -= velocity_error;
 
-	distance_error = 0;
+	//distance_error = 0;
 	double sensor_range = calc_dist(point, closest_unknown_point) - distance_error;
 	//sensor_range -= drone_radius;
 	double radius = -1*correct_distance(velocity_magnitude, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
 	sensor_range -=radius;
 	if (first_stuff){
-		ROS_INFO_STREAM("sensor_range"<<sensor_range << " distnace error"<<distance_error);
+		//ROS_INFO_STREAM("sensor_range"<<sensor_range << "radius"<< radius<<" distnace error"<<distance_error << "00000 velocity magnitude projected"<<velocity_magnitude);
 		first_stuff = false;
 	}
 	// blah change the sensor_Range value after data collection
@@ -233,7 +233,7 @@ void TimeBudgetter::calcSamplingTimeHelper(std::deque<multiDOFpoint>::iterator t
 		//velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
 		velocity_magnitude = get_velocity_projection_mag(point, closest_unknown_point);
 		//velocity_magnitude -= velocity_error;
-		sensor_range = calc_dist(point, closest_unknown_point);
+		sensor_range = calc_dist(point, closest_unknown_point) - distance_error;
 		double radius = -1*correct_distance(velocity_magnitude, v_max__global, drone_radius__global, planner_drone_radius_when_hovering, 0);
 		sensor_range -=radius;
 		potentialBudgetTillNextSample = calcSamplingTimeFixV(velocity_magnitude, latency, design_mode, sensor_range);
@@ -273,7 +273,14 @@ std::vector<double> TimeBudgetter::calcSamplingTime(trajectory_t traj, double la
 	multiDOFpoint point = *(trajItr);
 	//double velocity_magnitude = calc_magnitude(point.vx, point.vy, point.vz);
 	//double velocity_error;
+	// calculate the tracking error and add or subtract to the actual distance to unknown for time budtgetting
 	double distance_error = calc_magnitude(position.x - point.x , position.y - point.y, position.z - point.z);
+	double dist_to_closest_unknown_from_cur_point = calc_magnitude(position.x - closest_unknown_point.x , position.y - closest_unknown_point.y, position.z - closest_unknown_point.z);
+	double dist_to_closest_unknown_from_first_point_in_traj = calc_magnitude(point.x - closest_unknown_point.x , point.y - closest_unknown_point.y, point.z - closest_unknown_point.z);
+	if (dist_to_closest_unknown_from_cur_point < dist_to_closest_unknown_from_first_point_in_traj){
+		distance_error = -1*distance_error;
+	}
+
 	// use velocity error to correct for the difference between current velocity and the desired velocity
 	// this will help us to avoid being conservative
 	/*

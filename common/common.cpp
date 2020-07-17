@@ -749,7 +749,7 @@ trajectory_t create_trajectory_from_msg(const mavbench_msgs::multiDOFtrajectory&
         mdp.vx = mdp_msg.vx;
         mdp.vy = mdp_msg.vy;
         mdp.vz = mdp_msg.vz;
-        //ROS_INFO_STREAM("=====vx"<<mdp.vx<<"vy"<<mdp.vy<<"vz"<<mdp.vz) ;
+//        ROS_INFO_STREAM("=====vx"<<mdp.vx<<"vy"<<mdp.vy<<"vz"<<mdp.vz) ;
 
         mdp.ax = mdp_msg.ax;
         mdp.ay = mdp_msg.ay;

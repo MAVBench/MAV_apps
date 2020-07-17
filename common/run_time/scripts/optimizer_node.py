@@ -82,6 +82,7 @@ def run_optimizer(control):
     #print("rt_max" + str(rt_max)) 
     # -- determine the response time destired (rt_d)
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - (back_end_latency + front_end_latency)# the second run_time_latency is for the following iteration
+    #time_budget_left_to_distribute = 10
     #print("budget is" + str(time_budget_left_to_distribute))
     if (time_budget_left_to_distribute < runtime_latency):
         #print("-----------------**********&&&&budget is less than 0. budgget given" + str(time_budget_left_to_distribute))
@@ -101,7 +102,9 @@ def run_optimizer(control):
     r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
     r_min_ = r_min_temp
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
-    r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
+    #print("=================================avg gap size" + str(control.inputs.gap_statistics_avg))
+    #r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
+    r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
     global distance_to_goal
     if distance_to_goal < 40:
         r_min_temp = r_max_temp = min(4*r_min_static, r_min_temp, r_max_temp)

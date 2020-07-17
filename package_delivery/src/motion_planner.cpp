@@ -1830,9 +1830,11 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 	if (motion_planning_core_str == "lawn_mower")
         return false;
 
+	/*
 	if (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube && piecewise_planning){
 		return true;
 	}
+	*/
 
 	octomap::point3d n1_point; // to convert n1 from graph::node to octomap::point
     n1_point(0) = n1.x;
@@ -1936,6 +1938,10 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
     			closest_unknown_point.x = n1_point.x();
     			closest_unknown_point.y = n1_point.y();
     			closest_unknown_point.z = n1_point.z();
+    			//ROS_INFO_STREAM("insdie collision check unknown point is"<< n1_point.x()<< " l"<< n1_point.y()<< " "<<n1_point.z());
+    		}else{
+    		;
+    			//ROS_INFO_STREAM("insdie collision check unknown point was on drone so "<< n1_point.x()<< " l"<< n1_point.y()<< " "<<n1_point.z());
     		}
     	}
     }
@@ -1984,10 +1990,11 @@ bool MotionPlanner::collision(octomap::OcTree * octree, const graph::node& n1, c
 	if (motion_planning_core_str == "lawn_mower")
         return false;
 
+	/*
 	if (volume_explored_in_unit_cubes > ppl_vol_idealInUnitCube && piecewise_planning){
 		return true;
 	}
-
+	*/
     RESET_TIMER();
 
     // First, check if anything goes too close to the ground
@@ -2224,9 +2231,10 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
 					closest_unknown_way_point.z = pos1.z;
 					last_unknown_pt_ctr  = pos1.pt_ctr;
 					first_unknown_collected = true;
+        			//ROS_INFO_STREAM("closest unknow changing to "<< pos1.x << " " << pos1.y<<" " << pos1.z);
         		}else{
         		;
-        			//ROS_INFO_STREAM("closest uknown didn't change");
+        		//	ROS_INFO_STREAM("closest uknown didn't change");
         		}
         	}
         }
@@ -2519,7 +2527,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	// Setup optimizer
 	mav_trajectory_generation::Vertex::Vector vertices;
 	const int dimension = 3;
-	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::VELOCITY;
+	const int derivative_to_optimize = mav_trajectory_generation::derivative_order::ACCELERATION;
 	
 	// Convert roadmap path to optimizer's path format
 	mav_trajectory_generation::Vertex start_v(dimension), end_v(dimension);
@@ -2540,17 +2548,17 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	prev_constrained_pt.y = piecewise_path.begin()->y;
 	prev_constrained_pt.z = piecewise_path.begin()->z;
 
+	auto begin_to_end_distance = calc_vec_magnitude((piecewise_path.begin())->x - (piecewise_path.end() -1 )->x,  (piecewise_path.begin())->y - (piecewise_path.end() -1 )->y, (piecewise_path.begin())->z - (piecewise_path.end() -1 )->z);
 
     piecewise_trajectory piecewise_path_new;
     piecewise_path_new.push_back(prev_constrained_pt);
-
+    vector<double> segment_times;
 	auto end_pt = piecewise_path.end() - 1;
 	bool first_ = true;
-	double dist_to_add_constraints =  20000; // every this meter, we add a velocity constraint to make the path agile
+	double dist_to_add_constraints =  min(50.0, begin_to_end_distance/2.0); // every this meter, we add a velocity constraint to make the path agile
 	int ctr = 0;
 	for (auto it = piecewise_path.begin()+1; it != piecewise_path.end(); ++it) {
 		mav_trajectory_generation::Vertex v(dimension);
-
 		// add constraints to keep velocity high
 		//this is wrong double check auto dist_to_end_pt =  calc_vec_magnitude(it->x - end_pt->x,  prev_constrained_pt.y - end_pt->y, it->z - end_pt->z);
 		auto dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - prev_constrained_pt.x,  it->y - prev_constrained_pt.y, it->z - prev_constrained_pt.z);
@@ -2559,30 +2567,41 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		vec_to_prev_constrained_pt_norm.y  = (it->y - prev_constrained_pt.y)/dist_to_prev_constrained_pt;
 		vec_to_prev_constrained_pt_norm.z  = (it->z - prev_constrained_pt.z)/dist_to_prev_constrained_pt;
 		//if ((dist_to_prev_constrained_pt > dist_to_add_constraints) && (dist_to_end_pt < dist_to_add_constraints)){
+		double x[10] = {.35, .35,.35,.35,.35,.35,.35,.35,.35};
+		graph::node temp_node;
 		if (dist_to_prev_constrained_pt > dist_to_add_constraints){
-			for (int i =0; i<(double)dist_to_prev_constrained_pt/dist_to_add_constraints; i++) {
+			for (int i =0; i<(int)(dist_to_prev_constrained_pt/dist_to_add_constraints); i++) {
 				mav_trajectory_generation::Vertex new_v(dimension);
 				//v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global/sqrt(2),v_max__global/sqrt(2),0));
 				new_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(prev_constrained_pt.x + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x ,
 						prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y, prev_constrained_pt.z + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z));
 				//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,v_max__global*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
-				new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,v_max__global*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
-				ROS_INFO_STREAM("00000000000000000000 addd cosntraintes of speed "<<v_max__global*vec_to_prev_constrained_pt_norm.x<< " "<< v_max__global*vec_to_prev_constrained_pt_norm.y<< " " <<v_max__global*vec_to_prev_constrained_pt_norm.z);
-				ROS_INFO_STREAM("11111111111 addd cosntraintes of speed "<<prev_constrained_pt.z +(i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z);
+				//ROS_INFO_STREAM("extra constraints to add"<<prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y <<" velocity constraints"<< v_max__global*vec_to_prev_constrained_pt_norm.y);
+				new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,(v_max__global)*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
 				vertices.push_back(new_v);
-//				piecewise_path.insert(piecewise_path.begin()+ctr+1, prev_constrained_pt);
-				//piecewise_path_new.push_back(Eiprev_constrained_pt);
-				graph::node temp_node;
-				temp_node.x = (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x ;
-				temp_node.y = (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y;
-				temp_node.z = (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z;
-				piecewise_path_new.push_back(temp_node);
-				ctr +=1;
 
+				temp_node.x = prev_constrained_pt.x + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x;
+				temp_node.y = prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y;
+				temp_node.z = prev_constrained_pt.z + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z;
+				piecewise_path_new.push_back(temp_node);
+
+				if (ctr == 0){
+					segment_times.push_back(dist_to_add_constraints/(v_max__global/(1+x[i%10])));
+				}else{
+					segment_times.push_back(dist_to_add_constraints/(v_max__global));
+				}
+					/*
+				}else{
+					segment_times.push_back(dist_to_add_constraints/(v_max__global));
+				}*/
 			}
 		}
 
 		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
+		dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - temp_node.x,  it->y - temp_node.y, it->z - temp_node.z);
+		segment_times.push_back(dist_to_prev_constrained_pt/v_max__global);
+		//ROS_INFO_STREAM("normal constraints to add"<<it->y);
+
 		if ((it+1) == piecewise_path.end()) {
 			v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(0,0,0));
 		}
@@ -2601,6 +2620,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	//prev_constrained_pt.z = (piecewise_path.end()-1)->z;
 	//piecewise_path_new.push_back(prev_constrained_pt);
 	piecewise_path = piecewise_path_new; // replace the old piecewise path with new augmented one
+	ROS_INFO_STREAM("time segments seize"<< segment_times.size()<< " path size"<< piecewise_path.size());
 
 	// Parameters used to calculate how quickly the drone can move between vertices
 	const double magic_fabian_constant = 6.5; // A tuning parameter.
@@ -2635,7 +2655,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		first_unknown_collected = false;
 		col = false;
 		//ROS_INFO_STREAM(" =---------------- with velocity setting shit"<< v_max__global);
-		auto segment_times = estimateSegmentTimes(vertices, 2*v_max__global - 1, 2*a_max__global, magic_fabian_constant);
+		//auto segment_times = estimateSegmentTimes(vertices, v_max__global, a_max__global, magic_fabian_constant);
+
 		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
 		opt.solveLinear();
 
@@ -2731,8 +2752,10 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
                     graph::node middle_node = {middle_x, middle_y, middle_z};
 					piecewise_path.insert(piecewise_path.begin()+i+1, middle_node);
 
+					auto time = segment_times[i]/2.0;
+					segment_times[i] = time;
+					segment_times.insert(segment_times.begin()+(i+1), time);
 					col = true;
-
 					break;
 				}else{
 					if (!isnan(closest_unknown_point.x) && !first_unknown_collected){

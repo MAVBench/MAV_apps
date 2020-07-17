@@ -7,4 +7,5 @@ float32 ppl_time_budget
 float32 smoothening_budget
 float32 closest_unknown_distance
 float32 cur_velocity
+float32 distance_travelled
 float32 sensor_to_actuation_time_budget_to_enforce
