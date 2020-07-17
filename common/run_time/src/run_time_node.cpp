@@ -1155,7 +1155,9 @@ int main(int argc, char **argv)
     			control.inputs.ppl_vol_min = 0;
     		}
 
+    		auto drone_position_when_took_sample =  drone->position();
     		if (traj.size() == 0 || time_budgetting_failed || planner_consecutive_failure_ctr>0){
+    			ROS_INFO_STREAM("------------------------------------coming here now");
     			double closest_unknown_point_distance = calc_dist(drone_position, closest_unknown_point);
     			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
     			double sensor_range = closest_unknown_point_distance;
@@ -1181,11 +1183,11 @@ int main(int argc, char **argv)
     			debug_data.header.stamp = ros::Time::now();
     			debug_data.closest_unknown_distance = calc_dist(drone_position, closest_unknown_point);
     			debug_data.cur_velocity = cur_vel_mag;
-    			debug_data.distance_travelled = calc_dist(drone_position, last_drone_position);
+    			debug_data.distance_travelled = calc_dist(drone_position_when_took_sample, last_drone_position);
     			debug_data.sensor_to_actuation_time_budget_to_enforce = control.internal_states.sensor_to_actuation_time_budget_to_enforce;
     			runtime_debug_pub.publish(debug_data);
     		}
-    		//last_drone_position = drone_position;
+    		last_drone_position = drone_position;
     	}
 	}
 

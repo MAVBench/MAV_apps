@@ -2584,6 +2584,12 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool first_ = true;
 	double dist_to_add_constraints =  min(50.0, begin_to_end_distance/2.0); // every this meter, we add a velocity constraint to make the path agile
 	int ctr = 0;
+	bool found_intermediate_pts = false;
+	graph::node last_node;
+	last_node.x = piecewise_path.begin()->x;
+	last_node.y = piecewise_path.begin()->y;
+	last_node.z = piecewise_path.begin()->z;
+
 	for (auto it = piecewise_path.begin()+1; it != piecewise_path.end(); ++it) {
 		mav_trajectory_generation::Vertex v(dimension);
 		// add constraints to keep velocity high
@@ -2613,6 +2619,13 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				piecewise_path_new.push_back(temp_node);
 
 				if (ctr == 0){
+					/*
+					double potential_time =  dist_to_add_constraints;
+					double potential_a = abs(v_max__global - last_v)/potential_time;
+					if (potential_a > .3){
+						potential_time = .
+					}
+					*/
 					segment_times.push_back(dist_to_add_constraints/(v_max__global/(1+x[i%10])));
 				}else{
 					segment_times.push_back(dist_to_add_constraints/(v_max__global));
@@ -2622,11 +2635,20 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 					segment_times.push_back(dist_to_add_constraints/(v_max__global));
 				}*/
 			}
+			found_intermediate_pts = true;
 		}
 
 		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
-		dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - temp_node.x,  it->y - temp_node.y, it->z - temp_node.z);
+		if (found_intermediate_pts){
+			dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - temp_node.x,  it->y - temp_node.y, it->z - temp_node.z);
+		}else{
+			dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - last_node.x,  it->y - last_node.y, it->z - last_node.z);
+		}
 		segment_times.push_back(dist_to_prev_constrained_pt/v_max__global);
+		last_node.x = it->x;
+		last_node.y = it->y;
+		last_node.z = it->z;
+		found_intermediate_pts = false;
 		//ROS_INFO_STREAM("normal constraints to add"<<it->y);
 
 		if ((it+1) == piecewise_path.end()) {

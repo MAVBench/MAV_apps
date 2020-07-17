@@ -109,7 +109,8 @@ void trajectory_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 Drone *g_drone ;
 DataContainer profiling_container;
 ProfileManager *profile_manager_;
-
+int g_collision_count;
+int initial_collision_count;
 void log_data_before_shutting_down()
 {
 	ROS_ERROR_STREAM("shutting down package delivery------------------");
@@ -129,6 +130,7 @@ void log_data_before_shutting_down()
     }
 
     profiling_container.capture("mission_status", "single", mission_status_encoded_in_digits, 1);
+    profiling_container.capture("collision_count", "single", g_collision_count, 1);
     profiling_container.setStatsAndClear();
 
     profile_manager::profiling_data_verbose_srv profiling_data_verbose_srv_inst;
@@ -581,6 +583,7 @@ int main(int argc, char **argv)
             }
         	goal = get_goal(goal_mode);
             start = get_start(drone);
+        	initial_collision_count =   drone.getFlightStats().collision_count;
             
             // signal the profiler to start profiling
             //profiling_data_srv_inst.request.key = "start_profiling";
@@ -723,6 +726,8 @@ int main(int argc, char **argv)
         	if (reached_goal_ctr == 1) {
 
         		g_mission_status  = "completed";
+        		g_collision_count =   drone.getFlightStats().collision_count - initial_collision_count;
+
         		log_data_before_shutting_down();
         		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
         		ros::shutdown();

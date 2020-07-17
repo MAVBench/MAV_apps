@@ -378,7 +378,7 @@ void output_flight_summary(void){
     stats_ss << "{"<<endl;
     stats_ss << "\t\"distance_travelled\": " << g_end_stats.distance_traveled - g_init_stats.distance_traveled<< "," << endl;
     stats_ss << "\t\"flight_time\": " << g_end_stats.flight_time - g_init_stats.flight_time<< "," << endl;
-    stats_ss << "\t\"collision_count\": " << g_end_stats.collision_count  - g_init_stats.collision_count << "," << endl;
+    //stats_ss << "\t\"collision_count\": " << g_end_stats.collision_count  - g_init_stats.collision_count << "," << endl;
     
     stats_ss << "\t\"initial_voltage\": " << g_init_stats.voltage << "," << endl;
     stats_ss << "\t\"end_voltage\": " << g_end_stats.voltage << "," << endl;
