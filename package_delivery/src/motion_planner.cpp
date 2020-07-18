@@ -2720,33 +2720,31 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
 
         // launching opt.solveLinear async
-        std::future<void> smoothener_future = std::async(std::launch::async,
+        std::future<bool> smoothener_future = std::async(std::launch::async,
                 [&opt]() {
                     opt.solveLinear();
+                    return true;
                 }
         );
 
-        std::future_status smoothener_result_status;
-		smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
-        smoothening_time_left = ros::Duration(g_smoothening_budget).toSec() - smoothening_time_so_far.toSec();
-        // wait until g_smoothening_budget before giving up
-        // on smoothening result
-        smoothener_result_status = smoothener_future.wait_for(
-                std::chrono::duration<float, std::ratio<1, 1>>(smoothening_time_left)
-        );
-
-        // we timed out and solveLinear did not complete in time
-        if (smoothener_result_status == std::future_status::timeout ||
-                // the async never started altogether; this shouldn't happen
-                smoothener_result_status == std::future_status::deferred) {
-            // give up and stop drone
-		    //smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
-            //ROS_INFO_STREAM("ran out of budget in smoothener! time so far " << smoothening_time_so_far.toSec() << " time left " << smoothening_time_left);
+        bool smoothener_budget_exceeded = false;
+        while (true) {
+            if (!smoothener_future.valid()) {
+                smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
+                if(smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
+                    smoothener_budget_exceeded = true;
+                    break;
+                }
+            }
+            else {
+                // draining the future
+                smoothener_future.get();
+                break;
+            }
+        }
+        if (smoothener_budget_exceeded) {
             break;
         }
-        //ROS_INFO_STREAM("smoothener working");
-        // draining the future value
-        smoothener_future.get();
 
 		mav_trajectory_generation::Segment::Vector segments;
 		opt.getSegments(&segments);
