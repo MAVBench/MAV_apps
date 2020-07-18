@@ -724,10 +724,11 @@ int main(int argc, char **argv)
 
         if (dist(drone.position(), goal) < distance_to_goal_margin || drone.getFlightStats().collision_count>1){
         	if (reached_goal_ctr == 1) {
-
         		g_mission_status  = "completed";
         		g_collision_count =   drone.getFlightStats().collision_count - initial_collision_count;
-
+        		if (g_collision_count > 0){
+        			g_mission_status  = "collided";
+        		}
         		log_data_before_shutting_down();
         		signal_supervisor(g_supervisor_mailbox, "kill"); // @suppress("Invalid arguments")
         		ros::shutdown();

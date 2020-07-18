@@ -2546,6 +2546,17 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	double distance = 0.5; 
 	std::string frame_id = "world";
 
+
+	auto pos = drone->position();
+	graph::node first_point_to_add;
+	first_point_to_add.x  = pos.x;
+	first_point_to_add.y  = pos.y;
+	first_point_to_add.z  = pos.z;
+	auto cur_pos_to_first_distance = calc_vec_magnitude((piecewise_path.begin())->x - first_point_to_add.x,  (piecewise_path.begin())->y - first_point_to_add.y, (piecewise_path.begin())->z - first_point_to_add.z);
+	if (cur_pos_to_first_distance > .5){
+		piecewise_path.insert(piecewise_path.begin(), first_point_to_add);
+	}
+
 	// deep copy the piecewise trajectory
 	vector<graph::node> piecewise_path_copy_of_original;
 	for (auto it=piecewise_path.begin(); it!=piecewise_path.end(); it++){
@@ -2684,7 +2695,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     ros::Duration smoothening_time_so_far;
     float smoothening_time_left;
     //blah reactive the bellow after data collection
-    g_smoothening_budget = (SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec();  // whatever is left of the budget
+    g_smoothening_budget = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec())/3;  // whatever is left of the budget
 //    ROS_INFO_STREAM("--------------- remaning time is "<< g_smoothening_budget);
     //g_smoothening_budget = min(3.0,  SA_time_budget_to_enforce - (ros::Time::now() - deadline_setting_time).toSec());
 

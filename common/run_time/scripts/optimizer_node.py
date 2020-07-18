@@ -157,7 +157,9 @@ def run_optimizer(control):
                                                                         # provide a volume as a min that is smaller
                                                                         # than what we can already see (v_sennsor_max)
         #v_max_list = [(2**i)*(r_max_/r_min_static)*v_sensor_max, (2**i)*(r_max_/r_min_static)*v_tree_max, (2**i)*max(v_max, ppl_vol_min)]
-        v_max_list = [(r_max_/r_min_static)*v_sensor_max, (r_max_/r_min_static)*v_tree_max, max(v_max, 2*ppl_vol_min)]
+
+        #v_min_list = [min(v_min, .9*v_sensor_max) , 9*(r_max_/r_min_static)*v_tree_max, 2* max(v_max, 2*ppl_vol_min)]
+        v_max_list = [(r_max_/r_min_static)*v_sensor_max, 2*(r_max_/r_min_static)*v_tree_max, 2* max(v_max, 2*ppl_vol_min)]
 
         # sanity check on response time 
         global om_popt, om_pl_popt, pp_pl_popt, typical_model
