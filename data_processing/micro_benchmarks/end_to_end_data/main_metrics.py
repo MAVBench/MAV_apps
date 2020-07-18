@@ -10,14 +10,6 @@ sys.path.append('../../common_utils')
 from data_parsing import *
 import seaborn as sns
 col = sns.color_palette("Paired", 111111)
-stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl", "pc_om_estimation"]
-
-hw_sampling_method = "decision_based"
-
-# which stage are you trying to plot
-stage_of_interest = "pp_pl" # pick form ["om_to_pl", "pc_om", "pp_pl", "pc_om_estimation]
-
-assert stage_of_interest in stage_of_interests_to_pick_from
 
 result_folder = "./data_1"
 input_file_name = "saturday_morning.json"
