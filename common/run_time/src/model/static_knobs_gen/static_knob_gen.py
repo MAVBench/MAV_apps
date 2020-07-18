@@ -19,7 +19,7 @@ def calculate_static_values():
     #run_diagnostics = .15
     #pc_to_om_overhead = .6
     #run_time_budget = .1 
-    drone_radius = 1
+    drone_radius = 1.5
     drone_radius_when_hovering =  drone_radius  # set it equal to each other to avoid sub_vmax optimization
     # collect data 
     result_folder = "../../knob_performance_modeling_all/data_1" 
@@ -50,7 +50,7 @@ def calculate_static_values():
     max_time_budget = om_latency + om_pl_latency + 2*pp_pl_latency + pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency
 
     #max_time_budget = pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency + .2 + .2 + .2 + .1
-    max_time_budget = 2.2
+    #max_time_budget = 2.2
     
 
     velocity_to_budget_on = calc_v_max(max_time_budget, visibility_avg - drone_radius, .1439, .8016)

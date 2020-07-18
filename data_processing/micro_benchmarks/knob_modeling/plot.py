@@ -12,7 +12,7 @@ from data_parsing import *
 stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl", "pc_om_estimation"]
 
 # which stage are you trying to plot
-stage_of_interest = "pp_pl" # pick form ["om_to_pl", "pc_om", "pp_pl", "pc_om_estimation]
+stage_of_interest = "om_to_pl" # pick form ["om_to_pl", "pc_om", "pp_pl", "pc_om_estimation]
 
 assert stage_of_interest in stage_of_interests_to_pick_from
 
@@ -21,7 +21,7 @@ input_file_name = "stats.json"
 input_filepath = result_folder + "/" + input_file_name
 
 # data to collect
-metrics_to_collect_easy = []
+metrics_to_collect_easy = ["experiment_number"]
 metrics_to_collect_hard = ["octomap_exposed_resolution", "point_cloud_estimated_volume", "octomap_volume_digested", "pc_vol_estimated",
         "potential_volume_to_explore_knob_modeling", "resolution_to_explore_knob_modeling", 
         "piecewise_planner_time_knob_modeling", "piecewise_planner_resolution_knob_modeling", "piecewise_planner_volume_explored_knob_modeling",

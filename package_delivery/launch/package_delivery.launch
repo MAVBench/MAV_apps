@@ -273,7 +273,7 @@
   <param name="gap_statistic_mode" value="$(arg gap_statistic_mode)"/>
     <arg name="cur_tree_total_volume" default="8000" />   
   <param name="cur_tree_total_volume" value="$(arg cur_tree_total_volume)"/>
-  <arg name="ppl_vol_min_coeff" default="100" />   
+  <arg name="ppl_vol_min_coeff" default="4" />   
   <param name="ppl_vol_min_coeff" value="$(arg ppl_vol_min_coeff)"/>
   <arg name="ppl_time_budget" default="5" />   
   <param name="ppl_time_budget" value="$(arg ppl_time_budget)"/>
@@ -283,7 +283,7 @@
   <!-- fixed knob values --> 
  <arg name="pc_res_max" default=".3" />   
  <param name="pc_res_max" value="$(arg pc_res_max)"/>
- <arg name="pc_res_steps" default="5" />   
+ <arg name="pc_res_steps" default="1" />   
  <param name="pc_res_steps" value="$(arg pc_res_steps)"/>
  <arg name="num_of_res_to_try" default="5" />   
  <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
@@ -437,7 +437,7 @@
   <arg name="y_dist_to_sample_from__high_bound" default="2500"/>
   <arg name="goal_mode" default="launch_based"/>
   <arg name="goal_x" default="200"/>
-  <arg name="goal_y" default="347"/>
+  <arg name="goal_y" default="775"/>
   <arg name="goal_z" default="50"/>
   <arg name ="distance_to_goal" default="10000"/>
   <param name="distance_to_goal" value="$(arg distance_to_goal)"/>

@@ -1932,6 +1932,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 			 if (std::find(octomap_block_vec.begin(), octomap_block_vec.end(),m_octree_block) !=octomap_block_vec.end()) {
 				 continue;
 			 }
+	//		 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
 			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
 			 octomap_block_vec.push_back(m_octree_block);
 		 }

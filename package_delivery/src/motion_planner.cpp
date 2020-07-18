@@ -2594,13 +2594,14 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
     vector<double> segment_times;
 	auto end_pt = piecewise_path.end() - 1;
 	bool first_ = true;
-	double dist_to_add_constraints =  min(50.0, begin_to_end_distance/2.0); // every this meter, we add a velocity constraint to make the path agile
+	double dist_to_add_constraints =  max(min(50.0, begin_to_end_distance/2.0), 20.0); // every this meter, we add a velocity constraint to make the path agile
 	int ctr = 0;
 	bool found_intermediate_pts = false;
 	graph::node last_node;
 	last_node.x = piecewise_path.begin()->x;
 	last_node.y = piecewise_path.begin()->y;
 	last_node.z = piecewise_path.begin()->z;
+	//vector<double> dist_to_prev_point_vector;
 
 	for (auto it = piecewise_path.begin()+1; it != piecewise_path.end(); ++it) {
 		mav_trajectory_generation::Vertex v(dimension);
@@ -2614,6 +2615,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		//if ((dist_to_prev_constrained_pt > dist_to_add_constraints) && (dist_to_end_pt < dist_to_add_constraints)){
 		double x[10] = {.35, .35,.35,.35,.35,.35,.35,.35,.35, .35};
 		graph::node temp_node;
+		double prev_dist_to_constraint_pt = dist_to_prev_constrained_pt;
 		if (dist_to_prev_constrained_pt > dist_to_add_constraints){
 			for (int i =0; i<(int)(dist_to_prev_constrained_pt/dist_to_add_constraints) - 1; i++) {
 				mav_trajectory_generation::Vertex new_v(dimension);
@@ -2639,15 +2641,17 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 					}
 					*/
 					segment_times.push_back(dist_to_add_constraints/(v_max__global/(1+x[i%10])));
+					//dist_to_prev_point_vector.push_back(dist_to_prev_constrained_pt);
 				}else{
 					segment_times.push_back(dist_to_add_constraints/(v_max__global));
+					//dist_to_prev_point_vector.push_back(dist_to_add_constraints);
 				}
-					/*
+				/*
 				}else{
 					segment_times.push_back(dist_to_add_constraints/(v_max__global));
 				}*/
+				found_intermediate_pts = true;
 			}
-			found_intermediate_pts = true;
 		}
 
 		v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(it->x, it->y, it->z));
@@ -2657,6 +2661,13 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - last_node.x,  it->y - last_node.y, it->z - last_node.z);
 		}
 		segment_times.push_back(dist_to_prev_constrained_pt/v_max__global);
+		/*
+		//dist_to_prev_point_vector.push_back(dist_to_prev_constrained_pt);
+		if (dist_to_prev_constrained_pt > 100 || dist_to_prev_constrained_pt < .1){
+			double x = (int)(prev_dist_to_constraint_pt/dist_to_add_constraints) - 1;
+			cout<<"what the fuck"<< endl;
+		}
+		 */
 		last_node.x = it->x;
 		last_node.y = it->y;
 		last_node.z = it->z;
@@ -2709,15 +2720,19 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	bool break_all = false;
 	do {
 
+		/*
 		for (auto el : segment_times){
-			if (el < .001) {
+			if (el < .001 || el>50 ) {
 				ROS_INFO_STREAM("the unthinkable happend and one of the segment times are zero;");
+				int i =0;
 				for (auto el : segment_times){
-						ROS_INFO_STREAM(" "<<el);
+						ROS_INFO_STREAM(" "<<el << "dist is "<<dist_to_prev_point_vector[i]);
+						i++;
 					}
 					break;
 			}
 		}
+		*/
 		smoothening_time_so_far = (ros::Time::now() - smoothening_start_time);
 		if(smoothening_time_so_far.toSec() > ros::Duration(g_smoothening_budget).toSec()){
 			emergency_stop(drone);
@@ -2846,6 +2861,10 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 					auto time = segment_times[i]/2.0;
 					segment_times[i] = time;
 					segment_times.insert(segment_times.begin()+(i+1), time);
+					// detele later
+					//double blah = calc_vec_magnitude(segment_start.x - segment_end.x, segment_start.y - segment_end.y, segment_start.z - segment_start.z);
+					//dist_to_prev_point_vector[i] = blah;
+					//dist_to_prev_point_vector.insert(dist_to_prev_point_vector.begin()+(i+1), blah);
 					col = true;
 					break;
 				}else{

@@ -158,10 +158,10 @@ axs[1].set(xlabel="mission  progression (s)", ylabel="latnecy (s)")
 axs[1].legend(loc='best')
 
 axs[0].plot(x, octomap_volume_integrated, label="octomap_volume")
-axs[0].plot(x, ppl_volume, label="ppl_volume")
+#axs[0].plot(x, ppl_volume, label="ppl_volume")
 axs[0].plot(x, om_to_pl_volume, label="om_to_pl_volume")
 axs[0].set(xlabel="mission  progression (s)", ylabel="time (s)")
-axs[0].set_yscale('log')
+#axs[0].set_yscale('log')
 axs[0].legend(loc='best')
 output_file = "volume" + ".png"
 #plt.show()

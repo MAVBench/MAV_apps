@@ -1157,7 +1157,7 @@ int main(int argc, char **argv)
 
     		auto drone_position_when_took_sample =  drone->position();
     		if (traj.size() == 0 || time_budgetting_failed || planner_consecutive_failure_ctr>0){
-    			ROS_INFO_STREAM("------------------------------------coming here now");
+    			//ROS_INFO_STREAM("------------------------------------coming here now");
     			double closest_unknown_point_distance = calc_dist(drone_position, closest_unknown_point);
     			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
     			double sensor_range = closest_unknown_point_distance;
