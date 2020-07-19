@@ -1853,7 +1853,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   // average of averages
    gap_statistics_max = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_max);
    gap_statistics_min = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_min);
-  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - 3*g_planner_drone_radius;
+  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - 5*g_planner_drone_radius;
   double obs_dist_statistics_avg_from_pc = (obs_dist_statistics_avg_from_pc_total / n_points); // dont need to subtract drone_radius already been taken care of since, we get it from camera frames
   //ROS_INFO_STREAM("---------------------------------- gap statistics min"<< gap_statistics_min<< "avg"<< gap_statistics_avg);
 
@@ -2104,6 +2104,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 	  debug_data.point_cloud_area_to_digest = area_to_digest;
 	  //debug_data.diagnostics = profiling_container->findDataByName("diagnostics")->values.back();;
 	  debug_data.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
+	  debug_data.cur_vel = cur_vel_mag;
 	  debug_data.optimizer_failure_status = optimizer_failure_status;
 	  debug_data.velocity_to_budget_on = velocity_to_budget_on;
 	  pc_debug_pub.publish(debug_data);
@@ -2504,7 +2505,7 @@ int main(int argc, char** argv) {
 		if (budgetting_mode=="dynamic" && design_mode =="serial") {
 			ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
 			auto ran_pc_since_last_time = (ros::Time::now() - last_time_ran_pc).toSec();
-			if ((set_closest_unknown_point || !got_first_unknown || (ran_pc_since_last_time > 20)) && pyrun_rcvd_models){
+			if ((set_closest_unknown_point || !got_first_unknown || (ran_pc_since_last_time > 20000)) && pyrun_rcvd_models){
 				//cout<<"got the new unknown so spinning"<<endl;
 				pc->spinOnce();//
 				last_time_ran_pc = ros::Time::now();

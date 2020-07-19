@@ -28,7 +28,7 @@
   <arg name="v_max" default="4"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
-  <arg name="planner_drone_radius" default="3"/>
+  <arg name="planner_drone_radius" default="1.5"/>
   <arg name="planner_drone_height" default="1.2"/>
   <arg name="max_yaw_rate" default="90"/>
   <arg name="max_yaw_rate_during_flight" default="90"/>
@@ -39,7 +39,7 @@
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
   <param name="planner_drone_radius" value="$(arg planner_drone_radius)"/>
-  <arg name="planner_drone_radius_when_hovering" default="1.25"/>
+  <arg name="planner_drone_radius_when_hovering" default="1.5"/>
   <param name="planner_drone_radius_when_hovering" value="$(arg planner_drone_radius_when_hovering)"/>
   <arg name="planner_drone_height_when_hovering" default="1.25"/>
   <param name="planner_drone_height_when_hovering" value="$(arg planner_drone_height_when_hovering)"/>
@@ -437,7 +437,7 @@
   <arg name="y_dist_to_sample_from__high_bound" default="2500"/>
   <arg name="goal_mode" default="launch_based"/>
   <arg name="goal_x" default="200"/>
-  <arg name="goal_y" default="775"/>
+  <arg name="goal_y" default="980"/>
   <arg name="goal_z" default="50"/>
   <arg name ="distance_to_goal" default="10000"/>
   <param name="distance_to_goal" value="$(arg distance_to_goal)"/>

@@ -555,9 +555,9 @@ void MotionPlanner::runtime_failure_cb(const mavbench_msgs::runtime_failure_msg 
     closest_unknown_way_point.z = nan("");
     closest_unknown_way_point.planning_status = "runtime_failure";
 	closest_unknown_pub.publish(closest_unknown_way_point);
+    traj_pub.publish(traj);
 	ros::param::set("/set_closest_unknown_point", true);
 	traj.closest_unknown_point = closest_unknown_way_point;
-    traj_pub.publish(traj);
     runtime_failure_last_time = true;
 }
 
@@ -567,9 +567,16 @@ bool got_updated_budget = false;
 double calculate_budget(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, std::deque<multiDOFpoint> *traj_);
 
 // determine whether it's time to replan
+//bool hacky_goal_rcv = false;
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
-
-	ros::param::get("/appx_goal_reached", appx_goal_reached);
+	/*
+	ros::param::get("/hacky_goal_rcv", hacky_goal_rcv);
+	if (hacky_goal_rcv){
+		hacky_goal_rcv = false;
+		g_goal_pos.x = g_goal_pos.x + 200;
+	}
+	*/
+	//ros::param::get("/appx_goal_reached", appx_goal_reached);
 
 	bool replan;
 	//std_msgs::Header msg_for_follow_traj;
@@ -590,7 +597,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     //cout<<"renewd_v_max_after"<<renewed_v_max<<endl;
 
     sub_optimal_v_max = (renewed_v_max >  min(1.5*v_max__global, v_max_max)) || (renewed_v_max <  v_max__global/1.5);
-    //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+1.4) || (renewed_v_max <  (v_max__global- 1.4)));
+    //sub_optimal_v_max = (renewed_v_max >  min((v_max__global+1.7), v_max_max) || (renewed_v_max <  (v_max__global- 1.7)));
     //bool sub_optimal_v_max = false;
 
     planned_approximately = false; // for now setting to false, to see how much full approximate planning  following is effective
@@ -632,7 +639,8 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		}
 		else if (appx_goal_reached && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
 			//emergency_stop_2(drone);
-            ros::param::set("/appx_goal_reached", false);
+            //ros::param::set("/appx_goal_reached", false);
+			appx_goal_reached = false;
 			ROS_INFO_STREAM("==============================================================         now it's zero----------------------------=================================");
 			ROS_INFO_STREAM("==============================================================         now it's zero----------------------------================================="<< dist(drone->position(), g_goal_pos));
 			ROS_INFO_STREAM("==============================================================         now ----------------------------=================================");
@@ -1078,8 +1086,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 		msg_for_follow_traj.closest_unknown_point.planning_status = "ppl_failed";
 		closest_unknown_way_point.planning_status = "ppl_failed";
-		closest_unknown_pub.publish(closest_unknown_way_point);
-		ros::param::set("/set_closest_unknown_point", true);
 		msg_for_follow_traj.ee_profiles.control_flow_path = 1;
     	profiling_container.capture("motion_planning_piecewise_failure_cnt", "counter", 0, capture_size); // @suppress("Invalid arguments")
 		emergency_stop(drone);
@@ -1094,6 +1100,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
 			msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
+			//timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
+    		closest_unknown_pub.publish(closest_unknown_way_point);
+    		ros::param::set("/set_closest_unknown_point", true);
 			return false;
     	}
 
@@ -1146,6 +1155,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
+		closest_unknown_pub.publish(closest_unknown_way_point);
+		ros::param::set("/set_closest_unknown_point", true);
         traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -1173,8 +1184,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     volume_explored_in_unit_cubes = 0;
 
     auto ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
-    draw_piecewise(piecewise_path, status, &piecewise_traj_markers);
-    piecewise_traj_vis_pub.publish(piecewise_traj_markers);
+    //draw_piecewise(piecewise_path, status, &piecewise_traj_markers);
+    //piecewise_traj_vis_pub.publish(piecewise_traj_markers);
 
     // Smoothen the path and build the multiDOFtrajectory response
     //ROS_INFO("Smoothenning...");
@@ -1225,8 +1236,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 	}
     debug_data.motion_planning_smoothening_volume_explored = volume_explored_in_unit_cubes*pow(map_res,3);
     piecewise_traj_vis_pub.publish(piecewise_traj_markers);
-    closest_unknown_pub.publish(closest_unknown_way_point);
-	ros::param::set("/set_closest_unknown_point", true);
+
     if (smooth_path.empty()) {
 		msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
     	msg_for_follow_traj.ee_profiles.control_flow_path = 1.5;
@@ -1243,7 +1253,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 //			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
-    		return false;
+    		closest_unknown_pub.publish(closest_unknown_way_point);
+    		ros::param::set("/set_closest_unknown_point", true);
+			return false;
     	}
 
         res.path_found = false;
@@ -1271,6 +1283,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 		res.multiDOFtrajectory.closest_unknown_point.planning_status = "smoothening_failed";
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
         traj_pub.publish(res.multiDOFtrajectory);
+        closest_unknown_pub.publish(closest_unknown_way_point);
+        ros::param::set("/set_closest_unknown_point", true);
         return false;
     }
     notified_failure = false;
@@ -1305,6 +1319,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     if (planned_approximately || !first_time_planning_succeeded) {
 		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
     }
+    closest_unknown_pub.publish(closest_unknown_way_point);
+    ros::param::set("/set_closest_unknown_point", true);
+
 
     return true;
 }
@@ -1447,9 +1464,9 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 	g_next_steps_msg = *msg;
 	next_steps_msg_size  = msg->points.size();
 	if (!next_steps_msg_size){
-		;
 		//ROS_INFO_STREAM("msg sizees are 00000000000000000000");
 	}
+	appx_goal_reached  = (next_steps_msg_size == 0);
 }
 
 void MotionPlanner::motion_planning_initialize_params()
@@ -2602,7 +2619,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	last_node.y = piecewise_path.begin()->y;
 	last_node.z = piecewise_path.begin()->z;
 	//vector<double> dist_to_prev_point_vector;
-
+	int acceleration_ctr = 0;
+	double min_fix_v = 3;
 	for (auto it = piecewise_path.begin()+1; it != piecewise_path.end(); ++it) {
 		mav_trajectory_generation::Vertex v(dimension);
 		// add constraints to keep velocity high
@@ -2622,34 +2640,22 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 				//v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global/sqrt(2),v_max__global/sqrt(2),0));
 				new_v.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(prev_constrained_pt.x + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x ,
 						prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y, prev_constrained_pt.z + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z));
-				//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,v_max__global*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
-				//ROS_INFO_STREAM("extra constraints to add"<<prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y <<" velocity constraints"<< v_max__global*vec_to_prev_constrained_pt_norm.y);
-				new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,(v_max__global)*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
-				vertices.push_back(new_v);
 
+
+				if (ctr == 0 && i < 2){
+					//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(min(v_max__global/(1+x[i%10]),min_fix_v)*vec_to_prev_constrained_pt_norm.x ,min(v_max__global/(1+x[i%10]),min_fix_v)*vec_to_prev_constrained_pt_norm.y, min(v_max__global/(1+x[i%10]),min_fix_v)*vec_to_prev_constrained_pt_norm.z));
+					segment_times.push_back(dist_to_add_constraints/(min(v_max__global, min_fix_v + acceleration_ctr)));
+				}else{
+					//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,(v_max__global)*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
+					segment_times.push_back(dist_to_add_constraints/(v_max__global));
+				}
+
+				vertices.push_back(new_v);
 				temp_node.x = prev_constrained_pt.x + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.x;
 				temp_node.y = prev_constrained_pt.y + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.y;
 				temp_node.z = prev_constrained_pt.z + (i+1)*dist_to_add_constraints*vec_to_prev_constrained_pt_norm.z;
 				piecewise_path_new.push_back(temp_node);
-
-				if (ctr == 0){
-					/*
-					double potential_time =  dist_to_add_constraints;
-					double potential_a = abs(v_max__global - last_v)/potential_time;
-					if (potential_a > .3){
-						potential_time = .
-					}
-					*/
-					segment_times.push_back(dist_to_add_constraints/(v_max__global/(1+x[i%10])));
-					//dist_to_prev_point_vector.push_back(dist_to_prev_constrained_pt);
-				}else{
-					segment_times.push_back(dist_to_add_constraints/(v_max__global));
-					//dist_to_prev_point_vector.push_back(dist_to_add_constraints);
-				}
-				/*
-				}else{
-					segment_times.push_back(dist_to_add_constraints/(v_max__global));
-				}*/
+				acceleration_ctr +=1;
 				found_intermediate_pts = true;
 			}
 		}
@@ -2660,7 +2666,10 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		}else{
 			dist_to_prev_constrained_pt =  calc_vec_magnitude(it->x - last_node.x,  it->y - last_node.y, it->z - last_node.z);
 		}
-		segment_times.push_back(dist_to_prev_constrained_pt/v_max__global);
+
+		segment_times.push_back(dist_to_prev_constrained_pt/min(v_max__global, min_fix_v+acceleration_ctr));
+		acceleration_ctr += 1;
+		ctr+=1;
 		/*
 		//dist_to_prev_point_vector.push_back(dist_to_prev_constrained_pt);
 		if (dist_to_prev_constrained_pt > 100 || dist_to_prev_constrained_pt < .1){
@@ -2679,7 +2688,6 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		}
 		vertices.push_back(v);
 
-		ctr+=1;
 		prev_constrained_pt.x = it->x;
 		prev_constrained_pt.y = it->y;
 		prev_constrained_pt.z = it->z;
@@ -2944,12 +2952,14 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 			 emergency_stop(drone);
 			 if (drone->velocity().linear.x < .1 && drone->velocity().linear.y <.1 && drone->velocity().linear.z <.1){ // already stopped so no path
 				 closest_unknown_way_point.planning_status = "smoothener_failed";
-				 closest_unknown_pub.publish(closest_unknown_way_point);
+				 //closest_unknown_pub.publish(closest_unknown_way_point);
 			 }else{
 				 closest_obstacle_on_path_way_point.planning_status = "smoothener_failed";
-				 closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
+				 closest_unknown_way_point.planning_status = "smoothener_failed";
+				 closest_unknown_way_point = closest_obstacle_on_path_way_point;
+				 //closest_unknown_pub.publish(closest_obstacle_on_path_way_point);
 			 }
-			 ros::param::set("/set_closest_unknown_point", true);
+			 //ros::param::set("/set_closest_unknown_point", true);
 			 //unknown_budget_failed= true;
 			 ROS_INFO_STREAM("sending empty trajectory");
 			 return smooth_trajectory();
@@ -3038,6 +3048,7 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 	cout<<endl;
 	*/
 
+	/*
 	int num_of_optimums = get_num_of_optimums(piecewise_path, traj, counting_idx);
 	ROS_INFO_STREAM("Smoothened path! with "<< num_of_optimums << " num of optimums up to " << counting_idx << " index");
 	if (num_of_optimums <= 3*(num_of_optimums_till_idx-1)) {
@@ -3046,10 +3057,10 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 		ROS_INFO_STREAM("---planning suboptimally--");
 		planned_optimally = false;
 	}
-
+	*/
 	// Visualize path for debugging purposes
 	mav_trajectory_generation::drawMavTrajectory(traj, distance, frame_id, &smooth_traj_markers);
-	mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
+	//mav_trajectory_generation::drawVertices(vertices, frame_id, &piecewise_traj_markers);
 //	assert(first_unknown_collected);
 	return traj;
 }

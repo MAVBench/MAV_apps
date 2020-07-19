@@ -11,16 +11,16 @@ from data_parsing import *
 import seaborn as sns
 col = sns.color_palette("Paired", 111111)
 
-result_folder = "./data_2"
+result_folder = "./data_1"
 input_file_name = "saturday_morning.json"
 input_filepath = result_folder + "/" + input_file_name
  
 # data to collect (pass in the variables that you  are interested in)
 # PS: always keep experiement_number inf metrics_to_collect_easy.
 # PS: all the other parameters (Except mission_status and collision_count should be added to metrics_to_collect_easy (not hard)
-metrics_to_collect_easy = ["experiment_number", 
+metrics_to_collect_easy = [
         "PeakCongestion", "SpreadOfObstacles", "GapSize", "GoalDistance",
-        "flight_time", "distance_travelled", "total_energy_consumed"
+        "flight_time", "distance_travelled", "total_energy_consumed","experiment_number", 
 ]
 metrics_to_collect_hard = ["mission_status", "collision_count",
         "planning_ctr", "runtime_failure_ctr", "traj_gen_failure_ctr"
@@ -37,6 +37,7 @@ result_dict_filtered_based_on_mission_status_and_collision_count = filter_based_
 mission_status = result_dict["mission_status"]
 mission_status_filtered_based_on_mission_status  = result_dict_filtered_based_on_mission_status["mission_status"]
 mission_status_filtered_based_on_mission_status_and_filtered_count = result_dict_filtered_based_on_mission_status_and_collision_count["mission_status"]
+
 
 print(len(mission_status))
 print(len(mission_status_filtered_based_on_mission_status))

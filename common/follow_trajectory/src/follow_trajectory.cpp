@@ -895,7 +895,7 @@ void sigIntHandlerPrivate(int signo){
     exit(0);
 }
 
-
+double planner_drone_radius_min;
 void initialize_global_params() {
 	ros::param::get("p_vx", p_vx_original);
 	ros::param::get("p_vy", p_vy_original);
@@ -907,6 +907,14 @@ void initialize_global_params() {
 	ros::param::get("d_py", d_py);
 	ros::param::get("d_pz", d_pz);
 	ros::param::get("/use_emergency_stop", use_emergency_stop);
+
+
+	 if(!ros::param::get("/planner_drone_radius_when_hovering",planner_drone_radius_min)){
+		ROS_FATAL_STREAM("Could not start follow trajectory planner_drone_radius_when_hovering not provided");
+        exit(-1);
+	}
+
+
 
 	ros::param::get("PID_correction_time", PID_correction_time);
 
@@ -1083,8 +1091,12 @@ int main(int argc, char **argv)
 
 
     	if (use_emergency_stop){
-    		if (planning_failure_since_last_success >= 3) {
+    		double obs_dist_statistics_min_from_om;
+    		ros::param::get("obs_dist_statistics_min_from_om", obs_dist_statistics_min_from_om);
+    		if (planning_failure_since_last_success > 1 && obs_dist_statistics_min_from_om < (planner_drone_radius_min + 1)) {
+    		//if (planning_failure_since_last_success >= 3 && obs_dist_statistics_min_from_om < (planner_drone_radius_min + 1)) {
     			ROS_INFO_STREAM("here not for backing up");
+    			int pop_ctr = 0;
     			double time_ = 0;
     			for (auto &point: reverse_traj_to_follow){
 					if (time_ > backward_time){
@@ -1099,14 +1111,18 @@ int main(int argc, char **argv)
 					ROS_INFO_STREAM("time is "<< "time");
 					time_ += point.duration;
 					ros::Duration(point.duration).sleep();
+					pop_ctr +=1;
     			}
-					/*
+    			for (int i =0 ; i<pop_ctr; i++){
+    				reverse_traj_to_follow.pop_front();
+    			}
+    			/*
 				double scale = calc_vec_magnitude(vel_before_stop.linear.x, vel_before_stop.linear.y, vel_before_stop.linear.z); //scale down to slow down to prevent overshooting
 					if (scale != 0){
 						drone.fly_velocity(-1*vel_before_stop.linear.x/scale, -1*vel_before_stop.linear.y/scale, -1*vel_before_stop.linear.z/scale, 2);
 					}
 			*/
-    			reverse_traj_to_follow.clear();
+    			//reverse_traj_to_follow.clear();
     			planning_failure_since_last_success  = 0;
 			}
     	}
