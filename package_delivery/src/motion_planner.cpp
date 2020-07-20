@@ -620,11 +620,11 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     planned_approximately = false; // for now setting to false, to see how much full approximate planning  following is effective
     //bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
     bool SA_time_exceeded = is_SA_budget_exceeded();
-    if (SA_time_exceeded){
+    if (SA_time_exceeded && false){
 		replanning_reason = Collision_detected;
 		emergency_stop(drone);
 		replan = true;
-    }if(!first_time_planning_succeeded) {
+    }else if(!first_time_planning_succeeded) {
 		msg_for_follow_traj.closest_unknown_point.planning_status = "first_time_planning";
 		//msg_for_follow_traj.ee_profiles.actual_time.ppl_latency = (ros::Time::now() - planning_start_time_stamp).toSec();
 		//msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
@@ -632,7 +632,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 		replanning_reason = First_time_planning;
 		replan = true;
-	} else if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
+	} else {//if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
 		if (runtime_failure_last_time){
 			replanning_reason = Runtime_failure;
 			runtime_failure_last_time = false;;
@@ -726,6 +726,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				closest_unknown_way_point.planning_status = "no_planning_needed";
 				closest_unknown_pub.publish(closest_unknown_way_point);
 				ros::param::set("/spin_pc", true);
+				ROS_INFO_STREAM("spin_pc");
 				msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 				ROS_ERROR_STREAM(" not collision detected");
 			}
@@ -876,8 +877,9 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     	publish_dummy_octomap_vis(octree);
     }
 
-    budget_left = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec())/2;
-	planning_start_time_stamp = ros::Time::now();
+    //budget_left_half = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec())/2;
+    budget_left = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec());
+    planning_start_time_stamp = ros::Time::now();
     // -- purelly for knob_performance_modeling;
     // -- only collect data when the knob is set.
     // -- We'd like to have fine grain control over the collection so
