@@ -66,7 +66,7 @@ using namespace std;
 #include <Drone.h>
 //#define N_CAMERAS 6
 string clct_data_mode;
-bool set_closest_unknown_point = false;
+bool spin_pc= false;
 bool pyrun_rcvd_models = false;
 bool got_first_unknown = false;
 string design_mode;
@@ -114,7 +114,7 @@ class PointCloudXyz
   ros::Publisher control_pub;
   ros::Subscriber inform_pc_done_sub;
   ros::Subscriber closest_unknown_sub;
-
+  ros::Publisher closest_unknown_pub;
   image_geometry::PinholeCameraModel model_;
     
   //Profiling 
@@ -1745,11 +1745,15 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 		  else
 		  {
 			  //NODELET_ERROR_THROTTLE(5, "Depth image has unsupported encoding [%s]", depth_msgs[i]->encoding.c_str());
+			  ros::param::set("spin_pc", true);
+			  got_new_closest_unknown = true; //do not move
 			  return;
 		  }
 	  }
   }
   catch(...){
+	  ros::param::set("spin_pc", true);
+	 got_new_closest_unknown = true; //do not move
 	  return;
   }
   int n_points_cam = raw_cloud_msgs[0]->height * raw_cloud_msgs[0]->width;
@@ -1922,9 +1926,11 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 
 
   if (optimizer_failure_status == 1){
+	  ros::param::set("spin_pc", true);
+	  got_new_closest_unknown = true; //do not move
 	  return;
   }
-  got_new_closest_unknown = false; //do not move
+  //got_new_closest_unknown = false; //do not move
 
   if (optimizer_failure_status == 2){ // not enough time
 	  mavbench_msgs::runtime_failure_msg rtf_msg;
@@ -1944,11 +1950,31 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 	  runtime_failure_pub.publish(rtf_msg);
 	  debug_data.header.stamp = ros::Time::now();
 	  debug_data.optimizer_failure_status = optimizer_failure_status;
+	  ros::param::set("spin_pc", true);
 	  pc_debug_pub.publish(debug_data);
+
+	  // set the unknonw point for sequencer
+	  unknown_point_converted_to_pc_coord.point.x =
+			  unknown_point_converted_to_pc_coord.point.y =
+					  unknown_point_converted_to_pc_coord.point.z = 0;
+
+	  // publish this for runtime
+	  mavbench_msgs::planner_info closest_unknown_way_point;
+	  closest_unknown_way_point.x = nan("");
+	  closest_unknown_way_point.y = nan("");
+	  closest_unknown_way_point.z = nan("");
+	  //closest_unknown_way_point.header.frame_id = "world";
+	  //closest_unknown_way_point.header.stamp = ros::Time(); // TODO: change this to
+	  closest_unknown_pub.publish(closest_unknown_way_point);
+
+	  ros::param::set("spin_pc", true);
+	  got_new_closest_unknown = true; //do not move
 	  return;
   }
+  ros::param::set("spin_pc", false);
+  got_new_closest_unknown = false; //do not move
 
-  ros::param::set("set_closest_unknown_point", false);
+  //ros::param::set("set_closest_unknown_point", false);
   // -- get knobs from the py_run.
   // the reason that I have used param::get is because didn't want to push all of this into a msg
    ros::param::get("/sensor_to_actuation_time_budget_to_enforce", sensor_to_actuation_time_budget_to_enforce);
@@ -2427,7 +2453,7 @@ void PointCloudXyz::onInit()
     control_pub = nh.advertise<mavbench_msgs::control>("/control_to_crun", 1);
     inform_pc_done_sub =  nh.subscribe("/inform_pc_done", 1, &PointCloudXyz::inform_pc_done_cb, this);
     closest_unknown_sub = nh.subscribe("/closest_unknown_point", 1, &PointCloudXyz::closest_unknown_callback, this);
-
+	closest_unknown_pub = nh.advertise<mavbench_msgs::planner_info>("closest_unknown_point", 1);
 
     profile_manager_client =
     		private_nh.serviceClient<profile_manager::profiling_data_srv>("/record_profiling_data", true);
@@ -2503,9 +2529,9 @@ int main(int argc, char** argv) {
 			continue;
 		}
 		if (budgetting_mode=="dynamic" && design_mode =="serial") {
-			ros::param::get("/set_closest_unknown_point", set_closest_unknown_point);
+			ros::param::get("/spin_pc", spin_pc);
 			auto ran_pc_since_last_time = (ros::Time::now() - last_time_ran_pc).toSec();
-			if ((set_closest_unknown_point || !got_first_unknown || (ran_pc_since_last_time > 20000)) && pyrun_rcvd_models){
+			if ((spin_pc|| !got_first_unknown || (ran_pc_since_last_time > 20000)) && pyrun_rcvd_models){
 				//cout<<"got the new unknown so spinning"<<endl;
 				pc->spinOnce();//
 				last_time_ran_pc = ros::Time::now();

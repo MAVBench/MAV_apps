@@ -21,6 +21,11 @@
 #include <mavbench_msgs/response_time_capture.h>
 #include <mavbench_msgs/planner_info.h>
 using namespace std;
+
+
+int failure_ctr_for_v_max = 0;
+int max_failure_ctr_for_v_max;
+
 int planning_failure_since_last_success = 0;
 int planning_success_ctr = 0;
 int planning_ctr = 0;
@@ -331,6 +336,7 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	}
 
 	if (msg->closest_unknown_point.planning_status == "no_planning_needed") {
+		failure_ctr_for_v_max-=1;
 		;
 	}else {
 		if (msg->closest_unknown_point.planning_status == "success") {
@@ -339,15 +345,20 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 		}else if (msg->closest_unknown_point.planning_status == "runtime_failure") {
 			planning_failure_since_last_success +=1;
 			runtime_failure_ctr +=1;
+			failure_ctr_for_v_max +=1;
 		}else{
 			traj_gen_failure_ctr +=1;
 			planning_failure_since_last_success +=1;
+			failure_ctr_for_v_max +=1;
 		}
 		planning_ctr +=1;
 	}
 	decision_ctr +=1 ;
 
 
+
+	failure_ctr_for_v_max = max(min(failure_ctr_for_v_max, max_failure_ctr_for_v_max),0);
+	ros::param::set("failure_ctr_for_v_max", failure_ctr_for_v_max);
 
 	profiling_container->capture("depthToPCConversionLatency", "single", msg->ee_profiles.time_stats.depthToPCConversionLatency, 1);
 	profiling_container->capture("runDiagnosticsLatency","single",msg->ee_profiles.time_stats.runDiagnosticsLatency, 1);
@@ -750,6 +761,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 
 	if (msg->closest_unknown_point.planning_status == "no_planning_needed") {
 		;
+			failure_ctr_for_v_max -=1;
 	}else {
 		if (msg->closest_unknown_point.planning_status == "success") {
 			planning_success_ctr +=1;
@@ -757,15 +769,18 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 		}else if (msg->closest_unknown_point.planning_status == "runtime_failure") {
 			runtime_failure_ctr +=1;
 			planning_failure_since_last_success += 1;
+			failure_ctr_for_v_max +=1;
 		}else{
 			traj_gen_failure_ctr +=1;
 			planning_failure_since_last_success += 1;
+			failure_ctr_for_v_max +=1;
 		}
 		planning_ctr +=1;
 	}
 	decision_ctr +=1 ;
 
-
+	failure_ctr_for_v_max = max(min(failure_ctr_for_v_max, max_failure_ctr_for_v_max),0);
+	ros::param::set("/failure_ctr_for_v_max", failure_ctr_for_v_max);
 
 	/*
 	if (!debug_data.controls.cmds.log_control_data){
@@ -908,7 +923,7 @@ void initialize_global_params() {
 	ros::param::get("d_pz", d_pz);
 	ros::param::get("/use_emergency_stop", use_emergency_stop);
 
-
+	ros::param::get("/max_failure_ctr_for_v_max", max_failure_ctr_for_v_max);
 	 if(!ros::param::get("/planner_drone_radius_when_hovering",planner_drone_radius_min)){
 		ROS_FATAL_STREAM("Could not start follow trajectory planner_drone_radius_when_hovering not provided");
         exit(-1);

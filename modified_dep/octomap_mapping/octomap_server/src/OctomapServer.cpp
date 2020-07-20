@@ -1933,7 +1933,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 				 continue;
 			 }
 	//		 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
-			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
+			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res_original, 3));
 			 octomap_block_vec.push_back(m_octree_block);
 		 }
 	 }

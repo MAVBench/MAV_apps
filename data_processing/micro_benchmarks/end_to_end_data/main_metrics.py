@@ -12,7 +12,7 @@ import seaborn as sns
 col = sns.color_palette("Paired", 111111)
 
 result_folder = "./data_1"
-input_file_name = "saturday_morning.json"
+input_file_name = "monday_morning.json"
 input_filepath = result_folder + "/" + input_file_name
  
 # data to collect (pass in the variables that you  are interested in)

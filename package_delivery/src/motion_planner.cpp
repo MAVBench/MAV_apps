@@ -51,7 +51,7 @@
 #include <chrono>
 #include <future>
 bool appx_goal_reached = false;
-
+int max_failure_ctr_for_v_max;
 double budget_left;
 string clct_data_mode_;
 double max_time_budget;
@@ -554,10 +554,10 @@ void MotionPlanner::runtime_failure_cb(const mavbench_msgs::runtime_failure_msg 
     closest_unknown_way_point.y = nan("");
     closest_unknown_way_point.z = nan("");
     closest_unknown_way_point.planning_status = "runtime_failure";
-	closest_unknown_pub.publish(closest_unknown_way_point);
-    traj_pub.publish(traj);
-	ros::param::set("/set_closest_unknown_point", true);
+	//closest_unknown_pub.publish(closest_unknown_way_point);
 	traj.closest_unknown_point = closest_unknown_way_point;
+	traj_pub.publish(traj);
+	//ros::param::set("/set_closest_unknown_point", true);
     runtime_failure_last_time = true;
 }
 
@@ -587,16 +587,33 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     auto cur_vel_mag = calc_vec_magnitude(cur_velocity.x, cur_velocity.y, cur_velocity.z);
     auto time_diff_duration = (ros::Time::now() - dist_to_closest_obs_time_stamp).toSec();
     //double dist_to_closest_obs_recalculated =  dist_to_closest_obs - time_diff_duration*cur_vel_mag;
+    // setting velocity based on unknown
     double dist_to_closest_obs_recalculated =  min((double)dist_to_closest_obs, sensor_max_range); // only consider half
     double renewed_v_max_temp = max(v_max_min + (dist_to_closest_obs_recalculated/(sensor_max_range))*(v_max_max - v_max_min), v_max_min);
+    // setting velocity based on planning failure ct
+    int failure_ctr_for_v_max;
+	ros::param::get("/failure_ctr_for_v_max", failure_ctr_for_v_max);
+    double renewed_v_max_cause_of_pl_failure = v_max_max;
+    if (failure_ctr_for_v_max == max_failure_ctr_for_v_max){
+    	renewed_v_max_cause_of_pl_failure = max(v_max__global/1.5, v_max_min);
+    }
+
     cout<<"distance to closest obstacle: " << dist_to_closest_obs << "  dist_to closest obst recalculated:"<< dist_to_closest_obs_recalculated<< " renewd_v_max_temp:" << renewed_v_max_temp<< endl;
     //bool sub_optimal_v_max = (renewed_v_max >  (v_max__global+2) || (renewed_v_max <  (v_max__global- 2));
-    vmax_filter_queue->push(renewed_v_max_temp);
+    vmax_filter_queue->push(min(renewed_v_max_temp, renewed_v_max_cause_of_pl_failure));
     //cout<<"renewd_v_max_before"<<renewed_v_max<<endl;
     renewed_v_max = vmax_filter_queue->reduce("min");
     //cout<<"renewd_v_max_after"<<renewed_v_max<<endl;
+    sub_optimal_v_max = false;
+    //sub_optimal_v_max = (renewed_v_max >  min(1.5*v_max__global, v_max_max)) || (renewed_v_max <  v_max__global/1.5);
+    if (renewed_v_max >  1.5*v_max__global){
+    	sub_optimal_v_max = true;
+    }else if (renewed_v_max == v_max_max && v_max__global != v_max_max){
+    	sub_optimal_v_max = true;
+    }else if(renewed_v_max <  v_max__global/1.5) {
+    	sub_optimal_v_max = true;
+    }
 
-    sub_optimal_v_max = (renewed_v_max >  min(1.5*v_max__global, v_max_max)) || (renewed_v_max <  v_max__global/1.5);
     //sub_optimal_v_max = (renewed_v_max >  min((v_max__global+1.7), v_max_max) || (renewed_v_max <  (v_max__global- 1.7)));
     //bool sub_optimal_v_max = false;
 
@@ -708,7 +725,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				replan = false;
 				closest_unknown_way_point.planning_status = "no_planning_needed";
 				closest_unknown_pub.publish(closest_unknown_way_point);
-				ros::param::set("/set_closest_unknown_point", true);
+				ros::param::set("/spin_pc", true);
 				msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 				ROS_ERROR_STREAM(" not collision detected");
 			}
@@ -775,7 +792,7 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
         exit(0);
     }
 	*/
-
+    ROS_INFO_STREAM("--------- assessing start");
 	got_updated_budget = false;
 	ros::param::get("/v_max", v_max__global);
     ppl_vol_maximum_underestimated = true;
@@ -1102,8 +1119,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
 			//timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		closest_unknown_pub.publish(closest_unknown_way_point);
-    		ros::param::set("/set_closest_unknown_point", true);
-			return false;
+    		ros::param::set("/spin_pc", true);
+    		ROS_INFO_STREAM("spin pc");
+    		return false;
     	}
 
     	//ROS_ERROR("Empty path returned.status is");
@@ -1156,8 +1174,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
 		closest_unknown_pub.publish(closest_unknown_way_point);
-		ros::param::set("/set_closest_unknown_point", true);
-        traj_pub.publish(res.multiDOFtrajectory);
+		ros::param::set("/spin_pc", true);
+    	ROS_INFO_STREAM("spin pc");
+		traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
 
@@ -1254,8 +1273,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 //			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
     		closest_unknown_pub.publish(closest_unknown_way_point);
-    		ros::param::set("/set_closest_unknown_point", true);
-			return false;
+    		ros::param::set("/spin_pc", true);
+    		ROS_INFO_STREAM("spin pc");
+    		return false;
     	}
 
         res.path_found = false;
@@ -1284,7 +1304,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
         traj_pub.publish(res.multiDOFtrajectory);
         closest_unknown_pub.publish(closest_unknown_way_point);
-        ros::param::set("/set_closest_unknown_point", true);
+        ros::param::set("/spin_pc", true);
+    	ROS_INFO_STREAM("spin pc");
         return false;
     }
     notified_failure = false;
@@ -1320,7 +1341,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
     }
     closest_unknown_pub.publish(closest_unknown_way_point);
-    ros::param::set("/set_closest_unknown_point", true);
+    ros::param::set("/spin_pc", true);
+    ROS_INFO_STREAM("spin pc");
 
 
     return true;
@@ -1548,6 +1570,8 @@ void MotionPlanner::motion_planning_initialize_params()
     ros::param::get("/pc_res_max", pc_res_max);
 
     ros::param::get("/v_max_min", v_max_min);
+    ros::param::get("/max_failure_ctr_for_v_max", max_failure_ctr_for_v_max);
+
     ros::param::get("/sensor_max_range", sensor_max_range);
 
     ros::param::get("/motion_planner/a_max", a_max__global);
@@ -2283,6 +2307,7 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
         		;
         		//	ROS_INFO_STREAM("closest uknown didn't change");
         		}
+        		break;
         	}
         }
     }
@@ -2893,6 +2918,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 			planned_path_in_future_time += segments[i].getTime();
 			if (planned_path_in_future_time > max_time_budget){ // if we have lookinto future long enough that we have passed the worst case computation time,
+				break;
+			}else if (first_unknown_collected){
 				break;
 			}
 		}

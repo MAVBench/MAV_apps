@@ -232,7 +232,6 @@ double calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity
 	return time_budget;
 }
 
-
 void closest_unknown_callback(const mavbench_msgs::planner_info::ConstPtr& msg){
 	closest_unknown_point.x = msg->x;
 	closest_unknown_point.y = msg->y;
@@ -245,7 +244,6 @@ void closest_unknown_callback(const mavbench_msgs::planner_info::ConstPtr& msg){
 	}
 	//ROS_INFO_STREAM("unknown coordinats"<<msg->x << " "<<msg->y<< " " << msg->z);
 }
-
 
 
 TimeBudgetter *time_budgetter;
@@ -1140,9 +1138,9 @@ int main(int argc, char **argv)
     	}else{
     		ros::param::get("/v_max", g_v_max);
     		maxVelocity = g_v_max;
-    		closest_unknown_point_upper_bound.x = drone->position().x  + g_sensor_max_range/pow(3,.5);
-    		closest_unknown_point_upper_bound.y = drone->position().y + g_sensor_max_range/pow(3, .5);
-    		closest_unknown_point_upper_bound.z = drone->position().z + g_sensor_max_range/pow(3, .5);
+    		closest_unknown_point_upper_bound.x = drone->position().x  + (g_sensor_max_range/pow(3,.5))/4;
+    		closest_unknown_point_upper_bound.y = drone->position().y + (g_sensor_max_range/pow(3, .5))/4;
+    		closest_unknown_point_upper_bound.z = drone->position().z + (g_sensor_max_range/pow(3, .5))/4;
 
     		if (goal_known && !isnan(closest_unknown_point.x)){
     			double direct_length = calc_vec_magnitude(drone->position().x - g_goal_pos.x, drone->position().y - g_goal_pos.y, drone->position().z - g_goal_pos.z);

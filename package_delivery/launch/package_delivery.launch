@@ -25,7 +25,7 @@
   <!-- Drone's physical characteristics, actuators and sensors /-->
   <!-- actuators --> 
   <arg name="a_max" default="1"/> 
-  <arg name="v_max" default="4"/> 
+  <arg name="v_max" default="6"/> 
   <param name="future_col_drone_radius" value="1.5"/>
   <param name="future_col_drone_height" value="0.75"/>
   <arg name="planner_drone_radius" default="1.5"/>
@@ -45,6 +45,8 @@
   <param name="planner_drone_height_when_hovering" value="$(arg planner_drone_height_when_hovering)"/>
 
 
+    <arg name="max_failure_ctr_for_v_max" default="4"/>
+  <param name="max_failure_ctr_for_v_max" value="$(arg max_failure_ctr_for_v_max)"/>
 
 
   <!-- sensor information --> 
@@ -437,7 +439,7 @@
   <arg name="y_dist_to_sample_from__high_bound" default="2500"/>
   <arg name="goal_mode" default="launch_based"/>
   <arg name="goal_x" default="200"/>
-  <arg name="goal_y" default="980"/>
+  <arg name="goal_y" default="878"/>
   <arg name="goal_z" default="50"/>
   <arg name ="distance_to_goal" default="10000"/>
   <param name="distance_to_goal" value="$(arg distance_to_goal)"/>
