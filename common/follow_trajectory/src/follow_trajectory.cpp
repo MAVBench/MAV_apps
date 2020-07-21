@@ -217,9 +217,10 @@ void erase_up_to_msg(const std_msgs::Header &msg_s_header, string caller){
 		timing_msgs_vec.erase(timing_msgs_vec.begin(), it);
 	}
 }
-
+bool got_mp_msg;
 //call back function  to receive timing msgs. These msgs are collectd for profiling the SA latnecy and throughput purposes
 void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
+	ROS_INFO_STREAM("got timeing msgs");
 	if (!measure_time_end_to_end){
 		return;
 	}
@@ -229,14 +230,14 @@ void timing_msgs_callback(const std_msgs::Header::ConstPtr& msg) {
 		ROS_ERROR_STREAM("timing_msgs channel is full; either increase the follow trajectory rate, or decrease the imgPublisher rate");
 	}
 	timing_msgs_vec.push_back(msg->stamp);
+    got_mp_msg = true;
 }
 
 //call back function to receive timing msgs_from_mp. Using this, we reset the vector because this means
 //that we have already made a decision to not make a traj for those imgs
 void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::ConstPtr& msg) {
 
-
-
+	ROS_INFO_STREAM("got timeing msgs");
 	auto pl_to_ft_totalLatency = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 	closest_unknown_point = msg->closest_unknown_point;
 	erase_up_to_msg(msg->header, "timing_msgs_from_mp_callback");
@@ -399,6 +400,8 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	}
 
 	last_img_capture = msg->ee_profiles.actual_time.img_capture_time_stamp;
+
+    got_mp_msg = true;
 }
 
 /*
@@ -624,6 +627,8 @@ int empty_traj_ctr = 0;
 void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, Drone * drone)
 {
 
+	ROS_INFO_STREAM("got to cllaback trajectory");
+
 	auto pl_to_ft_totalLatency = (ros::Time::now() - msg->ee_profiles.actual_time.pl_pre_pub_time_stamp).toSec();
 
 	//for profiling SA erase_up_to_msg(msg->header, "callback_trajectory"); //erase the predecessors of the msg that currently reside in the timing_msgs_vec
@@ -671,6 +676,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     	if (use_emergency_stop){
     		emergency_stop(drone);
     	}
+        trajectory = new_trajectory;
     	//ROS_INFO_STREAM("follow trajectory stopping");
     }
     else if (trajectory.empty() && !new_trajectory.empty()) {
@@ -706,6 +712,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
     }
 
     g_got_new_trajectory = true;
+    got_mp_msg = true;
 
     ros::param::get("v_max", g_v_max);
     last_new_trajectory_time = ros::Time::now();
@@ -1065,6 +1072,9 @@ int main(int argc, char **argv)
     // Initialize publishers and subscribers
     ros::Publisher next_steps_pub = n.advertise<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1);
 
+	ros::Publisher closest_unknown_pub = n.advertise<mavbench_msgs::planner_info>("closest_unknown_point", 1);
+
+
     ros::Subscriber manual_control_mode_= n.subscribe<std_msgs::Bool>("/manual_control_mode", 1, manual_control_mode_callback);
     ros::Subscriber slam_lost_sub = n.subscribe<std_msgs::Bool>("/slam_lost", 1, slam_loss_callback);
     ros::Subscriber col_coming_sub = n.subscribe<mavbench_msgs::future_collision>("/col_coming", 1, future_collision_callback);
@@ -1186,10 +1196,12 @@ int main(int argc, char **argv)
                     }
                 }
             }
-        }
-        if (trajectory.size() == 0){
+        }else{
         	continue;
         }
+        //if (trajectory.size() == 0){
+        //	continue;
+        //}
 
         // Figure out which direction we will fly in
         trajectory_t * forward_traj;
@@ -1222,6 +1234,9 @@ int main(int argc, char **argv)
         	forward_traj = &trajectory;
         	rev_traj = &reverse_trajectory;
         }else{
+        	trajectory.clear();
+        	forward_traj = &trajectory;
+        	/*
         	forward_traj = &reverse_trajectory;
         	rev_traj = &trajectory;
         	modify_backward_traj(forward_traj, g_backup_duration, g_stay_in_place_duration_for_stop, g_stay_in_place_duration_for_reverse, stop);
@@ -1230,6 +1245,7 @@ int main(int argc, char **argv)
         		trajectory.clear(); //clear the trajectories so we won't continue iterating till we have a trajectory
         		rev_traj = forward_traj;
         	}
+        	*/
         	// get rid of clear traj if you want to add back ward motion
         	yaw_strategy = face_backward;
         }
@@ -1255,16 +1271,20 @@ int main(int argc, char **argv)
         	}
         }
 	*/
-         if (trajectory_done(*forward_traj)){
+        if (trajectory_done(*forward_traj) && got_mp_msg){
             loop_rate.sleep();
             if (use_emergency_stop){
             	mavbench_msgs::multiDOFtrajectory trajectory_msg = create_trajectory_msg(*forward_traj, &drone);
             	next_steps_pub.publish(trajectory_msg);
+            	ROS_INFO_STREAM("pubsliing closest unknown---");
+            	closest_unknown_pub.publish(closest_unknown_point);
+            	ros::param::set("/spin_pc", true);
             	if (!stop_detected){
             		ros::param::set("/appx_goal_reached", true);
             	}
             }
             stop_detected = false;
+            got_mp_msg = false;
             continue;
         }
         stop_detected = false;
@@ -1357,6 +1377,11 @@ int main(int argc, char **argv)
 //        if (trajectory_msg.points.size() != 0){
         	next_steps_pub.publish(trajectory_msg);
  //       }
+        	if (got_mp_msg){
+        	closest_unknown_pub.publish(closest_unknown_point);
+    		ros::param::set("/spin_pc", true);
+            ROS_INFO_STREAM("pubsliing closest unknown=================");
+        	}
 
     	profiling_container->capture("entire_follow_trajectory", "end", ros::Time::now(), g_capture_size);
         // debugging
@@ -1391,6 +1416,7 @@ int main(int argc, char **argv)
             future_collision_time = ros::Time(0);
         }
         g_got_new_trajectory = false;
+        got_mp_msg = false;
     }
 
     return 0;

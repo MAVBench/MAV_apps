@@ -1965,9 +1965,8 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 	  closest_unknown_way_point.z = nan("");
 	  //closest_unknown_way_point.header.frame_id = "world";
 	  //closest_unknown_way_point.header.stamp = ros::Time(); // TODO: change this to
-	  closest_unknown_pub.publish(closest_unknown_way_point);
-
-	  ros::param::set("spin_pc", true);
+	  //closest_unknown_pub.publish(closest_unknown_way_point);
+	  //ros::param::set("spin_pc", true);
 	  got_new_closest_unknown = true; //do not move
 	  return;
   }

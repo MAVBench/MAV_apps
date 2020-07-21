@@ -578,7 +578,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 	*/
 	//ros::param::get("/appx_goal_reached", appx_goal_reached);
 
-	bool replan;
+	bool replan = false;
 	//std_msgs::Header msg_for_follow_traj;
     //mavbench_msgs::response_time_capture msg_for_follow_traj;
 	msg_for_follow_traj.header.stamp = msg.header.stamp;
@@ -620,7 +620,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     planned_approximately = false; // for now setting to false, to see how much full approximate planning  following is effective
     //bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
     bool SA_time_exceeded = is_SA_budget_exceeded();
-    if (SA_time_exceeded){
+    if (SA_time_exceeded && false){
 		replanning_reason = Collision_detected;
 		emergency_stop(drone);
 		replan = true;
@@ -632,7 +632,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 		replanning_reason = First_time_planning;
 		replan = true;
-	} else {//if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
+	} else if (got_new_next_steps_since_last_attempted_plan){ // only can decide on replanning, if we have the new position of the drone on the track
 		if (runtime_failure_last_time){
 			replanning_reason = Runtime_failure;
 			runtime_failure_last_time = false;;
@@ -724,9 +724,9 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 				replanning_reason = No_need_to_plan;
 				replan = false;
 				closest_unknown_way_point.planning_status = "no_planning_needed";
-				closest_unknown_pub.publish(closest_unknown_way_point);
-				ros::param::set("/spin_pc", true);
-				ROS_INFO_STREAM("spin_pc");
+				//closest_unknown_pub.publish(closest_unknown_way_point);
+				//ros::param::set("/spin_pc", true);
+				///ROS_INFO_STREAM("spin_pc");
 				msg_for_follow_traj.closest_unknown_point = closest_unknown_way_point;
 				ROS_ERROR_STREAM(" not collision detected");
 			}
@@ -746,6 +746,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
 		msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube =  ppl_vol_unit_cube_actual;
 		msg_for_follow_traj.ee_profiles.control_flow_path = .5;
+		ROS_INFO_STREAM("sending msg to follow traj");
 		timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update response time
 	}else{
 		profiling_container.capture("planning_count", "counter", 0, capture_size); // @suppress("Invalid arguments")
@@ -1120,10 +1121,11 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
 			//timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
-    		closest_unknown_pub.publish(closest_unknown_way_point);
-    		ros::param::set("/spin_pc", true);
-    		ROS_INFO_STREAM("spin pc");
-    		return false;
+    		//closest_unknown_pub.publish(closest_unknown_way_point);
+    		//ros::param::set("/spin_pc", true);
+    		//ROS_INFO_STREAM("spin pc");
+			ROS_INFO_STREAM("publishing for mp timing msgs");
+			return false;
     	}
 
     	//ROS_ERROR("Empty path returned.status is");
@@ -1175,9 +1177,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
         res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
         res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1;
-		closest_unknown_pub.publish(closest_unknown_way_point);
-		ros::param::set("/spin_pc", true);
-    	ROS_INFO_STREAM("spin pc");
+		//closest_unknown_pub.publish(closest_unknown_way_point);
+		//ros::param::set("/spin_pc", true);
+    	ROS_INFO_STREAM("publishing for mp");
 		traj_pub.publish(res.multiDOFtrajectory);
         return false;
     }
@@ -1274,9 +1276,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 			msg_for_follow_traj.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
 //			msg_for_follow_traj.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 			timing_msg_from_mp_pub.publish(msg_for_follow_traj); //send a msg to make sure we update responese timne
-    		closest_unknown_pub.publish(closest_unknown_way_point);
-    		ros::param::set("/spin_pc", true);
-    		ROS_INFO_STREAM("spin pc");
+    		//closest_unknown_pub.publish(closest_unknown_way_point);
+    		//ros::param::set("/spin_pc", true);
+    		//ROS_INFO_STREAM("spin pc");
     		return false;
     	}
 
@@ -1305,9 +1307,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 		res.multiDOFtrajectory.closest_unknown_point.planning_status = "smoothening_failed";
         res.multiDOFtrajectory.ee_profiles.control_flow_path = 1.5;
         traj_pub.publish(res.multiDOFtrajectory);
-        closest_unknown_pub.publish(closest_unknown_way_point);
-        ros::param::set("/spin_pc", true);
-    	ROS_INFO_STREAM("spin pc");
+        //closest_unknown_pub.publish(closest_unknown_way_point);
+        //ros::param::set("/spin_pc", true);
+    	//ROS_INFO_STREAM("spin pc");
         return false;
     }
     notified_failure = false;
@@ -1342,9 +1344,9 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     if (planned_approximately || !first_time_planning_succeeded) {
 		profiling_container.capture("approximate_plans_count", "counter", 0); // @suppress("Invalid arguments")
     }
-    closest_unknown_pub.publish(closest_unknown_way_point);
-    ros::param::set("/spin_pc", true);
-    ROS_INFO_STREAM("spin pc");
+    //closest_unknown_pub.publish(closest_unknown_way_point);
+    //ros::param::set("/spin_pc", true);
+    //ROS_INFO_STREAM("spin pc");
 
 
     return true;
