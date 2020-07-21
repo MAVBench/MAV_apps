@@ -620,7 +620,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
     planned_approximately = false; // for now setting to false, to see how much full approximate planning  following is effective
     //bool SA_time_exceeded = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec()) < 0;  // whatever is left of the budget
     bool SA_time_exceeded = is_SA_budget_exceeded();
-    if (SA_time_exceeded && false){
+    if (SA_time_exceeded){
 		replanning_reason = Collision_detected;
 		emergency_stop(drone);
 		replan = true;
@@ -877,8 +877,8 @@ void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr&
     	publish_dummy_octomap_vis(octree);
     }
 
-    //budget_left_half = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec())/2;
-    budget_left = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec());
+    budget_left = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec())/2;
+    //budget_left = ((SA_time_budget_to_enforce - follow_trajectory_worse_case_latency) - (ros::Time::now() - deadline_setting_time).toSec());
     planning_start_time_stamp = ros::Time::now();
     // -- purelly for knob_performance_modeling;
     // -- only collect data when the knob is set.
