@@ -50,6 +50,9 @@
 #include "filterqueue.h"
 #include <chrono>
 #include <future>
+
+multiDOFpoint last_end_coord;
+
 bool appx_goal_reached = false;
 int max_failure_ctr_for_v_max;
 double budget_left;
@@ -566,6 +569,13 @@ bool got_updated_budget = false;
 
 double calculate_budget(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg, std::deque<multiDOFpoint> *traj_);
 
+bool is_appx_goal_reached(Drone *drone){
+	auto distance_to_last_end_coord = calc_vec_magnitude(drone->position().x - last_end_coord.x, drone->position().y - last_end_coord.y, drone->position().z - last_end_coord.z);
+    auto cur_velocity = drone->velocity().linear;
+	auto cur_vel_mag = calc_vec_magnitude(drone->velocity().linear.x,  drone->velocity().linear.y, drone->velocity().linear.z);
+	return (distance_to_last_end_coord < 2 && cur_vel_mag < .1);
+}
+
 // determine whether it's time to replan
 //bool hacky_goal_rcv = false;
 bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
@@ -654,7 +664,7 @@ bool MotionPlanner::shouldReplan(const octomap_msgs::Octomap& msg){
 			//ROS_ERROR_STREAM("long time since last planning, so replan");
 			replan = true;
 		}
-		else if (appx_goal_reached && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
+		else if (is_appx_goal_reached(drone) && dist(drone->position(), g_goal_pos) > distance_to_goal_margin){
 			//emergency_stop_2(drone);
             //ros::param::set("/appx_goal_reached", false);
 			appx_goal_reached = false;
@@ -771,6 +781,11 @@ void MotionPlanner::octomap_communication_proxy_msg_cb(const std_msgs::Header& m
 // octomap callback
 void MotionPlanner::octomap_callback(const mavbench_msgs::octomap_aug::ConstPtr& msg)
 {
+
+
+
+
+
 	/*
 	ros::param::get("/motion_planner/motion_planning_core", motion_planning_core_str);
     if (motion_planning_core_str == "lawn_mower")
@@ -1251,6 +1266,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
 	*/
 
+
     profiling_container.capture("motion_planning_smoothening_time", "end", ros::Time::now(), capture_size);
     if (DEBUG_RQT) {
     		debug_data.header.stamp = ros::Time::now();
@@ -1315,6 +1331,7 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     notified_failure = false;
 
     create_response(res, smooth_path);
+
 
     // Publish the trajectory (for debugging purposes)
     if (!measure_time_end_to_end) { res.multiDOFtrajectory.header.stamp = ros::Time::now(); }
@@ -1492,11 +1509,15 @@ void MotionPlanner::next_steps_callback(const mavbench_msgs::multiDOFtrajectory:
 	if (!next_steps_msg_size){
 		//ROS_INFO_STREAM("msg sizees are 00000000000000000000");
 	}
-	appx_goal_reached  = (next_steps_msg_size == 0);
 }
 
 void MotionPlanner::motion_planning_initialize_params()
 {
+
+last_end_coord.x = -1000000;
+last_end_coord.y = -1000000;
+last_end_coord.z = -1000000;
+
 	if(!ros::param::get("/DEBUG_RQT", DEBUG_RQT)){
       ROS_FATAL_STREAM("Could not start motion_planning DEBUG_RQT not provided");
       return ;
@@ -2247,6 +2268,10 @@ void MotionPlanner::create_response(package_delivery::get_trajectory::Response &
     res.multiDOFtrajectory.reverse = false;
     res.multiDOFtrajectory.stop = false;
 
+    last_end_coord.x = states[states.size()-1].position_W.x();
+    last_end_coord.y = states[states.size()-1].position_W.y();
+    last_end_coord.z = states[states.size()-1].position_W.z();
+
     // Mark the trajectory with the correct sequence id's
     res.multiDOFtrajectory.trajectory_seq = trajectory_seq_id;
     trajectory_seq_id++;
@@ -2297,7 +2322,7 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
             break;
         }else{
         	if (!isnan(closest_unknown_point.x) && !first_unknown_collected){
-        		if (pos1.pt_ctr >= last_unknown_pt_ctr){  // if smaller, what that means is that the unknown is discovered because we lowered the voxel
+        		if (pos1.pt_ctr >= last_unknown_pt_ctr && true){  // if smaller, what that means is that the unknown is discovered because we lowered the voxel
         												 // size, however, this is really not an issue because in our subsampling, we would
         											     // made sure to include any point that would be been an obstacle
         												 // so we won't be mistakenly thinking that an unknown is free because of subsampling

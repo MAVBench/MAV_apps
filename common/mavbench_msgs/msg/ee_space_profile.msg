@@ -10,3 +10,9 @@ float32 pc_vol_estimated
 
 float32 pc_to_om_datamovement
 float32 om_to_pl_datamovement
+
+float32 x_coord_while_budgetting
+float32 y_coord_while_budgetting
+float32 z_coord_while_budgetting
+
+

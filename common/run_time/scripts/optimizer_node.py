@@ -30,6 +30,9 @@ om_pl_popt = np.ndarray((2,2))
 pp_pl_popt = np.ndarray((2,2))
 typical_model = Model(3, 1)
 distance_to_goal = 1000
+use_gap_map = False
+gap_map_gap = 25
+
 def collect_hw_counters():
     try:
         events= [['SYSTEMWIDE:PERF_COUNT_HW_INSTRUCTIONS'],
@@ -69,7 +72,7 @@ r_max_queue = SmartQueue(5)
 
 def run_optimizer(control):
     cmd_rcvd_time = rospy.Time.now()
-    global r_max_queue 
+    global r_max_queue, use_gap_map 
     rt_max = control.inputs.max_time_budget 
     cur_vel_mag = rospy.get_param("velocity_to_budget_on")
     #print("====cur vel amg " + str(cur_vel_mag)) 
@@ -78,8 +81,15 @@ def run_optimizer(control):
     print("gap_statistics_avg" + str(control.inputs.gap_statistics_avg))
     print("obs min" + str(control.inputs.obs_dist_statistics_min))
     print("obs avg" + str(control.inputs.obs_dist_statistics_avg))
-    """ 
-    #print("rt_max" + str(rt_max)) 
+    """
+    """
+    if (failure_ctr_for_pc_res == 5):
+        r_max_static = max(r_min_static, r_max_static/2) 
+    elif (failure_ctr_for_pc_res == 0):
+        r_max_static = max(2*r_max_static, r_max_static_global) 
+    """
+
+    #print("rt_max" + str(rt_max))
     # -- determine the response time destired (rt_d)
     time_budget_left_to_distribute = control.internal_states.sensor_to_actuation_time_budget_to_enforce - (back_end_latency + front_end_latency)# the second run_time_latency is for the following iteration
     #time_budget_left_to_distribute = 10
@@ -105,6 +115,8 @@ def run_optimizer(control):
     #print("=================================avg gap size" + str(control.inputs.gap_statistics_avg))
     #r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
     r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
+    if (use_gap_map):
+        r_max_temp = min(r_max_temp, gap_map_gap)
     global distance_to_goal
     if distance_to_goal < 40:
         r_min_temp = r_max_temp = min(4*r_min_static, r_min_temp, r_max_temp)
@@ -122,9 +134,9 @@ def run_optimizer(control):
     r_max_ = min(r_max_temp, r_max_static)  # not aabove r_max_static
     r_max_ = (2 ** math.floor(math.log(round(r_max_ /r_min_static, 2), 2))) * r_min_static  # must get the floor otherwise, when converting (after solving), when we get the floor, we might go over
                                                                                         # the max value
-
-    r_max_queue.push(r_max_)
-    r_max_ = r_max_queue.reduce("min")
+    if not use_gap_map: 
+        r_max_queue.push(r_max_)
+        r_max_ = r_max_queue.reduce("min")
 
     if r_max_ < r_min_:
         #print("-------------------------------------------- bounds inverted -----------------------------------")
@@ -365,6 +377,7 @@ def control_callback(control):
 
     rospy.set_param("x_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.x))
     rospy.set_param("y_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.y))
+    rospy.set_param("z_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.z))
     rospy.set_param("vel_mag_while_budgetting", float(control.internal_states.drone_point_while_budgetting.vel_mag))
 
 
@@ -386,8 +399,8 @@ num_of_processors  = 0
 if __name__ == '__main__':
     global num_of_processors 
     global om_popt, om_pl_popt, pp_pl_popt,typical_model
-    global distance_to_goal
-
+    global distance_to_goal, gap_map_gap, use_gap_map
+    
     result_folder = os.getenv('base_dir') + "/src/MAV_apps/common/run_time/src/knob_performance_modeling_all/data_1"
     om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data(result_folder)
     # colecting models model 
@@ -414,7 +427,7 @@ if __name__ == '__main__':
     r_min_static = rospy.get_param("pc_res_max") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_steps = rospy.get_param("num_of_res_to_try") # we have actually swapped these mistakenly, i.e., chosen min for max. but launch file is correct and python is incorrect
     r_max_static = (2 ** r_steps) * r_min_static
-
+    use_gap_map = rospy.get_param("use_gap_map")
     rospy.set_param("pyrun_rcvd_models", True) # this is a signal to everyone else to start their run
 
 
@@ -422,4 +435,6 @@ if __name__ == '__main__':
         #rt_max = rospy.get_param("max_time_budget")
         drone_radius = rospy.get_param("planner_drone_radius")
         distance_to_goal = rospy.get_param("distance_to_goal")
+        gap_map_gap = rospy.get_param("gap_map_gap")
+        #failure_ctr_for_pc_res = rospy.get_param("failure_ctr_for_pc_res")
         rate.sleep()

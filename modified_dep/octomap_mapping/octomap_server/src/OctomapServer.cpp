@@ -178,6 +178,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_gridmap.info.resolution = m_res_original;
 
 
+  gap_map = new OcTreeT(15);
+
   m_octree_lower_res = new OcTreeT(om_to_pl_res);
   m_octree_lower_res->setProbHit(probHit);
   m_octree_lower_res->setProbMiss(probMiss);
@@ -423,6 +425,20 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	pc_pre_pub_time = pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp;
 	om_latency_expected = pcl_aug_data->ee_profiles.expected_time.om_latency;
 
+
+	// fill out the gap map
+	auto gap_coord= octomap::point3d(pcl_aug_data->controls.internal_states.drone_point_while_budgetting.x , pcl_aug_data->controls.internal_states.drone_point_while_budgetting.y , pcl_aug_data->controls.internal_states.drone_point_while_budgetting.z);
+	double gap_size = pcl_aug_data->controls.inputs.gap_statistics_min;
+	auto map_node = gap_map->search(gap_map->coordToKey(gap_coord));
+	if (map_node){
+		map_node->setLogOdds(min((double)map_node->getLogOdds(), (double)gap_size));
+	}else{
+		gap_map->updateNode(gap_map->coordToKey(gap_coord), true, true);
+		map_node = gap_map->search(gap_map->coordToKey(gap_coord));
+		map_node->setLogOdds((double)gap_size);
+	}
+	ros::param::set("/gap_map_gap", map_node->getLogOdds());
+	//ROS_INFO_STREAM("gap size "<<gap_size<< " vs "<< map_node->getLogOdds());
 
 	/*
 	om_to_pl_res = 2*last_res;

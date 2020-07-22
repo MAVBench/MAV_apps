@@ -319,6 +319,7 @@ protected:
   dynamic_reconfigure::Server<OctomapServerConfig> m_reconfigureServer;
 
   OcTreeT* m_octree;
+  OcTreeT* gap_map;
   OcTreeT* m_octree_lower_res;
   ros::Time last_time_cleared;
 

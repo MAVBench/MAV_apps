@@ -153,7 +153,7 @@ class PointCloudXyz
   std::string ip_addr, localization_method;
   double v_max_max;
   double planner_drone_radius_min, planner_drone_radius_max;
-  double x_coord_while_budgetting, y_coord_while_budgetting,vel_mag_while_budgetting;
+  double x_coord_while_budgetting, y_coord_while_budgetting,vel_mag_while_budgetting,  z_coord_while_budgetting;
   Drone *drone;
 
   ros::Time img_capture_time_stamp; // -- time the snap shot was taken
@@ -1986,6 +1986,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
    ros::param::get("/ee_latency_expected", ee_latency_expected);
    ros::param::get("/x_coord_while_budgetting", x_coord_while_budgetting);
    ros::param::get("/y_coord_while_budgetting", y_coord_while_budgetting);
+   ros::param::get("/z_coord_while_budgetting", z_coord_while_budgetting);
    ros::param::get("/vel_mag_while_budgetting", vel_mag_while_budgetting);
    ros::param::get("/pc_res", pc_res);
    //ROS_INFO_STREAM("pc res passed to pc"<<pc_res);
@@ -2000,6 +2001,9 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
    if (knob_performance_modeling){
 	   sensor_to_actuation_time_budget_to_enforce = 4000; //something really big
    }
+
+
+
 
 
     //filterByVolumeNoFilter(cloud_x, cloud_y, cloud_z, xs, ys, zs, pc_vol_ideal, n_points);
@@ -2054,6 +2058,10 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   pcl_aug_data.header = cloud_msg->header;
   pcl_aug_data.pcl = *cloud_msg;
 
+
+   pcl_aug_data.controls.internal_states.drone_point_while_budgetting.x = x_coord_while_budgetting;
+	pcl_aug_data.controls.internal_states.drone_point_while_budgetting.y =  y_coord_while_budgetting;
+	pcl_aug_data.controls.internal_states.drone_point_while_budgetting.z = z_coord_while_budgetting;
 
   pcl_aug_data.controls.cmds.optimizer_succeeded = optimizer_succeeded;
   pcl_aug_data.controls.cmds.optimizer_failure_status = optimizer_failure_status;
@@ -2342,6 +2350,14 @@ void PointCloudXyz::onInit()
     	exit(0);
     	return ;
     }
+
+    if(!ros::param::get("/z_coord_while_budgetting", z_coord_while_budgetting)){
+    	ROS_FATAL_STREAM("Could not start point cloud z_coord_while_budgetting not provided");
+    	exit(0);
+    	return ;
+    }
+
+
 
     if(!ros::param::get("/vel_mag_while_budgetting", vel_mag_while_budgetting)){
     	ROS_FATAL_STREAM("Could not start point cloud vel_mag_while_budgetting not provided");
