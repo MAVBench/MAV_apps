@@ -401,6 +401,8 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("gap_statistics_min", "single", msg->controls.inputs.gap_statistics_min, 1);
 	profiling_container->capture("gap_statistics_max", "single", msg->controls.inputs.gap_statistics_max, 1);
 	profiling_container->capture("obs_dist_statistics_min", "single", msg->controls.inputs.obs_dist_statistics_min, 1);
+	profiling_container->capture("pc_res", "single", msg->controls.cmds.pc_res, 1);
+	profiling_container->capture("om_to_pl_res", "single", msg->controls.cmds.om_to_pl_res, 1);
 
 
 	if (msg->closest_unknown_point.planning_status != "runtime_failure") {
@@ -901,6 +903,9 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("gap_statistics_min", "single", msg->controls.inputs.gap_statistics_min, 1);
 	profiling_container->capture("gap_statistics_max", "single", msg->controls.inputs.gap_statistics_max, 1);
 	profiling_container->capture("obs_dist_statistics_min", "single", msg->controls.inputs.obs_dist_statistics_min, 1);
+	profiling_container->capture("pc_res", "single", msg->controls.cmds.pc_res, 1);
+	profiling_container->capture("om_to_pl_res", "single", msg->controls.cmds.om_to_pl_res, 1);
+
 
 
 	if (msg->closest_unknown_point.planning_status != "runtime_failure") {
