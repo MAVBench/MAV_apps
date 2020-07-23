@@ -1176,6 +1176,7 @@ int main(int argc, char **argv)
     		auto time_between_budgettings = (ros::Time::now() - last_time_sent_budgets).toSec();
     		last_time_sent_budgets = ros::Time::now();
     		//ROS_INFO_STREAM("closest uknown distance:"<< calc_dist(drone_position, closest_unknown_point) << " budget "<<control.internal_states.sensor_to_actuation_time_budget_to_enforce << " velocity" << cur_vel_mag << " time between budgettins"<< time_between_budgettings);
+    		ros::param::set("velocity_to_budget_on", cur_vel_mag);
 
     		if (DEBUG_RQT){
     			debug_data.header.stamp = ros::Time::now();

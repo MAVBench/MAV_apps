@@ -60,7 +60,13 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "om_to_pl_datamovement",
 "PERF_COUNT_HW_INSTRUCTIONS",
 "LLC_REFERENCES",
-"CACHE_REFERENCES"
+"CACHE_REFERENCES",
+"x_coord_while_budgetting",
+"y_coord_while_budgetting",
+"z_coord_while_budgetting",
+"sensor_to_actuation_time_budget_to_enforce",
+"obs_dist_statistics_min",
+"vel_mag_while_budgetting"
 ]
 
 # parse  data
@@ -84,6 +90,14 @@ OMtoPlTotalLatency =  result_dict["OMtoPlTotalLatency"]
 ppl_latency= result_dict["ppl_latency"]
 smoothening_latency=  result_dict["smoothening_latency"]
 pl_to_ft_total_latency =  [0] + result_dict["pl_to_ft_totalLatency"][1:]
+
+x_coord_while_budgetting = result_dict["x_coord_while_budgetting"]
+y_coord_while_budgetting = result_dict["y_coord_while_budgetting"]
+z_coord_while_budgetting = result_dict["z_coord_while_budgetting"]
+sensor_to_actuation_time_budget_to_enforce = result_dict["sensor_to_actuation_time_budget_to_enforce"]
+obs_dist_statistics_min = result_dict["obs_dist_statistics_min"]
+vel_mag_while_budgetting = result_dict["vel_mag_while_budgetting"]
+
 
 end_to_end_latency =  result_dict["ee_latency"]
 blind_latency =  result_dict["blind_latency"]
@@ -133,6 +147,9 @@ plt.close(fig)
 
 
 
+
+
+
 # utilization
 fig, axs = plt.subplots(2)
 #axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
@@ -147,6 +164,45 @@ axs[0].legend(loc='best')
 output_file = "utilization" + ".png"
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
+
+
+
+# velocity/budget to enforce
+fig, axs = plt.subplots(2)
+#axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
+axs[1].set_yscale('linear')
+axs[1].plot(x, vel_mag_while_budgetting)
+axs[1].set(xlabel="mission  progression (s)", ylabel=" velocity")
+axs[1].legend(loc='best')
+
+axs[0].plot(x, sensor_to_actuation_time_budget_to_enforce, label="response time budget")
+axs[0].set(xlabel="mission  progression (s)", ylabel="mission progression (s) ")
+axs[0].legend(loc='best')
+output_file = "velocity_response_time" + ".png"
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
+
+
+
+
+
+# velocity/budget to enforce
+fig, axs = plt.subplots(2)
+#axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
+axs[1].set_yscale('linear')
+axs[1].plot(x, obs_dist_statistics_min)
+axs[1].set(xlabel="mission  progression (s)", ylabel=" min distance to obst")
+axs[1].legend(loc='best')
+
+axs[0].plot(x, sensor_to_actuation_time_budget_to_enforce, label="insertScanLatency")
+axs[0].set(xlabel="mission  progression (s)", ylabel=" octomap latency ")
+axs[0].legend(loc='best')
+output_file = "obst_dist_om_time" + ".png"
+fig.savefig(result_folder+"/"+output_file)
+plt.close(fig)
+
+
+
 
 
 

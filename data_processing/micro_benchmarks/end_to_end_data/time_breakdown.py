@@ -59,7 +59,13 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "om_to_pl_datamovement",
 "PERF_COUNT_HW_INSTRUCTIONS",
 "LLC_REFERENCES",
-"CACHE_REFERENCES"
+"CACHE_REFERENCES",
+"x_coord_while_budgetting",
+"y_coord_while_budgetting",
+"z_coord_while_budgetting",
+"sensor_to_actuation_time_budget_to_enforce",
+"obs_dist_statistics_min",
+"vel_mag_while_budgetting"
 ]
 
 # parse  data
@@ -93,6 +99,13 @@ time_cmd_received = result_dict["time_cmd_received"]
 PERF_COUNT_HW_INSTRUCTIONS = result_dict["PERF_COUNT_HW_INSTRUCTIONS"][1:]+ [100]
 LLC_REFERENCES = result_dict["LLC_REFERENCES"][1:]+ [100]
 CACHE_REFERENCES = result_dict["CACHE_REFERENCES"][1:]+ [100]
+
+x_coord_while_budgetting = result_dict["x_coord_while_budgetting"]
+y_coord_while_budgetting = result_dict["y_coord_while_budgetting"]
+z_coord_while_budgetting = result_dict["z_coord_while_budgetting"]
+sensor_to_actuation_time_budget_to_enforce = result_dict["sensor_to_actuation_time_budget_to_enforce"]
+obs_dist_statistics_min = result_dict["obs_dist_statistics_min"]
+vel_mag_while_budgetting = result_dict["vel_mag_while_budgetting"]
 
 
 pc_to_om_datamovement = result_dict["pc_to_om_datamovement"]

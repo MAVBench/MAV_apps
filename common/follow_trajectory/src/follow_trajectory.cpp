@@ -393,6 +393,16 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
 	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
+    profiling_container->capture("sensor_to_actuation_time_budget_to_enforce", "single", msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce, 1);
+	profiling_container->capture("x_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.x, 1);
+	profiling_container->capture("y_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.y, 1);
+	profiling_container->capture("z_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.z, 1);
+	profiling_container->capture("vel_mag_while_budgetting", "single", msg->controls.inputs.velocity_to_budget_on, 1);
+	profiling_container->capture("gap_statistics_min", "single", msg->controls.inputs.gap_statistics_min, 1);
+	profiling_container->capture("gap_statistics_max", "single", msg->controls.inputs.gap_statistics_max, 1);
+	profiling_container->capture("obs_dist_statistics_min", "single", msg->controls.inputs.obs_dist_statistics_min, 1);
+
+
 	if (msg->closest_unknown_point.planning_status != "runtime_failure") {
 		profiling_container->capture("pl_to_ft_totalLatency","single",  pl_to_ft_totalLatency, 1);
 	}else{
@@ -883,6 +893,16 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
 	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
+    profiling_container->capture("sensor_to_actuation_time_budget_to_enforce", "single", msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce, 1);
+	profiling_container->capture("x_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.x, 1);
+	profiling_container->capture("y_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.y, 1);
+	profiling_container->capture("z_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.z, 1);
+	profiling_container->capture("vel_mag_while_budgetting", "single", msg->controls.inputs.velocity_to_budget_on, 1);
+	profiling_container->capture("gap_statistics_min", "single", msg->controls.inputs.gap_statistics_min, 1);
+	profiling_container->capture("gap_statistics_max", "single", msg->controls.inputs.gap_statistics_max, 1);
+	profiling_container->capture("obs_dist_statistics_min", "single", msg->controls.inputs.obs_dist_statistics_min, 1);
+
+
 	if (msg->closest_unknown_point.planning_status != "runtime_failure") {
 		profiling_container->capture("pl_to_ft_totalLatency","single",  pl_to_ft_totalLatency, 1);
 	}else{
