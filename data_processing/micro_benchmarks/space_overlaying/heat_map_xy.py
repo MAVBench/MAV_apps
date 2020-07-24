@@ -17,12 +17,27 @@ from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('../../common_utils')
 from data_parsing import *
 from math import *
-from data_1.EnvGenObstacleCoords import obstacle_coords
-#result_dic = filter_based_on_key_value(result_dic, "pc_res", 1.200000, "in")
-#write_results_to_csv(result_dic, output_all_csv_filepath)
-#point_cloud_estimated_volume  = result_dic["octomap_volume_digested"]
-#point_cloud_volume_to_digest = result_dic["point_cloud_volume_to_digest"]
-#filtering = result_dic["filtering"]
+import json
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--datafile_path', metavar='d', type=str)
+parser.add_argument('--obsfile_path', metavar='o', type=str)
+args = parser.parse_args()
+
+def dir_path(path):
+    if not os.path.isfile(path):
+        print("Couldn't find datafile!")
+        exit(-1)
+    else:
+        return os.path.dirname(os.path.realpath(path))
+
+# we dump resulting graphs in same dir as datafile
+
+input_filepath = args.datafile_path
+result_folder = dir_path(input_filepath)
+obs_stats_path = args.obsfile_path
 
 def extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds):
     x_offset = -int(x_bounds["min"]) # offset by the min for array index placement
@@ -33,11 +48,11 @@ def extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds):
     obs_height = []
 
     for i in range(0, len(obstacle_coords_scaled)):
-        # obstacle coord bounding boxes are arranged from index 0-3 as:
-        # top right corner, bottom right, bottom left, top left
+        # obstacle coord bounding boxes are arranged:
+        # top right corner, bottom left
         obstacle_bounds = obstacle_coords_scaled[i]
         top_right = obstacle_bounds[0]
-        bottom_left = obstacle_bounds[2]
+        bottom_left = obstacle_bounds[1]
         # checking if obstacle lies within bounds
         if (top_right[0] < x_bounds["max"] and top_right[1] < y_bounds["max"]) or \
                 (bottom_left[0] > x_bounds["min"] and bottom_left[1] > y_bounds["min"]):
@@ -97,7 +112,7 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
         space_mat[y_rounded][x_rounded] = metric_values[i]
        
     # plotting 
-    fig, ax = plt.subplots(figsize=(12,7))
+    fig, ax = plt.subplots(figsize=(12,12))
     plt.title(title, fontsize=18)
     ttl = ax.title
     ttl.set_position([0.5, 1.05])
@@ -139,29 +154,43 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
 
     ax.set_ylim(ax.get_ylim()[::-1])
 
-    plt.savefig(title)
+    plt.savefig(result_folder + "/" + title)
     
-
-
-result_folder = "./data_1"
-input_file_name = "stats.json"
-input_filepath = result_folder + "/" + input_file_name
 
 # data to collect
 metrics_to_collect_easy = []
-metrics_to_collect_hard = ["x_coord_while_budgetting", "y_coord_while_budgetting", "vel_mag_while_budgetting", "sensor_to_actuation_time_budget_to_enforce", "obs_dist_statistics_min"]
+metrics_to_collect_hard = [
+        "x_coord_while_budgetting", 
+        "y_coord_while_budgetting", 
+        "vel_mag_while_budgetting", 
+        "sensor_to_actuation_time_budget_to_enforce", 
+        "octomap_volume_integrated",
+        "pc_res",
+        "obs_dist_statistics_min"
+]
 
 # parse  data
 result_dic = parse_stat_file_flattened(input_filepath, metrics_to_collect_easy, metrics_to_collect_hard)
 
+env_gen_stats = {}
+with open(obs_stats_path, "r") as obs_json_file:
+    env_gen_stats = json.load(obs_json_file)
+
+# adding an offset to show the entire map
+spread_of_obstacles = env_gen_stats["SpreadOfObstacles"]
+obstacle_coords = env_gen_stats["ObstacleList"]
+grid_resolution = 2
+
 x_coord_while_budgetting = result_dic["x_coord_while_budgetting"]
 y_coord_while_budgetting = result_dic["y_coord_while_budgetting"]
-metrics_to_overlay = ["obs_dist_statistics_min", "sensor_to_actuation_time_budget_to_enforce", "vel_mag_while_budgetting"]
-resolution = 2
-spread_of_obstacles = 65
+metrics_to_overlay = [
+        "vel_mag_while_budgetting", 
+        "sensor_to_actuation_time_budget_to_enforce", 
+        "octomap_volume_integrated",
+        "pc_res",
+        "obs_dist_statistics_min"
+]
+
 for metric_to_overlay in metrics_to_overlay:
     metric_values = result_dic[metric_to_overlay]
-    space_overlay(x_coord_while_budgetting,y_coord_while_budgetting, metric_values, obstacle_coords,  metric_to_overlay, resolution, spread_of_obstacles)
-
-#data_values = obs_dist_statistics_min
-
+    space_overlay(x_coord_while_budgetting, y_coord_while_budgetting, metric_values, obstacle_coords,  metric_to_overlay, grid_resolution, spread_of_obstacles)
