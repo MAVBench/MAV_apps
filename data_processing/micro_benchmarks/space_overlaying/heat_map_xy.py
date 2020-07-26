@@ -20,10 +20,14 @@ from math import *
 import json
 import argparse
 import os
+import time
+
+#time.sleep(5)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--datafile_path', metavar='d', type=str)
-parser.add_argument('--obsfile_path', metavar='o', type=str)
+parser.add_argument('-d', '--datafile_path', type=str)
+parser.add_argument('-e', '--envfile_path', type=str)
+parser.add_argument('-b', '--bounds', nargs='+', type=int)
 args = parser.parse_args()
 
 def dir_path(path):
@@ -37,7 +41,13 @@ def dir_path(path):
 
 input_filepath = args.datafile_path
 result_folder = dir_path(input_filepath)
-obs_stats_path = args.obsfile_path
+obs_stats_path = args.envfile_path
+
+bounds = args.bounds
+if bounds == None:
+    bounds = [-1, -1, -1, -1]
+else:
+    assert len(bounds) == 4, "bounds must be xmin, xmax, ymin, ymax (4 values)"
 
 def extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds):
     x_offset = -int(x_bounds["min"]) # offset by the min for array index placement
@@ -69,7 +79,7 @@ def extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds):
     return obs_dict
 
 def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, spread_of_obstacles = -1, 
-        x_input_bound={"min":-1,"max":-1}, y_input_bound = {"min":-1,"max":-1}):
+        x_input_bound={"min":-1,"max":-1}, y_input_bound = {"min":-1,"max":-1}, larger_is_better=True):
 
     if resolution == -1: resolution = 1
     if spread_of_obstacles == -1: spread_of_obstacles = 0
@@ -87,16 +97,16 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
     # most relevant part of the map with all the obstacles is displayed
 
     if x_input_bound["min"] == -1: x_bounds["min"] = x_data_bounds["min"] - spread_of_obstacles/resolution
-    else: x_bounds["min"] = x_input_bound["min"]
+    else: x_bounds["min"] = x_input_bound["min"]/resolution
 
     if x_input_bound["max"] == -1: x_bounds["max"] = x_data_bounds["max"] + spread_of_obstacles/resolution
-    else: x_bounds["max"] = x_input_bound["max"]
+    else: x_bounds["max"] = x_input_bound["max"]/resolution
 
     if y_input_bound["min"] == -1: y_bounds["min"] = y_data_bounds["min"] - spread_of_obstacles/resolution
-    else: y_bounds["min"] = y_input_bound["min"]
+    else: y_bounds["min"] = y_input_bound["min"]/resolution
 
     if y_input_bound["max"] == -1: y_bounds["max"] = y_data_bounds["max"] + spread_of_obstacles/resolution
-    else: y_bounds["max"] = y_input_bound["max"]
+    else: y_bounds["max"] = y_input_bound["max"]/resolution
 
     x_offset = -int(x_bounds["min"]) # offset by the min for array index placement
     y_offset = -int(y_bounds["min"]) # offset by the min for array index placement
@@ -109,7 +119,8 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
     for i in range(0, len(x)):
         x_rounded = int(float(x[i])/resolution) + x_offset
         y_rounded = int(float(y[i])/resolution) + y_offset
-        space_mat[y_rounded][x_rounded] = metric_values[i]
+        if x_rounded < x_range and y_rounded < y_range:
+            space_mat[y_rounded][x_rounded] = metric_values[i]
        
     # plotting 
     fig, ax = plt.subplots(figsize=(12,12))
@@ -124,6 +135,7 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
     obstacle_coords_scaled = np.array(obstacle_coords) / resolution
     obs_dict = extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds)
     n_obs = obs_dict["n_obstacles"]
+
     for i in range(0, n_obs):
         origin = obs_dict['origin'][i]
         width = obs_dict['width'][i]
@@ -133,7 +145,13 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
                 )
 
     sns.set()
-    sns.heatmap(space_mat, cmap='RdYlGn', ax=ax, square=True)
+
+    colormap='RdYlGn'
+    if not larger_is_better:
+        # reverses colormap
+        colormap += '_r'
+
+    sns.heatmap(space_mat, cmap=colormap, ax=ax, square=True)
     ax = plt.gca()
 
     # setting ticks and tick positions on axes
@@ -191,6 +209,15 @@ metrics_to_overlay = [
         "obs_dist_statistics_min"
 ]
 
+x_input_bound = {"min": bounds[0], "max": bounds[1]}
+y_input_bound = {"min": bounds[2], "max": bounds[3]}
+
 for metric_to_overlay in metrics_to_overlay:
     metric_values = result_dic[metric_to_overlay]
-    space_overlay(x_coord_while_budgetting, y_coord_while_budgetting, metric_values, obstacle_coords,  metric_to_overlay, grid_resolution, spread_of_obstacles)
+    space_overlay(x_coord_while_budgetting, y_coord_while_budgetting, 
+            metric_values, obstacle_coords,  metric_to_overlay, grid_resolution, 
+            spread_of_obstacles,
+            x_input_bound=x_input_bound, 
+            y_input_bound=y_input_bound,
+            #larger_is_better=False
+    )
