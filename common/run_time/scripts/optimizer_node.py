@@ -6,6 +6,7 @@ import sys
 import os
 sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/data_processing/common_utils")
 sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/common/run_time/src/model/")
+sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/common/run_time/src/model/model_generation")
 sys.path.append(os.getenv('base_dir') +"/src/MAV_apps/common/run_time/src/")
 from mavbench_msgs.msg import control
 from optimizer.opt import Opt

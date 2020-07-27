@@ -23,8 +23,6 @@ perf_log_file = os.getenv('base_dir') +"/stat.log"
 stat_file_name = os.getenv('base_dir') + "/src/MAV_apps/data/package_delivery/stats_mu.json"
 
 
-from pypapi import papi_high
-from pypapi import events as papi_events
 from profiler import *
 
 def collect_perf_data(events, sampling_period, perf_log_file):
