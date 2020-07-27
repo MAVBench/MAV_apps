@@ -133,7 +133,7 @@
   <arg name="DEBUG_RQT" default="true" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_RQT" value="$(arg DEBUG_RQT)"/> 
 
-  <arg name="DEBUG_VIS" default="true" /> <!-- determines whether to use RQT for debugging or not -->
+  <arg name="DEBUG_VIS" default="false" /> <!-- determines whether to use RQT for debugging or not -->
   <param name="DEBUG_VIS" value="$(arg DEBUG_VIS)"/> 
 
   <arg name="SPACE_PROFILING" default="false" /> <!-- determines whether to use RQT for debugging or not -->
