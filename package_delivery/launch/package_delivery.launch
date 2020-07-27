@@ -265,6 +265,14 @@
   <param name="decision_sampling_rate" value="$(arg time_sampling_rate)"/>
 
 
+  <arg name="motivation_section" default="false" />   
+  <param name="motivation_section" value="$(arg motivation_section)"/>
+  <arg name="motivation_section_for_velocity" default="false" />   
+  <param name="motivation_section_for_velocity" value="$(arg motivation_section_for_velocity)"/>
+
+
+
+
   <arg name="reactive_runtime" default="true" />   
   <arg name="budgetting_mode" default="manual" />    
   <param name="reactive_runtime" value="$(arg reactive_runtime)"/>

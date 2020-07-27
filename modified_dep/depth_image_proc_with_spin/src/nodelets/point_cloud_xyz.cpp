@@ -187,7 +187,7 @@ class PointCloudXyz
   public:
     virtual void onInit();
     void spinOnce();
-    double sensor_to_actuation_time_budget_to_enforce;
+    double sensor_to_actuation_time_budget_to_enforce, closest_unknown_distance;
     double follow_trajectory_loop_rate, follow_trajectory_worse_case_latency;
     ros::Time deadline_setting_time_stamp;
 	string planning_status;
@@ -1898,6 +1898,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   profiling_container->capture("runTimeLatency", "start", ros::Time::now());
   control_pub.publish(control);
   ros::param::get("/new_control_data", new_control_data);
+  //ROS_INFO_STREAM("sending msg to crun");
   while(!new_control_data){
 	  ros::param::get("/new_control_data", new_control_data);
 	  ros::Duration(.05).sleep();
@@ -1994,6 +1995,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
    ros::param::get("/om_to_pl_res", om_to_pl_res);
    ros::param::get("/om_to_pl_vol_ideal", om_to_pl_vol_ideal);
    ros::param::get("/ppl_vol_ideal", ppl_vol_ideal);
+   ros::param::get("/closest_unknown_distance", closest_unknown_distance);
    deadline_setting_time_stamp = ros::Time::now(); // this is not entirely accurate, since this needs to be set in the run time, however, it'll be a pain to pass the time msg around, so we approximate
 
    if (om_to_pl_res < pc_res){ROS_INFO_STREAM("om_to_pl_res:"<< om_to_pl_res<<"m_res"<<pc_res);} assert(om_to_pl_res >= pc_res);
@@ -2097,6 +2099,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   pcl_aug_data.controls.inputs.velocity_to_budget_on = velocity_to_budget_on;
 
   pcl_aug_data.controls.internal_states.sensor_to_actuation_time_budget_to_enforce = sensor_to_actuation_time_budget_to_enforce;
+  pcl_aug_data.controls.internal_states.closest_unknown_distance = closest_unknown_distance;
   profiling_container->capture("entire_point_cloud_depth_callback", "end", ros::Time::now());
   if (SPACE_PROFILING) {
 	  profiling_container->capture("sensor_to_actuation_time_budget_to_enforce", "single", sensor_to_actuation_time_budget_to_enforce, 1);

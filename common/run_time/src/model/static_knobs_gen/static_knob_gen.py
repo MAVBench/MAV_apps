@@ -14,6 +14,13 @@ from mpl_toolkits.mplot3d import Axes3D
 
    
 
+
+def calc_poly_deg_2(a, b, c):
+    return (-b + np.sqrt(b**2 - 4*a*c))/(2*a)
+
+
+
+
 def calculate_static_values():
     #filtering_time = .45
     #run_diagnostics = .15
@@ -30,11 +37,11 @@ def calculate_static_values():
             pp_pl_response_time_measured)	 # for error calculation
 
 
-    om_res_desired = om_pl_res_desired=pp_pl_res_desired = .3
-    om_vol_desired = 50000
-    om_pl_vol_desired = 3*50000
-    pp_pl_vol_desired = 3*50000
-    visibility_avg = 25.5 
+    om_res_desired = om_pl_res_desired=pp_pl_res_desired = .6
+    om_vol_desired = 46000
+    om_pl_vol_desired = 3*46000
+    pp_pl_vol_desired = 3*46000
+    visibility_avg = 8
     
     pc_filtering = .210
     sequencer_latency = .01
@@ -50,10 +57,12 @@ def calculate_static_values():
     max_time_budget = om_latency + om_pl_latency + 2*pp_pl_latency + pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency
 
     #max_time_budget = pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency + .2 + .2 + .2 + .1
-    #max_time_budget = 2.2
+    #max_time_budget = 2
     
 
-    velocity_to_budget_on = calc_v_max(max_time_budget, visibility_avg - drone_radius, .1439, .8016)
+    #velocity_to_budget_on = calc_v_max(max_time_budget, visibility_avg - drone_radius, .1439, .8016)
+    velocity_to_budget_on = calc_poly_deg_2(.05494, .349+ max_time_budget, -visibility_avg - .2038)
+    
     print("----om_latency:" + str(om_latency))
     print("--------om_pl_latency:" + str(om_pl_latency))
     print("-------------pp_pl_latency" + str(3*pp_pl_latency))

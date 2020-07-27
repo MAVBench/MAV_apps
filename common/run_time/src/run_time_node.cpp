@@ -43,6 +43,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+bool motivation_section, motivation_section_for_velocity;
 ros::Time last_time_sent_budgets;
 Drone *drone;
 string design_mode;
@@ -349,6 +350,16 @@ void initialize_global_params() {
 
 	if(!ros::param::get("/v_max", g_v_max)) {
 		ROS_FATAL_STREAM("Could not start run_time_node v_max not provided");
+        exit(-1);
+	}
+
+	if(!ros::param::get("/motivation_section", motivation_section)) {
+		ROS_FATAL_STREAM("Could not start run_time_node motivation_section not provided");
+        exit(-1);
+	}
+
+	if(!ros::param::get("/motivation_section_for_velocity", motivation_section_for_velocity)) {
+		ROS_FATAL_STREAM("Could not start run_time_node motivation_section_for_velocity not provided");
         exit(-1);
 	}
 
@@ -1154,16 +1165,22 @@ int main(int argc, char **argv)
     		}
 
     		auto drone_position_when_took_sample =  drone->position();
-    		if (traj.size() == 0 || time_budgetting_failed || planner_consecutive_failure_ctr>0){
+    		if (traj.size() == 0 || time_budgetting_failed || planner_consecutive_failure_ctr>0 || motivation_section){
     			//ROS_INFO_STREAM("------------------------------------coming here now");
     			double closest_unknown_point_distance = calc_dist(drone_position, closest_unknown_point);
     			//ROS_INFO_STREAM("closest unknown distance"<<closest_unknown_point_distance);
     			double sensor_range = closest_unknown_point_distance;
+    			//if (motivation_section_for_velocity){
+    			//	sensor_range =  14;
+    			//}
+
     			double time_budget = min(max_time_budget, calc_sensor_to_actuation_time_budget_to_enforce_based_on_current_velocity(cur_vel_mag, sensor_range));
     			//ROS_INFO_STREAM(" right here with time of budget of " <<time_budget);
     			//ROS_INFO_STREAM("failed to budgget, time_budgetg:"<< time_budget<< "  cur_vel_mag:"<<cur_vel_mag);
     			control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
     		}
+    		control.internal_states.closest_unknown_distance= calc_dist(drone_position, closest_unknown_point);
+    		ROS_INFO_STREAM("sending msg from c_run to pyrun");
     		control_to_pyrun.publish(control);
     		//state = "waiting_for_py_run";
     		time_budgetting_failed  = false;

@@ -45,7 +45,7 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "ppl_latency",
 "pl_to_ft_totalLatency",
 "ee_latency",
-    "blind_latency",
+"blind_latency",
 "cpu_utilization_for_last_decision",
 "planning_success_ctr",
 "traj_gen_failure_ctr",
@@ -65,8 +65,11 @@ metrics_to_collect_hard = ["depthToPCConversionLatency",
 "y_coord_while_budgetting",
 "z_coord_while_budgetting",
 "sensor_to_actuation_time_budget_to_enforce",
+"closest_unknown_distance",
 "obs_dist_statistics_min",
-"vel_mag_while_budgetting"
+"vel_mag_while_budgetting",
+"pc_res",
+"gap_statistics_avg"
 ]
 
 # parse  data
@@ -95,9 +98,11 @@ x_coord_while_budgetting = result_dict["x_coord_while_budgetting"]
 y_coord_while_budgetting = result_dict["y_coord_while_budgetting"]
 z_coord_while_budgetting = result_dict["z_coord_while_budgetting"]
 sensor_to_actuation_time_budget_to_enforce = result_dict["sensor_to_actuation_time_budget_to_enforce"]
+closest_unknown_distance= result_dict["closest_unknown_distance"]
 obs_dist_statistics_min = result_dict["obs_dist_statistics_min"]
 vel_mag_while_budgetting = result_dict["vel_mag_while_budgetting"]
-
+pc_res = result_dict["pc_res"]
+gap_statistics_avg= result_dict["gap_statistics_avg"]
 
 end_to_end_latency =  result_dict["ee_latency"]
 blind_latency =  result_dict["blind_latency"]
@@ -168,17 +173,48 @@ plt.close(fig)
 
 
 # velocity/budget to enforce
+x_copy = []
+planner_drone_radius = 1.5
+sensor_max_range = 25;
+sensor_to_actuation_time_budget_to_enforce_copy = []
+vel_mag_while_budgetting_copy = []
+closest_unknown_distance_copy = []
+for idx, el in enumerate(sensor_to_actuation_time_budget_to_enforce):
+    if el < .001 or el > 50:
+        continue
+    else:
+        sensor_to_actuation_time_budget_to_enforce_copy.append(el)
+        vel_mag_while_budgetting_copy.append(vel_mag_while_budgetting[idx])
+        closest_unknown_distance_copy.append(min(closest_unknown_distance[idx], sensor_max_range))
+        x_copy.append(x[idx])
+
+
 fig, axs = plt.subplots(2)
 #axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
 axs[1].set_yscale('linear')
-axs[1].plot(x, vel_mag_while_budgetting)
-axs[1].set(xlabel="mission  progression (s)", ylabel=" velocity")
+axs[1].plot(x_copy, vel_mag_while_budgetting_copy, marker="o", label="Acutal Dynamic Velocity (m/s)")
+axs[1].set(xlabel="Mission  Progression (s)", ylabel=" Velocity(m/s)")
 axs[1].legend(loc='best')
+axs[1].plot(x_copy, [3.2]*len(vel_mag_while_budgetting_copy), marker="o", label="Assumed Static Velocity (m/s)")
+#axs[1].set(xlabel="mission  progression (s)", label = "velocity (m/s)")
+axs[1].legend(loc='upper left')
 
-axs[0].plot(x, sensor_to_actuation_time_budget_to_enforce, label="response time budget")
-axs[0].set(xlabel="mission  progression (s)", ylabel="mission progression (s) ")
-axs[0].legend(loc='best')
-output_file = "velocity_response_time" + ".png"
+
+
+"""
+axs[2].set_yscale('linear')
+axs[2].plot(x_copy, closest_unknown_distance_copy, label="dynamic visibility", marker="o")
+axs[2].plot(x_copy, [8]*len(closest_unknown_distance_copy), label="assumed fix visibility", marker="o")
+axs[2].set(xlabel="mission  progression (s)", ylabel="visibility (s) ")
+axs[2].legend(loc='best')
+"""
+
+axs[0].set_yscale('linear')
+axs[0].plot(x_copy, sensor_to_actuation_time_budget_to_enforce_copy, label="Actual Dynamic Time Budget (s)", marker="o")
+axs[0].plot(x_copy, [2]*len(sensor_to_actuation_time_budget_to_enforce_copy), label="Assumed Static Time Budget", marker="o")
+axs[0].set(xlabel="mission  progression (s)", ylabel="time budget(s) ")
+axs[0].legend(loc='upper right')
+output_file = "vel_res" + ".png"
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
 
@@ -188,16 +224,60 @@ plt.close(fig)
 
 # velocity/budget to enforce
 fig, axs = plt.subplots(2)
+insertScanLatency_copy = []
+obs_dist_statistics_min_copy = []
+x_copy = []
+planner_drone_radius = 1.5
+gap_statistics_avg_copy= []
+pc_res_copy = []
+min_of_two_space_dist = []
+for idx, el in enumerate(insertScanLatency):
+    if el < .001 or el > 20:
+        continue
+    else:
+        insertScanLatency_copy.append(el)
+        obs_dist_statistics_min_copy.append(obs_dist_statistics_min[idx])
+        x_copy.append(x[idx])
+        gap_statistics_avg_copy.append(min(gap_statistics_avg[idx], sensor_max_range))
+        pc_res_copy.append(pc_res[idx])
+        min_of_two_space_dist.append(min(min(gap_statistics_avg[idx], sensor_max_range), abs(obs_dist_statistics_min[idx])))
+
 #axs[1].plot(x, end_to_end_latency=" end_to_end_latency")
+"""
 axs[1].set_yscale('linear')
-axs[1].plot(x, obs_dist_statistics_min)
+axs[1].plot(x_copy, obs_dist_statistics_min_copy, marker="o", label="dist to closest obstacle")
+axs[1].plot(x_copy, [.3]*len(obs_dist_statistics_min_copy), marker="o", label="assumed distance to closest obstacle")
 axs[1].set(xlabel="mission  progression (s)", ylabel=" min distance to obst")
 axs[1].legend(loc='best')
 
-axs[0].plot(x, sensor_to_actuation_time_budget_to_enforce, label="insertScanLatency")
-axs[0].set(xlabel="mission  progression (s)", ylabel=" octomap latency ")
-axs[0].legend(loc='best')
-output_file = "obst_dist_om_time" + ".png"
+axs[2].set_yscale('linear')
+axs[2].plot(x_copy, gap_statistics_avg_copy, label="average distance between visible obstalces", marker="o")
+axs[2].plot(x_copy, [(2+(2*.3))]*len(gap_statistics_avg_copy), label="assumed fix average distance between visible obstacles", marker="o")
+axs[2].set(xlabel="mission  progression (s)", ylabel="gap_statistics_avg ")
+axs[2].legend(loc='best')
+
+axs[3].set_yscale('linear')
+axs[3].plot(x_copy, min_of_two_space_dist, label="", marker="o")
+axs[3].set(xlabel="mission  progression (s)", ylabel="min_of_two_space_dist")
+axs[3].legend(loc='best')
+"""
+axs[1].set_yscale('log')
+axs[1].plot(x_copy, pc_res_copy, label="Actual Dynamic Precision Demand", marker="o")
+axs[1].plot(x_copy, [.6]*len(pc_res_copy), label="Assumed Static Precision Demand (cm)", marker="o")
+axs[1].set(xlabel="Mission  Progression (s)", ylabel="Precision Demanded (cm)")
+axs[1].legend(loc='upper left')
+
+axs[0].set_yscale('linear')
+axs[0].plot(x_copy, insertScanLatency_copy, label="Actual Dynamic Response Time (s) ", marker="o")
+axs[0].plot(x_copy, [.7]*len(insertScanLatency_copy), label="Assumed Static Response Time (s)", marker="o")
+axs[0].set(xlabel="Mission  Progression (s)", ylabel=" Reponse Time (s)")
+axs[0].legend(loc='upper right')
+
+#axs[2].plot(x, pc_res, label="pc_res")
+#axs[2].set(xlabel="mission  progression (s)", ylabel=" pc res")
+#axs[2].legend(loc='best')
+#
+output_file = "space_res" + ".png"
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
 

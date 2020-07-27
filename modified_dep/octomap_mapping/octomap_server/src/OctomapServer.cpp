@@ -424,6 +424,9 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 	om_to_pl_res = pcl_aug_data->controls.cmds.om_to_pl_res;
 	pc_pre_pub_time = pcl_aug_data->ee_profiles.actual_time.pc_pre_pub_time_stamp;
 	om_latency_expected = pcl_aug_data->ee_profiles.expected_time.om_latency;
+	om_start_time = ros::Time::now();
+
+
 
 
 	// fill out the gap map
@@ -685,6 +688,10 @@ void OctomapServer::SaveMapCb(std_msgs::Bool msg){
 }
 
 
+bool inline OctomapServer::is_budget_exceeded (){
+	return (om_latency_expected - ((ros::Time::now() - om_start_time).toSec()) < 0);
+}
+
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
 
 
@@ -702,7 +709,6 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
    closest_obs_coord = m_octree->keyToCoord(closest_obs_key, om_to_pl_depth_to_look_at);
    auto sensor_origin_key = m_octree->coordToKey(sensorOrigin, om_to_pl_depth_to_look_at);
    auto sensor_origin_corrected = m_octree->keyToCoord(sensor_origin_key, om_to_pl_depth_to_look_at);
-
 
 
 
@@ -752,7 +758,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   // insert ground points only as free:
   for (PCLPointCloud::const_iterator it = ground.begin(); it != ground.end(); ++it){
       pc_vol_actual = (free_cells.size() + occupied_cells.size())*pow(m_res,3);
-	  if (pc_vol_actual >= pc_vol_ideal){
+      if (pc_vol_actual >= pc_vol_ideal || is_budget_exceeded()){
     	/*
     	double error = (pc_vol_actual - pc_vol_ideal)/pc_vol_ideal;
     	if (error > .12){
@@ -863,29 +869,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   int free_cells_cnt = 0; // -- keep track of number of free cells (can't get this from free_cell.size() because of the overlap between occupied and free cell)
   float depth_acc_touched = 0;
   int cell_touched_cnt = 0;
-  for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ++it){
-	  auto coordinate_om = m_octree->keyToCoord(*it, depth_to_look_at);
-	  tree_max_x = max(tree_max_x, coordinate_om.x());
-	  tree_max_y = max(tree_max_y, coordinate_om.y());
-	  tree_max_z = max(tree_max_z, coordinate_om.z());
-
-	  if (occupied_cells.find(*it) == occupied_cells.end()){
-    	const OcTreeKey my_key = *it;
-    	//auto my_key_ = m_octree->adjustKeyAtDepth(my_key,10);
-    	auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, false, false);
-
-    	//auto coordinate = m_octree->keyToCoord(*it);
-    	//auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), false);
-    	//cell_touched_cnt +=1;
-    	//ros::Time low_res_start = ros::Time::now() ;
-    	//update_lower_res_map(coordinate, high_res_node);
-    	//update_low_res_total += (ros::Time::now() - low_res_start).toSec();
-    	free_cells_cnt +=1;
-	  }
-  }
-
   // now mark all occupied cells:
-  for (KeySet::iterator it = occupied_cells.begin(), end=occupied_cells.end(); it!= end; it++) {
+  for (KeySet::iterator it = occupied_cells.begin(), end=occupied_cells.end(); it!= end && !is_budget_exceeded(); it++) {
 	  const OcTreeKey my_key = *it;
 	  //auto my_key_ = m_octree->adjustKeyAtDepth(my_key,10);
 	  auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, true, false);
@@ -909,6 +894,29 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 	  //update_low_res_total += (ros::Time::now() - low_res_start).toSec();
   }
 
+for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end && !is_budget_exceeded(); ++it){
+	auto coordinate_om = m_octree->keyToCoord(*it, depth_to_look_at);
+	  tree_max_x = max(tree_max_x, coordinate_om.x());
+	  tree_max_y = max(tree_max_y, coordinate_om.y());
+	  tree_max_z = max(tree_max_z, coordinate_om.z());
+
+	  if (occupied_cells.find(*it) == occupied_cells.end()){
+    	const OcTreeKey my_key = *it;
+    	//auto my_key_ = m_octree->adjustKeyAtDepth(my_key,10);
+    	auto high_res_node = m_octree->updateNode((OcTreeKey) my_key, false, false);
+
+    	//auto coordinate = m_octree->keyToCoord(*it);
+    	//auto high_res_node = m_octree->updateNode(coordinate.x(), coordinate.y(), coordinate.z(), false);
+    	//cell_touched_cnt +=1;
+    	//ros::Time low_res_start = ros::Time::now() ;
+    	//update_lower_res_map(coordinate, high_res_node);
+    	//update_low_res_total += (ros::Time::now() - low_res_start).toSec();
+    	free_cells_cnt +=1;
+	  }
+  }
+
+
+
  // auto free_cell_volume = free_cells_cnt*pow(pc_res, 3); // -- we use pc_res instead of octomap->resolution() because exposed resolution is how point cloud is spaced out,
   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
   //auto occupied_cell_volume = occupied_cells.size()*pow(pc_res, 3);
@@ -923,7 +931,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   profiling_container.capture("perceived_closest_obs_distance", "single", dist_to_closest_obs, capture_size);
   profiling_container.capture("octomap_calc_disjoint_and_update", "end", ros::Time::now(), capture_size);
   octomap_aug_data.ee_profiles.space_stats.pc_vol_unit_cube = pc_vol_actual/pow(m_res, 3);
-  //ROS_INFO_STREAM("=== *(**********  ** pc_vol_unit_cube"<< pc_vol_actual/pow(m_res, 3));
+  //ROS_INFO_STREAM("=== *(**********  ** pc_vol_unit_cube"<< pc_vol_actual);
   //ROS_INFO_STREAM("===== pc_vol_unit_cube actually consumed"<< occupied_cells.size() + free_cells_cnt);
   octomap_aug_data.ee_profiles.space_stats.pc_occupied_vol_unit_cube = occupied_cells.size();
   octomap_aug_data.ee_profiles.space_stats.pc_free_vol_unit_cube = free_cells_cnt;

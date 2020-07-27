@@ -70,9 +70,10 @@ class SmartQueue:
             return avg(self.storage)
 r_max_queue = SmartQueue(5)
 
+motivation_section = False
 def run_optimizer(control):
     cmd_rcvd_time = rospy.Time.now()
-    global r_max_queue, use_gap_map 
+    global r_max_queue, use_gap_map, motivation_section, r_max_queue
     rt_max = control.inputs.max_time_budget 
     cur_vel_mag = rospy.get_param("velocity_to_budget_on")
     #print("====cur vel amg " + str(cur_vel_mag)) 
@@ -114,7 +115,11 @@ def run_optimizer(control):
     #obs_dist_min = min(control.inputs.obs_dist_statics_min_from_om)
     #print("=================================avg gap size" + str(control.inputs.gap_statistics_avg))
     #r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
+#    r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
     r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
+    #if motivation_section:
+    #    r_max_temp = control.inputs.obs_dist_statistics_min # - drone_radius  # min is because we want the tigher bound of the two:
+
     if (use_gap_map):
         r_max_temp = min(r_max_temp, gap_map_gap)
     global distance_to_goal
@@ -177,6 +182,12 @@ def run_optimizer(control):
         global om_popt, om_pl_popt, pp_pl_popt, typical_model
 
         v_min_list_copy = v_min_list[:]
+        """ 
+        if motivation_section:
+            v_min_list = [50000, 150000, 150000]
+            v_max_list = [50000, 150000, 150000]
+        """
+
         while True:
             om_response_time_min = calculate_fitted_value(om_popt, r_max_, v_min_list[0], typical_model)
             om_pl_response_time_min = calculate_fitted_value(om_pl_popt, r_max_, v_min_list[1], typical_model)
@@ -184,6 +195,8 @@ def run_optimizer(control):
             if om_response_time_min + om_pl_response_time_min + pp_pl_response_time_min < rt_d:
                 break
             v_min_list = [.99*v_min_list[0] , v_min_list[1], .9*v_min_list[2]]
+            
+
             #print(v_min_list) 
             #print(rt_d)
             #print("&&&&&&&&& ------------ this can not happend")
@@ -379,7 +392,7 @@ def control_callback(control):
     rospy.set_param("y_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.y))
     rospy.set_param("z_coord_while_budgetting", float(control.internal_states.drone_point_while_budgetting.z))
     rospy.set_param("vel_mag_while_budgetting", float(control.internal_states.drone_point_while_budgetting.vel_mag))
-
+    rospy.set_param("closest_unknown_distance", float(control.internal_states.closest_unknown_distance))
 
 
 
@@ -399,7 +412,7 @@ num_of_processors  = 0
 if __name__ == '__main__':
     global num_of_processors 
     global om_popt, om_pl_popt, pp_pl_popt,typical_model
-    global distance_to_goal, gap_map_gap, use_gap_map
+    global distance_to_goal, gap_map_gap, use_gap_map, motivation_section,r_max_queue
     
     result_folder = os.getenv('base_dir') + "/src/MAV_apps/common/run_time/src/knob_performance_modeling_all/data_1"
     om_res, om_vol, om_response_time_measured, om_pl_res, om_pl_vol, om_pl_response_time_measured, pp_pl_res, pp_pl_vol, pp_pl_response_time_measured = collect_data(result_folder)
@@ -429,12 +442,15 @@ if __name__ == '__main__':
     r_max_static = (2 ** r_steps) * r_min_static
     use_gap_map = rospy.get_param("use_gap_map")
     rospy.set_param("pyrun_rcvd_models", True) # this is a signal to everyone else to start their run
-
-
+   
     while not rospy.is_shutdown():
         #rt_max = rospy.get_param("max_time_budget")
         drone_radius = rospy.get_param("planner_drone_radius")
         distance_to_goal = rospy.get_param("distance_to_goal")
         gap_map_gap = rospy.get_param("gap_map_gap")
+        motivation_section = rospy.get_param("motivation_section")
+        if motivation_section:
+            r_max_queue = SmartQueue(1)
         #failure_ctr_for_pc_res = rospy.get_param("failure_ctr_for_pc_res")
+        
         rate.sleep()

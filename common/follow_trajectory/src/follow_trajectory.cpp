@@ -397,10 +397,12 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("x_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.x, 1);
 	profiling_container->capture("y_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.y, 1);
 	profiling_container->capture("z_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.z, 1);
+	profiling_container->capture("closest_unknown_distance", "single", msg->controls.internal_states.closest_unknown_distance, 1);
 	profiling_container->capture("vel_mag_while_budgetting", "single", msg->controls.inputs.velocity_to_budget_on, 1);
 	profiling_container->capture("gap_statistics_min", "single", msg->controls.inputs.gap_statistics_min, 1);
 	profiling_container->capture("gap_statistics_max", "single", msg->controls.inputs.gap_statistics_max, 1);
 	profiling_container->capture("obs_dist_statistics_min", "single", msg->controls.inputs.obs_dist_statistics_min, 1);
+	profiling_container->capture("gap_statistics_avg", "single", msg->controls.inputs.gap_statistics_avg, 1);
 	profiling_container->capture("pc_res", "single", msg->controls.cmds.pc_res, 1);
 	profiling_container->capture("om_to_pl_res", "single", msg->controls.cmds.om_to_pl_res, 1);
 
@@ -899,10 +901,12 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("x_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.x, 1);
 	profiling_container->capture("y_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.y, 1);
 	profiling_container->capture("z_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.z, 1);
+	profiling_container->capture("closest_unknown_distance", "single", msg->controls.internal_states.closest_unknown_distance, 1);
 	profiling_container->capture("vel_mag_while_budgetting", "single", msg->controls.inputs.velocity_to_budget_on, 1);
 	profiling_container->capture("gap_statistics_min", "single", msg->controls.inputs.gap_statistics_min, 1);
 	profiling_container->capture("gap_statistics_max", "single", msg->controls.inputs.gap_statistics_max, 1);
 	profiling_container->capture("obs_dist_statistics_min", "single", msg->controls.inputs.obs_dist_statistics_min, 1);
+	profiling_container->capture("gap_statistics_avg", "single", msg->controls.inputs.gap_statistics_avg, 1);
 	profiling_container->capture("pc_res", "single", msg->controls.cmds.pc_res, 1);
 	profiling_container->capture("om_to_pl_res", "single", msg->controls.cmds.om_to_pl_res, 1);
 

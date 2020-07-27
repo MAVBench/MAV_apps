@@ -21,6 +21,8 @@ import json
 import argparse
 import os
 import time
+from collections import OrderedDict 
+
 
 #time.sleep(5)
 
@@ -78,7 +80,7 @@ def extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds):
 
     return obs_dict
 
-def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, spread_of_obstacles = -1, 
+def space_overlay(x,y, metric_values, obstacle_coords, title, static_value = 0, resolution = -1, spread_of_obstacles = -1, 
         x_input_bound={"min":-1,"max":-1}, y_input_bound = {"min":-1,"max":-1}, larger_is_better=True):
 
     if resolution == -1: resolution = 1
@@ -112,68 +114,99 @@ def space_overlay(x,y, metric_values, obstacle_coords, title, resolution = -1, s
     y_offset = -int(y_bounds["min"]) # offset by the min for array index placement
     x_range = ceil(x_bounds["max"] - x_bounds["min"]) 
     y_range = ceil(y_bounds["max"] - y_bounds["min"])
-    space_mat = np.empty(shape=(y_range, x_range))
-    space_mat[:] = np.nan # so that coords we don't have data for are greyed out
+    space_mat_dynamic = np.empty(shape=(y_range, x_range))
+    space_mat_dynamic [:] = np.nan # so that coords we don't have data for are greyed out
+    space_mat_static = np.empty(shape=(y_range, x_range))
+    space_mat_static [:] = np.nan # so that coords we don't have data for are greyed out
+
+
+    # modify the title and cap at max 
+    sensor_max_range = 25 
+    max_metric_value = 1000000
+    plot_title = title 
+    if (title == "closest_unknown_distance"):
+        max_metric_value = sensor_max_range
+        plot_title = "Sensor Visibility (m)"
+    elif (title== "sensor_to_actuation_time_budget_to_enforce"):
+        max_metric_value = 15
+        plot_title = "Time Budget (s)"
+    elif (title== "pc_res"):
+        plot_title = "Precision (Voxel Size in cm)"
+    elif (title== "insertScanLatency"):
+        plot_title = "Response Time (s)"
+    elif (title== "vel_mag_while_budgetting"):
+        plot_title = "Acutuation Velocity (m/s)"
+    elif (title== "octomap_volume_integrated"):
+        plot_title = "Space Volume Processed (m3)"
+
 
     # binning the points
     for i in range(0, len(x)):
         x_rounded = int(float(x[i])/resolution) + x_offset
         y_rounded = int(float(y[i])/resolution) + y_offset
         if x_rounded < x_range and y_rounded < y_range:
-            space_mat[y_rounded][x_rounded] = metric_values[i]
+            space_mat_dynamic[y_rounded][x_rounded] = min(metric_values[i], max_metric_value)
+            space_mat_static[y_rounded][x_rounded] = static_value
        
     # plotting 
-    fig, ax = plt.subplots(figsize=(12,12))
-    plt.title(title, fontsize=18)
-    ttl = ax.title
-    ttl.set_position([0.5, 1.05])
-
+    space_mat_dict =  OrderedDict()
+    space_mat_dict ["static"] = space_mat_static
+    space_mat_dict ["dynamic"] = space_mat_dynamic
+    fig, axs = plt.subplots(1, 2)
+    
     # overlaying obstacles on top of plot
-
     # we pass all the obstacle coords scaled by resolution since the x_bounds
     # and y_bounds are scaled as well
     obstacle_coords_scaled = np.array(obstacle_coords) / resolution
     obs_dict = extract_obstacles(obstacle_coords_scaled, x_bounds, y_bounds)
     n_obs = obs_dict["n_obstacles"]
+    ctr = 0 
+    plt.suptitle(plot_title) 
+    for key in space_mat_dict.keys():
+        axs[ctr].set_title(key, fontsize=10)
+        ttl = axs[ctr].title
+        #ttl.set_position([0.5, 1.05])
+        for i in range(0, n_obs):
+            origin = obs_dict['origin'][i]
+            width = obs_dict['width'][i]
+            height = obs_dict['height'][i]
+            axs[ctr].add_patch(
+                    patches.Rectangle(origin, width, height, color="black", linewidth=0)
+                    )
+        sns.set()
 
-    for i in range(0, n_obs):
-        origin = obs_dict['origin'][i]
-        width = obs_dict['width'][i]
-        height = obs_dict['height'][i]
-        ax.add_patch(
-                patches.Rectangle(origin, width, height, color="black", linewidth=0)
-                )
+        colormap='RdYlGn'
+        if not larger_is_better:
+            # reverses colormap
+            colormap += '_r'
 
-    sns.set()
+        
+        if key == "dynamic":
+            cbar_predicate = True
+        else:
+            cbar_predicate = False
+        sns.heatmap(space_mat_dict[key], cmap=colormap, cbar=cbar_predicate, ax=axs[ctr], square=True)
+        #axs[ctr] = plt.gca()
 
-    colormap='RdYlGn'
-    if not larger_is_better:
-        # reverses colormap
-        colormap += '_r'
+        # setting ticks and tick positions on axes
 
-    sns.heatmap(space_mat, cmap=colormap, ax=ax, square=True)
-    ax = plt.gca()
+        n_ticks = 15
 
-    # setting ticks and tick positions on axes
+        x_tick_locs = np.rint(np.linspace(x_bounds["min"], x_bounds["max"], n_ticks)) + x_offset
+        y_tick_locs = np.rint(np.linspace(y_bounds["min"], y_bounds["max"], n_ticks)) + y_offset
 
-    n_ticks = 15
+        # scale back by resolution and round since we want absolute units on the labels
+        x_tick_labels = np.rint(np.linspace(x_bounds["min"], x_bounds["max"], n_ticks)) * resolution
+        y_tick_labels = np.rint(np.linspace(y_bounds["min"], y_bounds["max"], n_ticks)) * resolution
 
-    x_tick_locs = np.rint(np.linspace(x_bounds["min"], x_bounds["max"], n_ticks)) + x_offset
-    y_tick_locs = np.rint(np.linspace(y_bounds["min"], y_bounds["max"], n_ticks)) + y_offset
-
-    # scale back by resolution and round since we want absolute units on the labels
-    x_tick_labels = np.rint(np.linspace(x_bounds["min"], x_bounds["max"], n_ticks)) * resolution
-    y_tick_labels = np.rint(np.linspace(y_bounds["min"], y_bounds["max"], n_ticks)) * resolution
-
-    ax.set_xticks(x_tick_locs)
-    ax.set_yticks(y_tick_locs)
-    ax.set_xticklabels(x_tick_labels)
-    ax.set_yticklabels(y_tick_labels)
-
-    ax.set_ylim(ax.get_ylim()[::-1])
-
+        axs[ctr].set_xticks(x_tick_locs)
+        axs[ctr].set_yticks(y_tick_locs)
+        axs[ctr].set_xticklabels(x_tick_labels)
+        axs[ctr].set_yticklabels(y_tick_labels)
+        axs[ctr].set_ylim(axs[ctr].get_ylim()[::-1])
+        ctr +=1
     plt.savefig(result_folder + "/" + title)
-    
+        
 
 # data to collect
 metrics_to_collect_easy = []
@@ -184,7 +217,10 @@ metrics_to_collect_hard = [
         "sensor_to_actuation_time_budget_to_enforce", 
         "octomap_volume_integrated",
         "pc_res",
-        "obs_dist_statistics_min"
+        "obs_dist_statistics_min",
+        "insertScanLatency",
+	"closest_unknown_distance",
+
 ]
 
 # parse  data
@@ -206,18 +242,34 @@ metrics_to_overlay = [
         "sensor_to_actuation_time_budget_to_enforce", 
         "octomap_volume_integrated",
         "pc_res",
-        "obs_dist_statistics_min"
+        "obs_dist_statistics_min",
+        "insertScanLatency",
+	"closest_unknown_distance",
 ]
 
 x_input_bound = {"min": bounds[0], "max": bounds[1]}
 y_input_bound = {"min": bounds[2], "max": bounds[3]}
 
+static_value_dict = {}
+static_value_dict["vel_mag_while_budgetting"] = 3.2
+static_value_dict["sensor_to_actuation_time_budget_to_enforce"] = 2 
+static_value_dict["octomap_volume_integrated"] = 46000
+static_value_dict["obs_dist_statistics_min"] = .3
+static_value_dict["pc_res"] = .6
+static_value_dict["insertScanLatency"] = .7 
+static_value_dict["closest_unknown_distance"] = 8 
+
+
 for metric_to_overlay in metrics_to_overlay:
     metric_values = result_dic[metric_to_overlay]
+    larger_is_better_predicate = True
+    if metric_to_overlay in ["insertScanLatency"]:
+        larger_is_better_predicate = False
     space_overlay(x_coord_while_budgetting, y_coord_while_budgetting, 
-            metric_values, obstacle_coords,  metric_to_overlay, grid_resolution, 
+            metric_values, obstacle_coords,  metric_to_overlay, static_value_dict[metric_to_overlay],
+            grid_resolution, 
             spread_of_obstacles,
             x_input_bound=x_input_bound, 
             y_input_bound=y_input_bound,
-            #larger_is_better=False
+            larger_is_better= larger_is_better_predicate
     )

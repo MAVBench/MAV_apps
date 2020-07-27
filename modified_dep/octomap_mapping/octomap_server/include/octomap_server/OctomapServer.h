@@ -104,6 +104,7 @@ public:
 
  ros::Time pc_capture_time, pc_pre_pub_time; // -- time insertCloud was called
  double om_latency_expected;
+ ros::Time om_start_time;
  std::string voxel_type_to_publish;
  DataContainer profiling_container;
  ProfileManager my_profile_manager;
@@ -284,7 +285,7 @@ protected:
 
   void adjustMapData(nav_msgs::OccupancyGrid& map, const nav_msgs::MapMetaData& oldMapInfo) const;
   void SaveMapCb(std_msgs::Bool msg);
-
+  bool is_budget_exceeded ();
 
   void update_lower_res_map(octomap::point3d , octomap::OcTreeNode* node);
   inline void update_closest_obstacle(octomap::point3d coordinate, octomap::point3d sensorOrigin); //update the cloests obstacle distance and coordinates. It's conservate (read description in .cpp)

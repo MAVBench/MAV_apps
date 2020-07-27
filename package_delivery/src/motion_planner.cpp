@@ -2322,7 +2322,7 @@ bool MotionPlanner::traj_colliding(mavbench_msgs::multiDOFtrajectory *traj, mavb
             break;
         }else{
         	if (!isnan(closest_unknown_point.x) && !first_unknown_collected){
-        		if (pos1.pt_ctr >= last_unknown_pt_ctr && true){  // if smaller, what that means is that the unknown is discovered because we lowered the voxel
+        		if (pos1.pt_ctr >= last_unknown_pt_ctr || true){  // if smaller, what that means is that the unknown is discovered because we lowered the voxel
         												 // size, however, this is really not an issue because in our subsampling, we would
         											     // made sure to include any point that would be been an obstacle
         												 // so we won't be mistakenly thinking that an unknown is free because of subsampling
