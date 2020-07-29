@@ -168,6 +168,7 @@ def run_optimizer(control):
     if om_response_time_max + om_pl_response_time_max + pp_pl_response_time_max > rt_d:
         print("&&&&&&&&& ------------ this can not happend")
     """
+    ran_out_of_time = False
     for i in np.arange(1, 15, .1):
         v_min_list = [min(v_min, .9*v_sensor_max)] * 2 + [ppl_vol_min]  # not that .9*v_sensor_max is there
                                                                         # because sometimes, we actually might have a smaller
@@ -260,7 +261,11 @@ def run_optimizer(control):
                   G=G,
                   d=d)
 
+
         rt_d_ = rt_d/i
+        if (rt_d - (rospy.Time.now() - cmd_rcvd_time).to_sec()) < 0: # don't have time for another round
+            ran_out_of_time = True
+
         #print("well now 00000000000000000000" +str(rt_d_))
         # Optimization parameters #
         x0 = np.array([1/0.5, 1/0.5, (r_max_/r_min_static)*5000, 3*planning_failure_cntr_coeff*(r_max_/r_min_static)*5000, 3*planning_failure_cntr_coeff*r_max_*5000])
@@ -283,8 +288,8 @@ def run_optimizer(control):
         if results.success:
             break
 
-    if not results.success:
-        if (time_budget_left_to_distribute - ((rospy.Time.now() - cmd_rcvd_time).to_sec())) < front_end_latency: # don't have time for another round
+    if not results.success or ran_out_of_time:
+        if (time_budget_left_to_distribute - ((rospy.Time.now() - cmd_rcvd_time).to_sec())) < front_end_latency or ran_out_of_time: # don't have time for another round
             #print("-----------------**********&&&&budget is less than 0.this really shouldn't happen")
             failure_status = 2
         else:
@@ -329,7 +334,14 @@ def control_callback(control):
 
     # todo: add guards for minimums and maximus
     # kosherize the resolution to be an eponent of 2* base
-    if results.success:
+    if failure_status in [1,2]:
+        rospy.set_param("optimizer_failure_status", failure_status)
+        rospy.set_param("optimizer_succeeded", False)
+        rospy.set_param("log_control_data", False)
+        rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
+        # print("====================optimizer failed with status " + str(failure_status))
+        return
+    else:  # success
         r0_hat = results.x[0]
         r1_hat = results.x[1]
         v0_hat = results.x[2]
@@ -360,13 +372,7 @@ def control_callback(control):
         ppl_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
         smoothening_latency_expected = results.exp_task_times[2]/pl_to_ppl_ratio
         #print("$$$$$$$$$$$$$$$$ optimizer succeeded with status " + str(failure_status))
-    else:
-        rospy.set_param("optimizer_failure_status", failure_status)
-        rospy.set_param("optimizer_succeeded", False)
-        rospy.set_param("log_control_data", False)
-        rospy.set_param("new_control_data", True)  # Important: set this one last to ensure all other knobs/vars are set
-        #print("====================optimizer failed with status " + str(failure_status))
-        return
+
 
     rospy.set_param("optimizer_succeeded", True)
     rospy.set_param("log_control_data", True)

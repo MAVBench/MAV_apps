@@ -841,7 +841,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     	  free_cells.insert(m_keyRay.begin(), m_keyRay.end());
         octomap::OcTreeKey endKey;
         if (m_octree->coordToKeyChecked(new_end, endKey)){
-          free_cells.insert(endKey);
+          free_cells.insert(m_octree->adjustKeyAtDepth(endKey, depth_to_look_at));
+          //free_cells.insert(endKey);
           updateMinKey(endKey, m_updateBBXMin);
           updateMaxKey(endKey, m_updateBBXMax);
         } else{
@@ -926,6 +927,9 @@ for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end && 
   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 //    hence, tehnically, that's the volume we cover
   auto occupied_cell_volume = occupied_cells.size()*pow(m_res, 3);
 
+
+  pc_vol_actual = free_cell_volume + occupied_cell_volume;
+
   profiling_container.capture(std::string("octomap_avg_depth_touched"), "single", (float) depth_acc_touched/cell_touched_cnt, capture_size);
   profiling_container.capture(std::string("update_lower_res_map"), "single", update_low_res_total , capture_size);
   profiling_container.capture("perceived_closest_obs_distance", "single", dist_to_closest_obs, capture_size);
@@ -1006,7 +1010,6 @@ for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end && 
     //m_octree_lower_res->prune();
   }
 
-  //pc_vol_actual = free_cell_volume + occupied_cell_volume;
 
   profiling_container.capture("octomap_prune_in_octomap_server", "end", ros::Time::now(), capture_size);
 
@@ -1923,7 +1926,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  int binary_search_cntr_threshold = 9;
  int binary_search_cntr= 0;
  double error = INFINITY;
- MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
+ MapToTransferSideLength = (int)(upper_bound_MapToTransferSideLength);
 
  // conduct a binary search to find the betst MapToTransferSideLength
 
@@ -1943,7 +1946,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	 gridSideLength = float(MapToTransferSideLength)/gridSliceCountPerSide;
 	 gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
 	 MapToTransferBorrowedDepth = m_octree->getTreeDepth() - int(log2(gridSideLength/m_res_original)) - 1;
-	 generateOffSets(offset_vals, gridSideLength, gridSideLength/4, gridSliceCountToInclude, gridMode) ;
+	 generateOffSets(offset_vals, gridSideLength, gridSideLength, gridSliceCountToInclude, gridMode) ;
 	 for (auto it = offset_vals.begin(); it != offset_vals.end(); it++) {
 		 point3d offset_point = *it;
 		 auto point_to_consider = sensorOrigin + offset_point;
@@ -1956,7 +1959,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 			 if (std::find(octomap_block_vec.begin(), octomap_block_vec.end(),m_octree_block) !=octomap_block_vec.end()) {
 				 continue;
 			 }
-	//		 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
+			 //om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res, 3));
 			 om_to_pl_vol_actual +=  (m_octree_block->getVolumeInUnitCube()*pow(m_res_original, 3));
 			 octomap_block_vec.push_back(m_octree_block);
 		 }
@@ -1967,10 +1970,11 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	 if (error < .05 || binary_search_cntr > binary_search_cntr_threshold) {
 		 break;
 	 }else{
+		 int incr = (int) ((upper_bound_MapToTransferSideLength - lower_bound_MapToTransferSideLength)/8);
 		 if (om_to_pl_vol_actual > om_to_pl_vol_ideal){
-			 upper_bound_MapToTransferSideLength  = MapToTransferSideLength;
+			 upper_bound_MapToTransferSideLength  -=  incr;
 		 }else{
-			 lower_bound_MapToTransferSideLength  = MapToTransferSideLength;
+			 lower_bound_MapToTransferSideLength  += MapToTransferSideLength;
 		 }
 		 MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
 	 }
@@ -2131,11 +2135,12 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	  map.header.stamp = ros::Time::now();
 	  octomap_aug_data.header.stamp = ros::Time::now();
 	  octomap_aug_data.oct = map;
-	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
+	  //octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual; // -- this is a hack, sicne I have overwritten the field value with volume
+	  octomap_aug_data.ee_profiles.actual_cmds.pc_vol = pc_vol_actual;
 	  octomap_aug_data.ee_profiles.space_stats.pc_vol_maxium_underestimated = pc_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_vol_maxium_underestimated = om_to_pl_vol_maximum_underestimated; // -- this is a hack, sicne I have overwritten the field value with volume
 	  octomap_aug_data.ee_profiles.space_stats.om_to_pl_datamovement = ros::serialization::serializationLength(map);
-	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = om_to_pl_vol_actual;
+	  octomap_aug_data.ee_profiles.actual_cmds.om_to_pl_vol = volume_communicated_in_unit_cubes*pow(m_res_original, 3);
 	  octomap_aug_data.ee_profiles.actual_time.om_latency = (ros::Time::now()  - pc_capture_time).toSec();
 	  octomap_aug_data.ee_profiles.actual_time.om_pre_pub_time_stamp =  ros::Time::now();
 	  profiling_container.capture("octomap_serialization_time", "end", ros::Time::now(), capture_size);
@@ -2145,7 +2150,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
   }
   else
     ROS_ERROR("Error serializing OctoMap");
-  auto total_volume = volume_communicated_in_unit_cubes*pow(om_to_pl_res, 3);
+  auto total_volume = volume_communicated_in_unit_cubes*pow(m_res_original, 3);
 
   debug_data.octomap_volume_communicated =    total_volume;
   debug_data.octomap_serialization_time =  profiling_container.findDataByName("octomap_serialization_time")->values.back();
