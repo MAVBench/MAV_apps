@@ -23,14 +23,15 @@ result_folder = "./data_1/system_results"
 input_file_name_static = "static/static_stats.json"
 input_filepath_static = result_folder + "/" + input_file_name_static
 
-input_file_name_dynamic = "dynamic/dynamic_stats.json"
+#input_file_name_dynamic = "dynamic/dynamic_stats.json"
+input_file_name_dynamic = "dynamic_stats.json"
 input_filepath_dynamic = result_folder + "/" + input_file_name_dynamic
 
 
 time_sampling_data_file = "./data_1/stats_mu.json"
 
 # data to collect
-metrics_to_collect_easy = []
+metrics_to_collect_easy = ["experiment_number"]
 metrics_to_collect_hard = ["depthToPCConversionLatency",
 "runDiagnosticsLatency",
 "runTimeLatency",
@@ -494,15 +495,15 @@ for idx, el in enumerate(mode_result_dict["dynamic"]["sensor_to_actuation_time_b
         x_copy.append(x[idx])
 
 
-fig, axs = plt.subplots(2)
+fig, axs = plt.subplots()
 #axs[1].plot(x, ee_latency=" end_to_end_latency")
-axs[1].set_yscale('linear')
-axs[1].plot(x_copy, vel_mag_while_budgetting_copy, marker="o", label="Acutal Dynamic Velocity (m/s)")
-axs[1].set(xlabel="Mission  Progression (s)", ylabel=" Velocity(m/s)")
-axs[1].legend(loc='best')
-axs[1].plot(x_copy, [3.2]*len(vel_mag_while_budgetting_copy), marker="o", label="Assumed Static Velocity (m/s)")
-#axs[1].set(xlabel="mission  progression (s)", label = "velocity (m/s)")
-axs[1].legend(loc='upper left')
+#axs[1].set_yscale('linear')
+#axs[1].plot(x_copy, vel_mag_while_budgetting_copy, marker="o", label="Acutal Dynamic Velocity (m/s)")
+#axs[1].set(xlabel="Mission  Progression (s)", ylabel=" Velocity(m/s)")
+#axs[1].legend(loc='best')
+#axs[1].plot(x_copy, [3.2]*len(vel_mag_while_budgetting_copy), marker="o", label="Assumed Static Velocity (m/s)")
+##axs[1].set(xlabel="mission  progression (s)", label = "velocity (m/s)")
+#axs[1].legend(loc='upper left')
 
 
 
@@ -514,12 +515,12 @@ axs[2].set(xlabel="mission  progression (s)", ylabel="visibility (s) ")
 axs[2].legend(loc='best')
 """
 
-axs[0].set_yscale('linear')
-axs[0].plot(x_copy, sensor_to_actuation_time_budget_to_enforce_copy, label="Actual Dynamic Time Budget (s)", marker="o")
-axs[0].plot(x_copy, [2]*len(sensor_to_actuation_time_budget_to_enforce_copy), label="Assumed Static Time Budget", marker="o")
-axs[0].set(xlabel="mission  progression (s)", ylabel="time budget(s) ")
-axs[0].legend(loc='upper right')
-output_file = "vel_res" + "_SA.png"
+axs.set_yscale('linear')
+axs.plot(x_copy, sensor_to_actuation_time_budget_to_enforce_copy, label="Actual Run-time Time Budget (s)")
+axs.plot(x_copy, [.9]*len(sensor_to_actuation_time_budget_to_enforce_copy), label="Assumed Design-time Budget")
+axs.set(xlabel="Mission  Progression (s)", ylabel="Time Budget(s) ")
+axs.legend(loc='upper right')
+output_file = "time_budget_static_vs_dynamic" + "_SA.png"
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
 
@@ -528,7 +529,7 @@ plt.close(fig)
 
 
 # velocity/budget to enforce
-fig, axs = plt.subplots(2)
+fig, axs = plt.subplots()
 insertScanLatency_copy = []
 obs_dist_statistics_min_copy = []
 x_copy = []
@@ -566,23 +567,23 @@ axs[3].plot(x_copy, min_of_two_space_dist, label="", marker="o")
 axs[3].set(xlabel="mission  progression (s)", ylabel="min_of_two_space_dist")
 axs[3].legend(loc='best')
 """
-axs[1].set_yscale('log')
-axs[1].plot(x_copy, pc_res_copy, label="Actual Dynamic Precision Demand", marker="o")
-axs[1].plot(x_copy, [.6]*len(pc_res_copy), label="Assumed Static Precision Demand (cm)", marker="o")
-axs[1].set(xlabel="Mission  Progression (s)", ylabel="Precision Demanded (cm)")
-axs[1].legend(loc='upper left')
-
-axs[0].set_yscale('linear')
-axs[0].plot(x_copy, insertScanLatency_copy, label="Actual Dynamic Response Time (s) ", marker="o")
-axs[0].plot(x_copy, [.7]*len(insertScanLatency_copy), label="Assumed Static Response Time (s)", marker="o")
-axs[0].set(xlabel="Mission  Progression (s)", ylabel=" Reponse Time (s)")
-axs[0].legend(loc='upper right')
+#axs[1].set_yscale('log')
+#axs[1].plot(x_copy, pc_res_copy, label="Actual Dynamic Precision Demand", marker="o")
+#axs[1].plot(x_copy, [.3]*len(pc_res_copy), label="Assumed Static Precision Demand (cm)", marker="o")
+#axs[1].set(xlabel="Mission  Progression (s)", ylabel="Precision Demanded (cm)")
+#axs[1].legend(loc='upper left')
+#
+axs.set_yscale('linear')
+axs.plot(x_copy, insertScanLatency_copy, label="Actual Run-time Response Time (s) ")
+axs.plot(x_copy, [6.5]*len(insertScanLatency_copy), label="Assumed Design-time Response Time (s)")
+axs.set(xlabel="Mission  Progression (s)", ylabel=" Reponse Time (s)")
+axs.legend(loc='upper right')
 
 #axs[2].plot(x, pc_res, label="pc_res")
 #axs[2].set(xlabel="mission  progression (s)", ylabel=" pc res")
 #axs[2].legend(loc='best')
 #
-output_file = "space_res" + "_SA.png"
+output_file = "response_time_static_vs_dynamic" + "_SA.png"
 fig.savefig(result_folder+"/"+output_file)
 plt.close(fig)
 
