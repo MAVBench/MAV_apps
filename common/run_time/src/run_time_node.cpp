@@ -248,7 +248,7 @@ void closest_unknown_callback(const mavbench_msgs::planner_info::ConstPtr& msg){
 
 
 TimeBudgetter *time_budgetter;
-
+double velocity_magnitude_while_budgetting = 0;
 void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg){
 	/*
 	traj.clear();
@@ -279,7 +279,7 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 	*/
 
     drone_position = drone->position();
-	double velocity_magnitude = time_budgetter->get_velocity_projection_mag(traj[0], closest_unknown_point);
+	velocity_magnitude_while_budgetting = time_budgetter->get_velocity_projection_mag(traj[0], closest_unknown_point);
 	time_budgetter->set_params(vmax_max,g_planner_drone_radius, g_planner_drone_radius_when_hovering);
 	double time_budget = time_budgetter->calc_budget(*msg, &traj, closest_unknown_point, drone_position);
 	if (time_budget == -10){
@@ -301,10 +301,6 @@ void next_steps_callback(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg)
 //	ROS_INFO_STREAM("---- next step"<< control_inputs.sensor_to_actuation_time_budget_to_enforce);
 
 	control.internal_states.sensor_to_actuation_time_budget_to_enforce = time_budget;
-	control.internal_states.drone_point_while_budgetting.x = drone_position.x;
-	control.internal_states.drone_point_while_budgetting.y = drone_position.y;
-	control.internal_states.drone_point_while_budgetting.z = drone_position.z;
-	control.internal_states.drone_point_while_budgetting.vel_mag = velocity_magnitude;
 
 
 	//	ros::param::set("sensor_to_actuation_time_budget_to_enforce", macro_time_budgets[1]);
@@ -1111,6 +1107,11 @@ int main(int argc, char **argv)
     	drone_position = drone->position();
     	//ROS_INFO_STREAM("velocity in run time"<<cur_vel_mag);
 
+    	control.internal_states.drone_point_while_budgetting.x = drone_position.x;
+    	control.internal_states.drone_point_while_budgetting.y = drone_position.y;
+    	control.internal_states.drone_point_while_budgetting.z = drone_position.z;
+    	control.internal_states.drone_point_while_budgetting.vel_mag = velocity_magnitude_while_budgetting;
+
 
     	if (!use_pyrun) { // if not using pyrun. This is mainly used for performance modeling and static scenarios
     		ros::param::set("velocity_to_budget_on", cur_vel_mag);
@@ -1129,6 +1130,10 @@ int main(int argc, char **argv)
     			ros::param::set("log_control_data", true);
     			ros::param::set("new_control_data", true);
     			ros::param::set("optimizer_failure_status", 0);
+    			ros::param::set("x_coord_while_budgetting", drone_position.x);
+    			ros::param::set("y_coord_while_budgetting", drone_position.y);
+    			ros::param::set("z_coord_while_budgetting", drone_position.z);
+    			ros::param::get("/vel_mag_while_budgetting", velocity_magnitude_while_budgetting);
     		} else if (budgetting_mode == "dynamic"){
     			if (reactive_runtime){
     				reactive_budgetting(cur_vel_mag, pc_res_point_count);
