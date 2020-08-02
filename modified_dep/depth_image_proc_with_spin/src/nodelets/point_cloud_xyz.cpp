@@ -1190,8 +1190,7 @@ void filterByNumOfPointsHeightWise(std::vector<float> &xs,  std::vector<float> &
     int height_bucket_idx = (int) (zs[i]/ bucket_width);
     height_counters[height_bucket_idx] += 1;
   }
-
-  // select the pionts closest to the drone (height wise)
+// select the pionts closest to the drone (height wise)
   int max_height_bucket_idx = 0;
   int points_to_include = height_counters[0] + height_counters[1];
   while (points_to_include <= points_budget && max_height_bucket_idx < num_height_buckets) {
@@ -1878,7 +1877,8 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 
   // policty to extend the maximum time budget if we the current time can not afford it
   if (control.inputs.planner_consecutive_failure_ctr > 1){
-	  control.inputs.max_time_budget = standard_max_time_budget + control.inputs.planner_consecutive_failure_ctr*30;
+	  //control.inputs.max_time_budget = standard_max_time_budget + (int)(control.inputs.planner_consecutive_failure_ctr/3.0)*15;
+	  control.inputs.max_time_budget = standard_max_time_budget + (int)(control.inputs.planner_consecutive_failure_ctr)*15;
   }else{
 	  control.inputs.max_time_budget = standard_max_time_budget;
   }

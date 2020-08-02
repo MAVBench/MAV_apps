@@ -1147,7 +1147,7 @@ int main(int argc, char **argv)
     	if (use_emergency_stop){
     		double obs_dist_statistics_min_from_om;
     		ros::param::get("obs_dist_statistics_min_from_om", obs_dist_statistics_min_from_om);
-    		if (planning_failure_since_last_success > 1 && obs_dist_statistics_min_from_om < min((planner_drone_radius_min + 1),2.6)) {
+    		if (planning_failure_since_last_success > 1 && obs_dist_statistics_min_from_om < min((planner_drone_radius_min + .5),2.6)) {
     		//if (planning_failure_since_last_success >= 3 && obs_dist_statistics_min_from_om < (planner_drone_radius_min + 1)) {
     			ROS_INFO_STREAM("here not for backing up");
     			int pop_ctr = 0;

@@ -26,22 +26,22 @@
   <!-- actuators --> 
   <arg name="a_max" default="1"/> 
   <arg name="v_max" default="6"/> 
-  <param name="future_col_drone_radius" value="1.5"/>
+  <param name="future_col_drone_radius" value="1"/>
   <param name="future_col_drone_height" value="0.75"/>
-  <arg name="planner_drone_radius" default="2"/>
+  <arg name="planner_drone_radius" default="1"/>
   <arg name="planner_drone_height" default="1.5"/>
   <arg name="max_yaw_rate" default="90"/>
   <arg name="max_yaw_rate_during_flight" default="90"/>
   <param name="v_max" value="$(arg v_max)"/>
   <param name="v_max_max" value="$(arg v_max)"/>
-  <param name="v_max_min" value="1.5"/>
+  <param name="v_max_min" value="1"/>
   <param name="a_max" value="$(arg a_max)"/>
   <param name="max_yaw_rate" value="$(arg max_yaw_rate)"/>
   <param name="max_yaw_rate_during_flight" value="$(arg max_yaw_rate_during_flight)"/>
   <param name="planner_drone_radius" value="$(arg planner_drone_radius)"/>
   <arg name="planner_drone_radius_when_hovering" default="2"/>
   <param name="planner_drone_radius_when_hovering" value="$(arg planner_drone_radius_when_hovering)"/>
-  <arg name="planner_drone_height_when_hovering" default="1.25"/>
+  <arg name="planner_drone_height_when_hovering" default="1"/>
   <param name="planner_drone_height_when_hovering" value="$(arg planner_drone_height_when_hovering)"/>
 
   <arg name="sensor_max_range" default="25" />
@@ -293,7 +293,7 @@
   <param name="smoothening_budget" value="$(arg smoothening_budget)"/>
 
   <!-- fixed knob values --> 
- <arg name="pc_res_max" default=".3" />   
+ <arg name="pc_res_max" default="1.2" />   
  <param name="pc_res_max" value="$(arg pc_res_max)"/>
  <arg name="pc_res_steps" default="1" />   
  <param name="pc_res_steps" value="$(arg pc_res_steps)"/>
@@ -501,7 +501,7 @@
     
         
     <param name="z_dist_to_sample_from__low_bound" value="0"/>
-    <param name="z_dist_to_sample_from__high_bound" value="150"/>
+    <param name="z_dist_to_sample_from__high_bound" value="100"/>
 
     <!-- options for motion_planning core --> 
     <!-- param name="motion_planning_core" value="PRM"/-->

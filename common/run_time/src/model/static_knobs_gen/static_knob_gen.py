@@ -37,11 +37,11 @@ def calculate_static_values():
             pp_pl_response_time_measured)	 # for error calculation
 
 
-    om_res_desired = om_pl_res_desired=pp_pl_res_desired = .6
+    om_res_desired = om_pl_res_desired=pp_pl_res_desired = 9.8
     om_vol_desired = 46000
     om_pl_vol_desired = 3*46000
     pp_pl_vol_desired = 3*46000
-    visibility_avg = 8
+    visibility_avg = 6
     
     pc_filtering = .210
     sequencer_latency = .01

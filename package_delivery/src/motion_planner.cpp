@@ -2698,7 +2698,8 @@ MotionPlanner::smooth_trajectory MotionPlanner::smoothen_the_shortest_path(piece
 
 				if (ctr == 0 && i < 2){
 					//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(min(v_max__global/(1+x[i%10]),min_fix_v)*vec_to_prev_constrained_pt_norm.x ,min(v_max__global/(1+x[i%10]),min_fix_v)*vec_to_prev_constrained_pt_norm.y, min(v_max__global/(1+x[i%10]),min_fix_v)*vec_to_prev_constrained_pt_norm.z));
-					segment_times.push_back(dist_to_add_constraints/(min(v_max__global, min_fix_v + acceleration_ctr)));
+					//segment_times.push_back(dist_to_add_constraints/(min(v_max__global, min_fix_v + acceleration_ctr)));
+					segment_times.push_back(dist_to_add_constraints/(v_max__global));
 				}else{
 					//new_v.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, Eigen::Vector3d(v_max__global*vec_to_prev_constrained_pt_norm.x ,(v_max__global)*vec_to_prev_constrained_pt_norm.y,v_max__global*vec_to_prev_constrained_pt_norm.z));
 					segment_times.push_back(dist_to_add_constraints/(v_max__global));

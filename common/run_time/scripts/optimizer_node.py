@@ -69,7 +69,7 @@ class SmartQueue:
             return max(self.storage)
         elif mode == "avg":
             return avg(self.storage)
-r_max_queue = SmartQueue(5)
+r_max_queue = SmartQueue(1)
 
 motivation_section = False
 def run_optimizer(control):
@@ -108,7 +108,7 @@ def run_optimizer(control):
     # we can also think of r_min as what regulates the intellignce (i.e, the lower r_min the more intelligence the decision
     # making since we have more free space to make decision based off of)
     # and max value for resolution indicates  that we can't not do worse than this
-    r_min_temp = min(control.inputs.gap_statistics_avg/2, control.inputs.obs_dist_statistics_avg) #- drone_radius  # min to impose the worse case as the
+    r_min_temp = min(control.inputs.gap_statistics_avg/4, control.inputs.obs_dist_statistics_avg) #- drone_radius  # min to impose the worse case as the
 
     r_min_temp = min(r_min_temp, r_max_static) # not exceed r_max
     r_min_temp = max(r_min_static, r_min_temp)  # not lower than r_min_static
@@ -117,7 +117,7 @@ def run_optimizer(control):
     #print("=================================avg gap size" + str(control.inputs.gap_statistics_avg))
     #r_max_temp = min(control.inputs.gap_statistics_max, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
 #    r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
-    r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min) # - drone_radius  # min is because we want the tigher bound of the two:
+    r_max_temp = min(control.inputs.gap_statistics_avg, control.inputs.obs_dist_statistics_min/8) # - drone_radius  # min is because we want the tigher bound of the two:
     #if motivation_section:
     #    r_max_temp = control.inputs.obs_dist_statistics_min # - drone_radius  # min is because we want the tigher bound of the two:
 
