@@ -199,6 +199,8 @@ comp_components = [
         "OMFilterOutOfRangeLatency",  
         "insertScanLatency", 
         "OMFilteringLatency", 
+        "ppl_latency",
+        "smoothening_latency"
 ]
 
 for mode in per_decision_dict.keys():
@@ -334,7 +336,7 @@ def box_plot_field(field, ylabel):
             data=combined_per_decision, 
             ax=ax,
             #showfliers=False,
-            whis=100
+            whis=10
     )
     ax.set_title(field + ": Decision Based", fontsize=8)
     fig.savefig(result_folder + "/" + field + "_decision_based" + ".png")

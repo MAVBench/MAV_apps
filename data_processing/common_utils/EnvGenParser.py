@@ -79,45 +79,103 @@ class EnvGenParser:
     def split_trajectory_by_zone(self, traj_x, traj_y):
         return
 
+    #def split_time_by_zone(self, time_cmd_received, traj_x, traj_y):
+    #    zones = self.zones
+    #    
+    #    assert len(zones) == 3, "We don't support more than 2 populated + 1 free space zone currently"
+
+    #    n_traj_points = len(traj_x)
+    #    zone_boundary_times = []
+
+    #    curr_zone_ind = 0
+    #    # flag for checking if we're currently in a zone we've explored in the past
+    #    old_zone = False
+    #    for i in range(n_traj_points):
+    #        curr_zone = zones[curr_zone_ind]
+    #        curr_zone_top_right = curr_zone[0]
+    #        curr_zone_bottom_left = curr_zone[1]
+    #        if traj_x[i] < curr_zone_top_right[0] and traj_y[i] < curr_zone_top_right[1] and \
+    #                curr_zone_bottom_left[0] < traj_x[i] and curr_zone_bottom_left[1] < traj_y[i]:
+    #            old_zone = False
+    #            continue
+    #        else:
+    #            # checking if it went back to an old zone
+    #            past_zones = zones[:curr_zone_ind]
+    #            for past_zone in past_zones:
+    #                past_zone_top_right = past_zone[0]
+    #                past_zone_bottom_left = past_zone[1]
+    #                if traj_x[i] < past_zone_top_right[0] and traj_y[i] < past_zone_top_right[1] and \
+    #                        past_zone_bottom_left[0] < traj_x[i] and past_zone_bottom_left[1] < traj_y[i]:
+    #                    old_zone = True
+    #                    break
+
+    #            # making sure we haven't waded into an undefined zone
+    #            if not old_zone and curr_zone_ind != len(zones) - 1:
+    #                next_zone = zones[curr_zone_ind+1]
+    #                next_zone_top_right = next_zone[0]
+    #                next_zone_bottom_left = next_zone[1]
+    #                if traj_x[i] < next_zone_top_right[0] and traj_y[i] < next_zone_top_right[1] and \
+    #                        next_zone_bottom_left[0] < traj_x[i] and next_zone_bottom_left[1] < traj_y[i]:
+    #                    zone_boundary_times.append(time_cmd_received[i])
+    #                    curr_zone_ind += 1
+
+    #    return zone_boundary_times
+
     def split_time_by_zone(self, time_cmd_received, traj_x, traj_y):
-        zones = self.zones
+        rect_zones = self.zones
         
-        assert len(zones) == 3, "We don't support more than 2 populated + 1 free space zone currently"
+        assert len(rect_zones) == 3, "We don't support more than 2 populated + 1 free space zone currently"
+
+        # we change the zone to a circle centered at the center of the populated zone
+        # with radius spread of obstacles + halo
+
+        circ_zones = {}
+        circ_zones["origin"] = []
+        circ_zones["radius"] = []
+        for i, zone in enumerate(rect_zones):
+            rect_zone = rect_zones[i]
+            rect_zone_top_right = rect_zone[0]
+            rect_zone_bottom_left = rect_zone[1]
+            width = rect_zone_top_right[0] - rect_zone_bottom_left[0]
+            height = rect_zone_top_right[1] - rect_zone_bottom_left[1]
+            origin = [rect_zone_bottom_left[0] + width/2, rect_zone_bottom_left[1] + height/2]
+            if i == 0:
+                radius = 15 + self.spread_of_obstacles
+                circ_zones["origin"].append(origin)
+                circ_zones["radius"].append(radius)
+            elif i == 2:
+                radius = 50 + self.spread_of_obstacles
+                circ_zones["origin"].append(origin)
+                circ_zones["radius"].append(radius)
 
         n_traj_points = len(traj_x)
         zone_boundary_times = []
 
         curr_zone_ind = 0
-        # flag for checking if we're currently in a zone we've explored in the past
-        old_zone = False
+        middle_zone = False
         for i in range(n_traj_points):
-            curr_zone = zones[curr_zone_ind]
-            curr_zone_top_right = curr_zone[0]
-            curr_zone_bottom_left = curr_zone[1]
-            if traj_x[i] < curr_zone_top_right[0] and traj_y[i] < curr_zone_top_right[1] and \
-                    curr_zone_bottom_left[0] < traj_x[i] and curr_zone_bottom_left[1] < traj_y[i]:
-                old_zone = False
+            curr_zone_origin = circ_zones["origin"][curr_zone_ind]
+            curr_zone_radius = circ_zones["radius"][curr_zone_ind]
+            traj = np.array([traj_x[i], traj_y[i]])
+            origin = np.array(curr_zone_origin)
+            squares = np.square(np.subtract(traj, origin))
+            if squares[0] + squares[1] <= curr_zone_radius**2:
+                # within circle
+                if middle_zone:
+                    # transitioned into populated end zone
+                    zone_boundary_times.append(time_cmd_received[i])
+                    middle_zone = False
                 continue
             else:
-                # checking if it went back to an old zone
-                past_zones = zones[:curr_zone_ind]
-                for past_zone in past_zones:
-                    past_zone_top_right = past_zone[0]
-                    past_zone_bottom_left = past_zone[1]
-                    if traj_x[i] < past_zone_top_right[0] and traj_y[i] < past_zone_top_right[1] and \
-                            past_zone_bottom_left[0] < traj_x[i] and past_zone_bottom_left[1] < traj_y[i]:
-                        old_zone = True
-                        break
-
-                # making sure we haven't waded into an undefined zone
-                if not old_zone and curr_zone_ind != len(zones) - 1:
-                    next_zone = zones[curr_zone_ind+1]
-                    next_zone_top_right = next_zone[0]
-                    next_zone_bottom_left = next_zone[1]
-                    if traj_x[i] < next_zone_top_right[0] and traj_y[i] < next_zone_top_right[1] and \
-                            next_zone_bottom_left[0] < traj_x[i] and next_zone_bottom_left[1] < traj_y[i]:
-                        zone_boundary_times.append(time_cmd_received[i])
-                        curr_zone_ind += 1
+                if curr_zone_ind == 0:
+                    zone_boundary_times.append(time_cmd_received[i])
+                    # continue checking if we are in next populated zone
+                    curr_zone_ind += 1
+                    middle_zone = True
+                elif middle_zone:
+                    # while we are in middle zone, we ignore how we're outside
+                    # the bounds of the populated end zone
+                    continue
 
         return zone_boundary_times
 

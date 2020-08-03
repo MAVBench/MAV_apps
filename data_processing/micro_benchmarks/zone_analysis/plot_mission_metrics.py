@@ -52,6 +52,9 @@ metrics_to_collect_hard = []
 result_dict_static = parse_stat_file_flattened(input_filepath_static, metrics_to_collect_easy, metrics_to_collect_hard)
 result_dict_dynamic = parse_stat_file_flattened(input_filepath_dynamic, metrics_to_collect_easy, metrics_to_collect_hard)
 
+result_dict_static["average_velocity"] = np.divide(result_dict_static["distance_travelled"], result_dict_static["flight_time"])
+result_dict_dynamic["average_velocity"] = np.divide(result_dict_dynamic["distance_travelled"], result_dict_dynamic["flight_time"])
+
 static_df = pd.DataFrame(result_dict_static)
 static_df["type"] = "Static"
 dynamic_df = pd.DataFrame(result_dict_dynamic)
@@ -62,13 +65,15 @@ total_df = pd.concat([static_df, dynamic_df])
 fields = [
         "flight_time", 
         "total_energy_consumed",
-        "distance_travelled"
+        "distance_travelled",
+        "average_velocity"
 ]
 
 ylabels = [
         "Flight time (s)",
         "Total energy consumed (J)",
         "Distance travelled (m)",
+        "Average velocity (m/s)"
 ]
 
 width = 0.35
