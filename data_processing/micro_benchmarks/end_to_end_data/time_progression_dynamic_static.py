@@ -8,75 +8,92 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from mpl_toolkits.mplot3d import Axes3D 
 sys.path.append('../../common_utils')
 from data_parsing import *
+from EnvGenParser import EnvGenParser
+import os
 import seaborn as sns
+import argparse
+import pandas as pd
+
 col = sns.color_palette("Paired", 111111)
 stage_of_interests_to_pick_from = ["pc_om", "om_to_pl", "pp_pl", "pc_om_estimation"]
 
-hw_sampling_method = "decision_based"
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--staticdata_path', type=str)
+parser.add_argument('-d', '--dynamicdata_path', type=str)
+parser.add_argument('-e', '--envfile_path', type=str)
+parser.add_argument('-r', '--resultdir_path', type=str)
+args = parser.parse_args()
+
+def dir_path(path):
+    if not os.path.isfile(path):
+        print("Couldn't find datafile!")
+        exit(-1)
+    else:
+        return os.path.dirname(os.path.realpath(path))
+
+# we dump resulting graphs in same dir as datafile
+
+input_filepath_static = args.staticdata_path
+input_filepath_dynamic = args.dynamicdata_path
+obs_stats_path = args.envfile_path
+if args.resultdir_path:
+    result_folder = args.resultdir_path
+else:
+    result_folder = dir_path(input_filepath_dynamic)
 
 # which stage are you trying to plot
 stage_of_interest = "pp_pl" # pick form ["om_to_pl", "pc_om", "pp_pl", "pc_om_estimation]
 
 assert stage_of_interest in stage_of_interests_to_pick_from
 
-result_folder = "./data_1/system_results"
-input_file_name_static = "static/static_stats.json"
-input_filepath_static = result_folder + "/" + input_file_name_static
-
-#input_file_name_dynamic = "dynamic/dynamic_stats.json"
-input_file_name_dynamic = "dynamic_stats.json"
-input_filepath_dynamic = result_folder + "/" + input_file_name_dynamic
-
-
-time_sampling_data_file = "./data_1/stats_mu.json"
-
 # data to collect
-metrics_to_collect_easy = ["experiment_number"]
-metrics_to_collect_hard = ["depthToPCConversionLatency",
-"runDiagnosticsLatency",
-"runTimeLatency",
-"sequencerLatency",
-"PCFilteringLatency",
-"PCtoOMComOHLatency",
-"PCDeserializationLatency",
-"PCtoOMTotalLatency",
-"OMFilterOutOfRangeLatency",
-"insertScanLatency",
-"OMFilteringLatency",
-"OMSerializationLatency",
-"OMtoPlComOHLatency",
-"OMDeserializationLatency",
-"OMtoPlTotalLatency",
-"smoothening_latency",
-"ppl_latency",
-"pl_to_ft_totalLatency",
-"ee_latency",
-"blind_latency",
-"cpu_utilization_for_last_decision",
-"planning_success_ctr",
-"traj_gen_failure_ctr",
-"planning_ctr",
-"decision_ctr",
-"runtime_failure_ctr",
-"octomap_volume_integrated",
-"om_to_pl_volume",
-"ppl_volume",
-"time_cmd_received",
-"pc_to_om_datamovement",
-"om_to_pl_datamovement",
-"PERF_COUNT_HW_INSTRUCTIONS",
-"LLC_REFERENCES",
-"CACHE_REFERENCES",
-"x_coord_while_budgetting",
-"y_coord_while_budgetting",
-"z_coord_while_budgetting",
-"sensor_to_actuation_time_budget_to_enforce",
-"closest_unknown_distance",
-"obs_dist_statistics_min",
-"vel_mag_while_budgetting",
-"pc_res",
-"om_to_pl_res",
-"gap_statistics_avg"
+metrics_to_collect_easy = []
+metrics_to_collect_hard = [
+        "depthToPCConversionLatency",
+        "runDiagnosticsLatency",
+        "runTimeLatency",
+        "sequencerLatency",
+        "PCFilteringLatency",
+        "PCtoOMComOHLatency",
+        "PCDeserializationLatency",
+        "PCtoOMTotalLatency",
+        "OMFilterOutOfRangeLatency",
+        "insertScanLatency",
+        "OMFilteringLatency",
+        "OMSerializationLatency",
+        "OMtoPlComOHLatency",
+        "OMDeserializationLatency",
+        "OMtoPlTotalLatency",
+        "smoothening_latency",
+        "ppl_latency",
+        "pl_to_ft_totalLatency",
+        "ee_latency",
+        "blind_latency",
+        "cpu_utilization_for_last_decision",
+        "planning_success_ctr",
+        "traj_gen_failure_ctr",
+        "planning_ctr",
+        "decision_ctr",
+        "runtime_failure_ctr",
+        "octomap_volume_integrated",
+        "om_to_pl_volume",
+        "ppl_volume",
+        "time_cmd_received",
+        "pc_to_om_datamovement",
+        "om_to_pl_datamovement",
+        "PERF_COUNT_HW_INSTRUCTIONS",
+        "LLC_REFERENCES",
+        "CACHE_REFERENCES",
+        "x_coord_while_budgetting",
+        "y_coord_while_budgetting",
+        "z_coord_while_budgetting",
+        "sensor_to_actuation_time_budget_to_enforce",
+        "closest_unknown_distance",
+        "obs_dist_statistics_min",
+        "vel_mag_while_budgetting",
+        "pc_res",
+        "om_to_pl_res",
+        "gap_statistics_avg"
 ]
 
 # parse  data
@@ -96,12 +113,21 @@ result_dict_dynamic["PERF_COUNT_HW_INSTRUCTIONS"] = result_dict_dynamic["PERF_CO
 result_dict_dynamic["LLC_REFERENCES"] = result_dict_dynamic["LLC_REFERENCES"][1:]+ [100]
 result_dict_dynamic["CACHE_REFERENCES"] = result_dict_dynamic["CACHE_REFERENCES"][1:]+ [100]
 
-
-
 mode_result_dict = {}
 mode_result_dict["static"] = result_dict_static
 mode_result_dict["dynamic"] = result_dict_dynamic
 
+env_gen_parser = EnvGenParser(obs_stats_path)
+
+def draw_zone_separators(ax, mode):
+    time_cmd_received = mode_result_dict[mode]["time_cmd_received"]
+    x_coords = mode_result_dict[mode]["x_coord_while_budgetting"]
+    y_coords = mode_result_dict[mode]["y_coord_while_budgetting"]
+
+    zone_times = env_gen_parser.split_time_by_zone(time_cmd_received, x_coords, y_coords)
+
+    for zone_time in zone_times:
+        ax.axvline(zone_time, color='k', linestyle='dashed', linewidth=1)
 
 labels = ["depthToPCConversionLatency", "runDiagnosticsLatency", "runTimeLatency", "sequencerLatency", "PCFilteringLatency", "PCtoOMTotalLatency", "OMFilterOutOfRangeLatency",   "insertScanLatency", "OMFilteringLatency", 
         "OMtoPlTotalLatency", "ppl_latency", "smoothening_latency", "pl_to_ft_totalLatency"]
@@ -116,6 +142,7 @@ for mode in mode_result_dict.keys():
         data_list.append(mode_result_dict[mode][el])
     fig, ax = plt.subplots()
     ax.stackplot(x, *data_list, labels=labels, colors = col)
+    draw_zone_separators(ax, mode)
     ax.legend(loc='best')
     ax.set_ylim((0,y_lim))
     output_file = "time_breakdown" 
@@ -123,7 +150,6 @@ for mode in mode_result_dict.keys():
     plt.ylabel("sensor to act latency(s)")
     fig.savefig(result_folder+"/"+output_file + "_"+mode +"_SA.png")
     plt.close(fig)
-
 
 labels = ["depthToPCConversionLatency", "runDiagnosticsLatency", "runTimeLatency", "sequencerLatency", "PCFilteringLatency", "OMFilterOutOfRangeLatency",  "insertScanLatency", "OMFilteringLatency", 
         "ppl_latency", "smoothening_latency"]
@@ -139,6 +165,7 @@ for mode in mode_result_dict.keys():
         data_list.append(mode_result_dict[mode][el])
     fig, ax = plt.subplots()
     ax.stackplot(x, *data_list, labels=labels, colors = col)
+    draw_zone_separators(ax, mode)
     ax.legend(loc='best')
     ax.set_ylim((0,y_lim))
     output_file = "computation_breakdown" 
@@ -162,6 +189,7 @@ for mode in mode_result_dict.keys():
         data_list.append(mode_result_dict[mode][el])
     fig, ax = plt.subplots()
     ax.stackplot(x, *data_list, labels=labels, colors = col)
+    draw_zone_separators(ax, mode)
     ax.legend(loc='best')
     ax.set_ylim((0, y_lim))
     output_file = "communication_breakdown" 
@@ -187,6 +215,7 @@ for mode in mode_result_dict.keys():
 
     fig, ax = plt.subplots()
     ax.stackplot(x[1:], *data_list, labels=labels, colors = col)
+    draw_zone_separators(ax, mode)
     ax.legend(loc='best')
     ax.set_ylim((0,y_lim))
     output_file = "response_time_breakdown"
@@ -216,11 +245,13 @@ for mode in mode_result_dict.keys():
     fig, axs = plt.subplots(2)
     axs[1].set_yscale('linear')
     axs[1].plot(x, mode_result_dict[mode]["ee_latency"])
+    draw_zone_separators(axs[1], mode)
     axs[1].set(xlabel="mission  progression (s)", ylabel=" end to end latency(s)")
     axs[1].legend(loc='best')
     axs[1].set_ylim((0,y_lim_2))
 
     axs[0].plot(x, *data_list, label="cpu_utilization ")
+    draw_zone_separators(axs[0], mode)
     axs[0].set(xlabel="mission  progression (s)", ylabel="mission progression (s) ")
     axs[0].legend(loc='best')
     axs[0].set_ylim((0, y_lim_1))
@@ -249,11 +280,13 @@ for mode in mode_result_dict.keys():
     #axs[1].plot(x, ee_latency=" end_to_end_latency")
     axs[1].set_yscale('linear')
     axs[1].plot(x, mode_result_dict[mode]["ee_latency"])
+    draw_zone_separators(axs[1], mode)
     axs[1].set(xlabel="mission  progression (s)", ylabel=" end to end latency(s)")
     axs[1].legend(loc='best')
     axs[1].set_ylim((0,y_lim_2))
 
     axs[0].plot(x, *data_list, label="HW instructions (millions)")
+    draw_zone_separators(axs[0], mode)
     axs[0].set(xlabel="mission  progression (s)", ylabel="HW instructions (millions) ")
     axs[0].legend(loc='best')
     axs[0].set_ylim((0, y_lim_1))
@@ -272,6 +305,7 @@ for mode in mode_result_dict.keys():
     x = mode_result_dict[mode]["time_cmd_received"];#range(0, len(runDiagnosticsLatency))
     fig, axs = plt.subplots()
     axs.plot(x, *data_list, label="HW instructions (millions)")
+    draw_zone_separators(axs, mode)
     axs.set(xlabel="mission  progression (s)", ylabel="HW instructions (millions) ")
     axs.legend(loc='best')
     axs.set_ylim((0, y_lim_1))
@@ -307,6 +341,7 @@ for mode in mode_result_dict.keys():
     fig, axs = plt.subplots(2)
     axs[1].set_yscale('linear')
     axs[1].plot(x, mode_result_dict[mode]["ee_latency"], label=" end_to_end_latency")
+    draw_zone_separators(axs[1], mode)
     axs[1].set(xlabel="mission  progression (s)", ylabel="latnecy (s)")
     axs[1].legend(loc='best')
     axs[1].set_ylim((0,y_lim_2))
@@ -316,13 +351,13 @@ for mode in mode_result_dict.keys():
         axs[0].set(xlabel="mission  progression (s)", ylabel="time (s)")
         axs[0].set_yscale('log')
         axs[0].legend(loc='best')
+    draw_zone_separators(axs[0], mode)
     axs[0].set_ylim((40000,y_lim_1))
     output_file = "volume" 
     #plt.show()
     fig.savefig(result_folder+"/"+output_file + "_"+mode+ "_SA.png")
     plt.close(fig)
     #plt.show()
-
 
 # ------- datamovement chart
 y_lim_2 = 0
@@ -340,6 +375,7 @@ for mode in mode_result_dict.keys():
     fig, axs = plt.subplots(2)
     axs[1].set_yscale('linear')
     axs[1].plot(x, mode_result_dict[mode]["ee_latency"], label=" end_to_end_latency")
+    draw_zone_separators(axs[1], mode)
     axs[1].set(xlabel="mission  progression (s)", ylabel="latnecy (s)")
     axs[1].legend(loc='best')
     axs[1].set_ylim((0,y_lim_2))
@@ -349,6 +385,7 @@ for mode in mode_result_dict.keys():
 
     for idx, lbl in enumerate(labels):
         axs[0].plot(x,[y/1000 for y in data_list[idx]], label=lbl)
+    draw_zone_separators(axs[0], mode)
     axs[0].set(xlabel="mission  progression (s)", ylabel="dataw movement (KB)")
     axs[0].legend(loc='best')
     output_file = "datamovement" 
@@ -366,6 +403,7 @@ for mode in mode_result_dict.keys():
     #axs[1].plot(x, ee_latency=" end_to_end_latency")
     axs[1].set_yscale('linear')
     axs[1].plot(x, mode_result_dict[mode]["ee_latency"])
+    draw_zone_separators(axs[1], mode)
     axs[1].set(xlabel="mission  progression (s)", ylabel=" end to end latency(s)")
     axs[1].legend(loc='best')
 
@@ -374,6 +412,7 @@ for mode in mode_result_dict.keys():
     for el in labels:
         data_list.append(mode_result_dict[mode][el])
     axs[0].plot(x, data_list[0], label=labels[0])
+    draw_zone_separators(axs[0], mode)
     axs[0].set(xlabel="mission  progression (s)", ylabel="LLC REFERENCES (million) ")
     axs[0].legend(loc='best')
     output_file = "llc_references" 
@@ -394,6 +433,7 @@ for mode in mode_result_dict.keys():
     for el in labels:
         data_list.append(mode_result_dict[mode][el])
     axs.plot(x, data_list[0], label=labels[0])
+    draw_zone_separators(axs, mode)
     axs.set(xlabel="mission  progression (s)", ylabel="CACHE REFERENCES (million) ")
     axs.legend(loc='best')
     axs.set_ylim((0, 1.1*y_lim_1))
@@ -417,7 +457,7 @@ for mode in mode_result_dict.keys():
         axs.plot(x, data_list[idx], label=labels[idx])
         axs.set(xlabel="mission  progression (s)", ylabel="Precision (cm) ")
         axs.legend(loc='best')
-        
+    draw_zone_separators(axs, mode)
     output_file = "precision" 
     fig.savefig(result_folder+"/"+output_file + "_" +mode+ "_SA.png")
     plt.close(fig)
@@ -437,6 +477,7 @@ for mode in mode_result_dict.keys():
     for el in labels:
         data_list.append(mode_result_dict[mode][el])
     axs.plot(x, data_list[0], label=labels[0])
+    draw_zone_separators(axs, mode)
     axs.set_ylim(0, y_lim) 
     axs.set(xlabel="mission  progression (s)", ylabel="end to end latency (s) ")
     axs.legend(loc='best')
@@ -633,8 +674,3 @@ output_file = "decision_pie_chart" + "_SA.png"
 fig.savefig(result_folder+"/"+output_file)
 # show it
 #plt.show()
-
-
-
-
-

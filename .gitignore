@@ -3,4 +3,5 @@ minkindr/*
 deps/glog_catkin
 *.pyc
 *data_1
-
+*.png
+*.idea
