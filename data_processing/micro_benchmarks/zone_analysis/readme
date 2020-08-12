@@ -1,0 +1,5 @@
+zone_analysis
+-------------
+
+* Run ./generate_zone_time_progression_plots.sh to generate all the plots inside the
+`behzad_trial_zones` dir.
