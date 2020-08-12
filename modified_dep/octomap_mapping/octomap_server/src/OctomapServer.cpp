@@ -689,6 +689,9 @@ void OctomapServer::SaveMapCb(std_msgs::Bool msg){
 
 
 bool inline OctomapServer::is_budget_exceeded (){
+    if (knob_performance_modeling){
+    	return false;
+    }
 	return (om_latency_expected - ((ros::Time::now() - om_start_time).toSec()) < 0);
 }
 

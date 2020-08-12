@@ -1878,7 +1878,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 
   // policty to extend the maximum time budget if we the current time can not afford it
   if (control.inputs.planner_consecutive_failure_ctr > 1){
-	  control.inputs.max_time_budget = standard_max_time_budget + control.inputs.planner_consecutive_failure_ctr*30;
+	  control.inputs.max_time_budget = standard_max_time_budget + control.inputs.planner_consecutive_failure_ctr*5;
   }else{
 	  control.inputs.max_time_budget = standard_max_time_budget;
   }
@@ -1968,7 +1968,8 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
 	  //closest_unknown_way_point.header.stamp = ros::Time(); // TODO: change this to
 	  //closest_unknown_pub.publish(closest_unknown_way_point);
 	  //ros::param::set("spin_pc", true);
-	  got_new_closest_unknown = true; //do not move
+	  //got_new_closest_unknown = true; //do not move
+	  got_new_closest_unknown = false; //do not move
 	  return;
   }
   ros::param::set("spin_pc", false);

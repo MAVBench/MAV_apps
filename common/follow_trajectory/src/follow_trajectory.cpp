@@ -392,6 +392,7 @@ void timing_msgs_from_mp_callback(const mavbench_msgs::response_time_capture::Co
 	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
+	profiling_container->capture("planned_path_length_normalized","single",  msg->ee_profiles.space_stats.planned_path_length_normalized, 1);
 	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
     profiling_container->capture("sensor_to_actuation_time_budget_to_enforce", "single", msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce, 1);
 	profiling_container->capture("x_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.x, 1);
@@ -896,6 +897,7 @@ void callback_trajectory(const mavbench_msgs::multiDOFtrajectory::ConstPtr& msg,
 	profiling_container->capture("om_to_pl_volume","single", msg->ee_profiles.actual_cmds.om_to_pl_vol, 1);
 	profiling_container->capture("ppl_volume","single",  msg->ee_profiles.actual_cmds.ppl_vol, 1);
 	profiling_container->capture("pc_to_om_datamovement","single",  msg->ee_profiles.space_stats.pc_to_om_datamovement, 1);
+	profiling_container->capture("planned_path_length_normalized","single",  msg->ee_profiles.space_stats.planned_path_length_normalized, 1);
 	profiling_container->capture("om_to_pl_datamovement","single",  msg->ee_profiles.space_stats.om_to_pl_datamovement, 1);
     profiling_container->capture("sensor_to_actuation_time_budget_to_enforce", "single", msg->controls.internal_states.sensor_to_actuation_time_budget_to_enforce, 1);
 	profiling_container->capture("x_coord_while_budgetting", "single", msg->controls.internal_states.drone_point_while_budgetting.x, 1);

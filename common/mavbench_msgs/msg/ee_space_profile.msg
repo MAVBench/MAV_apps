@@ -15,4 +15,4 @@ float32 x_coord_while_budgetting
 float32 y_coord_while_budgetting
 float32 z_coord_while_budgetting
 
-
+float32 planned_path_length_normalized

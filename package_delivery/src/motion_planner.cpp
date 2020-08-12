@@ -1211,7 +1211,6 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
     }
 	*/
 
-
     res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
     res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_maxium_underestimated = ppl_vol_maximum_underestimated;
     res.multiDOFtrajectory.ee_profiles.space_stats.ppl_vol_unit_cube = ppl_vol_unit_cube_actual;
@@ -1351,7 +1350,8 @@ bool MotionPlanner::get_trajectory_fun(package_delivery::get_trajectory::Request
 	//res.multiDOFtrajectory.ee_profiles.actual_time.pl_pre_pub_time_stamp =  ros::Time::now();
     //res.multiDOFtrajectory.ee_profiles.actual_cmds.ppl_vol = ppl_vol_actual;
 	res.multiDOFtrajectory.ee_profiles.control_flow_path = 2;
-    traj_pub.publish(res.multiDOFtrajectory);
+    res.multiDOFtrajectory.ee_profiles.space_stats.planned_path_length_normalized =  calculate_path_length(piecewise_path)/calc_vec_magnitude(drone->position().x - req.goal.x, drone->position().y - req.goal.y, drone->position().z - req.goal.z);
+	traj_pub.publish(res.multiDOFtrajectory);
     smooth_traj_vis_pub.publish(smooth_traj_markers);
 
     g_number_of_planning++; 

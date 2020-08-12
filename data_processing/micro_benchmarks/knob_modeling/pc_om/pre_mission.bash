@@ -11,8 +11,8 @@ sleep 10
 echo f 0 0 3 10
 sleep 15
 rosparam set knob_performance_modeling_for_pc_om true
-echo f 0 2 0 600
-sleep 600
+echo f 0 2 0 850
+sleep 850
 echo kill > ${MAVApps_folder}"/data/package_delivery/supervisor_mailbox.txt"
 #${MAVApss_folder}isc/generic/kill_all_ros.bash
 

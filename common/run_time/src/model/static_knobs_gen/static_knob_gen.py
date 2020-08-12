@@ -37,11 +37,11 @@ def calculate_static_values():
             pp_pl_response_time_measured)	 # for error calculation
 
 
-    om_res_desired = om_pl_res_desired=pp_pl_res_desired = .6
+    om_res_desired = om_pl_res_desired=pp_pl_res_desired = 1.2
     om_vol_desired = 46000
     om_pl_vol_desired = 3*46000
     pp_pl_vol_desired = 3*46000
-    visibility_avg = 8
+    visibility_avg = 10
     
     pc_filtering = .210
     sequencer_latency = .01
@@ -49,9 +49,14 @@ def calculate_static_values():
     depth_img_latency = .1
     follow_trajectory_latency = .05
 
+    #om_latency = max(calculate_fitted_value(om_popt, om_res_desired, om_vol_desired, typical_model),.2)
+    #om_pl_latency = max(calculate_fitted_value(om_pl_popt, om_pl_res_desired, om_pl_vol_desired, typical_model),.2)
+    #pp_pl_latency = max(calculate_fitted_value(pp_pl_popt, pp_pl_res_desired, pp_pl_vol_desired, typical_model),.2)
+
     om_latency = calculate_fitted_value(om_popt, om_res_desired, om_vol_desired, typical_model)
     om_pl_latency = calculate_fitted_value(om_pl_popt, om_pl_res_desired, om_pl_vol_desired, typical_model)
     pp_pl_latency = calculate_fitted_value(pp_pl_popt, pp_pl_res_desired, pp_pl_vol_desired, typical_model)
+
 
 
     max_time_budget = om_latency + om_pl_latency + 2*pp_pl_latency + pc_filtering + sequencer_latency + depth_img_conversion + depth_img_latency + follow_trajectory_latency
@@ -65,7 +70,7 @@ def calculate_static_values():
     
     print("----om_latency:" + str(om_latency))
     print("--------om_pl_latency:" + str(om_pl_latency))
-    print("-------------pp_pl_latency" + str(3*pp_pl_latency))
+    print("-------------pp_pl_latency" + str(2*pp_pl_latency))
     print("-----------------controlled_latency" + str(om_latency + om_pl_latency + 2*pp_pl_latency))
     print("----------------------max_budget" + str(max_time_budget))
     print("----------------------v_max" + str(velocity_to_budget_on))

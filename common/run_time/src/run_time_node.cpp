@@ -614,13 +614,14 @@ void performance_modeling(double cur_vel_mag, vector<std::pair<double, int>>& pc
 	profiling_container->capture("pc_res", "single", pc_res, g_capture_size);
     profiling_container->capture("om_to_pl_res", "single", om_to_pl_res, g_capture_size);
     ros::param::set("point_cloud_num_points", static_point_cloud_num_points);
-	ros::param::set("pc_vol_ideal", (static_pc_res/pc_res_max)*static_pc_vol_ideal);
-	profiling_container->capture("pc_vol_ideal", "single", static_pc_vol_ideal, g_capture_size);
+	ros::param::set("pc_vol_ideal", 1.4*static_pc_vol_ideal);
+	profiling_container->capture("pc_vol_ideal", "single", 1.4*static_pc_vol_ideal, g_capture_size);
 	//profiling_container->capture("point_cloud_num_points", "single", static_point_cloud_num_points, g_capture_size);
 // -- determine how much of the space to keep
 //	ros::param::set("MapToTransferSideLength", MapToTransferSideLength);
-	ros::param::set("om_to_pl_vol_ideal", (static_om_to_pl_res/om_to_pl_res_max)*static_om_to_pl_vol_ideal);
-	ros::param::set("ppl_vol_ideal", (static_om_to_pl_res/om_to_pl_res_max)*static_ppl_vol_ideal);
+	//ros::param::set("om_to_pl_vol_ideal", (static_om_to_pl_res/om_to_pl_res_max)*static_om_to_pl_vol_ideal);
+	ros::param::set("om_to_pl_vol_ideal", 1.5*static_om_to_pl_vol_ideal);
+	ros::param::set("ppl_vol_ideal", 1.5*static_ppl_vol_ideal);
 	ros::param::set("om_to_pl_res", static_om_to_pl_res);
 
 

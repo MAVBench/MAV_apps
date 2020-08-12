@@ -50,7 +50,7 @@ bool g_start_profiling_data = false;
 #define MAX_PACKAGES    16
 #define NUM_RAPL_DOMAINS    4
 
-static int total_cores=0,total_packages=0;
+static int total_cores=0,total_packages=1;
 static int package_map[MAX_PACKAGES];
 
 float g_worst_case_power;
@@ -575,7 +575,7 @@ int main(int argc, char **argv)
         if (g_drone->getFlightStats().collision_count > 1) {
             //ROS_INFO_STREAM("collision count too high");
         }
-
+        double cpu_compute_energy = run_rapl_sysfs(&rs);
         loop_rate.sleep();
         ros::spinOnce();
     }
