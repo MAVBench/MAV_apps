@@ -178,7 +178,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_gridmap.info.resolution = m_res_original;
 
 
-  gap_map = new OcTreeT(15);
+  gap_map = new OcTreeT(3);
 
   m_octree_lower_res = new OcTreeT(om_to_pl_res);
   m_octree_lower_res->setProbHit(probHit);

@@ -1857,7 +1857,7 @@ void PointCloudXyz::depthCb(const sensor_msgs::CameraInfoConstPtr& info_msg)
   // average of averages
    gap_statistics_max = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_max);
    gap_statistics_min = correct_distance(cur_vel_mag, v_max_max, planner_drone_radius_max, planner_drone_radius_min, gap_statistics_min);
-  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - 5*g_planner_drone_radius;
+  double gap_statistics_avg = (gap_statistics_avg_total / n_points) - g_planner_drone_radius;
   double obs_dist_statistics_avg_from_pc = (obs_dist_statistics_avg_from_pc_total / n_points); // dont need to subtract drone_radius already been taken care of since, we get it from camera frames
   //ROS_INFO_STREAM("---------------------------------- gap statistics min"<< gap_statistics_min<< "avg"<< gap_statistics_avg);
 

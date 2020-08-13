@@ -297,7 +297,7 @@
  <param name="pc_res_max" value="$(arg pc_res_max)"/>
  <arg name="pc_res_steps" default="1" />   
  <param name="pc_res_steps" value="$(arg pc_res_steps)"/>
- <arg name="num_of_res_to_try" default="5" />   
+ <arg name="num_of_res_to_try" default="2" />   
  <param name="num_of_res_to_try" value="$(arg num_of_res_to_try)"/>
  <arg name="pc_vol_ideal_min" default="2900" />   
  <param name="pc_vol_ideal_min" value="$(arg pc_vol_ideal_min)"/>
