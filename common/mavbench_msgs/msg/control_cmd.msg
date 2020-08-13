@@ -1,7 +1,7 @@
-float32 pc_res
+float64 pc_res
 float32 pc_vol
 float32 pc_vol_estimated
-float32 om_to_pl_res
+float64 om_to_pl_res
 float32 om_to_pl_vol
 float32 ppl_vol
 float32 optimizer_succeeded

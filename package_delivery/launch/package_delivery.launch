@@ -382,7 +382,7 @@
   <arg name="filterOctoMap" default="true" /> 
   <arg name="MapToTransferSideLength" default="30" /> 
 
-  <arg name="gridSliceCountPerSide" default="4" />
+  <arg name="gridSliceCountPerSide" default="2" />
   <arg name="gridMode" default="3d" />
   <arg name="voxel_type_to_publish" default="free" />
  
@@ -450,7 +450,7 @@
   <arg name="y_dist_to_sample_from__high_bound" default="2500"/>
   <arg name="goal_mode" default="launch_based"/>
   <arg name="goal_x" default="200"/>
-  <arg name="goal_y" default="566"/>
+  <arg name="goal_y" default="878"/>
   <!--arg name="goal_y" default="878"/-->
   <arg name="goal_z" default="50"/>
   <arg name ="distance_to_goal" default="10000"/>

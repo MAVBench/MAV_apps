@@ -679,6 +679,7 @@ void OctomapServer::insertCloudCallback(const mavbench_msgs::point_cloud_aug::Co
 //	  	debug_data.low_res_map_volume =  profiling_container.findDataByName("low_res_map_volume")->values.back();
 	  	if (filterOctoMap) { debug_data.OMFilteringLatency =  profiling_container.findDataByName("OMFilteringLatency")->values.back();}
 	  	else{debug_data.OMFilteringLatency =  0;}
+	  	ROS_INFO_STREAM("OMFiltering latency total"<<profiling_container.findDataByName("OMFilteringLatency")->values.back());
 	  	octomap_debug_pub.publish(debug_data);
   }
 }
@@ -1926,7 +1927,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
  // -- expand MapToTransferSideLength untill you hit the volume target
  int upper_bound_MapToTransferSideLength  = int(max(map_max_length, (float) (1.2*m_maxRange))) + 1; // adding one, because later, when converting from float to int, we are essentially rounding down
  int lower_bound_MapToTransferSideLength  = 5;
- int binary_search_cntr_threshold = 9;
+ int binary_search_cntr_threshold = 40;
  int binary_search_cntr= 0;
  double error = INFINITY;
  MapToTransferSideLength = (int)(upper_bound_MapToTransferSideLength);
@@ -1938,6 +1939,7 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	 om_to_pl_vol_maximum_underestimated = false;
  }
  //ROS_INFO_STREAM("total volume is"<<tree_total_volume);
+ auto binary_search_start = ros::Time::now();
  while (true){
 	 om_to_pl_vol_actual = 0;
 	 octomap_block_vec.clear();
@@ -1970,28 +1972,29 @@ void OctomapServer::publishFilteredByVolumeBySamplingBinaryOctoMap(const ros::Ti
 	 //ROS_INFO_STREAM("om_to_pl_vol_actual"<<om_to_pl_vol_actual);
 	 // -- if exceed the threshold, break
 	 error = fabs(om_to_pl_vol_ideal - om_to_pl_vol_actual)/om_to_pl_vol_ideal;
-	 if (error < .05 || binary_search_cntr > binary_search_cntr_threshold) {
+	 if (error < .05 || binary_search_cntr > binary_search_cntr_threshold || lower_bound_MapToTransferSideLength > upper_bound_MapToTransferSideLength) {
 		 break;
 	 }else{
 		 int incr = (int) ((upper_bound_MapToTransferSideLength - lower_bound_MapToTransferSideLength)/8);
 		 if (om_to_pl_vol_actual > om_to_pl_vol_ideal){
 			 upper_bound_MapToTransferSideLength  -=  incr;
 		 }else{
-			 lower_bound_MapToTransferSideLength  += MapToTransferSideLength;
+			 lower_bound_MapToTransferSideLength  += incr;
 		 }
 		 MapToTransferSideLength = int(float(upper_bound_MapToTransferSideLength + lower_bound_MapToTransferSideLength)/2.0);
 	 }
 	 binary_search_cntr++;
  }
-
-  /*
+ ROS_INFO_STREAM("binary search time"<<(ros::Time::now() - binary_search_start).toSec());
+ ROS_INFO_STREAM("maptoTransferSAideLength:"<<MapToTransferSideLength);
+ /*
   if (error > .1){
   	  ROS_INFO_STREAM("expected volume kept"<< om_to_pl_vol_ideal<<"actual volume kept" << om_to_pl_vol_actual<<"error"<<error<<"first_iter"<<first_itr<< "total volume"<<(m_octree->getRoot())->getVolumeInUnitCube()*pow(m_octree->getResolution(), 3));
   }
  */
  MapToTransferSideLength = min(MapToTransferSideLength, map_max_length); // -- incase we exceeded the threshold when doubling
- gridSideLength = float(MapToTransferSideLength)/(4*gridSliceCountPerSide); // -- to be more accurate, we quadruple the number of slices
- gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(4*gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
+ gridSideLength = float(MapToTransferSideLength)/(gridSliceCountPerSide); // -- to be more accurate, we quadruple the number of slices
+ gridSliceCountToInclude =  int(pow(2, grid_coeff)*pow(gridSliceCountPerSide, grid_coeff)); //9(2d grid), 27 (3d grid)
  MapToTransferBorrowedDepth = m_octree->getTreeDepth() - int(log2(gridSideLength/m_res_original)) - 1;
 
   // -- now that we found the MapToTrasnferSideLength associated with the volume target
