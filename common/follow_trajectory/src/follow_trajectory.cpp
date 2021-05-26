@@ -6,10 +6,19 @@
 #include "common.h"
 #include "Drone.h"
 #include <std_msgs/Bool.h>
+#include "std_msgs/Int32.h"
+#include <signal.h>
+#include <sys/prctl.h>
 #include <profile_manager/profiling_data_srv.h>
 #include <profile_manager/start_profiling_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
+#include <mavbench_msgs/rosfi.h>
+
+#include <fstream>
+#include <typeinfo>
+#include <vector>
+#include <list>
 
 using namespace std;
 
@@ -48,7 +57,61 @@ int g_traj_ctr = 0;
 ros::Time g_recieved_traj_t;
 ros::Time last_to_fly_backward;
 double g_max_velocity_reached = 0;
+int noise_select;
+int num_fault;
+int range_select_drone;
+double num_sigma;
+int detect;
+double detect_percentage;
+double error_threshold;
+int num_recompute;
+// Magnitude difference after fault injection
+/*double difference_float;
+double original_float;
+double after_float;
+float difference_float32;
+float original_float32;
+float after_float32;
+bool is_float;
+*/
+// for saving results
+std::list<double> drone_vx_list;
+std::list<double> drone_vy_list;
+std::list<double> drone_vz_list;
+std::list<float> drone_yaw_list;
+std::list<double> drone_duration_list;
+std::list<double> recompute_time;
 
+std::list<double> x_list;
+std::list<double> y_list;
+std::list<double> z_list;
+std::list<double> vx_list;
+std::list<double> vy_list;
+std::list<double> vz_list;
+std::list<double> ax_list;
+std::list<double> ay_list;
+std::list<double> az_list;
+std::list<double> yaw_list;
+std::list<double> duration_list;
+std::list<float> error_list;
+
+
+int injected_detected = 0;
+int injected_not_detected = 0;
+int not_injected_detected = 0;
+int not_injected_not_detected = 0;
+
+double detection_time;
+int FI_PID;
+bool ready = false;
+
+void FIPIDCallback(const std_msgs::Int32::ConstPtr& msg)
+{
+    FI_PID = msg->data;
+  
+  ready = true;
+  ROS_INFO("FI_PID: [%d]", msg->data);
+}
 
 template <class P1, class P2>
 double distance(const P1& p1, const P2& p2) {
@@ -63,13 +126,148 @@ double distance(const P1& p1, const P2& p2) {
 void log_data_before_shutting_down()
 {
     std::cout << "\n\nMax velocity reached by drone: " << g_max_velocity_reached << "\n" << std::endl;
+    // write the variable vaules into .txt files
+    ofstream outfile;
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/drone_vx.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:drone_vx_list){
+        outfile << v << "\n";}
+    outfile.close();
 
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/drone_vy.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:drone_vy_list){
+        outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/drone_vz.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:drone_vz_list){
+        outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/drone_yaw.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:drone_yaw_list){
+        outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/drone_duration.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:drone_duration_list){
+        outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/recompute.txt", std::ios_base::app);
+    outfile << "control stage: "<< num_recompute << "\n";
+    outfile.close();
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/recompute_time.txt", std::ios_base::app);
+    outfile << 3 << "\n";
+    for (auto v:recompute_time){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_x.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:x_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_y.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:y_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_z.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:z_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_vx.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:vx_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_vy.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:vy_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_vz.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:vz_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_ax.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:ax_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_ay.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:ay_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_az.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:az_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_yaw.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:yaw_list){
+         outfile << v << "\n";}
+    outfile.close();
+
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/multi_duration.txt", std::ios_base::app);
+    outfile << -10000 << "\n";
+    for (auto v:duration_list){
+         outfile << v << "\n";}
+    outfile.close();
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/error_list.txt", std::ios_base::app);
+    for (auto v:error_list){
+         outfile << v << "\n";}
+    outfile.close();
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/detection_time.txt", std::ios_base::app);
+    outfile << "control stage: "<< detection_time << "\n";
+    outfile.close();
+    // write the location date into a .txt file
+    /*std::ofstream outfile;
+    if(is_float){
+        outfile.open("/home/nvidia/MAVBench_base/src/MAV_apps/package_delivery/src/drone_float64_var_" + std::to_string(noise_select)
+            + "_range_" + std::to_string(range_select_drone) + ".txt", std::ios_base::app);
+        outfile << original_float << ", " << after_float << ", " <<  difference_float << "\n";
+    }
+    else {
+        outfile.open("/home/nvidia/MAVBench_base/src/MAV_apps/package_delivery/src/drone_float32_var_" + std::to_string(noise_select)
+            + "_range_" + std::to_string(range_select_drone) + ".txt", std::ios_base::app);
+        outfile << original_float32 << ", " << after_float32 << ", " <<  difference_float32 << "\n";
+    }
+    outfile.close();*/
+    //write the variable vaules into .txt files
+    /*std::ofstream outfile;
+    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/detect_control_summary.txt", std::ios_base::app);
+    outfile << injected_detected << ", " << injected_not_detected << ", " << not_injected_detected << ", " << not_injected_not_detected << "\n";
+    outfile.close();
+
+    std::cout << "control stage:" << "\n";
+    std::cout << injected_detected << ", " << injected_not_detected << ", " << not_injected_detected << ", " << not_injected_not_detected << "\n";
+    */
     profile_manager::profiling_data_srv profiling_data_srv_inst;
     profiling_data_srv_inst.request.key = "localization_status";
     profiling_data_srv_inst.request.value = g_localization_status;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }
@@ -78,7 +276,8 @@ void log_data_before_shutting_down()
     profiling_data_srv_inst.request.value = (((double)g_pt_cld_to_futurCol_commun_acc)/1e9)/g_traj_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }
@@ -87,7 +286,8 @@ void log_data_before_shutting_down()
     profiling_data_srv_inst.request.value = (((double)g_rcv_traj_to_follow_traj_acc_t)/1e9)/g_follow_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }
@@ -96,7 +296,8 @@ void log_data_before_shutting_down()
     profiling_data_srv_inst.request.value = (((double)g_img_to_follow_acc)/1e9)/g_follow_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }
@@ -105,7 +306,8 @@ void log_data_before_shutting_down()
     profiling_data_srv_inst.request.value = g_max_velocity_reached;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }
@@ -120,6 +322,10 @@ void future_collision_callback(const mavbench_msgs::future_collision::ConstPtr& 
         else
             future_collision_time = ros::Time::now();
     }
+    //cout <<"-----"<<endl;
+    //cout << int(msg->collision) <<endl;
+    //cout << msg->time_to_collision <<endl;
+    //cout << msg->future_collision_seq <<endl;
 }
 
 void slam_loss_callback (const std_msgs::Bool::ConstPtr& msg) {
@@ -279,7 +485,35 @@ void initialize_global_params() {
         ROS_FATAL("Could not start follow_trajectory. Parameter missing! grace_period is not provided");
         exit(-1);
     }
-
+    if(!ros::param::get("/follow_trajectory/num_fault_drone", num_fault)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! num_fault is not provided");
+        exit(-1);
+    }
+    if(!ros::param::get("/follow_trajectory/var_choose_drone", noise_select)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! noise_select is not provided");
+        exit(-1);
+    }
+    if(!ros::param::get("/follow_trajectory/range_select_drone", range_select_drone)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! range_select_drone is not provided");
+        exit(-1);
+    }
+    if(!ros::param::get("/follow_trajectory/num_sigma_drone", num_sigma)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! num_sigma_drone is not provided");
+        exit(-1);
+    }
+    if(!ros::param::get("/follow_trajectory/detect", detect)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! detect is not provided");
+        exit(-1);
+    }
+    if(!ros::param::get("/follow_trajectory/detect_percentage", detect_percentage)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! detect_percentage is not provided");
+        exit(-1);
+    }
+    if(!ros::param::get("/follow_trajectory/error_threshold", error_threshold)) {
+        ROS_FATAL("Could not start follow_trajectory. Parameter missing! error_threshold is not provided");
+        exit(-1);
+    }
+    
     double a_max;
     if(!ros::param::get("a_max", a_max))  {
         ROS_FATAL_STREAM("Could not start follow_trajectory amax not provided");
@@ -295,9 +529,12 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "follow_trajectory", ros::init_options::NoSigintHandler);
     ros::NodeHandle n;
     signal(SIGINT, sigIntHandlerPrivate);
-
+    srand(time(0));
     initialize_global_params();
 
+    ros::Subscriber sub = n.subscribe("/FIPID", 1, FIPIDCallback);
+    ros::Publisher PID_pub = n.advertise<mavbench_msgs::rosfi>("/PID", 1);
+    ros::Publisher traced_process_pub = n.advertise<std_msgs::Int32>("/traced_process", 1);
     // Initialize the drone
     std::string localization_method;
     std::string ip_addr;
@@ -306,7 +543,7 @@ int main(int argc, char **argv)
     ros::param::get("/follow_trajectory/ip_addr", ip_addr);
     ros::param::get("/follow_trajectory/localization_method", localization_method);
     Drone drone(ip_addr.c_str(), port, localization_method,
-                g_max_yaw_rate, g_max_yaw_rate_during_flight);
+                g_max_yaw_rate, g_max_yaw_rate_during_flight, num_fault);
 
     // Initialize publishers and subscribers
     ros::Publisher next_steps_pub = n.advertise<mavbench_msgs::multiDOFtrajectory>("/next_steps", 1);
@@ -322,7 +559,27 @@ int main(int argc, char **argv)
                                //functionaliy in follow_trajectory accordingly
 
     ros::Rate loop_rate(50);
+    bool sent = false;
+    std_msgs::Int32 ready_msg;
+    ready_msg.data = 0;
+    mavbench_msgs::rosfi msg;
+    sleep(1);
+    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
     while (ros::ok()) {
+        if(!sent){
+            drone.start_ros = ros::Time::now();
+            msg.pid = getpid();
+            msg.name = "follow_trajectory";
+            PID_pub.publish(msg);
+            ROS_INFO("publish follow_trajectory_node's id: %d", msg.pid);
+            sent = true;
+        }
+        //sleep(1);
+        if(ready){
+            ready_msg.data = 1;
+            traced_process_pub.publish(ready_msg);
+            ready = false;
+        }
         ros::spinOnce();
 
         if (trajectory.size() > 0) {
@@ -377,13 +634,109 @@ int main(int argc, char **argv)
             rev_traj = &trajectory;
 
             yaw_strategy = face_backward;
-            max_velocity = 3;
+            max_velocity = g_v_max;
         }
-
+        drone.num_sigma = num_sigma;
+        drone.detect_percentage = detect_percentage;
+        drone.threshold = error_threshold; //Threshold for construction error in autoencoder-based anomaly detection
         double max_velocity_reached = follow_trajectory(drone, forward_traj,
                 rev_traj, yaw_strategy, true, max_velocity,
-                g_fly_trajectory_time_out);
+                g_fly_trajectory_time_out, noise_select, range_select_drone, detect);
+        // Record histogram
+        for (auto v:drone.drone_vx_list){
+            drone_vx_list.push_back(v);
+        }
+        for (auto v:drone.drone_vy_list){
+            drone_vy_list.push_back(v);
+        }
+        for (auto v:drone.drone_vz_list){
+            drone_vz_list.push_back(v);
+        }
+        for (auto v:drone.drone_yaw_list){
+            drone_yaw_list.push_back(v);
+        }
+        for (auto v:drone.drone_duration_list){
+            drone_duration_list.push_back(v);
+        }
+        for (auto v:drone.drone_yaw_list){
+            drone_yaw_list.push_back(v);
+        }
+        for (auto v:drone.recompute_time){
+            recompute_time.push_back(v);
+        }
 
+        for (auto v:drone.x_list){
+            x_list.push_back(v);
+        }
+        for (auto v:drone.y_list){
+            y_list.push_back(v);
+        }
+        for (auto v:drone.z_list){
+            z_list.push_back(v);
+        }
+        for (auto v:drone.vx_list){
+            vx_list.push_back(v);
+        }
+        for (auto v:drone.vy_list){
+            vy_list.push_back(v);
+        }
+        for (auto v:drone.vz_list){
+            vz_list.push_back(v);
+        }
+        for (auto v:drone.ax_list){
+            ax_list.push_back(v);
+        }
+        for (auto v:drone.ay_list){
+            ay_list.push_back(v);
+        }
+        for (auto v:drone.az_list){
+            az_list.push_back(v);
+        }
+        for (auto v:drone.yaw_list){
+            yaw_list.push_back(v);
+        }
+        for (auto v:drone.duration_list){
+            duration_list.push_back(v);
+        }
+        for (auto v:drone.error_list){
+            error_list.push_back(v);
+        }
+
+        drone.drone_vx_list.clear();
+        drone.drone_vy_list.clear();
+        drone.drone_vz_list.clear();
+        drone.drone_yaw_list.clear();
+        drone.drone_duration_list.clear();
+        drone.recompute_time.clear();
+
+        drone.x_list.clear();
+        drone.y_list.clear();
+        drone.z_list.clear();
+        drone.vx_list.clear();
+        drone.vy_list.clear();
+        drone.vz_list.clear();
+        drone.ax_list.clear();
+        drone.ay_list.clear();
+        drone.az_list.clear();
+        drone.yaw_list.clear();
+        drone.duration_list.clear();
+        drone.error_list.clear();
+
+        num_recompute = drone.num_recompute;
+        detection_time = drone.detection_time;
+        // Record after fault injection
+        //injected_detected = drone.injected_detected;
+        //injected_not_detected = drone.injected_not_detected;
+        //not_injected_detected = drone.not_injected_detected;
+        //not_injected_not_detected = drone.not_injected_not_detected;
+
+        /*difference_float = drone.difference_float;
+        original_float = drone.original_float;
+        after_float = drone.after_float;
+        difference_float32 = drone.difference_float32;
+        original_float32 = drone.original_float32;
+        after_float32 = drone.after_float32;
+        is_float = drone.is_float;*/
         if (max_velocity_reached > g_max_velocity_reached)
             g_max_velocity_reached = max_velocity_reached;
 
@@ -394,7 +747,7 @@ int main(int argc, char **argv)
         trajectory_msg.reverse = fly_backward;
 
         next_steps_pub.publish(trajectory_msg);
-
+        //std::cout << "output trajectory in follow_trajectory" << "\n";
         if (slam_lost){
             ROS_INFO_STREAM("slam loss");
             log_data_before_shutting_down();

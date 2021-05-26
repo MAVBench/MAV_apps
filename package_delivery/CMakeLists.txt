@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 2.8.3)
 project(package_delivery)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
+add_compile_options(-std=c++14 -g -fno-omit-frame-pointer)
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+
+find_package(frugally-deep REQUIRED)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -140,6 +142,9 @@ set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
 ## Your package locations should be listed before other locations
 include_directories(
 # include
+  /usr/local/include
+  /usr/local/include/fplus
+  /usr/local/include/fdeep
   ${CATKIN_DEVEL_PREFIX}/include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
@@ -189,25 +194,25 @@ link_directories(
 ### Package-Delivery executables
 
 
-add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
-add_dependencies(occupancy_map_node future_collision package_delivery_generate_messages_cpp)
+add_executable(occupancy_map_node src/occupancy_map_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
+add_dependencies(occupancy_map_node future_collision package_delivery_generate_messages_cpp )
 target_link_libraries(occupancy_map_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand)
 
 add_executable(package_delivery ${common_utility_src}/Drone.cpp ${common_utility_src}/control_drone.cpp 
-    ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp)
+    ${common_utility_src}/common.cpp  ${common_utility_src}/Profiling.cpp src/package_delivery.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
 add_dependencies(package_delivery package_delivery_generate_messages_cpp)
 target_link_libraries(package_delivery ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
 ### Scanning executables
 
 add_executable(scanning ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
-    ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/scanning.cpp ${common_utility_src}/timer.cpp)
+    ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/scanning.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
 add_dependencies(scanning package_delivery_generate_messages_cpp)
 target_link_libraries(scanning ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread ${OpenCV_LIBS})
 
-add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_executable(motion_planner_node src/motion_planner_node.cpp src/motion_planner.cpp src/graph.cpp src/global_planner.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
 add_dependencies(motion_planner_node package_delivery_generate_messages_cpp)
-target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand )
+target_link_libraries(motion_planner_node ${catkin_LIBRARIES} ${OMPL_LIBRARIES}  AirLib MavLinkCom rpc pthread cuda cudart cublas curand)
 
 # add_executable(obstacle_avoidance_test ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp 
 #      ${common_utility_src}/Profiling.cpp ${common_utility_src}/control_drone.cpp src/obstacle_avoidance_test.cpp ${common_utility_src}/timer.cpp)

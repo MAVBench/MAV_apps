@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(follow_trajectory)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11 -fno-omit-frame-pointer)
+add_compile_options(-std=c++14 -fno-omit-frame-pointer)
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
@@ -10,6 +10,8 @@ set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+find_package(frugally-deep REQUIRED)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -126,6 +128,9 @@ set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
 ## Your package locations should be listed before other locations
 include_directories(
 # include
+    /usr/local/include
+    /usr/local/include/fplus
+    /usr/local/include/fdeep
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${common_utility_include} 
@@ -169,7 +174,7 @@ link_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-add_executable(follow_trajectory src/follow_trajectory.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp)
+add_executable(follow_trajectory src/follow_trajectory.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
 # add_dependencies(follow_trajectory package_delivery_generate_messages_cpp)
 target_link_libraries(follow_trajectory ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 

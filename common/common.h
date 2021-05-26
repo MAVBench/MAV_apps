@@ -1,14 +1,16 @@
 #ifndef COMMON_H
 #define COMMON_H
+#include <ros/ros.h>
 
 #include <string>
 #include <limits>
 #include <geometry_msgs/Vector3.h>
 #include <mavbench_msgs/multiDOFpoint.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
+//#include <autoencoder/autoencoder.h>
+
 #include "Profiling.h"
 #include "Drone.h"
-
 void sigIntHandler(int sig);
 
 
@@ -30,13 +32,16 @@ multiDOFpoint trajectory_at_time(const trajectory_t& traj, double t);
 multiDOFpoint trajectory_at_time(const mavbench_msgs::multiDOFtrajectory& traj, double t);
 trajectory_t append_trajectory (trajectory_t first, const trajectory_t& second);
 
+std::vector<float> inference(std::vector<float>&, Drone&, int);
+void autoencoder_detect(Drone&, int);
+
 double follow_trajectory(Drone& drone, trajectory_t * traj,
         trajectory_t * reverse_traj,
         yaw_strategy_t yaw_strategy = ignore_yaw,
         bool check_position = true,
         float max_speed = std::numeric_limits<double>::infinity(),
         //float max_speed = 3,
-        float time = 2); 
+        float time = 2, int noise_select = 0, int range_select_drone = 0, int detect = 0); 
 
 
 // Recovery methods
@@ -54,6 +59,11 @@ float distance(float x, float y, float z);
 float yawFromQuat(geometry_msgs::Quaternion q);
 float yawFromVelocity(float vx, float vy);
 void waitForLocalization(std::string method);
+
+
+
+
+
 
 #endif
 

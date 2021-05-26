@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(future_collision)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11 -g -fno-omit-frame-pointer)
+add_compile_options(-std=c++14 -g -fno-omit-frame-pointer)
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
@@ -114,6 +114,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
 find_package(Eigen3 REQUIRED)
+find_package(frugally-deep REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -131,6 +132,9 @@ set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
 ## Your package locations should be listed before other locations
 include_directories(
   include
+  /usr/local/include
+  /usr/local/include/fplus
+  /usr/local/include/fdeep
   ${CATKIN_DEVEL_PREFIX}/include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}

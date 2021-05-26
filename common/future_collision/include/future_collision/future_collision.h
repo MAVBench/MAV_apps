@@ -22,6 +22,12 @@
 // TODO: Get rid of this dependency
 #include <octomap_server/OctomapServer.h>
 
+#include <bitset>
+#include <vector>
+
+#include <fstream>
+#include <iostream>
+
 class FutureCollisionChecker {
 public:
     FutureCollisionChecker(octomap::OcTree * octree_, Drone * drone_) :
@@ -43,6 +49,16 @@ public:
     }
 
     void spinOnce();
+
+    void fault_injection_double(double &original);
+    void fault_injection_int(int &original);
+    void fault_injection_bool(bool &original);
+    void detect_all();
+    void detect_int(std::vector<int> &points, double mean, double stddev);
+    void detect_double(std::vector<double> &points, double mean, double stddev);
+
+
+
     void log_data_before_shutting_down();
 
     // TODO: Get rid of this function
@@ -50,6 +66,9 @@ public:
     {
         server = server_;
     }
+    bool recompute = false;
+    ros::Time start_ros;
+    ros::Time end_ros;
 
 private:
     std::tuple <bool, double> check_for_collisions(Drone& drone);
@@ -77,7 +96,37 @@ private:
     double drone_height__global;
     double drone_radius__global;
     double grace_period__global;
+    // number of bit flip faults
+    bool injected = false;
+    double num_fault;
+    // choose which variables to injecrt noise 
+    int var_choose_col;
+    // Select where to inject, (sign, exponent, mantissa): float (sign, others) : int 
+    int range_select_col;
+    // Magnitude difference after fault injection
+    double difference_float;
+    double original_float;
+    double after_float;
+    int difference_int;
+    int original_int;
+    int after_int;
 
+    std::vector<double> g_time_to_collision = {0.0, 0.0};
+    std::vector<int> g_future_collision_seq_id = {0, 0};
+    // make sure only inject once
+    bool one_time_injection = false;
+    double num_sigma = 3.0;
+    double detect_percentage = 0.0;
+    std::vector<int> record_detect;
+
+    // Turn on detection mode
+    int detect;
+    int injected_detected = 0;
+    int injected_not_detected = 0;
+    int not_injected_detected = 0;
+    int not_injected_not_detected = 0;
+    // Whether inject to float or int
+    bool is_float;
     // Profiling variables
     const octomap_server::OctomapServer * server = nullptr; // TODO: get rid of this dependency
     ros::Time start_hook_chk_col_t, end_hook_chk_col_t;                                          

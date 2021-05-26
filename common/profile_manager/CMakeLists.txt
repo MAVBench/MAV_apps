@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(profile_manager)
 
+add_compile_options(-std=c++14 -g -fno-omit-frame-pointer)
+
 set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
+
+find_package(frugally-deep REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(CUDA REQUIRED)
@@ -44,6 +48,9 @@ generate_messages(
 
 #message(cuda_include_dirs )
 include_directories(
+    /usr/local/include
+    /usr/local/include/fplus
+    /usr/local/include/fdeep
     ${CATKIN_DEVEL_PREFIX}/include
     ${Eigen_INCLUDE_DIRS} 
     ${catkin_INCLUDE_DIRS}
@@ -70,12 +77,13 @@ catkin_package(
 
 if(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
 include_directories(/usr/local/cuda/include)
-link_directories(/usr/lib/nvidia-384)
-add_definitions(-DUSE_INTEL -DUSE_NVML)
-add_executable(profile_manager src/profile_manager.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/timer.cpp)
+link_directories(/usr/lib/nvidia-410)
+add_definitions(-DUSE_INTEL)
+#add_definitions(-DUSE_INTEL -DUSE_NVML)
+add_executable(profile_manager src/profile_manager.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp  ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
 target_link_libraries(profile_manager  ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread nvidia-ml)
 else(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
-add_executable(profile_manager src/profile_manager.cpp src/slam_profiler.cpp ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp ${common_utility_src}/timer.cpp)
+add_executable(profile_manager src/profile_manager.cpp src/slam_profiler.cpp)
 target_link_libraries(profile_manager  ${catkin_LIBRARIES}  AirLib MavLinkCom rpc pthread)
 endif(${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
 

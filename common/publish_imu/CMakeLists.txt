@@ -3,8 +3,10 @@ project(publish_imu)
 set (common_utility_src $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 set (common_utility_include $ENV{base_dir}/catkin_ws/src/MAV_apps/common)
 
+add_compile_options(-std=c++14 -g -fno-omit-frame-pointer)
 
 set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
+find_package(frugally-deep REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -37,6 +39,9 @@ generate_messages(
 
 #message(cuda_include_dirs )
 include_directories(
+    /usr/local/include
+    /usr/local/include/fplus
+    /usr/local/include/fdeep
     ${Eigen_INCLUDE_DIRS} 
     ${catkin_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
@@ -65,7 +70,7 @@ catkin_package(
 
 add_executable(publish_imu ${common_utility_src}/publish_imu/src/publish_imu.cpp 
     ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/Profiling.cpp 
-    ${common_utility_src}/publish_imu/src/HelperFunctions/QuatRotEuler.cpp) 
+    ${common_utility_src}/publish_imu/src/HelperFunctions/QuatRotEuler.cpp  ${common_utility_src}/autoencoder.cpp) 
 target_link_libraries(publish_imu ${catkin_LIBRARIES}  ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_curand_LIBRARY} AirLib MavLinkCom rpc pthread)
 add_dependencies(publish_imu ${catkin_EXPORTED_TARGETS})
 

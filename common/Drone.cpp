@@ -51,6 +51,19 @@ Drone::Drone(const std::string& ip_addr, uint16_t port,
     this->max_yaw_rate = max_yaw_rate;
 }
 
+Drone::Drone(const std::string& ip_addr, uint16_t port, 
+             std::string localization_method, float max_yaw_rate, 
+             float max_yaw_rate_during_flight, int num_fault_drone) : client(0), collision_count(0)
+{
+    connect(ip_addr, port);
+
+    auto pos = client->getPosition();
+    initial_fc_pos = {pos.y(), pos.x(), -pos.z()};
+    this->localization_method = localization_method;
+    this->max_yaw_rate_during_flight = max_yaw_rate_during_flight;
+    this->max_yaw_rate = max_yaw_rate;
+    num_fault = num_fault_drone;
+}
 
 Drone::~Drone()
 {
@@ -291,11 +304,263 @@ static float xy_yaw(double x, double y) {
     return 90 - atan2(y, x)*180.0/3.14;
 }
 
-bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double duration)
+void Drone::fault_injection_double(double &original){
+    int noise; 
+    int pick;
+    int select;
+    //original_float = original;
+    bool success = false;
+    std::vector<int> record;
+    //is_float = true;
+
+   // write inputted data into the file.
+    //std::cout << "print float64: " << original << std::endl;
+    for(int i = 0; i < num_fault; i++){
+        while(!success){
+            if(range_select_drone == 1){
+                select = 63;
+            }
+            else if(range_select_drone == 2){
+                select = rand() % 11 + 52;
+            }
+            else if(range_select_drone == 3){
+                select = rand() % 52;
+            }
+            noise = select / 8;
+            pick = select % 8;
+            success = true;
+            if(!record.empty()){
+                for (int j = 0; j < record.size(); ++j){
+                    if(record[j] == (select)){
+                        success = false;
+                    }              
+                }
+            }
+        }
+        char* bits = reinterpret_cast<char*>(&original);
+        for(std::size_t n = 0; n < sizeof original; ++n){
+            std::bitset<8> byte (bits[n]);
+            if(n == noise){
+                byte.flip(pick);
+                bits[n] = static_cast<unsigned char>(byte.to_ulong());
+                record.push_back(select);
+            }
+        }
+        
+        success = false;
+    }
+    //after_float = original;
+    record.clear();
+    //difference_float = after_float - original_float;
+    //std::cout << "after injection print float64: " << original << std::endl;
+    //std::cout << "difference: " << difference_float << std::endl;
+
+}
+
+void Drone::fault_injection_float(float &original){
+    int noise; 
+    int pick;
+    int select;
+    //original_float32 = original;
+    bool success = false;
+    std::vector<float> record;
+    //is_float = false;
+
+   // write inputted data into the file.
+    //std::cout << "print float32: " << original << std::endl;
+    for(int i = 0; i < num_fault; i++){
+        while(!success){
+            if(range_select_drone == 1){
+                select = 31;
+            }
+            else if(range_select_drone == 2){
+                select = rand() % 8 + 23;
+            }
+            else if(range_select_drone == 3){
+                select = rand() % 23;
+            }
+            noise = select / 8;
+            pick = select % 8;
+            success = true;
+            if(!record.empty()){
+                for (int j = 0; j < record.size(); ++j){
+                    if(record[j] == (select)){
+                        success = false;
+                    }              
+                }
+            }
+        }
+        char* bits = reinterpret_cast<char*>(&original);
+        for(std::size_t n = 0; n < sizeof original; ++n){
+            std::bitset<8> byte (bits[n]);
+            if(n == noise){
+                byte.flip(pick);
+                bits[n] = static_cast<unsigned char>(byte.to_ulong());
+                record.push_back(select);
+            }
+        }
+        
+        success = false;
+    }
+    //after_float32 = original;
+    record.clear();
+    //difference_float32 = after_float32 - original_float32;
+    //std::cout << "after injection print float32: " << original << std::endl;
+    //std::cout << "difference: " << difference_float32 << std::endl;
+
+}
+
+void Drone::detect_double(std::vector<double> &points, double mean, double stddev){
+    double upper_b = mean + num_sigma * stddev;
+    double lower_b = mean - num_sigma * stddev;
+    double delta;
+
+    /*for(int i = 0; i < points.size(); i++){
+        std::cout << i << ": " << points[i] << " ";
+    }*/
+    delta = points[1] - points[0];
+    if(delta != 0){
+        if(delta > upper_b || delta < lower_b){
+            std::cout << " upper_b: " << upper_b << " lower_b: " << lower_b << "\n";
+            std::cout << "drone delta: " << delta << "\n";
+            recompute = true;
+        } 
+    }
+
+
+}
+void Drone::detect_float(std::vector<float> &points, double mean, double stddev){
+    float upper_b = mean + num_sigma * stddev;
+    float lower_b = mean - num_sigma * stddev;
+    float delta;
+
+    if(!recompute){
+        delta = points[1] - points[0];
+        if(delta != 0){
+            if(delta > upper_b || delta < lower_b){
+                recompute = true;
+            } 
+            for(int i = 0; i < points.size(); i++){
+                if (points[i] == FACE_FORWARD || points[i] == FACE_BACKWARD || points[i] == YAW_UNCHANGED){
+                    recompute = false;
+                }
+                if (points[i] == 90 || points[i] == -90 || points[i] == 180 || points[i] == -180){
+                    recompute = false;
+                }
+            }
+        }
+    }
+    
+
+}
+void Drone::detect_all(bool is_yaw_rate){
+    // Starting from index = 1
+    std::vector<double> mean = {-4.08598e-05, -6.49413e-07, -0.000127048};
+    //std::vector<double> stddev = {1.7164e-07, 0.00198019, 0.0131262};
+    std::vector<double> stddev = {0.0486682, 0.00198019, 0.0131262};
+    //std::vector<double> mean = {7.49104e-06, -6.49413e-07, -0.000127048};
+    //std::vector<double> stddev = {0.0886682, 0.00198019, 0.0131262};
+    std::vector<double> tmp;
+    int num_detect = 4.0 * detect_percentage;
+    int detect_run = 0;
+    int select;
+    bool success = false;
+    if(record_detect.empty()){
+        if(detect_percentage == 1){
+            for(int i = 0; i< 4; i++){
+                record_detect.push_back(i);
+            }
+        }
+        else{
+            while(detect_run < num_detect){
+                success = false;
+                while(!success){
+                    select = rand() % 4;
+                    success = true;
+                    for (int j = 0; j < record_detect.size(); ++j){
+                        if(record_detect[j] == (select)){
+                            success = false;
+                        }              
+                    }
+                }
+                record_detect.push_back(select);
+                detect_run++;
+            }
+        }
+        std::cout << "control: ";
+        for(int i = 0; i < record_detect.size(); i++){
+            std::cout << record_detect[i] << ", ";
+        }
+        std::cout << "\n";
+    }
+
+    for(int i = 0; i < record_detect.size(); i++){
+        select = record_detect[i];
+        if(select == 0){
+            detect_double(g_vx, mean[0], stddev[0]);
+        }
+        else if(select == 1){
+            detect_double(g_vy, mean[0], stddev[0]);
+        }
+        else if(select == 2){
+            if(count > 10){
+                detect_double(g_vz, mean[0], stddev[0]);
+            }
+        }
+        else if(select == 3){
+            if(is_yaw_rate){
+                detect_float(g_yaw_rate, mean[2], stddev[2]);
+            }
+        }
+    }
+    /*detect_double(g_duration, mean[1], stddev[1]);
+    if(recompute){
+        std::cout << "duration has error" << "\n";
+    }*/
+
+
+    if(recompute){
+        end_ros = ros::Time::now();
+        recompute_time.push_back((end_ros - start_ros).toSec());
+        std::cout << "recompute: " << recompute << "\n";
+        num_recompute++;
+        std::cout << "\n";
+    }
+    if(injected && one_time_injection == false){
+        one_time_injection = true;
+        std::cout << "fault injected!!!" << "\n";
+        std::cout << "recompute: " << recompute << "\n";
+        if(recompute){
+            injected_detected++;
+        }
+        else{
+            injected_not_detected++;
+        }
+    }
+    else{
+        if(recompute){
+            not_injected_detected++;
+        }
+        else{
+            not_injected_not_detected++;
+        }
+    }
+
+
+}
+bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double duration, int noise_select, int range_select, bool start, int detect)
 {
     //getCollisionInfo();
 
 	try {
+        /*if(start){
+            g_vx[0] = 0.0;
+            g_vy[0] = 0.0;
+            g_vz[0] = 0.0;
+            g_duration[0] = 0.0;
+            g_yaw_rate[0] = 0.0;
+        }*/
+        range_select_drone = range_select;
         if (yaw != YAW_UNCHANGED) {
             float target_yaw = yaw;
             if (yaw == FACE_FORWARD)
@@ -325,10 +590,88 @@ bool Drone::fly_velocity(double vx, double vy, double vz, float yaw, double dura
 
             auto drivetrain = msr::airlib::DrivetrainType::MaxDegreeOfFreedom;
             auto yawmode = msr::airlib::YawMode(true, yaw_rate);
+            drone_yaw_list.push_back(yaw_rate);
+            //std::cout << "yaw_rate: " << yaw_rate << "\n";
+            int inject = rand() % 100;
+            if(inject == 0 && noise_select != 0){
+                // noise injection
+                if(!injected){
+                    injected = true;
+                    if(noise_select == 1){
+                        fault_injection_double(vx);
+                        fault_injection_double(vy);
+                        fault_injection_double(vz);
+                    }
+                    else if(noise_select == 2){
+                        fault_injection_double(duration);
+                    }
+                    else if(noise_select == 3){
+                        fault_injection_float(yaw_rate);
+                    }
+                    else{
+                        injected = false;
+                    }
+                }
+            }
+            g_vx[1] = vx;
+            g_vy[1] = vy;
+            g_vz[1] = vz;
+            g_duration[1] = duration;
+            g_yaw_rate[1] = yaw_rate;
+            // Initialize the recompute as don't need
+            recompute = false;
+            if(detect == 1){
+                detect_all(true);
+            }
 
-            client->moveByVelocity(vy, vx, -vz, duration, drivetrain, yawmode);
+            g_vx[0] = g_vx[1];
+            g_vy[0] = g_vy[1];
+            g_vz[0] = g_vz[1];
+            g_duration[0] = g_duration[1];
+            g_yaw_rate[0] = g_yaw_rate[1];
+            if(!recompute){
+                client->moveByVelocity(vy, vx, -vz, duration, drivetrain, yawmode);
+            }
         } else {
-            client->moveByVelocity(vy, vx, -vz, duration);
+            int inject = rand() % 1000;
+            if(inject == 0){
+                // noise injection
+                if(!injected){
+                    injected = true;
+                    if(noise_select == 1){
+                        fault_injection_double(vx);
+                        fault_injection_double(vy);
+                        fault_injection_double(vz);
+                    }
+                    else if(noise_select == 2){
+                        fault_injection_double(duration);
+                    }
+                    else{
+                        injected = false;
+                    }
+                }
+            }
+            drone_yaw_list.push_back(g_yaw_rate[0]);
+            g_vx[1] = vx;
+            g_vy[1] = vy;
+            g_vz[1] = vz;
+            g_duration[1] = duration;
+            g_yaw_rate[1] = g_yaw_rate[0];
+
+            // Initialize the recompute as don't need
+            recompute = false;
+            if(detect == 1){
+                detect_all(false);
+            }
+
+            g_vx[0] = g_vx[1];
+            g_vy[0] = g_vy[1];
+            g_vz[0] = g_vz[1];
+            g_duration[0] = g_duration[1];
+            g_yaw_rate[0] = g_yaw_rate[1];
+            if(!recompute){
+                client->moveByVelocity(vy, vx, -vz, duration);
+            }
         }
     } catch(...) {
 		std::cerr << "fly_velocity failed" << std::endl;

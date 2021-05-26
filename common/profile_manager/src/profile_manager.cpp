@@ -383,6 +383,16 @@ void output_flight_summary(void){
     stats_ss << "\t\"StateOfCharge\": " << 100 - (g_init_stats.state_of_charge  - g_end_stats.state_of_charge) << "," << endl;
     stats_ss << "\t\"rotor energy consumed \": " << g_end_stats.energy_consumed - g_init_stats.energy_consumed << ","<<endl; 
 
+    std::cout << "{"<<endl;
+    std::cout << "\t\"distance_travelled\": " << g_end_stats.distance_traveled - g_init_stats.distance_traveled<< "," << endl;
+    std::cout << "\t\"flight_time\": " << g_end_stats.flight_time - g_init_stats.flight_time<< "," << endl;
+    std::cout << "\t\"collision_count\": " << g_end_stats.collision_count  - g_init_stats.collision_count << "," << endl;
+    
+    std::cout << "\t\"initial_voltage\": " << g_init_stats.voltage << "," << endl;
+    std::cout << "\t\"end_voltage\": " << g_end_stats.voltage << "," << endl;
+    std::cout << "\t\"StateOfCharge\": " << 100 - (g_init_stats.state_of_charge  - g_end_stats.state_of_charge) << "," << endl;
+    std::cout << "\t\"rotor energy consumed \": " << g_end_stats.energy_consumed - g_init_stats.energy_consumed << ","<<endl; 
+
     //stats_ss << "\t\"absolute_slam_error\": " << absoluteTrajectoryError(P, Q) << "," << endl;
     //stats_ss << "\t\"slam_lost:\": " << (g_slam_lost ? "true" : "false") << "," << endl;
 
@@ -403,6 +413,7 @@ void output_flight_summary(void){
     //total_energy_consumed += ((g_end_stats.flight_time - g_init_stats.flight_time)*g_worst_case_power)
     total_energy_consumed +=  (g_end_stats.energy_consumed - g_init_stats.energy_consumed);
     stats_ss << "\t\"" <<"total_energy_consumed"<<'"'<<":" << total_energy_consumed << "," << endl;
+    std::cout << "\t\"" <<"total_energy_consumed"<<'"'<<":" << total_energy_consumed << "," << endl;
     // topic rates
     stats_ss << "\t\""  <<"topic_statistics"<<'"'<<":{" << endl;
     

@@ -18,7 +18,8 @@
 #include <profile_manager/profiling_data_srv.h>
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
-
+#include <mavbench_msgs/rosfi.h>
+#include "std_msgs/Int32.h"
 // Misc messages
 #include <geometry_msgs/Point.h>
 
@@ -36,11 +37,18 @@
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/planners/rrt/RRT.h>
+#include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/prm/PRM.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/config.h>
 
+//autoencoder
+#include "autoencoder.h"
+#include "fdeep.hpp"
+
+
+//#include "../common/autoencoder/include/autoencoder/autoencoder.h"
 class MotionPlanner
 {
 friend class OMPLMotionValidator;
@@ -61,6 +69,7 @@ public:
 
         // Topics and services
         get_trajectory_srv_server = nh.advertiseService("/get_trajectory_srv", &MotionPlanner::get_trajectory_fun, this);
+        Start_pub = nh.advertise<std_msgs::Int32>("/start", 1);
 
         future_col_sub = nh.subscribe("/col_coming", 1, &MotionPlanner::future_col_callback, this);
         next_steps_sub = nh.subscribe("/next_steps", 1, &MotionPlanner::next_steps_callback, this);
@@ -70,12 +79,34 @@ public:
         traj_pub = nh.advertise<mavbench_msgs::multiDOFtrajectory>("multidoftraj", 1);
     }
 
+    void fault_injection_double(double &original);
+    void fault_injection_int(int &original);
+    bool fault_injection_bool(bool original);
+    void inject_all(package_delivery::get_trajectory::Response &res);
+    void detect_all(package_delivery::get_trajectory::Response &res);
+    void autoencoder_detect(package_delivery::get_trajectory::Response &res);
+    std::vector<float> inference(std::vector<float>&);
+    void detect_double(std::vector<double> &points, double mean, double stddev);
+    void detect_int(std::vector<int> &points, double mean, double stddev);
+
+
     void spinOnce()
     {
         callback_queue.callAvailable(ros::WallDuration());
     }
 
+    //Autoencoder autoencoder();
     void log_data_before_shutting_down();
+    int FI_PID;
+    bool ready = false;
+    ros::Publisher Start_pub;
+    bool inject_once = false;
+    int notify_rosfi;
+    int count = 0;
+    int num_recompute = 0;
+    ros::Time start_ros;
+    ros::Time end_ros;
+    Autoencoder encoder;
 
 private:
     bool get_trajectory_fun(package_delivery::get_trajectory::Request &req, package_delivery::get_trajectory::Response &res);
@@ -94,6 +125,8 @@ private:
 
     // ***F:DN Use the RRT sampling method from OMPL to find a piecewise path
     piecewise_trajectory OMPL_RRT(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
+    // ***F:DN Use the RRT sampling method from OMPL to find a piecewise path
+    piecewise_trajectory OMPL_RRTStar(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
 
     // ***F:DN Use bi-directonal RRT from OMPL to find a piecewise path
     piecewise_trajectory OMPL_RRTConnect(geometry_msgs::Point start, geometry_msgs::Point goal, int width, int length, int n_pts_per_dir, octomap::OcTree * octree);
@@ -176,6 +209,37 @@ private:
     int g_number_of_planning = 0 ;
     float g_planning_budget;
     float g_out_of_bounds_allowance = 5;
+    // noise inject
+    bool injected = false;
+    // number of bit flip faults
+    double num_fault;
+    int num_points;
+    int range_select_multidoftraj;
+    int var_choose_multidoftraj;
+    // Whether inject to float or int
+    bool is_float;
+    // Magnitude difference after fault injection
+    double difference_float;
+    double original_float;
+    double after_float;
+    int difference_int;
+    int original_int;
+    int after_int;
+    bool recompute = false;
+    double num_sigma = 3.0;
+    int detect;
+    bool one_time_injection = false;
+    int injected_detected = 0;
+    int injected_not_detected = 0;
+    int not_injected_detected = 0;
+    int not_injected_not_detected = 0;
+
+    std::vector<int> record_detect;
+
+    
+    std::vector<int> g_trajectory_seq = {0, 0};
+    std::vector<int> g_future_collision_seq = {0, 0};
+    double detect_percentage = 0.0; 
 
     // The following block of variables only exist for debugging purposes
     visualization_msgs::MarkerArray smooth_traj_markers;
@@ -318,7 +382,7 @@ MotionPlanner::piecewise_trajectory MotionPlanner::OMPL_plan(geometry_msgs::Poin
         }
     }
     else
-        ROS_ERROR("Path not found!");
+        ROS_INFO("Path not found!");
 
     return result;
 }

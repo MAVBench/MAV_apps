@@ -9,8 +9,6 @@
 #include <deque>
 #include <limits>
 #include <signal.h>
-#include <sys/prctl.h>
-#include <mavbench_msgs/rosfi.h>
 
 #include <profile_manager/profiling_data_srv.h>
 #include <profile_manager/start_profiling_srv.h>
@@ -26,11 +24,6 @@
 #include <mavbench_msgs/multiDOFtrajectory.h>
 #include <mavbench_msgs/future_collision.h>
 
-#include <fstream>
-#include <typeinfo>
-#include <vector>
-#include <list>
-
 using namespace std;
 
 // Profiling
@@ -38,7 +31,7 @@ std::string g_mission_status = "time_out"; //global variable to log in stats man
 ros::Time col_coming_time_stamp; 
 long long g_pt_cld_to_pkg_delivery_commun_acc = 0;
 int g_col_com_ctr = 0;
-std::list<float> location_list;
+
 bool slam_lost = false;
 bool col_coming = false;
 bool clcted_col_coming_data = true;
@@ -59,7 +52,6 @@ long long g_planning_time_including_ros_overhead_acc  = 0;
 int  g_planning_ctr = 0; 
 bool clct_data = true;
 ros::Time g_traj_time_stamp;
-string goal_mode;
 
 geometry_msgs::Vector3 panic_velocity;
 string ip_addr__global;
@@ -67,7 +59,6 @@ string localization_method;
 string stats_file_addr;
 string ns;
 std::string g_supervisor_mailbox; //file to write to when completed
-double goal_x, goal_y, goal_z;
 bool CLCT_DATA;
 bool DEBUG;
 
@@ -111,12 +102,6 @@ void log_data_before_shutting_down()
 {
     std::string ns = ros::this_node::getName();
     profile_manager::profiling_data_srv profiling_data_srv_inst;
-
-    ofstream outfile;
-    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/trajectory.txt", std::ios_base::app);
-    for (auto v:location_list){
-         outfile << v << "\n";}
-    outfile.close();
     
     profiling_data_srv_inst.request.key = "mission_status";
     if (g_mission_status == "time_out") {
@@ -217,25 +202,6 @@ void package_delivery_initialize_params()
       ROS_FATAL_STREAM("Could not start pkg delivery CLCT_DATA not provided");
       return ;
     }
-    if(!ros::param::get("/goal_mode",goal_mode))  {
-      ROS_FATAL_STREAM("Could not start mapping goal_mode not provided");
-      return ;
-    }
-
-    if(!ros::param::get("/goal_x",goal_x))  {
-      ROS_FATAL_STREAM("Could not start mapping goal_x not provided");
-      return ;
-    }
-
-    if(!ros::param::get("/goal_y",goal_y))  {
-      ROS_FATAL_STREAM("Could not start mapping goal_y not provided");
-      return ;
-    }
-
-    if(!ros::param::get("/goal_z",goal_z))  {
-      ROS_FATAL_STREAM("Could not start mapping goal_z not provided");
-      return ;
-    }
 
     if(!ros::param::get("/package_delivery/ip_addr",ip_addr__global)){
         ROS_FATAL("Could not start exploration. Parameter missing! Looking for %s", 
@@ -293,21 +259,14 @@ geometry_msgs::Point get_start(Drone& drone) {
 }
 
 
-geometry_msgs::Point get_goal(string mode="manual") {
+geometry_msgs::Point get_goal() {
     geometry_msgs::Point goal;
 
     // Get intended destination from user
     std::cout << "Please input your destination in x,y,z format." << std::endl;
     double input_x, input_y, input_z;
     std::cin >> input_x >> input_y >> input_z;
-    if (mode == "manual"){
-        goal.x = input_x; goal.y = input_y; goal.z = input_z;
-    }else{
-        goal.x = goal_x;
-        goal.y = goal_y;
-        goal.z = goal_z;
-        cout<<goal.x<< " "<< goal.y <<" " <<goal.z<<endl;
-    }
+    goal.x = input_x; goal.y = input_y; goal.z = input_z;
 
     return goal;
 }
@@ -408,9 +367,6 @@ bool drone_stopped_or_reversing()
 // *** F:DN main function
 int main(int argc, char **argv)
 {
-    // output finite state machine for debug
-    std::ofstream outfile;
-    outfile.open("/home/yushun/Desktop/MAVBench_original/MAVBench_base/src/MAV_apps/data/package_delivery/variable/complete.txt", std::ios_base::app);
     // ROS node initialization
     ros::init(argc, argv, "package_delivery", ros::init_options::NoSigintHandler);
     ros::NodeHandle nh;
@@ -438,7 +394,7 @@ int main(int argc, char **argv)
                                               //pkg and successfully returned to origin
     
     int fail_ctr = 0;
-    int fail_threshold = 40;
+    int fail_threshold = 50;
 
     ros::Time start_hook_t, end_hook_t;                                          
     // *** F:DN subscribers,publishers,servers,clients
@@ -448,9 +404,8 @@ int main(int argc, char **argv)
     ros::Subscriber trajectory_sub = nh.subscribe("multidoftraj", 1, trajectory_callback);
     ros::Subscriber next_steps_sub = nh.subscribe("next_steps", 1, next_steps_callback);
     ros::Subscriber slam_lost_sub = nh.subscribe("/slam_lost", 1, slam_loss_callback);
-    ros::Publisher PID_pub = nh.advertise<mavbench_msgs::rosfi>("/PID", 1);
-    sleep(1);
-    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
+
+
 
     ros::ServiceClient get_trajectory_client = 
         nh.serviceClient<package_delivery::get_trajectory>("/get_trajectory_srv", true);
@@ -471,7 +426,7 @@ int main(int argc, char **argv)
     //----------------------------------------------------------------- 
 	// *** F:DN knobs(params)
 	//----------------------------------------------------------------- 
-    const float goal_s_error_margin = 8.0; //ok distance to be away from the goal.
+    const float goal_s_error_margin = 6.0; //ok distance to be away from the goal.
                                            //this is b/c it's very hard 
                                            //given the issues associated with
                                            //flight controler to land exactly
@@ -496,34 +451,19 @@ int main(int argc, char **argv)
     
     ros::Time loop_start_t(0,0); 
     ros::Time loop_end_t(0,0); //if zero, it's not valid
-    ros::Time start_step, end_step;
+
 	ros::Rate pub_rate(80);
-    mavbench_msgs::rosfi msg;
-    bool sent = false;
-    if(!sent){
-        msg.pid = getpid();
-        msg.name = "package_delivery";
-        PID_pub.publish(msg);
-        ROS_INFO("publish %s's id: %d", msg.name.c_str(), msg.pid);
-        sent = true;
-    }
     for (State state = setup; ros::ok(); ) {
 		pub_rate.sleep();
         ros::spinOnce();
-        auto location_drone = drone.position(); 
-    end_step = ros::Time::now();
-    location_list.push_back((end_step - start_step).toSec());
-    location_list.push_back(location_drone.x);
-    location_list.push_back(location_drone.y);
-    location_list.push_back(location_drone.z);
-    start_step = ros::Time::now();
+        
         State next_state = invalid;
         loop_start_t = ros::Time::now();
         if (state == setup)
         {
             control_drone(drone);
 
-            goal = get_goal(goal_mode);
+            goal = get_goal();
             start = get_start(drone);
             
             profiling_data_srv_inst.request.key = "start_profiling";
@@ -544,7 +484,8 @@ int main(int argc, char **argv)
             ROS_INFO_STREAM("requesting a trajectory in pd");
             normal_traj_msg = request_trajectory(get_trajectory_client, start,
                     goal, twist, acceleration);
-           
+            //std::cout << "acceleration"<< acceleration.linear.x << ", "<<acceleration.linear.y << ", " << acceleration.linear.z << std::endl;
+             
             // Profiling
             if (CLCT_DATA){ 
                 end_hook_t = ros::Time::now(); 
@@ -573,6 +514,8 @@ int main(int argc, char **argv)
         }
         else if (state == flying)
         {
+            //std::cout << "twist"<< twist.linear.x << ", "<<twist.linear.y << ", " << twist.linear.z << std::endl;
+            //std::cout << "acceleration"<< acceleration.linear.x << ", "<<acceleration.linear.y << ", " << acceleration.linear.z << std::endl;
             if (drone_stopped_or_reversing()) {
                 next_state = trajectory_completed;
 
@@ -587,12 +530,14 @@ int main(int argc, char **argv)
             //     get_start_in_future(drone, start, twist, acceleration);
             // }
             else {
-                next_state = flying;
+                //next_state = flying;
+                next_state = trajectory_completed;
             }
         }
         else if (state == trajectory_completed)
         {
             fail_ctr = normal_traj_msg.points.empty() ? fail_ctr+1 : 0;
+            
             if (normal_traj_msg.points.empty()){
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -601,9 +546,6 @@ int main(int argc, char **argv)
                 mission_status = "planning_failed_too_many_times";
             } else if (dist(drone.position(), goal) < goal_s_error_margin) {
                 ROS_INFO("Delivered the package and returned!");
-                outfile << "Delivered the package and returned!" << "\n";
-                outfile.close();
-
                 mission_status = "completed";
                 g_mission_status = mission_status;
                 //update_stats_file(stats_file_addr,"mission_status completed");
@@ -618,8 +560,7 @@ int main(int argc, char **argv)
             }
         }
         else if (state == failed) {
-            outfile << "in failed" << "\n";
-            ROS_INFO("Failed to reach destination");
+            ROS_ERROR("Failed to reach destination");
             //mission_status = "time_out"; 
             g_mission_status = mission_status;            
             log_data_before_shutting_down();
@@ -633,10 +574,33 @@ int main(int argc, char **argv)
             ROS_ERROR("Invalid FSM state!");
             break;
         }
-
-        state = next_state;
-        
-        if (clct_data){
+	int noise; 
+	srand(time(0));
+	noise = rand() % 10 + 6;
+	std::cout << "noise:" <<noise << std::endl;
+	if(noise == 0){
+		state = setup;
+	}
+	else if(noise == 1){
+		state = waiting;
+	}
+	else if(noise == 2){
+		state = flying;
+	}
+	else if(noise == 3){
+		state = trajectory_completed;
+	}
+	else if(noise == 4){
+		state = failed;
+	}
+	else if(noise == 5){
+		state = invalid;
+	}
+	else{
+        	state = next_state;
+        }
+        //state = next_state;
+	if (clct_data){
             if(!g_start_profiling) { 
                 if (ros::service::waitForService("/start_profiling", 10)){ 
                     if(!start_profiling_client.call(start_profiling_srv_inst)){

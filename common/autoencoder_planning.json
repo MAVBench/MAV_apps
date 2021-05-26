@@ -1,0 +1,289 @@
+{
+  "architecture": {
+    "backend": "tensorflow",
+    "class_name": "Model",
+    "config": {
+      "input_layers": [
+        [
+          "input_1",
+          0,
+          0
+        ]
+      ],
+      "layers": [
+        {
+          "class_name": "InputLayer",
+          "config": {
+            "batch_input_shape": [
+              null,
+              9
+            ],
+            "dtype": "float32",
+            "name": "input_1",
+            "ragged": false,
+            "sparse": false
+          },
+          "inbound_nodes": [],
+          "name": "input_1"
+        },
+        {
+          "class_name": "Dense",
+          "config": {
+            "activation": "tanh",
+            "activity_regularizer": {
+              "class_name": "L1L2",
+              "config": {
+                "l1": 9.999999747378752e-05,
+                "l2": 0.0
+              }
+            },
+            "bias_constraint": null,
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {
+                "dtype": "float32"
+              }
+            },
+            "bias_regularizer": null,
+            "dtype": "float32",
+            "kernel_constraint": null,
+            "kernel_initializer": {
+              "class_name": "VarianceScaling",
+              "config": {
+                "distribution": "uniform",
+                "dtype": "float32",
+                "mode": "fan_avg",
+                "scale": 1.0,
+                "seed": null
+              }
+            },
+            "kernel_regularizer": null,
+            "name": "dense_1",
+            "trainable": true,
+            "units": 6,
+            "use_bias": true
+          },
+          "inbound_nodes": [
+            [
+              [
+                "input_1",
+                0,
+                0,
+                {}
+              ]
+            ]
+          ],
+          "name": "dense_1"
+        },
+        {
+          "class_name": "Dense",
+          "config": {
+            "activation": "relu",
+            "activity_regularizer": null,
+            "bias_constraint": null,
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {
+                "dtype": "float32"
+              }
+            },
+            "bias_regularizer": null,
+            "dtype": "float32",
+            "kernel_constraint": null,
+            "kernel_initializer": {
+              "class_name": "VarianceScaling",
+              "config": {
+                "distribution": "uniform",
+                "dtype": "float32",
+                "mode": "fan_avg",
+                "scale": 1.0,
+                "seed": null
+              }
+            },
+            "kernel_regularizer": null,
+            "name": "dense_2",
+            "trainable": true,
+            "units": 3,
+            "use_bias": true
+          },
+          "inbound_nodes": [
+            [
+              [
+                "dense_1",
+                0,
+                0,
+                {}
+              ]
+            ]
+          ],
+          "name": "dense_2"
+        },
+        {
+          "class_name": "Dense",
+          "config": {
+            "activation": "tanh",
+            "activity_regularizer": null,
+            "bias_constraint": null,
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {
+                "dtype": "float32"
+              }
+            },
+            "bias_regularizer": null,
+            "dtype": "float32",
+            "kernel_constraint": null,
+            "kernel_initializer": {
+              "class_name": "VarianceScaling",
+              "config": {
+                "distribution": "uniform",
+                "dtype": "float32",
+                "mode": "fan_avg",
+                "scale": 1.0,
+                "seed": null
+              }
+            },
+            "kernel_regularizer": null,
+            "name": "dense_3",
+            "trainable": true,
+            "units": 3,
+            "use_bias": true
+          },
+          "inbound_nodes": [
+            [
+              [
+                "dense_2",
+                0,
+                0,
+                {}
+              ]
+            ]
+          ],
+          "name": "dense_3"
+        },
+        {
+          "class_name": "Dense",
+          "config": {
+            "activation": "relu",
+            "activity_regularizer": null,
+            "bias_constraint": null,
+            "bias_initializer": {
+              "class_name": "Zeros",
+              "config": {
+                "dtype": "float32"
+              }
+            },
+            "bias_regularizer": null,
+            "dtype": "float32",
+            "kernel_constraint": null,
+            "kernel_initializer": {
+              "class_name": "VarianceScaling",
+              "config": {
+                "distribution": "uniform",
+                "dtype": "float32",
+                "mode": "fan_avg",
+                "scale": 1.0,
+                "seed": null
+              }
+            },
+            "kernel_regularizer": null,
+            "name": "dense_4",
+            "trainable": true,
+            "units": 9,
+            "use_bias": true
+          },
+          "inbound_nodes": [
+            [
+              [
+                "dense_3",
+                0,
+                0,
+                {}
+              ]
+            ]
+          ],
+          "name": "dense_4"
+        }
+      ],
+      "name": "model_1",
+      "output_layers": [
+        [
+          "dense_4",
+          0,
+          0
+        ]
+      ]
+    },
+    "keras_version": "2.2.4-tf"
+  },
+  "hash": "98fc07f0a50cb34439782ac36e2d09ac68c559ae29f52bd3a22d7db8743bcbcc",
+  "image_data_format": "channels_last",
+  "input_shapes": [
+    [
+      9
+    ]
+  ],
+  "output_shapes": [
+    [
+      9
+    ]
+  ],
+  "tests": [
+    {
+      "inputs": [
+        {
+          "shape": [
+            9
+          ],
+          "values": [
+            "1JwWP/Qwxz+gtvY/ecIXP/ZMZj6jDHQ/OIspv6FmSD9uUvI+"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "shape": [
+            9
+          ],
+          "values": [
+            "SiZhPjDHqjw4N6E9AAAAAPzkWD6TeEY/gPftOgAAAAAAAAAA"
+          ]
+        }
+      ]
+    }
+  ],
+  "trainable_params": {
+    "dense_1": {
+      "bias": [
+        "MHdJPAtXxzrKxZe6ND+vOqyc7riebK+5"
+      ],
+      "weights": [
+        "c8aKO9LBE76L3p886FqMPXr4Jbv/p267p8jJvCh7FT48d6m8h9SRvf+Zvjpm9wo780KfO899uTxJrMk8T/QhPdyQHD1rbww9Yn+RO38Ftrw+CkI8SEGmPB0TcbxyOoC82vJgu1nptDyT21W8vvCZvKI3GzwBoho8YjoxvDVY6Tya3ic9TN+gva+aRj5lbko+8yrdPd57Ir9bYkI/WFEqP0wILL0BJJm9hyTCvSYSgT/kt3u/wDS/vjS5jzxIukQ9KHSGPdN9f77RxJk+EKXdPjfOsjycMua7"
+      ]
+    },
+    "dense_2": {
+      "bias": [
+        "DiVSPkpvrT4bAaU+"
+      ],
+      "weights": [
+        "Dq+nQGiHZ8CpslzAME2mvXCU5T6Pvca/FKIOv61QBT/hedW/aYImv8AGIT4iHho/hH+Av6Mwjr8hhBa/MU10vxJckL8L4+++"
+      ]
+    },
+    "dense_3": {
+      "bias": [
+        "COrQPfB3/r4//Aa+"
+      ],
+      "weights": [
+        "RrokvYpp5b95BMs/E/hPP/mk0j9jWfe+Vg+Sv/xBkj9suvC+"
+      ]
+    },
+    "dense_4": {
+      "bias": [
+        "LNGlPlyWqj62FDS+ljgZvhbKAr7qdoO+rUOuvf3Mkr7vo4O+"
+      ],
+      "weights": [
+        "O2Tsvy+J3T+iqw4/ElbzvG9wOz4dWG++WQo7PrQD5z5gC6q+aOjIPyzG8j9H03a+1IYwPJaXL7/pp9y/rN3tvnXO7L0KRkM9EW3KvyyIm7/2Pm+/7QCxPtVQNb+uQSfAaWFbPucxLD4JfaQ+"
+      ]
+    }
+  }
+}

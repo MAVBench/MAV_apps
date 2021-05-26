@@ -57,6 +57,7 @@ add_message_files(
   multiDOFpoint.msg
   multiDOFtrajectory.msg
   future_collision.msg
+  rosfi.msg
 )
 
 ## Generate services in the 'srv' folder

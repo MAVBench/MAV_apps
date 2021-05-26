@@ -37,7 +37,8 @@ void log_data_before_shutting_down(){
     profiling_data_srv_inst.request.value = (((double)g_panic_kernel_acc)/1e9)/g_panic_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }
@@ -46,7 +47,8 @@ void log_data_before_shutting_down(){
     profiling_data_srv_inst.request.value = (((double)g_panic_main_loop)/1e9)/g_panic_ctr;
     if (ros::service::waitForService("/record_profiling_data", 10)){ 
         if(!ros::service::call("/record_profiling_data",profiling_data_srv_inst)){
-            ROS_ERROR_STREAM("could not probe data using stats manager");
+            //ROS_ERROR_STREAM("could not probe data using stats manager");
+            ROS_INFO("could not probe data using stats manager");
             ros::shutdown();
         }
     }

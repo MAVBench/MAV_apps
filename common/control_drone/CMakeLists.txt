@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 2.8.3)
 project(control_drone)
 set (common_utility_src $ENV{mavbench_apps_base_dir}/common)
 set (common_utility_include $ENV{mavbench_apps_base_dir}/common)
+add_compile_options(-std=c++14 -g -fno-omit-frame-pointer)
 
 set (Airlib_addr  $ENV{AirSim_base_dir}/AirLib)
+find_package(frugally-deep REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -39,6 +41,9 @@ generate_messages(
 )
 
 include_directories(
+    /usr/local/include
+    /usr/local/include/fplus
+    /usr/local/include/fdeep
     ${Eigen_INCLUDE_DIRS} 
     ${catkin_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
@@ -65,7 +70,7 @@ catkin_package(
 
 
 add_executable(control_thread ${common_utility_src}/control_drone_node.cpp ${common_utility_src}/control_drone.cpp
-   ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/timer.cpp)
+   ${common_utility_src}/Drone.cpp ${common_utility_src}/common.cpp ${common_utility_src}/timer.cpp ${common_utility_src}/autoencoder.cpp)
 target_link_libraries(control_thread ${catkin_LIBRARIES} AirLib MavLinkCom rpc pthread)
 add_dependencies(control_thread ${catkin_EXPORTED_TARGETS})
 
